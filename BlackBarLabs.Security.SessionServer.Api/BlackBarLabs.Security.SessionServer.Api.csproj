@@ -1,0 +1,381 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>
+    </ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{4B275F63-3063-4913-BFEF-06BC1AC4A9C0}</ProjectGuid>
+    <ProjectTypeGuids>{349c5851-65df-11da-9384-00065b846f21};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>BlackBarLabs.Security.SessionServer.Api</RootNamespace>
+    <AssemblyName>BlackBarLabs.Security.SessionServer.Api</AssemblyName>
+    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <MvcBuildViews>false</MvcBuildViews>
+    <UseIISExpress>true</UseIISExpress>
+    <IISExpressSSLPort>44307</IISExpressSSLPort>
+    <IISExpressAnonymousAuthentication>enabled</IISExpressAnonymousAuthentication>
+    <IISExpressWindowsAuthentication>disabled</IISExpressWindowsAuthentication>
+    <IISExpressUseClassicPipelineMode>false</IISExpressUseClassicPipelineMode>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+    <TargetFrameworkProfile />
+    <UseGlobalApplicationHostFile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="BlackBarLabs.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\BlackBarLabs.Api.0.1.4\lib\BlackBarLabs.Api.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="BlackBarLabs.Api.Tests, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\BlackBarLabs.Api.0.1.4\lib\BlackBarLabs.Api.Tests.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="BlackBarLabs.Core, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\BlackBarLabs.Core.1.0.1\lib\BlackBarLabs.Core.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="BlackBarLabs.Persistence, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\BlackBarLabs.Storage.0.2.1\lib\BlackBarLabs.Persistence.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="BlackBarLabs.Persistence.Azure, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\BlackBarLabs.Storage.0.2.1\lib\BlackBarLabs.Persistence.Azure.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="BlackBarLabs.Security, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\BlackBarLabs.Security.0.4.3\lib\BlackBarLabs.Security.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="BlackBarLabs.Web, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\BlackBarLabs.Api.0.1.4\lib\BlackBarLabs.Web.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\log4net.1.2.10\lib\2.0\log4net.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Azure.KeyVault.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Azure.KeyVault.Core.1.0.0\lib\net40\Microsoft.Azure.KeyVault.Core.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.Data.Edm, Version=5.6.4.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Data.Edm.5.6.4\lib\net40\Microsoft.Data.Edm.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Data.OData, Version=5.6.4.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Data.OData.5.6.4\lib\net40\Microsoft.Data.OData.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Data.Services.Client, Version=5.6.4.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Data.Services.Client.5.6.4\lib\net40\Microsoft.Data.Services.Client.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.IdentityModel.Logging, Version=1.0.0.127, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Microsoft.IdentityModel.Logging.1.0.0\lib\net451\Microsoft.IdentityModel.Logging.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.IdentityModel.Tokens, Version=5.0.0.127, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Microsoft.IdentityModel.Tokens.5.0.0\lib\net451\Microsoft.IdentityModel.Tokens.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Web.Infrastructure, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Microsoft.Web.Infrastructure.1.0.0.0\lib\net40\Microsoft.Web.Infrastructure.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.WindowsAzure.Configuration, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Microsoft.WindowsAzure.ConfigurationManager.3.2.3\lib\net40\Microsoft.WindowsAzure.Configuration.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.WindowsAzure.Storage, Version=6.2.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\WindowsAzure.Storage.6.2.0\lib\net40\Microsoft.WindowsAzure.Storage.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.IdentityModel" />
+    <Reference Include="System.IdentityModel.Services" />
+    <Reference Include="System.IdentityModel.Tokens.Jwt, Version=5.0.0.127, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\System.IdentityModel.Tokens.Jwt.5.0.0\lib\net451\System.IdentityModel.Tokens.Jwt.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Net.Http.Formatting, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Microsoft.AspNet.WebApi.Client.5.2.3\lib\net45\System.Net.Http.Formatting.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Spatial, Version=5.6.4.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Spatial.5.6.4\lib\net40\System.Spatial.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Web.DynamicData" />
+    <Reference Include="System.Web.Entity" />
+    <Reference Include="System.Web.ApplicationServices" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Web.Abstractions" />
+    <Reference Include="System.Web.Extensions" />
+    <Reference Include="System.Web.Helpers, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Microsoft.AspNet.WebPages.3.2.3\lib\net45\System.Web.Helpers.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Web.Http, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Microsoft.AspNet.WebApi.Core.5.2.3\lib\net45\System.Web.Http.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Web.Http.WebHost, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Microsoft.AspNet.WebApi.WebHost.5.2.3\lib\net45\System.Web.Http.WebHost.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Web.Mvc, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Microsoft.AspNet.Mvc.5.2.3\lib\net45\System.Web.Mvc.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Web.Razor, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Microsoft.AspNet.Razor.3.2.3\lib\net45\System.Web.Razor.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Web.Routing" />
+    <Reference Include="System.Web.WebPages, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Microsoft.AspNet.WebPages.3.2.3\lib\net45\System.Web.WebPages.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Web.WebPages.Deployment, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Microsoft.AspNet.WebPages.3.2.3\lib\net45\System.Web.WebPages.Deployment.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Web.WebPages.Razor, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Microsoft.AspNet.WebPages.3.2.3\lib\net45\System.Web.WebPages.Razor.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Net.Http">
+    </Reference>
+    <Reference Include="System.Net.Http.WebRequest">
+    </Reference>
+    <Reference Include="System.Xml.Linq" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="App_Start\BundleConfig.cs" />
+    <Compile Include="App_Start\FilterConfig.cs" />
+    <Compile Include="App_Start\RouteConfig.cs" />
+    <Compile Include="App_Start\Startup.Auth.cs" />
+    <Compile Include="App_Start\WebApiConfig.cs" />
+    <Compile Include="Constants.cs" />
+    <Compile Include="Controllers\AuthorizeController.cs" />
+    <Compile Include="Controllers\CredentialController.cs" />
+    <Compile Include="Controllers\ContentNegotiationController.cs" />
+    <Compile Include="Controllers\ClaimController.cs" />
+    <Compile Include="Controllers\SessionController.cs" />
+    <Compile Include="Controllers\AuthorizationController.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\AuthorizeActions.cs" />
+    <Compile Include="Models\Filters\SessionFilter.cs" />
+    <Compile Include="Models\Filters\SocialIdentityFilter.cs" />
+    <Compile Include="Models\Filters\UserIdentityFilter.cs" />
+    <Compile Include="Models\UpdatePassword.cs" />
+    <Compile Include="Controllers\BaseController.cs" />
+    <Compile Include="Formats\CustomJwtFormat.cs" />
+    <Compile Include="Global.asax.cs">
+      <DependentUpon>Global.asax</DependentUpon>
+    </Compile>
+    <Compile Include="Models\AccountBindingModels.cs" />
+    <Compile Include="Models\AccountViewModels.cs" />
+    <Compile Include="Models\ClientModel.cs" />
+    <Compile Include="Models\IdentityModels.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Resources\Authorize.cs" />
+    <Compile Include="Resources\Authorization\Authorization.cs" />
+    <Compile Include="Resources\Authorization\AuthorizationGet.cs" />
+    <Compile Include="Resources\Authorization\AuthorizationOptions.cs" />
+    <Compile Include="Resources\Authorization\AuthorizationPost.cs" />
+    <Compile Include="Resources\Claim\Claim.cs" />
+    <Compile Include="Resources\Claim\ClaimGet.cs" />
+    <Compile Include="Resources\Claim\ClaimPut.cs" />
+    <Compile Include="Resources\Claim\ClaimPost.cs" />
+    <Compile Include="Resources\Credential\CredentialOptions.cs" />
+    <Compile Include="Resources\Credential\CredentialDelete.cs" />
+    <Compile Include="Resources\Credential\CredentialPut.cs" />
+    <Compile Include="Resources\Credential\CredentialPost.cs" />
+    <Compile Include="Resources\Credential\Credential.cs" />
+    <Compile Include="Resources\Credential\CredentialGet.cs" />
+    <Compile Include="Resources\Resource.cs" />
+    <Compile Include="Resources\Session\Session.cs" />
+    <Compile Include="Resources\Session\SessionPut.cs" />
+    <Compile Include="Resources\Session\SessionPost.cs" />
+    <Compile Include="Resources\Session\SessionGet.cs" />
+    <Compile Include="Results\ChallengeResult.cs" />
+    <Compile Include="Startup.cs" />
+    <Compile Include="UserAuth.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="favicon.ico" />
+    <Content Include="Global.asax" />
+    <None Include="Properties\PublishProfiles\affirmhealthpdms-authentication-dev - FTP.pubxml" />
+    <None Include="Properties\PublishProfiles\affirmhealthpdms-authentication-dev - Web Deploy.pubxml" />
+    <None Include="Properties\PublishProfiles\affirmhealthpdms-authentication-prd - FTP.pubxml" />
+    <None Include="Properties\PublishProfiles\affirmhealthpdms-authentication-prd - Web Deploy.pubxml" />
+    <None Include="Properties\PublishProfiles\gibbit-authentication - FTP.pubxml" />
+    <None Include="Properties\PublishProfiles\gibbit-authentication - Web Deploy.pubxml" />
+    <None Include="Properties\PublishProfiles\gibbit-authentication-dev - FTP.pubxml" />
+    <None Include="Properties\PublishProfiles\gibbit-authentication-dev - Web Deploy.pubxml" />
+    <None Include="Properties\PublishProfiles\gibbit-authentication-stg - FTP.pubxml" />
+    <None Include="Properties\PublishProfiles\gibbit-authentication-stg - Web Deploy.pubxml" />
+    <None Include="Properties\PublishProfiles\humagelorderowl-authentication-dev - FTP.pubxml" />
+    <None Include="Properties\PublishProfiles\humagelorderowl-authentication-dev - Web Deploy.pubxml" />
+    <None Include="Properties\PublishProfiles\humagelorderowl-authentication-dev3 - FTP.pubxml" />
+    <None Include="Properties\PublishProfiles\humagelorderowl-authentication-dev3 - Web Deploy.pubxml" />
+    <None Include="Properties\PublishProfiles\humagelorderowl-authentication-test - FTP.pubxml" />
+    <None Include="Properties\PublishProfiles\humagelorderowl-authentication-test - Web Deploy.pubxml" />
+    <None Include="Scripts\jquery-1.10.2.intellisense.js" />
+    <Content Include="Web.config">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Web.Debug.config">
+      <DependentUpon>Web.config</DependentUpon>
+    </Content>
+    <Content Include="Web.Release.config">
+      <DependentUpon>Web.config</DependentUpon>
+    </Content>
+    <Content Include="Content\Site.css" />
+    <Content Include="Scripts\_references.js" />
+    <Content Include="Views\Web.config">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Views\_ViewStart.cshtml" />
+    <Content Include="Views\Home\Index.cshtml" />
+    <Content Include="Views\Shared\Error.cshtml" />
+    <Content Include="Views\Shared\_Layout.cshtml" />
+    <Content Include="Views\UserIdentity\Create.cshtml" />
+    <Content Include="Views\UserIdentity\Index.cshtml" />
+    <Content Include="Views\SocialIdentity\Index.cshtml" />
+    <None Include="Web.Local.config">
+      <DependentUpon>Web.config</DependentUpon>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="App_Data\" />
+    <Folder Include="Areas\" />
+    <Folder Include="Views\Roles\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="packages.config" />
+    <None Include="Project_Readme.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BlackBarLabs.Security.Authorization\BlackBarLabs.Security.Session.csproj">
+      <Project>{6E009BB4-A644-43A5-95C7-0A3918F61B04}</Project>
+      <Name>BlackBarLabs.Security.Session</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BlackBarLabs.Security.CredentialProvider.Facebook\BlackBarLabs.Security.CredentialProvider.Facebook.csproj">
+      <Project>{90a432fc-e2ce-44d8-bc53-a6e4d9724b38}</Project>
+      <Name>BlackBarLabs.Security.CredentialProvider.Facebook</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BlackBarLabs.Security.CredentialProvider.ImplicitCreation\BlackBarLabs.Security.CredentialProvider.ImplicitCreation.csproj">
+      <Project>{dfc25fda-fc37-47d1-87dd-2a4adb659a69}</Project>
+      <Name>BlackBarLabs.Security.CredentialProvider.ImplicitCreation</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BlackBarLabs.Security.CredentialProvider.OpenIdConnect\BlackBarLabs.Security.CredentialProvider.OpenIdConnect.csproj">
+      <Project>{6efa78c9-e660-42da-854f-91e7d10cb992}</Project>
+      <Name>BlackBarLabs.Security.CredentialProvider.OpenIdConnect</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BlackBarLabs.Security.CredentialProvider.Voucher\BlackBarLabs.Security.CredentialProvider.Voucher.csproj">
+      <Project>{939b50b2-eae2-454e-ac01-da162da292c6}</Project>
+      <Name>BlackBarLabs.Security.CredentialProvider.Voucher</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BlackBarLabs.Security.CredentialProvider\BlackBarLabs.Security.CredentialProvider.csproj">
+      <Project>{a9d838c7-31a5-4b36-98f8-f37442e10dc3}</Project>
+      <Name>BlackBarLabs.Security.CredentialProvider</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BlackBarLabs.Security.SessionServer.Persistence.Azure\BlackBarLabs.Security.SessionServer.Persistence.Azure.csproj">
+      <Project>{9b3d13c3-2ac7-491c-bcab-5b274b6df3c0}</Project>
+      <Name>BlackBarLabs.Security.SessionServer.Persistence.Azure</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BlackBarLabs.Security.SessionServer.Persistence\BlackBarLabs.Security.SessionServer.Persistence.csproj">
+      <Project>{e5f5aab3-867b-4b68-8e53-b513fb502f38}</Project>
+      <Name>BlackBarLabs.Security.SessionServer.Persistence</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BlackBarLabs.Security.SessionServer\BlackBarLabs.Security.SessionServer.csproj">
+      <Project>{e2f3fcfb-89c8-47b3-b3d2-ae35e52a84fa}</Project>
+      <Name>BlackBarLabs.Security.SessionServer</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
+    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Local|AnyCPU'">
+    <OutputPath>bin\</OutputPath>
+  </PropertyGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets" Condition="'$(VSToolsPath)' != ''" />
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v10.0\WebApplications\Microsoft.WebApplication.targets" Condition="false" />
+  <Target Name="MvcBuildViews" AfterTargets="AfterBuild" Condition="'$(MvcBuildViews)'=='true'">
+    <AspNetCompiler VirtualPath="temp" PhysicalPath="$(WebProjectOutputDir)" />
+  </Target>
+  <ProjectExtensions>
+    <VisualStudio>
+      <FlavorProperties GUID="{349c5851-65df-11da-9384-00065b846f21}">
+        <WebProjectProperties>
+          <UseIIS>True</UseIIS>
+          <AutoAssignPort>True</AutoAssignPort>
+          <DevelopmentServerPort>61142</DevelopmentServerPort>
+          <DevelopmentServerVPath>/</DevelopmentServerVPath>
+          <IISUrl>http://localhost:6144/</IISUrl>
+          <NTLMAuthentication>False</NTLMAuthentication>
+          <UseCustomServer>False</UseCustomServer>
+          <CustomServerUrl>
+          </CustomServerUrl>
+          <SaveServerSettingsInUserFile>False</SaveServerSettingsInUserFile>
+        </WebProjectProperties>
+      </FlavorProperties>
+    </VisualStudio>
+  </ProjectExtensions>
+  <!-- Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
+    <Error Condition="!Exists('..\packages\Microsoft.Bcl.Build.1.0.21\build\Microsoft.Bcl.Build.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Bcl.Build.1.0.21\build\Microsoft.Bcl.Build.targets'))" />
+  </Target -->
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target> -->
+</Project>

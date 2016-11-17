@@ -31,15 +31,15 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="BlackBarLabs.Core, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\BlackBarLabs.Core.1.0.1\lib\BlackBarLabs.Core.dll</HintPath>
+      <HintPath>..\..\packages\BlackBarLabs.Core.1.0.1\lib\BlackBarLabs.Core.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="BlackBarLabs.Persistence, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\BlackBarLabs.Storage.0.2.1\lib\BlackBarLabs.Persistence.dll</HintPath>
+      <HintPath>..\..\packages\BlackBarLabs.Storage.0.2.1\lib\BlackBarLabs.Persistence.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="BlackBarLabs.Persistence.Azure, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\BlackBarLabs.Storage.0.2.1\lib\BlackBarLabs.Persistence.Azure.dll</HintPath>
+      <HintPath>..\..\packages\BlackBarLabs.Storage.0.2.1\lib\BlackBarLabs.Persistence.Azure.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
@@ -47,7 +47,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.Azure.KeyVault.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Azure.KeyVault.Core.1.0.0\lib\net40\Microsoft.Azure.KeyVault.Core.dll</HintPath>
+      <HintPath>..\..\packages\Microsoft.Azure.KeyVault.Core.1.0.0\lib\net40\Microsoft.Azure.KeyVault.Core.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.Data.Edm, Version=5.6.4.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
@@ -62,8 +62,8 @@
       <HintPath>..\packages\Microsoft.Data.Services.Client.5.6.4\lib\net40\Microsoft.Data.Services.Client.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Microsoft.WindowsAzure.Storage, Version=6.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\WindowsAzure.Storage.6.1.0\lib\net40\Microsoft.WindowsAzure.Storage.dll</HintPath>
+    <Reference Include="Microsoft.WindowsAzure.Storage, Version=6.2.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\WindowsAzure.Storage.6.2.0\lib\net40\Microsoft.WindowsAzure.Storage.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">

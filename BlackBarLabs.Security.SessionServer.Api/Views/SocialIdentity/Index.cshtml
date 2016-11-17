@@ -1,0 +1,59 @@
+﻿@model IEnumerable<BlackBarLabs.Security.AuthorizationServer.API.Models.SocialIdentityModel>
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Create User</title>
+</head>
+<body>
+    <div>
+        <table>
+            <tr>
+                <th>Id</th>
+                <th>AppId</th>
+                <th>UserId</th>
+                <th>UserIdentityId</th>
+                <th>Method</th>
+                <th>Type</th>
+                <th>Provider</th>
+                <th>Token</th>
+            </tr>
+
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.Id)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.AppId)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.UserId)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.UserIdentityId)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.Method)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.Type)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.Provider)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.Token)
+                    </td>
+                </tr>
+            }
+        </table>
+    </div>
+</body>
+</html>
