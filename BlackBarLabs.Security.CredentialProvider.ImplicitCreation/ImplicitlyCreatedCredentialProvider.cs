@@ -4,7 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using BlackBarLabs.Security.CredentialProvider;
 using System.Configuration;
-using BlackBarLabs.Core.Extensions;
+using BlackBarLabs.Extensions;
 
 namespace BlackBarLabs.Security.CredentialProvider.ImplicitCreation
 {

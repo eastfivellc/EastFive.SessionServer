@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 
-using BlackBarLabs.Core.Web;
 using BlackBarLabs.Collections.Async;
 
 namespace BlackBarLabs.Security.AuthorizationServer

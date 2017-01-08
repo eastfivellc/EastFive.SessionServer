@@ -7,8 +7,8 @@ using System.Security.Claims;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using BlackBarLabs.Core.Collections;
 using BlackBarLabs.Collections.Async;
+using BlackBarLabs.Collections.Generic;
 
 namespace BlackBarLabs.Security.AuthorizationServer
 {
