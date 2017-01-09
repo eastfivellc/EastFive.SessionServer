@@ -5,7 +5,7 @@ using System.Runtime.Serialization;
 namespace BlackBarLabs.Security.AuthorizationServer.API.Resources
 {
     [DataContract]
-    public class Claim : Resource, Security.Authorization.IClaim
+    public class Claim : Resource, Security.Session.IClaim
     {
         [DataMember]
         public Guid Id { get; set; }

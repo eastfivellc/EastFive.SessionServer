@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Runtime.Serialization;
-using BlackBarLabs.Security.Authorization;
+using BlackBarLabs.Security.Session;
 
 namespace BlackBarLabs.Security.AuthorizationServer.API.Resources
 {

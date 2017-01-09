@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Security.Permissions;
 using System.Runtime.Serialization;
 using BlackBarLabs.Security.CredentialProvider.ImplicitCreation;
-using BlackBarLabs.Security.Authorization;
+using BlackBarLabs.Security.Session;
 using BlackBarLabs.Security.SessionServer.Persistence.Azure;
 
 namespace BlackBarLabs.Security.AuthorizationServer.API.Controllers

@@ -8,7 +8,7 @@ using System.Web.Http;
 using System.Net.Http;
 using System.Threading;
 using BlackBarLabs.Api;
-using BlackBarLabs.Security.Authorization;
+using BlackBarLabs.Security.Session;
 
 namespace BlackBarLabs.Security.AuthorizationServer.API.Resources
 {

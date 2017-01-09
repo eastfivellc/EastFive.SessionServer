@@ -1,5 +1,5 @@
 ﻿using BlackBarLabs.Api;
-using BlackBarLabs.Security.Authorization;
+using BlackBarLabs.Security.Session;
 using System;
 using System.Collections.Generic;
 using System.Linq;

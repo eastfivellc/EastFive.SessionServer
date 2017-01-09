@@ -303,8 +303,8 @@
       <Project>{1ae1a4d9-58f6-4e90-9744-e746e1d01d02}</Project>
       <Name>BlackBarLabs.Security.CredentialProvider.AzureADB2C</Name>
     </ProjectReference>
-    <ProjectReference Include="..\BlackBarLabs.Security.Authorization\BlackBarLabs.Security.Session.csproj">
-      <Project>{6E009BB4-A644-43A5-95C7-0A3918F61B04}</Project>
+    <ProjectReference Include="..\..\BlackBarLabs.Security.Session\BlackBarLabs.Security.Session.csproj">
+      <Project>{31c1c7f3-4f14-42bd-a90d-6b984e3643c4}</Project>
       <Name>BlackBarLabs.Security.Session</Name>
     </ProjectReference>
     <ProjectReference Include="..\BlackBarLabs.Security.CredentialProvider.Facebook\BlackBarLabs.Security.CredentialProvider.Facebook.csproj">

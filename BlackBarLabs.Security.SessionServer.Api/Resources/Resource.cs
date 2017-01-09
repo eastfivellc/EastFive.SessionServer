@@ -1,4 +1,4 @@
-﻿using BlackBarLabs.Security.Authorization;
+﻿using BlackBarLabs.Security.Session;
 using BlackBarLabs.Security.CredentialProvider.ImplicitCreation;
 using BlackBarLabs.Security.SessionServer.Persistence.Azure;
 using System;

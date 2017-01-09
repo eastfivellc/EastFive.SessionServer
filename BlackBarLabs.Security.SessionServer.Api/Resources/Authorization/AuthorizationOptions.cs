@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 
-using BlackBarLabs.Security.Authorization;
+using BlackBarLabs.Security.Session;
 
 namespace BlackBarLabs.Security.AuthorizationServer.API.Resources
 {

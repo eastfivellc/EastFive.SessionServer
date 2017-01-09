@@ -1,6 +1,6 @@
 ﻿using System;
 //using BlackBarLabs.Security.Tokens;
-using BlackBarLabs.Security.Authorization;
+using BlackBarLabs.Security.Session;
 using System.Web.Http;
 
 namespace BlackBarLabs.Security.AuthorizationServer.API.Controllers
