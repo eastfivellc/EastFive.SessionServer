@@ -1,12 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using BlackBarLabs.Security.AuthorizationServer.Exceptions;
-using BlackBarLabs.Security.Authorization;
-using System.Configuration;
-using System.Security.Claims;
-using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 
 using BlackBarLabs.Collections.Async;
 

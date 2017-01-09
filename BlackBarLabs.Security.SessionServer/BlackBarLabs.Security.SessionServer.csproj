@@ -101,8 +101,8 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\BlackBarLabs.Security.Authorization\BlackBarLabs.Security.Session.csproj">
-      <Project>{6e009bb4-a644-43a5-95c7-0a3918f61b04}</Project>
+    <ProjectReference Include="..\..\BlackBarLabs.Security.Session\BlackBarLabs.Security.Session.csproj">
+      <Project>{31c1c7f3-4f14-42bd-a90d-6b984e3643c4}</Project>
       <Name>BlackBarLabs.Security.Session</Name>
     </ProjectReference>
     <ProjectReference Include="..\BlackBarLabs.Security.CredentialProvider\BlackBarLabs.Security.CredentialProvider.csproj">

@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
 
-using BlackBarLabs.Security.Authorization;
 using BlackBarLabs.Security.SessionServer;
+using BlackBarLabs.Security.Session;
 
 namespace BlackBarLabs.Security.AuthorizationServer
 {

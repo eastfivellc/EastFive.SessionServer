@@ -1,9 +1,6 @@
-﻿using BlackBarLabs.Security.Authorization;
-using BlackBarLabs.Security.AuthorizationServer;
+﻿using BlackBarLabs.Security.AuthorizationServer;
+using BlackBarLabs.Security.Session;
 using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace BlackBarLabs.Security.SessionServer
