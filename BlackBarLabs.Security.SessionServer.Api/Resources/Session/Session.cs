@@ -49,7 +49,7 @@ namespace BlackBarLabs.Security.SessionServer.Api.Resources
         
         #endregion
 
-        protected bool IsCredentialsPopulated()
+        internal bool IsCredentialsPopulated()
         {
             if (default(Resources.Credential) == Credentials)
                 return false;

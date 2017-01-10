@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Web.Http;
+using System.Threading.Tasks;
+
 using BlackBarLabs.Security.Session;
+using BlackBarLabs.Api;
 
 namespace BlackBarLabs.Security.SessionServer.Api.Controllers
 {
@@ -15,10 +18,9 @@ namespace BlackBarLabs.Security.SessionServer.Api.Controllers
             return query;
         }
         
-        public IHttpActionResult Post([FromBody]Resources.SessionPost model)
+        public async Task<IHttpActionResult> Post([FromBody]Resources.Session model)
         {
-            model.Request = Request;
-            return model;
+            return (await model.CreateAsync(this.Request)).ToActionResult();
         }
         
         public IHttpActionResult Put([FromBody]Resources.SessionPut model)

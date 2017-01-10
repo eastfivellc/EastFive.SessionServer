@@ -18,6 +18,8 @@ namespace BlackBarLabs.Security.SessionServer
                     {
                         case CredentialValidationMethodTypes.Facebook:
                             return new CredentialProvider.Facebook.FacebookCredentialProvider();
+                        case CredentialValidationMethodTypes.AzureADB2C:
+                            return new CredentialProvider.AzureADB2C.AzureADB2CProvider();
                         case CredentialValidationMethodTypes.Implicit:
                             return new ImplicitlyCreatedCredentialProvider();
                         case CredentialValidationMethodTypes.Voucher:

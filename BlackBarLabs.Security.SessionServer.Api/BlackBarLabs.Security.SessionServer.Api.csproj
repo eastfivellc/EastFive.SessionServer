@@ -232,7 +232,7 @@
     <Compile Include="Resources\Resource.cs" />
     <Compile Include="Resources\Session\Session.cs" />
     <Compile Include="Resources\Session\SessionPut.cs" />
-    <Compile Include="Resources\Session\SessionPost.cs" />
+    <Compile Include="Models\SessionActions.cs" />
     <Compile Include="Resources\Session\SessionGet.cs" />
     <Compile Include="Results\ChallengeResult.cs" />
     <Compile Include="Startup.cs" />
