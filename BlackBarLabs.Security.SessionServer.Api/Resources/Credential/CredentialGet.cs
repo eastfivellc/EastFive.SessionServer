@@ -4,7 +4,7 @@ using System.Web.Http;
 using System.Net.Http;
 using System.Threading;
 
-namespace BlackBarLabs.Security.AuthorizationServer.API.Resources
+namespace BlackBarLabs.Security.SessionServer.Api.Resources
 {
     public class CredentialGet : Credential, IHttpActionResult
     {

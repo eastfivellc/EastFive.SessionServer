@@ -10,7 +10,7 @@ using System.Web.Http;
 
 using BlackBarLabs.Collections.Async;
 
-namespace BlackBarLabs.Security.AuthorizationServer.API.Resources
+namespace BlackBarLabs.Security.SessionServer.Api.Resources
 {
     public class ClaimGet : Claim, IHttpActionResult
     {

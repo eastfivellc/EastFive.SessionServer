@@ -10,7 +10,7 @@ using System.Web.Script.Serialization;
 using System.Xml;
 using System.Xml.Serialization;
 
-namespace BlackBarLabs.Security.AuthorizationServer.API.Controllers
+namespace BlackBarLabs.Security.SessionServer.Api.Controllers
 {
     public class ContentNegotiationController : Controller
     {

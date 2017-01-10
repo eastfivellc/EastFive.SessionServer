@@ -3,14 +3,15 @@ using System.Linq;
 using System.Net;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
-using BlackBarLabs.Security.AuthorizationServer.API.Models;
 using System.Web.Http;
 using System.Net.Http;
 using System.Threading;
+
 using BlackBarLabs.Api;
 using BlackBarLabs.Security.Session;
+using BlackBarLabs.Security.AuthorizationServer.API.Models;
 
-namespace BlackBarLabs.Security.AuthorizationServer.API.Resources
+namespace BlackBarLabs.Security.SessionServer.Api.Resources
 {
     [DataContract]
     public class CredentialPost : Credential, IHttpActionResult

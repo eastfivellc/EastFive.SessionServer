@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 
-namespace BlackBarLabs.Security.AuthorizationServer.API.Resources
+namespace BlackBarLabs.Security.SessionServer.Api.Resources
 {
     public class SessionPost : Session, IHttpActionResult
     {
@@ -20,9 +20,9 @@ namespace BlackBarLabs.Security.AuthorizationServer.API.Resources
             {
                 Id = this.Id,
             };
-
+            
             //Get the session and Extrude it's information
-            Sessions.CreateSessionSuccessDelegate<HttpResponseMessage> createSessionCallback = (authorizationId, token, refreshToken) =>
+            AuthorizationServer.Sessions.CreateSessionSuccessDelegate<HttpResponseMessage> createSessionCallback = (authorizationId, token, refreshToken) =>
             {
                 responseSession.AuthorizationId = authorizationId;
                 responseSession.SessionHeader = new AuthHeaderProps { Name = "Authorization", Value = "Bearer " + token };
@@ -37,7 +37,7 @@ namespace BlackBarLabs.Security.AuthorizationServer.API.Resources
                 {
                     return await this.Context.Sessions.CreateAsync(Id,
                         createSessionCallback,
-                        () => this.Request.CreateResponse(HttpStatusCode.Conflict, "This session has already been created."));
+                        () => this.Request.CreateResponse(HttpStatusCode.Conflict).AddReason("This session has already been created."));
                 }
 
                 return await this.Context.Sessions.CreateAsync(Id,

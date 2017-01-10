@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 
-namespace BlackBarLabs.Security.AuthorizationServer.API.Resources
+namespace BlackBarLabs.Security.SessionServer.Api.Resources
 {
     public class SessionGet : Session, IHttpActionResult
     {

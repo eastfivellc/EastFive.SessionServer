@@ -49,7 +49,7 @@ namespace BlackBarLabs.Security.SessionServer
                 (errorMessage) => Task.FromResult(authenticationFailed()),
                 () => Task.FromResult(default(TResult)));
             return result;
-            }
+        }
 
         public async Task<TResult> GetCredentialsAsync<TResult>(CredentialValidationMethodTypes method, Uri providerId, string username,
             Func<Guid, TResult> success,

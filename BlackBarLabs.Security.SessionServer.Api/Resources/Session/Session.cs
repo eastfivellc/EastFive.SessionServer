@@ -2,7 +2,7 @@
 using System;
 using System.Runtime.Serialization;
 
-namespace BlackBarLabs.Security.AuthorizationServer.API.Resources
+namespace BlackBarLabs.Security.SessionServer.Api.Resources
 {
     [DataContract]
     public class Session : Resource, ISession

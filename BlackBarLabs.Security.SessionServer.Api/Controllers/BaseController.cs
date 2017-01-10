@@ -7,8 +7,9 @@ using System.Runtime.Serialization;
 using BlackBarLabs.Security.CredentialProvider.ImplicitCreation;
 using BlackBarLabs.Security.Session;
 using BlackBarLabs.Security.SessionServer.Persistence.Azure;
+using BlackBarLabs.Security.AuthorizationServer;
 
-namespace BlackBarLabs.Security.AuthorizationServer.API.Controllers
+namespace BlackBarLabs.Security.SessionServer.Api.Controllers
 {
     [ContentNegotiationController.AutoContentNegotiation]
     public class BaseController : BlackBarLabs.Api.Controllers.BaseController
@@ -21,7 +22,7 @@ namespace BlackBarLabs.Security.AuthorizationServer.API.Controllers
         {
             get
             {
-                return configurationServiceDictionary ?? (configurationServiceDictionary = (ConfigurationServiceDictionary)GlobalConfiguration.Configuration.Properties[Constants.SystemConfiguration.ConfigurationService]);
+                return configurationServiceDictionary ?? (configurationServiceDictionary = (ConfigurationServiceDictionary)GlobalConfiguration.Configuration.Properties[AuthorizationServer.API.Constants.SystemConfiguration.ConfigurationService]);
             }
         }
 

@@ -2,12 +2,13 @@
 //using BlackBarLabs.Security.Tokens;
 using BlackBarLabs.Security.Session;
 using System.Web.Http;
+using BlackBarLabs.Security.SessionServer.Api.Resources;
 
-namespace BlackBarLabs.Security.AuthorizationServer.API.Controllers
+namespace BlackBarLabs.Security.SessionServer.Api.Controllers
 {
     public class ClaimController : BaseController
     {
-        public IHttpActionResult Get([FromUri]Resources.ClaimGet model)
+        public IHttpActionResult Get([FromUri]ClaimGet model)
         {
             model.Request = Request;
             return model;

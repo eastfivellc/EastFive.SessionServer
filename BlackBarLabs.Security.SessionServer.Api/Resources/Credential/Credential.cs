@@ -3,10 +3,10 @@ using System.Linq;
 using System.Runtime.Serialization;
 using BlackBarLabs.Security.Session;
 
-namespace BlackBarLabs.Security.AuthorizationServer.API.Resources
+namespace BlackBarLabs.Security.SessionServer.Api.Resources
 {
     [DataContract]
-    public class Credential : Resource, ICredential
+    public class Credential : Resources.Resource, ICredential
     {
         #region Properties
 

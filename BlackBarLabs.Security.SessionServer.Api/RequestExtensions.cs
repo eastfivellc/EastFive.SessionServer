@@ -1,36 +1,17 @@
-﻿using BlackBarLabs.Security.Session;
+﻿using System;
+using System.Net.Http;
+
+using BlackBarLabs.Security.Session;
 using BlackBarLabs.Security.CredentialProvider.ImplicitCreation;
 using BlackBarLabs.Security.SessionServer.Persistence.Azure;
-using System;
-using BlackBarLabs.Security.AuthorizationServer;
 
-namespace BlackBarLabs.Security.SessionServer.Api.Resources
+namespace BlackBarLabs.Security.SessionServer
 {
-    public class Resource : BlackBarLabs.Api.Resource
+    internal static class RequestExtensions
     {
-        private static readonly object DataContextLock = new object();
-
-        private Context context;
-
-        protected Context Context
+        internal static AuthorizationServer.Context GetSessionServerContext(this HttpRequestMessage request)
         {
-            get
-            {
-                if (default(Context) == context)
-                {
-                    lock (DataContextLock)
-                    {
-                        context = GetContext();
-                    }
-                }
-
-                return context;
-            }
-        }
-
-        private static Context GetContext()
-        {
-            var context = new Context(() => new DataContext("Azure.Authorization.Storage"),
+            var context = new AuthorizationServer.Context(() => new DataContext("Azure.Authorization.Storage"),
                 (credentialValidationMethodType) =>
                 {
                     switch (credentialValidationMethodType)

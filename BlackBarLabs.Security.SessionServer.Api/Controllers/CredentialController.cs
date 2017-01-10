@@ -1,27 +1,29 @@
-﻿using System.Web.Http;
+﻿using BlackBarLabs.Security.AuthorizationServer.API.Resources;
+using BlackBarLabs.Security.SessionServer.Api.Resources;
+using System.Web.Http;
 
-namespace BlackBarLabs.Security.AuthorizationServer.API.Controllers
+namespace BlackBarLabs.Security.SessionServer.Api.Controllers
 {
     public class CredentialController : BaseController
     {
-        public IHttpActionResult Post([FromBody]Resources.CredentialPost model)
+        public IHttpActionResult Post([FromBody]CredentialPost model)
         {
             model.Request = Request;
             return model;
         }
 
-        public IHttpActionResult Put([FromBody]Resources.CredentialPut model)
+        public IHttpActionResult Put([FromBody]CredentialPut model)
         {
             model.Request = Request;
             return model;
         }
 
-        public IHttpActionResult Delete([FromBody]Resources.CredentialDelete model)
+        public IHttpActionResult Delete([FromBody]CredentialDelete model)
         {
             model.Request = Request;
             return model;
         }
-        public IHttpActionResult Get([FromUri]Resources.CredentialGet model)
+        public IHttpActionResult Get([FromUri]CredentialGet model)
         {
             model.Request = Request;
             return model;

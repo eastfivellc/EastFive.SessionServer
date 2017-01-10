@@ -2,7 +2,7 @@
 using System.Web.Http;
 using BlackBarLabs.Security.Session;
 
-namespace BlackBarLabs.Security.AuthorizationServer.API.Controllers
+namespace BlackBarLabs.Security.SessionServer.Api.Controllers
 {
     public class SessionController : BaseController
     {

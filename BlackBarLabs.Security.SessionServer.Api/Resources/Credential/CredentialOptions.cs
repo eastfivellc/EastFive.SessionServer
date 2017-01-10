@@ -6,7 +6,7 @@ using System.Web.Http;
 
 using BlackBarLabs.Security.Session;
 
-namespace BlackBarLabs.Security.AuthorizationServer.API.Resources
+namespace BlackBarLabs.Security.SessionServer.Api.Resources
 {
     public class CredentialOptions : Resource, IHttpActionResult
     {

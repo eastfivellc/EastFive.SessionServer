@@ -10,7 +10,7 @@ using System.Threading;
 using BlackBarLabs.Api;
 using BlackBarLabs.Security.Session;
 
-namespace BlackBarLabs.Security.AuthorizationServer.API.Resources
+namespace BlackBarLabs.Security.SessionServer.Api.Resources
 {
     [DataContract]
     public class CredentialPut : Credential, IHttpActionResult

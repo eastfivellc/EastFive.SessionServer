@@ -3,7 +3,7 @@ using BlackBarLabs.Security.AuthorizationServer.API.Models;
 using System.Threading.Tasks;
 using System.Web.Http;
 
-namespace BlackBarLabs.Security.AuthorizationServer.API.Controllers
+namespace BlackBarLabs.Security.SessionServer.Api.Controllers
 {
     public class AuthorizeController : BaseController
     {
@@ -11,12 +11,6 @@ namespace BlackBarLabs.Security.AuthorizationServer.API.Controllers
         public async Task<IHttpActionResult> Post([FromBody]Resources.Authorize model)
         {
             return (await model.PostAsync(Request)).ToActionResult();
-        }
-        
-        public IHttpActionResult Options()
-        {
-            var model = new Resources.AuthorizationOptions();
-            return model;
         }
     }
 }
