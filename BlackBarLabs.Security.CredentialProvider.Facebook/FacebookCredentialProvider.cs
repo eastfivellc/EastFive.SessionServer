@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Facebook;
+using System.Security.Claims;
 
 namespace BlackBarLabs.Security.CredentialProvider.Facebook
 {
     public class FacebookCredentialProvider : IProvideCredentials
     {
         public async Task<TResult> RedeemTokenAsync<TResult>(Uri providerId, string username, string accessToken,
-            Func<string, TResult> success, Func<string, TResult> invalidCredentials, Func<TResult> couldNotConnect)
+            Func<Guid, Claim[], TResult> success, Func<string, TResult> invalidCredentials, Func<TResult> couldNotConnect)
         {
             if (String.IsNullOrWhiteSpace(accessToken))
                 return invalidCredentials("accessToken is null");
@@ -19,7 +20,7 @@ namespace BlackBarLabs.Security.CredentialProvider.Facebook
                     return invalidCredentials("Cannot get token from Facebook");
                 if (username != result.id)
                     return invalidCredentials("username and result.Id from Facebook do not match");
-                return success(client.AccessToken);
+                throw new NotImplementedException();
             }
             catch (Exception ex)
             {

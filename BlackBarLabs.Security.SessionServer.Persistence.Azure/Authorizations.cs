@@ -6,10 +6,18 @@ using BlackBarLabs.Collections.Async;
 using BlackBarLabs.Persistence.Azure;
 using BlackBarLabs.Persistence.Azure.StorageTables;
 using BlackBarLabs.Extensions;
+using BlackBarLabs.Security.Session;
 
 namespace BlackBarLabs.Security.SessionServer.Persistence.Azure
 {
-    internal class Authorizations : IAuthorizations
+    public struct AuthorizationProvider
+    {
+        public string userId;
+        public CredentialValidationMethodTypes method;
+        public Uri provider;
+    }
+
+    public class Authorizations
     {
         private AzureStorageRepository repository;
         public Authorizations(AzureStorageRepository repository)
@@ -70,13 +78,16 @@ namespace BlackBarLabs.Security.SessionServer.Persistence.Azure
             throw new NotImplementedException();
         }
 
-        public async Task<T> CreateAuthorizationAsync<T>(Guid authorizationId, Func<T> onSuccess, Func<T> onAlreadyExist)
+        public async Task<T> CreateAuthorizationAsync<T>(Guid authorizationId,
+                AuthorizationProvider [] authorizationProviders,
+            Func<T> onSuccess,
+            Func<T> onAlreadyExist)
         {
             var authorizationDocument = new Documents.AuthorizationDocument()
             {
-                RowKey = authorizationId.AsRowKey(),
-                PartitionKey = authorizationId.AsRowKey().GeneratePartitionKey(),
+
             };
+            authorizationDocument.AddProviders(authorizationProviders);
 
             return await repository.CreateAsync(authorizationId, authorizationDocument,
                 () => onSuccess(),

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using System.Net.Http;
 using System.Net;
@@ -26,7 +25,11 @@ namespace BlackBarLabs.Security.SessionServer
             var viewModel = new Api.Resources.Authorization
             {
                 Id = Guid.NewGuid(),
-                CredentialProviders = new Uri[] { new Uri("http://example.com/Credentials?UserId=" + Guid.NewGuid().ToString()) },
+                DisplayName = "Chester the Tester",
+                Username = "test@example.com",
+                IsEmail = true,
+                Secret = "Secret",
+                ForceChange = false,
             };
             var response = new BlackBarLabs.Api.Resources.Options()
             {
@@ -41,10 +44,13 @@ namespace BlackBarLabs.Security.SessionServer
             HttpRequestMessage request)
         {
             var context = request.GetSessionServerContext();
-            var response = await context.Authorizations.CreateAsync(resource.Id.UUID,
+            var response = await context.Authorizations.CreateAsync(resource.DisplayName,
+                    resource.Username, resource.IsEmail, resource.Secret, resource.ForceChange,
                 () => request.CreateResponse(HttpStatusCode.Created),
                 () => request.CreateResponse(HttpStatusCode.Conflict)
-                    .AddReason("Authorization already exists"));
+                    .AddReason("Authorization already exists"),
+                (why) => request.CreateResponse(HttpStatusCode.Conflict)
+                    .AddReason(why));
             return response;
         }
     }

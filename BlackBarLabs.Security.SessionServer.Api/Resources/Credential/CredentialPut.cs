@@ -22,8 +22,8 @@ namespace BlackBarLabs.Security.SessionServer.Api.Resources
             var creationResults = await Context.Authorizations.UpdateCredentialsAsync(AuthorizationId,
                 this.Method, this.Provider, this.UserId, this.Token,
                 () => Request.CreateResponse(HttpStatusCode.Created, this),
-                () => Request.CreateErrorResponse(HttpStatusCode.Conflict, "Authorization does not exist"),
-                () => Request.CreateErrorResponse(HttpStatusCode.Conflict, "Update failed"));
+                () => Request.CreateResponse(HttpStatusCode.Conflict).AddReason("Authorization does not exist"),
+                (why) => Request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Update failed:{why}"));
             return creationResults;
         }
 

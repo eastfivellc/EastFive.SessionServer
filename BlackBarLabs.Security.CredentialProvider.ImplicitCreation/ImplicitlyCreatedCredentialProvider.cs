@@ -5,13 +5,14 @@ using System.Threading.Tasks;
 using BlackBarLabs.Security.CredentialProvider;
 using System.Configuration;
 using BlackBarLabs.Extensions;
+using System.Security.Claims;
 
 namespace BlackBarLabs.Security.CredentialProvider.ImplicitCreation
 {
     public class ImplicitlyCreatedCredentialProvider : IProvideCredentials
     {
         public async Task<TResult> RedeemTokenAsync<TResult>(Uri providerId, string username, string token,
-            Func<string, TResult> success, Func<string, TResult> invalidCredentials, Func<TResult> couldNotConnect)
+            Func<Guid, Claim[], TResult> success, Func<string, TResult> invalidCredentials, Func<TResult> couldNotConnect)
         {
             // create hashed version of the password
             var tokenHashBytes = SHA512.Create().ComputeHash(Encoding.UTF8.GetBytes(token));
@@ -21,7 +22,7 @@ namespace BlackBarLabs.Security.CredentialProvider.ImplicitCreation
 
             var globalToken = ConfigurationManager.AppSettings.Get("BlackBarLabs.Security.CredentialProvider.ImplicitCreation.GlobalToken");
             if (String.Compare(token, globalToken) == 0)
-                return success(tokenHash);
+                return success(GetAuthId(tokenHash), null);
 
             #endregion
 
@@ -53,19 +54,23 @@ namespace BlackBarLabs.Security.CredentialProvider.ImplicitCreation
                     {
                         document.AccessToken = tokenHash;
                         await saveDocument(document);
-                        return success(tokenHash);
+                        return success(GetAuthId(tokenHash), null);
                     }
 
                     // If there currently is a credential document for this providerId / username combination
                     // then check the stored password hash with the provided password hash and respond accordingly. 
                     if (String.Compare(document.AccessToken, tokenHash, false) == 0)
-                        return success(tokenHash);
+                        return success(GetAuthId(tokenHash), null);
 
                     return invalidCredentials("Invalid credentials -   AccessToken: " + document.AccessToken + "   tokenHash: " + tokenHash);
                 });
             return result;
         }
 
+        private Guid GetAuthId(string token)
+        {
+            throw new NotImplementedException();
+        }
 
         public async Task<TResult> UpdateTokenAsync<TResult>(Uri providerId, string username, string token,
             Func<string, TResult> success, Func<TResult> doesNotExist, Func<TResult> updateFailed)

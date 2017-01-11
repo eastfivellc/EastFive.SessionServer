@@ -23,8 +23,8 @@ namespace BlackBarLabs.Security.SessionServer.Api.Resources
             var creationResults = await Context.Authorizations.CreateCredentialsAsync(AuthorizationId,
                 this.Method, this.Provider, this.UserId, this.Token,
                 () => Request.CreateResponse(HttpStatusCode.Created, this),
-                () => Request.CreateErrorResponse(HttpStatusCode.Conflict, "Authentication failed"),
-                () => Request.CreateErrorResponse(HttpStatusCode.Conflict, "Authorization does not exist"),
+                (why) => Request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Authentication failed:{why}"),
+                () => Request.CreateResponse(HttpStatusCode.Conflict).AddReason("Authorization does not exist"),
                 (alreadyAssociatedAuthId) =>
                 {
                     var alreadyAssociatedAuthIdUrl = (string)"";

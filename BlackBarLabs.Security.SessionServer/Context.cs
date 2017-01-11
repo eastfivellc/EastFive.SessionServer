@@ -8,14 +8,14 @@ namespace BlackBarLabs.Security.AuthorizationServer
 {
     public class Context
     {
-        private SessionServer.Persistence.IDataContext dataContext;
-        private readonly Func<SessionServer.Persistence.IDataContext> dataContextCreateFunc;
+        private SessionServer.Persistence.Azure.DataContext dataContext;
+        private readonly Func<SessionServer.Persistence.Azure.DataContext> dataContextCreateFunc;
 
         private ConcurrentDictionary<CredentialValidationMethodTypes, CredentialProvider.IProvideCredentials> credentialProviders = 
             new ConcurrentDictionary<CredentialValidationMethodTypes, CredentialProvider.IProvideCredentials>();
         private readonly Func<CredentialValidationMethodTypes, CredentialProvider.IProvideCredentials> credentialProvidersFunc;
 
-        public Context(Func<SessionServer.Persistence.IDataContext> dataContextCreateFunc,
+        public Context(Func<SessionServer.Persistence.Azure.DataContext> dataContextCreateFunc,
             Func<CredentialValidationMethodTypes, CredentialProvider.IProvideCredentials> credentialProvidersFunc)
         {
             dataContextCreateFunc.ValidateArgumentIsNotNull("dataContextCreateFunc");
@@ -25,7 +25,7 @@ namespace BlackBarLabs.Security.AuthorizationServer
             this.credentialProvidersFunc = credentialProvidersFunc;
         }
 
-        internal SessionServer.Persistence.IDataContext DataContext
+        internal SessionServer.Persistence.Azure.DataContext DataContext
         {
             get { return dataContext ?? (dataContext = dataContextCreateFunc.Invoke()); }
         }

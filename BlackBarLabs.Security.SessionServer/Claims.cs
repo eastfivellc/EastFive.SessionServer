@@ -9,7 +9,7 @@ namespace BlackBarLabs.Security.AuthorizationServer
     public class Claims
     {
         private Context context;
-        private SessionServer.Persistence.IDataContext dataContext;
+        private SessionServer.Persistence.Azure.DataContext dataContext;
 
         public async Task<TResult> FindAsync<TResult>(Guid authorizationId, Uri type,
             Func<IEnumerableAsync<Func<Guid, Guid, Uri, string, Task>>, TResult> found,
@@ -40,7 +40,7 @@ namespace BlackBarLabs.Security.AuthorizationServer
                 (whyFailed) => failure(whyFailed));
         }
 
-        internal Claims(Context context, SessionServer.Persistence.IDataContext dataContext)
+        internal Claims(Context context, SessionServer.Persistence.Azure.DataContext dataContext)
         {
             this.dataContext = dataContext;
             this.context = context;

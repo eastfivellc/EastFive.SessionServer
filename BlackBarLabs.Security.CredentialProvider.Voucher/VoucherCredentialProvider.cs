@@ -6,7 +6,7 @@ namespace BlackBarLabs.Security.CredentialProvider.Voucher
     public class VoucherCredentialProvider : IProvideCredentials
     {
         public async Task<TResult> RedeemTokenAsync<TResult>(Uri providerId, string username, string accessToken,
-            Func<string, TResult> success, Func<string, TResult> invalidCredentials, Func<TResult> couldNotConnect)
+            Func<Guid, System.Security.Claims.Claim[], TResult> success, Func<string, TResult> invalidCredentials, Func<TResult> couldNotConnect)
         {
             var trustedProvider = Utilities.GetTrustedProviderId();
             var trimChars = new char[] { '/' };
@@ -21,7 +21,7 @@ namespace BlackBarLabs.Security.CredentialProvider.Voucher
                     if (authId.CompareTo(userNameId) != 0)
                         return invalidCredentials(
                             String.Format("authId:[{0}] does not match userNameId:[{1}]", authId, userNameId));
-                    return success(authId.ToString());
+                    return success(authId, null);
                 },
                 (errorMessage) => invalidCredentials(errorMessage),
                 (errorMessage) => invalidCredentials(errorMessage),

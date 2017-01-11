@@ -12,9 +12,9 @@ namespace BlackBarLabs.Security.AuthorizationServer
     public class Sessions
     {
         private Context context;
-        private SessionServer.Persistence.IDataContext dataContext;
+        private SessionServer.Persistence.Azure.DataContext dataContext;
 
-        internal Sessions(Context context, SessionServer.Persistence.IDataContext dataContext)
+        internal Sessions(Context context, SessionServer.Persistence.Azure.DataContext dataContext)
         {
             this.dataContext = dataContext;
             this.context = context;
@@ -29,12 +29,12 @@ namespace BlackBarLabs.Security.AuthorizationServer
             var refreshToken = BlackBarLabs.Security.SecureGuid.Generate().ToString("N");
             return await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, default(Guid),
                 () =>
-            {
-                var jwtToken = this.GenerateToken(sessionId, default(Guid), new Claim[] { });
-                return onSuccess.Invoke(default(Guid), jwtToken, refreshToken);
+                {
+                    var jwtToken = this.GenerateToken(sessionId, default(Guid), new Claim[] { });
+                    return onSuccess.Invoke(default(Guid), jwtToken, refreshToken);
                 },
                 () => alreadyExists());
-            }
+        }
 
         public async Task<T> CreateAsync<T>(Guid sessionId,
             CredentialValidationMethodTypes method, Uri providerId, string username, string token,
@@ -94,21 +94,15 @@ namespace BlackBarLabs.Security.AuthorizationServer
 
         private async Task<T> AuthenticateCredentialsAsync<T>(
             CredentialValidationMethodTypes method, Uri providerId, string username, string token,
-            Func<Guid, SessionServer.Persistence.Claim[], T> onSuccess, Func<string, T> onAuthIdNotFound, Func<T> onInvalidCredential)
+            Func<Guid, Claim[], T> onSuccess, Func<string, T> onAuthIdNotFound, Func<T> onInvalidCredential)
         {
             var provider = this.context.GetCredentialProvider(method);
-            return await await provider.RedeemTokenAsync(providerId, username, token,
-                async (accessToken) =>
+            return await provider.RedeemTokenAsync(providerId, username, token,
+                (authorizationId, claims) =>
                 {
-                    var result = await this.dataContext.Authorizations.FindAuthId(providerId, username,
-                        (authorizationId, claims) =>
-                        {
-                            return onSuccess(authorizationId, claims);
-                        },
-                        () => onAuthIdNotFound("Could not find auth Id for username: " + username));
-                    return result;
+                    return onSuccess(authorizationId, claims);
                 },
-                (errorMessage) => Task.FromResult(onAuthIdNotFound(errorMessage)),
+                (errorMessage) => onAuthIdNotFound(errorMessage),
                 () => { throw new Exception("Could not connect to auth system"); });
         }
 
@@ -120,7 +114,7 @@ namespace BlackBarLabs.Security.AuthorizationServer
 
         private string GenerateToken(Guid sessionId, Guid authorizationId, IEnumerable<Claim> claims)
         {
-            var tokenExpirationInMinutesConfig = ConfigurationManager.AppSettings["BlackBarLabs.Security.AuthorizationServer.tokenExpirationInMinutes"];
+            var tokenExpirationInMinutesConfig = ConfigurationManager.AppSettings["BlackBarLabs.Security.SessionServer.tokenExpirationInMinutes"];
             if (string.IsNullOrEmpty(tokenExpirationInMinutesConfig))
                 throw new SystemException("TokenExpirationInMinutes was not found in the configuration file");
             var tokenExpirationInMinutes = Double.Parse(tokenExpirationInMinutesConfig);
@@ -132,7 +126,8 @@ namespace BlackBarLabs.Security.AuthorizationServer
                 (token) => token,
                 (configName) => configName,
                 (configName, issue) => configName + ":" + issue,
-                "AuthServer.issuer", "AuthServer.key");
+                "BlackBarLabs.Security.SessionServer.issuer",
+                "BlackBarLabs.Security.SessionServer.key");
 
             return jwtToken;
         }

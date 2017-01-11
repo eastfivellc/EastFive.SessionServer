@@ -62,8 +62,8 @@
       <HintPath>..\packages\Microsoft.Data.Services.Client.5.6.4\lib\net40\Microsoft.Data.Services.Client.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Microsoft.WindowsAzure.Storage, Version=6.2.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\WindowsAzure.Storage.6.2.0\lib\net40\Microsoft.WindowsAzure.Storage.dll</HintPath>
+    <Reference Include="Microsoft.WindowsAzure.Storage, Version=6.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\WindowsAzure.Storage.6.1.0\lib\net40\Microsoft.WindowsAzure.Storage.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
@@ -94,6 +94,10 @@
     <Compile Include="Sessions.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\BlackBarLabs.Security.Session\BlackBarLabs.Security.Session.csproj">
+      <Project>{31C1C7F3-4F14-42BD-A90D-6B984E3643C4}</Project>
+      <Name>BlackBarLabs.Security.Session</Name>
+    </ProjectReference>
     <ProjectReference Include="..\BlackBarLabs.Security.SessionServer.Persistence\BlackBarLabs.Security.SessionServer.Persistence.csproj">
       <Project>{1d01bcaa-5639-4606-9fb4-48eb803601df}</Project>
       <Name>BlackBarLabs.Security.SessionServer.Persistence</Name>

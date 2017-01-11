@@ -63,6 +63,11 @@ namespace BlackBarLabs.Security.SessionServer.Persistence.Azure.Documents
                         () => failure());
         }
 
+        internal void AddProviders(AuthorizationProvider[] authorizationProviders)
+        {
+
+        }
+
         #endregion
 
     }

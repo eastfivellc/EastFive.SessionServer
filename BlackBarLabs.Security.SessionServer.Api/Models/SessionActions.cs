@@ -45,8 +45,8 @@ namespace BlackBarLabs.Security.SessionServer.Api
                 return await context.Sessions.CreateAsync(resource.Id,
                     resource.Credentials.Method, resource.Credentials.Provider, resource.Credentials.UserId, resource.Credentials.Token,
                     createSessionCallback,
-                    () => resource.Request.CreateResponse(HttpStatusCode.Conflict, "This session has already been created."),
-                    (message) => resource.Request.CreateResponse(HttpStatusCode.Conflict, message));
+                    () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("This session has already been created."),
+                    (message) => request.CreateResponse(HttpStatusCode.Conflict).AddReason(message));
 
             } catch(Exception ex)
             {

@@ -2,14 +2,14 @@
 
 namespace BlackBarLabs.Security.SessionServer.Persistence.Azure
 {
-    public class DataContext : BlackBarLabs.Persistence.Azure.DataStores, IDataContext
+    public class DataContext : BlackBarLabs.Persistence.Azure.DataStores
     {
         public DataContext(string appAzureTableStorageSettingsKey) : base(appAzureTableStorageSettingsKey)
         {
         }
 
         private Authorizations authorizations = null;
-        public IAuthorizations Authorizations
+        public Authorizations Authorizations
         {
             get
             {
@@ -20,7 +20,7 @@ namespace BlackBarLabs.Security.SessionServer.Persistence.Azure
         }
 
         private Sessions sessions = null;
-        public ISessions Sessions
+        public Sessions Sessions
         {
             get
             {

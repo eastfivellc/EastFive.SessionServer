@@ -4,7 +4,7 @@ using BlackBarLabs.Persistence.Azure.StorageTables;
 
 namespace BlackBarLabs.Security.SessionServer.Persistence.Azure
 {
-    internal class Sessions : Persistence.ISessions
+    public class Sessions
     {
         private AzureStorageRepository repository;
         public Sessions(AzureStorageRepository repository)
@@ -36,15 +36,21 @@ namespace BlackBarLabs.Security.SessionServer.Persistence.Azure
         }
 
         #endregion
-
-
-        public async Task UpdateAuthentication(Guid sessionId, Func<Guid, Guid> authIdFunc)
+        
+        public async Task<TResult> UpdateAuthentication<TResult>(Guid sessionId,
+            Func<Guid, Guid> authIdFunc,
+            Func<TResult> onSuccess,
+            Func<TResult> onNotFound)
         {
-            await repository.UpdateAtomicAsync<Documents.SessionDocument>(sessionId, (sessionDoc) =>
+            var r = await repository.UpdateAsync<Documents.SessionDocument, TResult>(sessionId,
+                async (sessionDoc, save) =>
                 {
                     sessionDoc.AuthorizationId = authIdFunc.Invoke(sessionDoc.AuthorizationId);
-                    return sessionDoc;
-                });
+                    await save(sessionDoc);
+                    return onSuccess();
+                },
+                () => onNotFound());
+            return r;
         }
 
         public async Task<TResult> UpdateAuthentication<TResult>(Guid sessionId,
