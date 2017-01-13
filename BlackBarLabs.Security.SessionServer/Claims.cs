@@ -4,7 +4,7 @@ using System.Linq;
 
 using BlackBarLabs.Collections.Async;
 
-namespace BlackBarLabs.Security.AuthorizationServer
+namespace BlackBarLabs.Security.SessionServer
 {
     public class Claims
     {

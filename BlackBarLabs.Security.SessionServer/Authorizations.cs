@@ -3,7 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using BlackBarLabs.Extensions;
-using BlackBarLabs.Security.AuthorizationServer;
+using BlackBarLabs.Security.SessionServer;
 using BlackBarLabs.Security.Session;
 
 namespace BlackBarLabs.Security.SessionServer
@@ -13,6 +13,14 @@ namespace BlackBarLabs.Security.SessionServer
         public string userId;
         public string secret;
         public bool isEmail;
+    }
+
+    public struct Claim
+    {
+        public Guid claimId;
+        public Uri issuer;
+        public Uri type;
+        public string value;
     }
 
     public class Authorizations

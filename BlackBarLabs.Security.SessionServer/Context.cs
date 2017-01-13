@@ -4,7 +4,7 @@ using System.Collections.Concurrent;
 using BlackBarLabs.Security.SessionServer;
 using BlackBarLabs.Security.Session;
 
-namespace BlackBarLabs.Security.AuthorizationServer
+namespace BlackBarLabs.Security.SessionServer
 {
     public class Context
     {

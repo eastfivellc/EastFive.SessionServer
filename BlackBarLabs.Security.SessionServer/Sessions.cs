@@ -7,7 +7,7 @@ using System.Linq;
 using BlackBarLabs.Collections.Generic;
 using BlackBarLabs.Security.Session;
 
-namespace BlackBarLabs.Security.AuthorizationServer
+namespace BlackBarLabs.Security.SessionServer
 {
     public class Sessions
     {
@@ -30,7 +30,7 @@ namespace BlackBarLabs.Security.AuthorizationServer
             return await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, default(Guid),
                 () =>
                 {
-                    var jwtToken = this.GenerateToken(sessionId, default(Guid), new Claim[] { });
+                    var jwtToken = this.GenerateToken(sessionId, default(Guid), new Dictionary<string, string>());
                     return onSuccess.Invoke(default(Guid), jwtToken, refreshToken);
                 },
                 () => alreadyExists());
@@ -49,7 +49,9 @@ namespace BlackBarLabs.Security.AuthorizationServer
                     var resultFound = await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, authorizationId,
                         () =>
                         {
-                            var jwtToken = GenerateToken(sessionId, authorizationId, claims);
+                            var jwtToken = GenerateToken(sessionId, authorizationId, claims
+                                .Select(claim =>new KeyValuePair<string, string>(claim.Type, claim.Value))
+                                .ToDictionary());
                             return onSuccess(authorizationId, jwtToken, refreshToken);
                         },
                         () => alreadyExists());
@@ -81,7 +83,9 @@ namespace BlackBarLabs.Security.AuthorizationServer
                                 return onAlreadyAuthenticated();
 
                             await saveAuthId(authorizationId);
-                            var jwtToken = GenerateToken(sessionId, authorizationId, claims);
+                            var jwtToken = GenerateToken(sessionId, authorizationId, claims
+                                .Select(claim => new KeyValuePair<string, string>(claim.Type, claim.Value))
+                                .ToDictionary());
                             return onSuccess.Invoke(authorizationId, jwtToken, string.Empty);
                         },
                         () => onNotFound("Error updating authentication"));
@@ -94,7 +98,9 @@ namespace BlackBarLabs.Security.AuthorizationServer
 
         private async Task<T> AuthenticateCredentialsAsync<T>(
             CredentialValidationMethodTypes method, Uri providerId, string username, string token,
-            Func<Guid, Claim[], T> onSuccess, Func<string, T> onAuthIdNotFound, Func<T> onInvalidCredential)
+            Func<Guid, System.Security.Claims.Claim[], T> onSuccess, 
+            Func<string, T> onAuthIdNotFound, 
+            Func<T> onInvalidCredential)
         {
             var provider = this.context.GetCredentialProvider(method);
             return await provider.RedeemTokenAsync(providerId, username, token,
@@ -106,13 +112,13 @@ namespace BlackBarLabs.Security.AuthorizationServer
                 () => { throw new Exception("Could not connect to auth system"); });
         }
 
-        private string GenerateToken(Guid sessionId, Guid authorizationId, SessionServer.Persistence.Claim [] claims)
-        {
-            var jwtClaims = GetClaims(sessionId, authorizationId, claims);
-            return GenerateToken(sessionId, authorizationId, jwtClaims);
-        }
+        //private string GenerateToken(Guid sessionId, Guid authorizationId, SessionServer.Persistence.Claim [] claims)
+        //{
+        //    var jwtClaims = GetClaims(sessionId, authorizationId, claims);
+        //    return GenerateToken(sessionId, authorizationId, jwtClaims);
+        //}
 
-        private string GenerateToken(Guid sessionId, Guid authorizationId, IEnumerable<Claim> claims)
+        private string GenerateToken(Guid sessionId, Guid authorizationId, Dictionary<string, string> claims)
         {
             var tokenExpirationInMinutesConfig = ConfigurationManager.AppSettings["BlackBarLabs.Security.SessionServer.tokenExpirationInMinutes"];
             if (string.IsNullOrEmpty(tokenExpirationInMinutesConfig))
@@ -122,7 +128,7 @@ namespace BlackBarLabs.Security.AuthorizationServer
             var jwtToken = Security.Tokens.JwtTools.CreateToken(
                 sessionId, new Uri("http://example.com/Auth"),
                 TimeSpan.FromMinutes(tokenExpirationInMinutes),
-                claims.Select(claim => new KeyValuePair<string, string>(claim.Type, claim.Value)).ToDictionary(),
+                claims,
                 (token) => token,
                 (configName) => configName,
                 (configName, issue) => configName + ":" + issue,
@@ -132,22 +138,22 @@ namespace BlackBarLabs.Security.AuthorizationServer
             return jwtToken;
         }
 
-        private IEnumerable<Claim> GetClaims(Guid sessionId, Guid authorizationId, SessionServer.Persistence.Claim [] claims)
-        {
-            var claimsDefault = (IEnumerable<Claim>)new[] {
-                new Claim(ClaimIds.Session, sessionId.ToString()),
-                new Claim(ClaimIds.Authorization, authorizationId.ToString()) };
+        //private IEnumerable<Claim> GetClaims(Guid sessionId, Guid authorizationId, SessionServer.Persistence.Claim [] claims)
+        //{
+        //    var claimsDefault = (IEnumerable<Claim>)new[] {
+        //        new Claim(ClaimIds.Session, sessionId.ToString()),
+        //        new Claim(ClaimIds.Authorization, authorizationId.ToString()) };
 
-            var claimsExtra = claims.Select(
-                (claim) => 
-                {
-                    var typeString = claim.type == default(Uri) ? string.Empty : claim.type.AbsoluteUri;
-                    var issuerString = claim.issuer == default(Uri) ? string.Empty : claim.issuer.AbsoluteUri;
-                    return new Claim(typeString, claim.value, "string", issuerString);
-                })
-                .ToArray();
+        //    var claimsExtra = claims.Select(
+        //        (claim) => 
+        //        {
+        //            var typeString = claim.type == default(Uri) ? string.Empty : claim.type.AbsoluteUri;
+        //            var issuerString = claim.issuer == default(Uri) ? string.Empty : claim.issuer.AbsoluteUri;
+        //            return new Claim(typeString, claim.value, "string", issuerString);
+        //        })
+        //        .ToArray();
 
-            return claimsDefault.Concat(claimsExtra);
-        }
+        //    return claimsDefault.Concat(claimsExtra);
+        //}
     }
 }

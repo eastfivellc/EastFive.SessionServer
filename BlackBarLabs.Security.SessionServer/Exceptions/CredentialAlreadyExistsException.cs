@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace BlackBarLabs.Security.AuthorizationServer.Exceptions
+namespace BlackBarLabs.Security.SessionServer.Exceptions
 {
     public class CredentialAlreadyExistsException : Exception
     {

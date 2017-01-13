@@ -98,10 +98,6 @@
       <Project>{31C1C7F3-4F14-42BD-A90D-6B984E3643C4}</Project>
       <Name>BlackBarLabs.Security.Session</Name>
     </ProjectReference>
-    <ProjectReference Include="..\BlackBarLabs.Security.SessionServer.Persistence\BlackBarLabs.Security.SessionServer.Persistence.csproj">
-      <Project>{1d01bcaa-5639-4606-9fb4-48eb803601df}</Project>
-      <Name>BlackBarLabs.Security.SessionServer.Persistence</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>

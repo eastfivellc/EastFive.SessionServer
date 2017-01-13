@@ -53,6 +53,23 @@ namespace BlackBarLabs.Security.SessionServer.Persistence.Azure
             return r;
         }
 
+        /// <summary>
+        /// Task&ltTResult&gt found(AuthorizationId, saveAuthId(updatedAuthId))
+        /// </summary>
+        /// <example>
+        /// UpdateAuthentication<T>(sessionId,
+        ///     async(authId, saveAuthId) =>
+        ///     {
+        ///         await saveAuthId(authorizationId);
+        ///         await true.ToTask(),
+        ///     }
+        ///     () => onNotFound("Error updating authentication"));
+        /// </example>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="sessionId"></param>
+        /// <param name="found"></param>
+        /// <param name="notFound"></param>
+        /// <returns></returns>
         public async Task<TResult> UpdateAuthentication<TResult>(Guid sessionId,
             Func<Guid, Func<Guid, Task>, Task<TResult>> found,
             Func<TResult> notFound)

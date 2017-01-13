@@ -17,14 +17,6 @@ namespace BlackBarLabs.Security.SessionServer.Persistence.Azure
         public Uri provider;
     }
 
-    public struct Claim
-    {
-        public Guid claimId;
-        public Uri issuer;
-        public Uri type;
-        public string value;
-    }
-
     public class Authorizations
     {
         private AzureStorageRepository repository;

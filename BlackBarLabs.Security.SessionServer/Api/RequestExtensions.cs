@@ -9,9 +9,9 @@ namespace BlackBarLabs.Security.SessionServer
 {
     internal static class RequestExtensions
     {
-        internal static AuthorizationServer.Context GetSessionServerContext(this HttpRequestMessage request)
+        internal static SessionServer.Context GetSessionServerContext(this HttpRequestMessage request)
         {
-            var context = new AuthorizationServer.Context(() => new DataContext("Azure.Authorization.Storage"),
+            var context = new SessionServer.Context(() => new DataContext("Azure.Authorization.Storage"),
                 (credentialValidationMethodType) =>
                 {
                     switch (credentialValidationMethodType)
