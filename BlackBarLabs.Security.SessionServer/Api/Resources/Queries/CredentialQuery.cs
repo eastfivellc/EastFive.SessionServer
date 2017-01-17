@@ -6,7 +6,7 @@ using BlackBarLabs.Api.Resources;
 namespace EastFive.Security.SessionServer.Api.Resources.Queries
 {
     [DataContract]
-    public class Credential : BlackBarLabs.Api.ResourceQueryBase
+    public class CredentialQuery : BlackBarLabs.Api.ResourceQueryBase
     {
         #region Properties
         

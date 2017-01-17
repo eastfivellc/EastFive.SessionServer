@@ -43,22 +43,29 @@ namespace EastFive.Security.SessionServer
             CreateSessionAlreadyExistsDelegate<T> alreadyExists,
             Func<string, T> invalidCredentials,
             Func<T> authIdNotFound,
+            Func<T> credentialNotInSystem,
             Func<string, T> systemOffline)
         {
             var result = await await AuthenticateCredentialsAsync(method, token,
                 async (authorizationId, claims) =>
                 {
-                    var refreshToken = BlackBarLabs.Security.SecureGuid.Generate().ToString("N");
-                    var resultFound = await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, authorizationId,
-                        () =>
+                    // Convert authentication unique ID to Actor ID
+                    return await await dataContext.Authorizations.LookupCredentialMappingAsync(authorizationId,
+                        async (actorId) =>
                         {
-                            var jwtToken = GenerateToken(sessionId, authorizationId, claims
-                                .Select(claim =>new KeyValuePair<string, string>(claim.Type, claim.Value))
-                                .ToDictionary());
-                            return onSuccess(authorizationId, jwtToken, refreshToken);
+                            var refreshToken = BlackBarLabs.Security.SecureGuid.Generate().ToString("N");
+                            var resultFound = await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, actorId,
+                                () =>
+                                {
+                                    var jwtToken = GenerateToken(sessionId, actorId, claims
+                                        .Select(claim => new KeyValuePair<string, string>(claim.Type, claim.Value))
+                                        .ToDictionary());
+                                    return onSuccess(actorId, jwtToken, refreshToken);
+                                },
+                                () => alreadyExists());
+                            return resultFound;
                         },
-                        () => alreadyExists());
-                    return resultFound;
+                        () => credentialNotInSystem().ToTask());
                 },
                 (why) => invalidCredentials(why).ToTask(),
                 () => authIdNotFound().ToTask(),

@@ -16,7 +16,7 @@ namespace EastFive.Security.SessionServer.Api
     {
         #region Actionables
 
-        public static async Task<HttpResponseMessage> QueryAsync(this Resources.Queries.Credential credential,
+        public static async Task<HttpResponseMessage> QueryAsync(this Resources.Queries.CredentialQuery credential,
             HttpRequestMessage request)
         {
             return await credential.ParseAsync(request,
@@ -36,25 +36,25 @@ namespace EastFive.Security.SessionServer.Api
         public static async Task<HttpResponseMessage> CreateAsync(this Resources.Credential credential,
             HttpRequestMessage request)
         {
-            return await request.GetClaims(
-                async (claims) =>
-                {
+            //return await request.GetClaims(
+            //    async (claims) =>
+            //    {
+            var claims = new System.Security.Claims.Claim[] { };
                     var context = request.GetSessionServerContext();
                     var creationResults = await context.Authorizations.CreateCredentialsAsync(credential.AuthorizationId.UUID,
+                        credential.Method,
                         credential.UserId, credential.IsEmail, credential.Token, credential.ForceChange,
                         claims.ToArray(),
                         () => request.CreateResponse(HttpStatusCode.Created, credential),
                         (why) => request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Authentication failed:{why}"),
-                        () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("Authorization does not exist"),
-                        (alreadyAssociatedAuthId) =>
+                        () =>
                         {
-                            var alreadyAssociatedAuthIdUrl = (string)"";
-                            return request.CreateResponse(HttpStatusCode.Conflict, alreadyAssociatedAuthIdUrl);
+                            return request.CreateResponse(HttpStatusCode.Conflict).AddReason("Credential is already associated with an actor.");
                         });
                     return creationResults;
-                },
-                () => request.CreateResponse(HttpStatusCode.Unauthorized).ToTask(),
-                (why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why).ToTask());
+                //},
+                //() => request.CreateResponse(HttpStatusCode.Unauthorized).ToTask(),
+                //(why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why).ToTask());
         }
 
         public static async Task<HttpResponseMessage> PutAsync(this Resources.Credential credential,
@@ -69,7 +69,7 @@ namespace EastFive.Security.SessionServer.Api
             return creationResults;
         }
 
-        public static Task<HttpResponseMessage> DeleteAsync(this Resources.Queries.Credential credential,
+        public static Task<HttpResponseMessage> DeleteAsync(this Resources.Queries.CredentialQuery credential,
             HttpRequestMessage request)
         {
             return request

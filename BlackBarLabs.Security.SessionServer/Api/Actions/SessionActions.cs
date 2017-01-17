@@ -48,6 +48,7 @@ namespace EastFive.Security.SessionServer.Api
                     () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("This session has already been created."),
                     (why) => request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Invalid credential in token:{why}"),
                     () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("Account associated with that token is not associated with this system"),
+                    () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("Account associated with that token is not associated with a user in this system"),
                     (why) => request.CreateResponse(HttpStatusCode.BadGateway).AddReason(why));
 
             } catch(Exception ex)

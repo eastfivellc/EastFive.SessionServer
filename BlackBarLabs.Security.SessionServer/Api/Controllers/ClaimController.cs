@@ -4,7 +4,7 @@ using System.Web.Http;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
-    public class ClaimController : BlackBarLabs.Api.Controllers.BaseController
+    public class ClaimController : BaseController
     {
         public IHttpActionResult Get([FromUri]Resources.Claim model)
         {

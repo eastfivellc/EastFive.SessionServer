@@ -7,8 +7,8 @@
     <ProjectGuid>{E2F3FCFB-89C8-47B3-B3D2-AE35E52A84FA}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>BlackBarLabs.Security.SessionServer</RootNamespace>
-    <AssemblyName>BlackBarLabs.Security.SessionServer</AssemblyName>
+    <RootNamespace>EastFive.Security.SessionServer</RootNamespace>
+    <AssemblyName>EastFive.Security.SessionServer</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
@@ -33,7 +33,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="BlackBarLabs.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
@@ -177,15 +177,15 @@
   <ItemGroup>
     <Compile Include="Api\Actions\ClaimActions.cs" />
     <Compile Include="Api\Constants.cs" />
-    <Compile Include="Api\Controllers\AuthorizationController.cs" />
     <Compile Include="Api\Controllers\AuthorizeController.cs" />
+    <Compile Include="Api\Controllers\BaseController.cs" />
     <Compile Include="Api\Controllers\ClaimController.cs" />
     <Compile Include="Api\Controllers\CredentialController.cs" />
     <Compile Include="Api\Controllers\SessionController.cs" />
     <Compile Include="Api\RequestExtensions.cs" />
     <Compile Include="Api\Resources\AuthHeaderProps.cs" />
     <Compile Include="Api\Controllers\AccountLinksController.cs" />
-    <Compile Include="Api\Resources\Queries\Credential.cs" />
+    <Compile Include="Api\Resources\Queries\CredentialQuery.cs" />
     <Compile Include="CredentialProviders\AzureADB2C\AzureADB2CProvider.cs" />
     <Compile Include="LoginProvider.cs" />
     <Compile Include="IProvideLogin.cs" />
@@ -203,7 +203,7 @@
     <Compile Include="Api\Actions\AuthorizationActions.cs" />
     <Compile Include="Api\Actions\AuthorizeActions.cs" />
     <Compile Include="Api\Actions\SessionActions.cs" />
-    <Compile Include="Persistence\Documents\AuthorizationCheck.cs" />
+    <Compile Include="Persistence\Documents\CredentialMappingDocument.cs" />
     <Compile Include="Persistence\Documents\AuthorizationDocument.cs" />
     <Compile Include="Persistence\Documents\ClaimDocument.cs" />
     <Compile Include="Persistence\Documents\DataContext.cs" />

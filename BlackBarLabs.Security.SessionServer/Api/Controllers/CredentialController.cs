@@ -4,7 +4,7 @@ using System.Web.Http;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
-    public class CredentialController : BlackBarLabs.Api.Controllers.BaseController
+    public class CredentialController : BaseController
     {
         public IHttpActionResult Post([FromBody]Resources.Credential model)
         {
@@ -16,12 +16,12 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             return new HttpActionResult(() => model.PutAsync(this.Request));
         }
 
-        public IHttpActionResult Delete([FromBody]Resources.Queries.Credential model)
+        public IHttpActionResult Delete([FromBody]Resources.Queries.CredentialQuery model)
         {
             return new HttpActionResult(() => model.DeleteAsync(this.Request));
         }
 
-        public IHttpActionResult Get([FromUri]Resources.Queries.Credential model)
+        public IHttpActionResult Get([FromUri]Resources.Queries.CredentialQuery model)
         {
             return new HttpActionResult(() => model.QueryAsync(this.Request));
         }

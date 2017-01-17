@@ -9,7 +9,7 @@ using BlackBarLabs.Extensions;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
-    public class SessionController : BlackBarLabs.Api.Controllers.BaseController
+    public class SessionController : BaseController
     {
         public IHttpActionResult Get()
         {

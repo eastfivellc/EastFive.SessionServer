@@ -2,13 +2,8 @@
 
 namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
 {
-    internal class AuthorizationCheck : Microsoft.WindowsAzure.Storage.Table.TableEntity
+    internal class CredentialMappingDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
     {
-        #region Constructors
-        public AuthorizationCheck() { }
-
-        #endregion
-
         #region Properties
         
         public Guid AuthId { get; set; }

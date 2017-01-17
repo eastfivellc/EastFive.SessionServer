@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 using BlackBarLabs;
+using BlackBarLabs.Extensions;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
@@ -31,18 +32,24 @@ namespace EastFive.Security.SessionServer.Api.Controllers
     }
 
     [RoutePrefix("aadb2c")]
-    public class AccountLinksController : ApiController
+    public class AccountLinksController : BaseController
     {
         public static string SignupEndpoint;
         public static string SigninEndpoint;
         public static string Audience;
 
         [HttpGet]
-        public IHttpActionResult Get([FromUri]AccountLinksQuery q)
+        public async Task<IHttpActionResult> Get([FromUri]AccountLinksQuery q)
         {
             var response_mode = q.response_mode;
             var redirect_uri = q.redirect_uri;
             
+            if(String.IsNullOrWhiteSpace(AccountLinksController.SigninEndpoint))
+            {
+                var loginProvider = BaseController.GetLoginProvider();
+                await loginProvider.InitializeAsync();
+            }
+
             return this.Request.CreateResponse(System.Net.HttpStatusCode.OK,
                 new AccountLinks
                 {
@@ -57,17 +64,19 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             var query = HttpUtility.ParseQueryString(uriBuilder.Query);
             query["client_id"] = AccountLinksController.Audience;
             query["response_type"] = "id_token";
-            query["redirect_uri"] = String.IsNullOrWhiteSpace(redirect_uri) ?
+            query["redirect_uri"] =
                 this.Url.GetLocation<OpenIdResponseController>(
                     typeof(OpenIdResponseController)
                         .GetCustomAttributes<RoutePrefixAttribute>()
                         .Select(routePrefix => routePrefix.Prefix)
-                        .First()).AbsoluteUri
-                :
-                redirect_uri;
-            query["response_mode"] = String.IsNullOrWhiteSpace(response_mode) ? "form_post" : response_mode;
+                        .First()).AbsoluteUri;
+            query["response_mode"] = "form_post";
             query["scope"] = "openid";
-            query["state"] = Guid.NewGuid().ToString("N");
+
+            var bytes = System.Text.Encoding.ASCII.GetBytes(redirect_uri);
+            var base64 = Convert.ToBase64String(bytes);
+
+            query["state"] = base64; //  redirect_uri.Base64(System.Text.Encoding.ASCII);
             query["nonce"] = Guid.NewGuid().ToString("N");
             // query["p"] = "B2C_1_signin1";
             uriBuilder.Query = query.ToString();

@@ -36,25 +36,25 @@ namespace EastFive.Security.SessionServer
         
         
         public async Task<TResult> CreateCredentialsAsync<TResult>(Guid actorId,
+            CredentialValidationMethodTypes method,
             string username, bool isEmail, string token, bool forceChange,
             System.Security.Claims.Claim [] claims,
             Func<TResult> success,
             Func<string, TResult> authenticationFailed,
-            Func<TResult> authorizationDoesNotExists,
-            Func<Guid, TResult> alreadyAssociated)
+            Func<TResult> alreadyAssociated)
         {
-            // ... validates the provider credentials before accepting / storing them.
-            //var result = await this.context.LoginProvider.CreateLoginAsync(String.Empty, username, isEmail, token, forceChange,
-            //    async (loginId) =>
-            //    {
-            //        return await this.dataContext.Authorizations.CreateCredentialProviderAsync(loginId,
-            //                actorId,
-            //            () => success(),
-            //            () => authorizationDoesNotExists(),
-            //            (alreadyAssociatedAuthorizationId) => alreadyAssociated(alreadyAssociatedAuthorizationId));
-            //    },
-            //    (why) => authenticationFailed(why).ToTask());
-            //return result;
+            if (method == CredentialValidationMethodTypes.AzureADB2C)
+            {
+                var result = await await this.context.LoginProvider.CreateLoginAsync("User", username, isEmail, token, forceChange,
+                    async (loginId) =>
+                    {
+                        return await this.dataContext.Authorizations.CreateCredentialAsync(loginId, actorId,
+                            () => success(),
+                            () => alreadyAssociated());
+                    },
+                    (why) => authenticationFailed(why).ToTask());
+                return result;
+            }
             throw new NotImplementedException();
         }
 

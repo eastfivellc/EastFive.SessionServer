@@ -19,7 +19,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
     }
 
     [RoutePrefix("aadb2c")]
-    public class OpenIdResponseController : ApiController
+    public class OpenIdResponseController : BaseController
     {
         public async Task<IHttpActionResult> Post(OpenIdConnectResult result)
         {
@@ -27,13 +27,18 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             var response = context.Sessions.CreateAsync(Guid.NewGuid(), CredentialValidationMethodTypes.AzureADB2C, result.id_token,
                 (authorizationId, token, refreshToken) =>
                 {
+                    var bytes = Convert.FromBase64String(result.state);
+                    var addr = System.Text.Encoding.ASCII.GetString(bytes);
+                    
                     var responseRedir = this.Request.CreateResponse(HttpStatusCode.Redirect);
-                    responseRedir.Headers.Location = new Uri("http://example.com");
+                    responseRedir.Headers.Location = new Uri(
+                        $"{addr}?authoriationId={authorizationId}&token={token}&refreshToken={refreshToken}");
                     return responseRedir;
                 },
                 () => this.Request.CreateResponse(HttpStatusCode.Conflict).AddReason("Already exists"),
                 (why) => this.Request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Invalid token:{why}"),
                 () => this.Request.CreateResponse(HttpStatusCode.Conflict).AddReason("Token does not work in this system"),
+                () => this.Request.CreateResponse(HttpStatusCode.Conflict).AddReason("Token is not connected to a user in this system"),
                 (why) => this.Request.CreateResponse(HttpStatusCode.BadGateway).AddReason(why));
 
             return new HttpActionResult(() => response);

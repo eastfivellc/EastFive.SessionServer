@@ -35,42 +35,7 @@ namespace EastFive.Security.SessionServer.Persistence.Azure
             var md5Hash = GetMd5Hash(md5, concatination);
             return md5Hash;
         }
-
-        public async Task<T> FindAuthId<T>(Uri providerId, string username,
-            Func<Guid, Claim[], T> onSuccess, Func<T> onFailure)
-        {
-            var authCheckId = GetRowKey(providerId, username);
-            var result = await await repository.FindByIdAsync(authCheckId,
-                async (Documents.AuthorizationCheck document) =>
-                {
-                    return await await repository.FindByIdAsync(document.AuthId,
-                        async (Documents.AuthorizationDocument authorizationDocument) =>
-                        {
-                            var claims = await authorizationDocument.GetClaims(repository);
-                            return onSuccess(document.AuthId, claims);
-                        },
-                        () =>
-                        {
-                            // TODO: Log data inconsistency exception
-                            return onFailure().ToTask();
-                        });
-                },
-                () => Task.FromResult(onFailure()));
-            return result;
-        }
-
-        public async Task<bool> DoesMatchAsync(Guid authorizationId, Uri providerId, string username)
-        {
-            var md5Hash = GetRowKey(providerId, username);
-            var result = await repository.FindByIdAsync(md5Hash,
-                (Documents.AuthorizationCheck doc) =>
-                {
-                    return doc.AuthId == authorizationId;
-                },
-                () => false);
-            return result;
-        }
-
+        
         public Task<TResult> UpdateCredentialTokenAsync<TResult>(Guid authorizationId, Uri providerId, string username, Uri[] claimsProviders,
             Func<TResult> success, Func<TResult> authorizationDoesNotExists, Func<Guid, TResult> alreadyAssociated)
         {
@@ -102,50 +67,27 @@ namespace EastFive.Security.SessionServer.Persistence.Azure
             return new Guid(data);
         }
 
-        public async Task<TResult> CreateCredentialProviderAsync<TResult>(Guid loginId, Guid actorId,
+        public async Task<TResult> CreateCredentialAsync<TResult>(Guid loginId, Guid actorId,
             Func<TResult> success,
-            Func<TResult> authorizationDoesNotExists,
-            Func<Guid, TResult> alreadyAssociated)
+            Func<TResult> onAlreadyExists)
         {
-            throw new NotImplementedException();
-            //var authorization = new Documents.AuthorizationCheck
-            //{
-            //    AuthId = loginId,
-            //};
-            //var result = repository.CreateAsync(loginId, authorization,
-            //    async () =>
-            //    {
-            //        repository.FindByIdAsync()
-            //    },
-            //    async () =>
-            //    {
-            //        return await repository.FindByIdAsync(loginId,
-            //            (Documents.AuthorizationCheck doc) =>
-            //            {
+            var document = new Documents.CredentialMappingDocument
+            {
+                AuthId = actorId,
+            };
+            return await repository.CreateAsync(loginId, document,
+                () => success(),
+                () => onAlreadyExists());
+        }
 
-            //            });
-            //    });
-            //return result;
-            //return await await repository.FindByIdAsync(loginId,
-            //    async (Documents.AuthorizationDocument authorizationStored) =>
-            //    {
-            //        var authorizationCheckId = GetRowKey(providerId, username);
-            //        var authorizationDocument = new Documents.AuthorizationCheck
-            //        {
-            //            AuthId = authorizationId,
-            //        };
-            //        return await await await repository.CreateAsync(authorizationCheckId, authorizationDocument,
-            //            () => Task.FromResult(Task.FromResult(success())),
-            //            () =>
-            //            {
-            //                return repository.FindByIdAsync(authorizationCheckId,
-            //                    (Documents.AuthorizationCheck authorizationCheckDocument) =>
-            //                        Task.FromResult(alreadyAssociated(authorizationCheckDocument.AuthId)),
-            //                    () => CreateCredentialProviderAsync(authorizationId, providerId, username,
-            //                            success, authorizationDoesNotExists, alreadyAssociated));
-            //            });
-            //    },
-            //    () => Task.FromResult(authorizationDoesNotExists()));
+
+        public async Task<TResult> LookupCredentialMappingAsync<TResult>(Guid loginId,
+            Func<Guid, TResult> onSuccess,
+            Func<TResult> onNotExist)
+        {
+            return await repository.FindByIdAsync(loginId,
+                (Documents.CredentialMappingDocument document) => onSuccess(document.AuthId),
+                () => onNotExist());
         }
 
         /// <summary>

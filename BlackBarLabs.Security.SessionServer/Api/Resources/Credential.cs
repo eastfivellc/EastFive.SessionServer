@@ -25,6 +25,9 @@ namespace EastFive.Security.SessionServer.Api.Resources
         [DataMember]
         public bool ForceChange { get; set; }
 
+        [DataMember]
+        public CredentialValidationMethodTypes Method { get; set; }
+
         #endregion
     }
 }
