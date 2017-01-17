@@ -2,20 +2,20 @@
 using System.Web.Http;
 using System.Threading.Tasks;
 
-using BlackBarLabs.Security.Session;
 using BlackBarLabs.Api;
+using System.Net.Http;
+using System.Net;
+using BlackBarLabs.Extensions;
 
-namespace BlackBarLabs.Security.SessionServer.Api.Controllers
+namespace EastFive.Security.SessionServer.Api.Controllers
 {
-    public class SessionController : BaseController
+    public class SessionController : BlackBarLabs.Api.Controllers.BaseController
     {
-        public IHttpActionResult Get([FromUri]Resources.SessionGet query)
+        public IHttpActionResult Get()
         {
-            if (default(Resources.SessionGet) == query)
-                query = new Resources.SessionGet();
-
-            query.Request = this.Request;
-            return query;
+            return new HttpActionResult(() => this.Request.CreateResponse(HttpStatusCode.Unauthorized)
+                .AddReason("Get not permitted on Session Resource")
+                .ToTask());
         }
         
         public async Task<IHttpActionResult> Post([FromBody]Resources.Session model)
@@ -23,10 +23,9 @@ namespace BlackBarLabs.Security.SessionServer.Api.Controllers
             return (await model.CreateAsync(this.Request)).ToActionResult();
         }
         
-        public IHttpActionResult Put([FromBody]Resources.SessionPut model)
+        public IHttpActionResult Put([FromBody]Resources.Session model)
         {
-            model.Request = Request;
-            return model;
+            return new HttpActionResult(() => model.UpdateAsync(this.Request));
         }
         
         public IHttpActionResult Options(Nullable<Guid> Id = default(Nullable<Guid>))
@@ -53,14 +52,7 @@ namespace BlackBarLabs.Security.SessionServer.Api.Controllers
                 {
                     Id = Id.Value,
                     AuthorizationId = authId,
-                    Credentials = new Resources.Credential()
-                    {
-                        Method = CredentialValidationMethodTypes.Facebook,
-                        Provider = new Uri("urn:facebook.com/Auth"),
-                        UserId = "0123455690",
-                        Token = "ABC.123.U_AND_ME"
-                    },
-                    SessionHeader = new AuthHeaderProps
+                    SessionHeader = new Resources.AuthHeaderProps
                     {
                         Name = "Authorization",
                         Value = jwtToken,

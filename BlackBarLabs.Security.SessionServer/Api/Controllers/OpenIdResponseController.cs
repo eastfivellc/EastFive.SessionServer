@@ -3,12 +3,13 @@ using BlackBarLabs.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 
-namespace BlackBarLabs.Security.SessionServer.Api.Controllers
+namespace EastFive.Security.SessionServer.Api.Controllers
 {
     public class OpenIdConnectResult
     {
@@ -22,27 +23,20 @@ namespace BlackBarLabs.Security.SessionServer.Api.Controllers
     {
         public async Task<IHttpActionResult> Post(OpenIdConnectResult result)
         {
-            var idToken = result.id_token;
-            return (await await CredentialProvider.AzureADB2C.AzureADB2CProvider.RedeemTokenInternalAsync(idToken,
-                async (authId, claims) =>
+            var context = this.Request.GetSessionServerContext();
+            var response = context.Sessions.CreateAsync(Guid.NewGuid(), CredentialValidationMethodTypes.AzureADB2C, result.id_token,
+                (authorizationId, token, refreshToken) =>
                 {
-                    await Library.PostAuthEvent(authId, claims);
-
-                    return this.Request.CreateResponse(System.Net.HttpStatusCode.Created,
-                        new Resources.Session
-                        {
-                            Id = Guid.NewGuid(),
-                            AuthorizationId = authId,
-                            Credentials = new Resources.Credential
-                            {
-                                Method = Session.CredentialValidationMethodTypes.AzureADB2C,
-                                Token = idToken,
-                            },
-                        });
+                    var responseRedir = this.Request.CreateResponse(HttpStatusCode.Redirect);
+                    responseRedir.Headers.Location = new Uri("http://example.com");
+                    return responseRedir;
                 },
-                (why) => this.Request.CreateResponse(System.Net.HttpStatusCode.Conflict).AddReason(why).ToTask(),
-                () => this.Request.CreateResponse(System.Net.HttpStatusCode.ServiceUnavailable).ToTask()))
-            .ToActionResult();
+                () => this.Request.CreateResponse(HttpStatusCode.Conflict).AddReason("Already exists"),
+                (why) => this.Request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Invalid token:{why}"),
+                () => this.Request.CreateResponse(HttpStatusCode.Conflict).AddReason("Token does not work in this system"),
+                (why) => this.Request.CreateResponse(HttpStatusCode.BadGateway).AddReason(why));
+
+            return new HttpActionResult(() => response);
         }
     }
 }

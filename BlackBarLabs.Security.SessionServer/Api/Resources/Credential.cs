@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Linq;
 using System.Runtime.Serialization;
-using BlackBarLabs.Security.Session;
 using BlackBarLabs.Api.Resources;
 
-namespace BlackBarLabs.Security.SessionServer.Api.Resources
+namespace EastFive.Security.SessionServer.Api.Resources
 {
     [DataContract]
     public class Credential : BlackBarLabs.Api.ResourceBase
@@ -13,9 +12,6 @@ namespace BlackBarLabs.Security.SessionServer.Api.Resources
         
         [DataMember]
         public WebId AuthorizationId { get; set; }
-
-        [DataMember]
-        public CredentialValidationMethodTypes Method { get; set; }
         
         [DataMember]
         public string UserId { get; set; }
@@ -25,6 +21,9 @@ namespace BlackBarLabs.Security.SessionServer.Api.Resources
 
         [DataMember]
         public bool IsEmail { get; set; }
+
+        [DataMember]
+        public bool ForceChange { get; set; }
 
         #endregion
     }

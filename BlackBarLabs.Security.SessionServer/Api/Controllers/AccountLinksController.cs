@@ -8,8 +8,9 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
+using BlackBarLabs;
 
-namespace BlackBarLabs.Security.SessionServer.Api.Controllers
+namespace EastFive.Security.SessionServer.Api.Controllers
 {
     public class AccountLinks
     {
@@ -32,19 +33,21 @@ namespace BlackBarLabs.Security.SessionServer.Api.Controllers
     [RoutePrefix("aadb2c")]
     public class AccountLinksController : ApiController
     {
+        public static string SignupEndpoint;
+        public static string SigninEndpoint;
+        public static string Audience;
+
         [HttpGet]
-        public async Task<IHttpActionResult> Get([FromUri]AccountLinksQuery q)
+        public IHttpActionResult Get([FromUri]AccountLinksQuery q)
         {
             var response_mode = q.response_mode;
             var redirect_uri = q.redirect_uri;
-            if (String.IsNullOrWhiteSpace(Library.SigninEndpoint))
-                await Library.InitializeAsync(() => true, (why) => false);
             
             return this.Request.CreateResponse(System.Net.HttpStatusCode.OK,
                 new AccountLinks
                 {
-                    Login = GetUrl(Library.SigninEndpoint, redirect_uri, response_mode),
-                    Signup = GetUrl(Library.SignupEndpoint, redirect_uri, response_mode),
+                    Login = GetUrl(AccountLinksController.SigninEndpoint, redirect_uri, response_mode),
+                    Signup = GetUrl(AccountLinksController.SignupEndpoint, redirect_uri, response_mode),
                 }).ToActionResult();
         }
 
@@ -52,7 +55,7 @@ namespace BlackBarLabs.Security.SessionServer.Api.Controllers
         {
             var uriBuilder = new UriBuilder(longurl);
             var query = HttpUtility.ParseQueryString(uriBuilder.Query);
-            query["client_id"] = Library.Audience; // "51d61cbc-d8bd-4928-8abb-6e1bb3155526";
+            query["client_id"] = AccountLinksController.Audience;
             query["response_type"] = "id_token";
             query["redirect_uri"] = String.IsNullOrWhiteSpace(redirect_uri) ?
                 this.Url.GetLocation<OpenIdResponseController>(

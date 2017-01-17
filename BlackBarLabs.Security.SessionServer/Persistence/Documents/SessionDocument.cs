@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace BlackBarLabs.Security.SessionServer.Persistence.Azure.Documents
+namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
 {
     [Serializable]
     internal class SessionDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity

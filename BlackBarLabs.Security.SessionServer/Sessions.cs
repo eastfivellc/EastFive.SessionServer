@@ -1,20 +1,21 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Configuration;
 using System.Security.Claims;
 using System.Collections.Generic;
-using System.Linq;
-using BlackBarLabs.Collections.Generic;
-using BlackBarLabs.Security.Session;
 
-namespace BlackBarLabs.Security.SessionServer
+using BlackBarLabs.Collections.Generic;
+using BlackBarLabs.Extensions;
+
+namespace EastFive.Security.SessionServer
 {
     public class Sessions
     {
         private Context context;
-        private SessionServer.Persistence.Azure.DataContext dataContext;
+        private Persistence.Azure.DataContext dataContext;
 
-        internal Sessions(Context context, SessionServer.Persistence.Azure.DataContext dataContext)
+        internal Sessions(Context context, Persistence.Azure.DataContext dataContext)
         {
             this.dataContext = dataContext;
             this.context = context;
@@ -37,12 +38,14 @@ namespace BlackBarLabs.Security.SessionServer
         }
 
         public async Task<T> CreateAsync<T>(Guid sessionId,
-            CredentialValidationMethodTypes method, Uri providerId, string username, string token,
+            CredentialValidationMethodTypes method, string token,
             CreateSessionSuccessDelegate<T> onSuccess,
             CreateSessionAlreadyExistsDelegate<T> alreadyExists,
-            Func<string, T> invalidCredentials)
+            Func<string, T> invalidCredentials,
+            Func<T> authIdNotFound,
+            Func<string, T> systemOffline)
         {
-            var result = await await AuthenticateCredentialsAsync(method, providerId, username, token,
+            var result = await await AuthenticateCredentialsAsync(method, token,
                 async (authorizationId, claims) =>
                 {
                     var refreshToken = BlackBarLabs.Security.SecureGuid.Generate().ToString("N");
@@ -57,23 +60,25 @@ namespace BlackBarLabs.Security.SessionServer
                         () => alreadyExists());
                     return resultFound;
                 },
-                (errorMessage) => Task.FromResult(invalidCredentials(errorMessage)),
-                () => Task.FromResult(invalidCredentials("Credential failed")));
+                (why) => invalidCredentials(why).ToTask(),
+                () => authIdNotFound().ToTask(),
+                (why) => systemOffline(why).ToTask());
             return result;
         }
         
         public delegate T AuthenticateSuccessDelegate<T>(Guid authorizationId, string token, string refreshToken);
-        public delegate T AuthenticateInvalidCredentialsDelegate<T>();
         public delegate T AuthenticateAlreadyAuthenticatedDelegate<T>();
         public delegate T AuthenticateNotFoundDelegate<T>(string message);
         public async Task<T> AuthenticateAsync<T>(Guid sessionId,
-            CredentialValidationMethodTypes credentialValidationMethod, Uri credentialsProviderId, string username, string token,
+            CredentialValidationMethodTypes credentialValidationMethod, string token,
             AuthenticateSuccessDelegate<T> onSuccess,
-            AuthenticateInvalidCredentialsDelegate<T> onInvalidCredentials,
+            Func<string, T> onInvalidCredentials,
             AuthenticateAlreadyAuthenticatedDelegate<T> onAlreadyAuthenticated,
-            AuthenticateNotFoundDelegate<T> onNotFound)
+            Func<T> onAuthIdNotFound,
+            AuthenticateNotFoundDelegate<T> onNotFound,
+            Func<string, T> systemOffline)
         {
-            var result = await await AuthenticateCredentialsAsync(credentialValidationMethod, credentialsProviderId, username, token,
+            var result = await await AuthenticateCredentialsAsync(credentialValidationMethod, token,
                 async (authorizationId, claims) =>
                 {
                     var updateAuthResult = await this.dataContext.Sessions.UpdateAuthentication<T>(sessionId,
@@ -91,25 +96,28 @@ namespace BlackBarLabs.Security.SessionServer
                         () => onNotFound("Error updating authentication"));
                     return updateAuthResult;
                 },
-                (errorMessage) => Task.FromResult(onNotFound(errorMessage)),
-                () => Task.FromResult(onInvalidCredentials()));
+                (why) => onInvalidCredentials(why).ToTask(),
+                () => onAuthIdNotFound().ToTask(),
+                (why) => systemOffline(why).ToTask());
             return result;
         }
 
         private async Task<T> AuthenticateCredentialsAsync<T>(
-            CredentialValidationMethodTypes method, Uri providerId, string username, string token,
+            CredentialValidationMethodTypes method, string token,
             Func<Guid, System.Security.Claims.Claim[], T> onSuccess, 
-            Func<string, T> onAuthIdNotFound, 
-            Func<T> onInvalidCredential)
+            Func<string, T> onInvalidCredential,
+            Func<T> onAuthIdNotFound,
+            Func<string, T> systemUnavailable)
         {
             var provider = this.context.GetCredentialProvider(method);
-            return await provider.RedeemTokenAsync(providerId, username, token,
+            return await provider.RedeemTokenAsync(token,
                 (authorizationId, claims) =>
                 {
                     return onSuccess(authorizationId, claims);
                 },
-                (errorMessage) => onAuthIdNotFound(errorMessage),
-                () => { throw new Exception("Could not connect to auth system"); });
+                (why) => onInvalidCredential(why),
+                () => onAuthIdNotFound(),
+                (why) => systemUnavailable(why));
         }
 
         //private string GenerateToken(Guid sessionId, Guid authorizationId, SessionServer.Persistence.Claim [] claims)
@@ -125,7 +133,7 @@ namespace BlackBarLabs.Security.SessionServer
                 throw new SystemException("TokenExpirationInMinutes was not found in the configuration file");
             var tokenExpirationInMinutes = Double.Parse(tokenExpirationInMinutesConfig);
             
-            var jwtToken = Security.Tokens.JwtTools.CreateToken(
+            var jwtToken = BlackBarLabs.Security.Tokens.JwtTools.CreateToken(
                 sessionId, new Uri("http://example.com/Auth"),
                 TimeSpan.FromMinutes(tokenExpirationInMinutes),
                 claims,

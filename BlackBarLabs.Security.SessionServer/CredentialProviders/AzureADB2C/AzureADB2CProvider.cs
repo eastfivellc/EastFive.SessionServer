@@ -1,24 +1,36 @@
-﻿using BlackBarLabs.Security.CredentialProvider;
-using System;
+﻿using System;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
-namespace BlackBarLabs.Security.CredentialProvider.AzureADB2C
+using EastFive.Security.LoginProvider;
+
+namespace EastFive.Security.CredentialProvider.AzureADB2C
 {
-    public class AzureADB2CProvider : BlackBarLabs.Security.CredentialProvider.IProvideCredentials
+    public class AzureADB2CProvider : IProvideCredentials
     {
-        public Task<TResult> RedeemTokenAsync<TResult>(Uri providerId, string username, string id_token,
-            Func<Guid, System.Security.Claims.Claim[], TResult> success,
-            Func<string, TResult> invalidToken,
-            Func<TResult> couldNotConnect)
+        IProvideLogin loginProvider;
+
+        public AzureADB2CProvider(IProvideLogin loginProvider)
         {
-            return RedeemTokenInternalAsync(id_token, success, invalidToken, couldNotConnect);
+            this.loginProvider = loginProvider;
         }
 
-        public static async Task<TResult> RedeemTokenInternalAsync<TResult>(string id_token,
+        public Task<TResult> RedeemTokenAsync<TResult>(string token, 
+            Func<Guid, Claim[], TResult> success,
+            Func<string, TResult> invalidCredentials,
+            Func<TResult> onAuthIdNotFound, 
+            Func<string, TResult> couldNotConnect)
+        {
+            return RedeemTokenInternalAsync(token, success,
+                invalidCredentials,
+                couldNotConnect);
+        }
+        
+        public async Task<TResult> RedeemTokenInternalAsync<TResult>(string id_token,
             Func<Guid, System.Security.Claims.Claim[], TResult> success,
             Func<string, TResult> invalidToken,
-            Func<TResult> couldNotConnect)
+            Func<string, TResult> couldNotConnect)
         {
             //TODO - Validate the token with AAD B2C here
             //Surely there is a library for this.  Actually, the OWIN library does this.  Look in OO API's Startup.Auth.cs.
@@ -29,8 +41,8 @@ namespace BlackBarLabs.Security.CredentialProvider.AzureADB2C
             //This will return the rolling keys to validate the jwt signature
             //We will want to cache the key here and only go fetch again if the signature look up fails.  The keys rotate about every 24 hours.
 
-            return await SessionServer.Library.ValidateToken(id_token,
-                (token, claims) =>
+            return await loginProvider.ValidateToken(id_token,
+                (claims) =>
                 {
                     var claimType = Microsoft.Azure.CloudConfigurationManager.GetSetting(
                         "BlackBarLabs.Security.CredentialProvider.AzureADB2C.ClaimType");
@@ -48,17 +60,6 @@ namespace BlackBarLabs.Security.CredentialProvider.AzureADB2C
                 {
                     return invalidToken(why);
                 });
-        }
-
-        public Task<TResult> UpdateTokenAsync<TResult>(Uri providerId, string username, string token, Func<string, TResult> success, Func<TResult> doesNotExist,
-            Func<TResult> updateFailed)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<TResult> GetCredentialsAsync<TResult>(Uri providerId, string username, Func<string, TResult> success, Func<TResult> doesNotExist)
-        {
-            throw new NotImplementedException();
         }
     }
 }

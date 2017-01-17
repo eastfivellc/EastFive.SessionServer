@@ -5,7 +5,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
 
-namespace BlackBarLabs.Security.SessionServer
+namespace EastFive.Security.SessionServer
 {
     public static class AuthorizeActions
     {

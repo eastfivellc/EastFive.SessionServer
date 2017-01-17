@@ -2,9 +2,9 @@
 using System.Threading.Tasks;
 using System.Web.Http;
 
-namespace BlackBarLabs.Security.SessionServer.Api.Controllers
+namespace EastFive.Security.SessionServer.Api.Controllers
 {
-    public class AuthorizeController : BaseController
+    public class AuthorizeController : BlackBarLabs.Api.Controllers.BaseController
     {
         // POST: api/Order
         public async Task<IHttpActionResult> Post([FromBody]Resources.Authorize model)

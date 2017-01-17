@@ -4,7 +4,7 @@ using System.Linq;
 
 using BlackBarLabs.Collections.Async;
 
-namespace BlackBarLabs.Security.SessionServer
+namespace EastFive.Security.SessionServer
 {
     public class Claims
     {

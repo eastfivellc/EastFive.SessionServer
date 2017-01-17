@@ -6,9 +6,8 @@ using BlackBarLabs.Collections.Async;
 using BlackBarLabs.Persistence.Azure;
 using BlackBarLabs.Persistence.Azure.StorageTables;
 using BlackBarLabs.Extensions;
-using BlackBarLabs.Security.Session;
 
-namespace BlackBarLabs.Security.SessionServer.Persistence.Azure
+namespace EastFive.Security.SessionServer.Persistence.Azure
 {
     public struct AuthorizationProvider
     {
@@ -103,29 +102,50 @@ namespace BlackBarLabs.Security.SessionServer.Persistence.Azure
             return new Guid(data);
         }
 
-        public async Task<TResult> CreateCredentialProviderAsync<TResult>(Guid authorizationId, Uri providerId, string username,
-            Func<TResult> success, Func<TResult> authorizationDoesNotExists, Func<Guid, TResult> alreadyAssociated)
+        public async Task<TResult> CreateCredentialProviderAsync<TResult>(Guid loginId, Guid actorId,
+            Func<TResult> success,
+            Func<TResult> authorizationDoesNotExists,
+            Func<Guid, TResult> alreadyAssociated)
         {
-            return await await repository.FindByIdAsync(authorizationId,
-                async (Documents.AuthorizationDocument authorizationStored) =>
-                {
-                    var authorizationCheckId = GetRowKey(providerId, username);
-                    var authorizationDocument = new Documents.AuthorizationCheck
-                    {
-                        AuthId = authorizationId,
-                    };
-                    return await await await repository.CreateAsync(authorizationCheckId, authorizationDocument,
-                        () => Task.FromResult(Task.FromResult(success())),
-                        () =>
-                        {
-                            return repository.FindByIdAsync(authorizationCheckId,
-                                (Documents.AuthorizationCheck authorizationCheckDocument) =>
-                                    Task.FromResult(alreadyAssociated(authorizationCheckDocument.AuthId)),
-                                () => CreateCredentialProviderAsync(authorizationId, providerId, username,
-                                        success, authorizationDoesNotExists, alreadyAssociated));
-                        });
-                },
-                () => Task.FromResult(authorizationDoesNotExists()));
+            throw new NotImplementedException();
+            //var authorization = new Documents.AuthorizationCheck
+            //{
+            //    AuthId = loginId,
+            //};
+            //var result = repository.CreateAsync(loginId, authorization,
+            //    async () =>
+            //    {
+            //        repository.FindByIdAsync()
+            //    },
+            //    async () =>
+            //    {
+            //        return await repository.FindByIdAsync(loginId,
+            //            (Documents.AuthorizationCheck doc) =>
+            //            {
+
+            //            });
+            //    });
+            //return result;
+            //return await await repository.FindByIdAsync(loginId,
+            //    async (Documents.AuthorizationDocument authorizationStored) =>
+            //    {
+            //        var authorizationCheckId = GetRowKey(providerId, username);
+            //        var authorizationDocument = new Documents.AuthorizationCheck
+            //        {
+            //            AuthId = authorizationId,
+            //        };
+            //        return await await await repository.CreateAsync(authorizationCheckId, authorizationDocument,
+            //            () => Task.FromResult(Task.FromResult(success())),
+            //            () =>
+            //            {
+            //                return repository.FindByIdAsync(authorizationCheckId,
+            //                    (Documents.AuthorizationCheck authorizationCheckDocument) =>
+            //                        Task.FromResult(alreadyAssociated(authorizationCheckDocument.AuthId)),
+            //                    () => CreateCredentialProviderAsync(authorizationId, providerId, username,
+            //                            success, authorizationDoesNotExists, alreadyAssociated));
+            //            });
+            //    },
+            //    () => Task.FromResult(authorizationDoesNotExists()));
         }
 
         /// <summary>

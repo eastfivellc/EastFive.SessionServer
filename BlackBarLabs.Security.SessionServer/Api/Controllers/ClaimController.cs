@@ -1,29 +1,24 @@
-﻿using System;
-//using BlackBarLabs.Security.Tokens;
-using BlackBarLabs.Security.Session;
+﻿using BlackBarLabs.Api;
+using System;
 using System.Web.Http;
-using BlackBarLabs.Security.SessionServer.Api.Resources;
 
-namespace BlackBarLabs.Security.SessionServer.Api.Controllers
+namespace EastFive.Security.SessionServer.Api.Controllers
 {
-    public class ClaimController : BaseController
+    public class ClaimController : BlackBarLabs.Api.Controllers.BaseController
     {
-        public IHttpActionResult Get([FromUri]ClaimGet model)
+        public IHttpActionResult Get([FromUri]Resources.Claim model)
         {
-            model.Request = Request;
-            return model;
+            return new HttpActionResult(() => model.GetAsync(this.Request));
         }
 
-        public IHttpActionResult Post([FromBody]Resources.ClaimPost model)
+        public IHttpActionResult Post([FromBody]Resources.Claim model)
         {
-            model.Request = Request;
-            return model;
+            return new HttpActionResult(() => model.CreateAsync(this.Request));
         }
 
-        public IHttpActionResult Put([FromBody]Resources.ClaimPut model)
+        public IHttpActionResult Put([FromBody]Resources.Claim model)
         {
-            model.Request = Request;
-            return model;
+            return new HttpActionResult(() => model.UpdateAsync(this.Request));
         }
     }
 }

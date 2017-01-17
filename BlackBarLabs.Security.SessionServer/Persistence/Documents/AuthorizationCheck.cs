@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace BlackBarLabs.Security.SessionServer.Persistence.Azure.Documents
+namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
 {
     internal class AuthorizationCheck : Microsoft.WindowsAzure.Storage.Table.TableEntity
     {

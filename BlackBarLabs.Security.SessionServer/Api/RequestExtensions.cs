@@ -1,34 +1,42 @@
 ﻿using System;
 using System.Net.Http;
 
-using BlackBarLabs.Security.Session;
-using BlackBarLabs.Security.CredentialProvider.ImplicitCreation;
-using BlackBarLabs.Security.SessionServer.Persistence.Azure;
+using EastFive.Security.CredentialProvider.ImplicitCreation;
+using EastFive.Security.SessionServer.Persistence.Azure;
 
-namespace BlackBarLabs.Security.SessionServer
+using BlackBarLabs.Api.Extensions;
+
+namespace EastFive.Security.SessionServer
 {
     internal static class RequestExtensions
     {
         internal static SessionServer.Context GetSessionServerContext(this HttpRequestMessage request)
         {
+            var loginProvider = (Func<LoginProvider.IProvideLogin>)
+                request.Properties[BlackBarLabs.Api.ServicePropertyDefinitions.IdentityService];
             var context = new SessionServer.Context(() => new DataContext("Azure.Authorization.Storage"),
                 (credentialValidationMethodType) =>
                 {
                     switch (credentialValidationMethodType)
                     {
-                        case CredentialValidationMethodTypes.Facebook:
-                            return new CredentialProvider.Facebook.FacebookCredentialProvider();
                         case CredentialValidationMethodTypes.AzureADB2C:
-                            return new CredentialProvider.AzureADB2C.AzureADB2CProvider();
-                        case CredentialValidationMethodTypes.Implicit:
-                            return new ImplicitlyCreatedCredentialProvider();
+                            {
+                                // Catch this in the default
+                                break;
+                            }
                         case CredentialValidationMethodTypes.Voucher:
                             return new CredentialProvider.Voucher.VoucherCredentialProvider();
                         default:
                             break;
                     }
-                    return new CredentialProvider.OpenIdConnect.OpenIdConnectCredentialProvider();
-                });
+
+                    object identityServiceCreateObject;
+                    request.Properties.TryGetValue(
+                        BlackBarLabs.Api.ServicePropertyDefinitions.IdentityService, out identityServiceCreateObject);
+                    var identityServiceCreate = (Func<EastFive.Security.LoginProvider.IProvideLogin>)identityServiceCreateObject;
+                    var service = identityServiceCreate();
+                    return new CredentialProvider.AzureADB2C.AzureADB2CProvider(service);
+                }, loginProvider);
             return context;
         }
     }

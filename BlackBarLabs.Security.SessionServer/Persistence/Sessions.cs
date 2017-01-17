@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
+
 using BlackBarLabs.Persistence.Azure.StorageTables;
 
-namespace BlackBarLabs.Security.SessionServer.Persistence.Azure
+namespace EastFive.Security.SessionServer.Persistence.Azure
 {
     public class Sessions
     {

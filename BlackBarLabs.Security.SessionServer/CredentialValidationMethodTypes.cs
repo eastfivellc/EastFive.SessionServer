@@ -1,12 +1,7 @@
-﻿namespace BlackBarLabs.Security.Session
+﻿namespace EastFive.Security.SessionServer
 {
     public enum CredentialValidationMethodTypes
     {
-        OpenIdConnect,
-        Facebook,
-        Twitter,
-        Google,
-        Implicit,
         Voucher,
         AzureADB2C
     }

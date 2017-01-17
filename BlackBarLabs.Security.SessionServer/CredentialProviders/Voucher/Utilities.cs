@@ -3,7 +3,7 @@ using System.Configuration;
 using System.Linq;
 using System.Security.Cryptography;
 
-namespace BlackBarLabs.Security.CredentialProvider.Voucher
+namespace EastFive.Security.CredentialProvider.Voucher
 {
     public static class Utilities
     {
@@ -19,7 +19,7 @@ namespace BlackBarLabs.Security.CredentialProvider.Voucher
             byte[] signatureData;
             var hashedData = ComputeHashData(authId, validUntilUtc, out signatureData);
 
-            return RSA.FromConfig("BlackbarLabs.Security.CredentialProvider.Voucher.key",
+            return BlackBarLabs.Security.RSA.FromConfig("BlackbarLabs.Security.CredentialProvider.Voucher.key",
                 (trustedVoucherPrivateKey) =>
                 {
                     var signature = trustedVoucherPrivateKey.SignHash(hashedData, CryptoConfig.MapNameToOID("SHA256"));
@@ -67,7 +67,7 @@ namespace BlackBarLabs.Security.CredentialProvider.Voucher
             byte[] signatureData;
             var hashedData = ComputeHashData(authId, validUntilUtc, out signatureData);
 
-            var result = RSA.FromConfig("BlackbarLabs.Security.Voucher.key.pub",
+            var result = BlackBarLabs.Security.RSA.FromConfig("BlackbarLabs.Security.Voucher.key.pub",
                 (trustedVoucher) =>
                 {
                     if (!trustedVoucher.VerifyHash(hashedData, CryptoConfig.MapNameToOID("SHA256"), providedSignature))

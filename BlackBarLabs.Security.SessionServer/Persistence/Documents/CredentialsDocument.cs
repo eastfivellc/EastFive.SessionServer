@@ -1,4 +1,4 @@
-﻿namespace BlackBarLabs.Security.CredentialProvider.ImplicitCreation
+﻿namespace EastFive.Security.CredentialProvider.ImplicitCreation
 {
     internal class CredentialsDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
     {

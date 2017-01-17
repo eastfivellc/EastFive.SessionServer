@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+
+using BlackBarLabs;
 using BlackBarLabs.Collections.Async;
 using BlackBarLabs.Persistence.Azure;
 using BlackBarLabs.Persistence.Azure.StorageTables;
 
-namespace BlackBarLabs.Security.SessionServer.Persistence.Azure.Documents
+namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
 {
     internal class AuthorizationDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
     {

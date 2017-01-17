@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 
-namespace BlackBarLabs.Security.SessionServer
+namespace EastFive.Security.SessionServer
 {
     public static class ExtensionsThrowingExceptions
     {

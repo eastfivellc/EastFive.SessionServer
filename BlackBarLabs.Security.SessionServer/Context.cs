@@ -1,10 +1,9 @@
-﻿using System;
+﻿using EastFive.Security.LoginProvider;
+using System;
 using System.Collections.Concurrent;
+using System.Threading.Tasks;
 
-using BlackBarLabs.Security.SessionServer;
-using BlackBarLabs.Security.Session;
-
-namespace BlackBarLabs.Security.SessionServer
+namespace EastFive.Security.SessionServer
 {
     public class Context
     {
@@ -16,20 +15,31 @@ namespace BlackBarLabs.Security.SessionServer
         private readonly Func<CredentialValidationMethodTypes, CredentialProvider.IProvideCredentials> credentialProvidersFunc;
 
         public Context(Func<SessionServer.Persistence.Azure.DataContext> dataContextCreateFunc,
-            Func<CredentialValidationMethodTypes, CredentialProvider.IProvideCredentials> credentialProvidersFunc)
+            Func<CredentialValidationMethodTypes, CredentialProvider.IProvideCredentials> credentialProvidersFunc,
+            Func<IProvideLogin> getLoginProvider)
         {
             dataContextCreateFunc.ValidateArgumentIsNotNull("dataContextCreateFunc");
             this.dataContextCreateFunc = dataContextCreateFunc;
 
             credentialProvidersFunc.ValidateArgumentIsNotNull("credentialProvidersFunc");
             this.credentialProvidersFunc = credentialProvidersFunc;
+
+            getLoginProvider.ValidateArgumentIsNotNull("getLoginProvider");
+            this.loginProviderFunc = getLoginProvider;
         }
 
         internal SessionServer.Persistence.Azure.DataContext DataContext
         {
             get { return dataContext ?? (dataContext = dataContextCreateFunc.Invoke()); }
         }
-        
+
+        private Func<IProvideLogin> loginProviderFunc;
+        private IProvideLogin loginProvider;
+        internal IProvideLogin LoginProvider
+        {
+            get { return loginProvider ?? (loginProvider = loginProviderFunc.Invoke()); }
+        }
+
         internal CredentialProvider.IProvideCredentials GetCredentialProvider(CredentialValidationMethodTypes method)
         {
             if (!this.credentialProviders.ContainsKey(method))
@@ -73,6 +83,7 @@ namespace BlackBarLabs.Security.SessionServer
                 return claims;
             }
         }
+
 
         #region Authorizations
 

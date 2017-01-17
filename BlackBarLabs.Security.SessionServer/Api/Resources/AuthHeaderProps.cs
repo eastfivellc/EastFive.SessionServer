@@ -1,6 +1,6 @@
 ﻿using System.Runtime.Serialization;
 
-namespace BlackBarLabs.Security.Session
+namespace EastFive.Security.SessionServer.Api.Resources
 {
     [DataContract]
     public class AuthHeaderProps

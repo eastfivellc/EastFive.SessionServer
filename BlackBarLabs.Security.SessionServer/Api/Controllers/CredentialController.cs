@@ -1,39 +1,35 @@
 ﻿using BlackBarLabs.Api;
-using BlackBarLabs.Security.SessionServer.API.Resources;
-using BlackBarLabs.Security.SessionServer.Api.Resources;
+using EastFive.Security.SessionServer.Api.Resources;
 using System.Web.Http;
 
-namespace BlackBarLabs.Security.SessionServer.Api.Controllers
+namespace EastFive.Security.SessionServer.Api.Controllers
 {
-    public class CredentialController : BaseController
+    public class CredentialController : BlackBarLabs.Api.Controllers.BaseController
     {
-        public IHttpActionResult Post([FromBody]Credential model)
+        public IHttpActionResult Post([FromBody]Resources.Credential model)
         {
             return new HttpActionResult(() => model.CreateAsync(this.Request));
         }
 
-        public IHttpActionResult Put([FromBody]CredentialPut model)
+        public IHttpActionResult Put([FromBody]Credential model)
         {
-            model.Request = Request;
-            return model;
+            return new HttpActionResult(() => model.PutAsync(this.Request));
         }
 
-        public IHttpActionResult Delete([FromBody]CredentialDelete model)
+        public IHttpActionResult Delete([FromBody]Resources.Queries.Credential model)
         {
-            model.Request = Request;
-            return model;
-        }
-        public IHttpActionResult Get([FromUri]CredentialGet model)
-        {
-            model.Request = Request;
-            return model;
+            return new HttpActionResult(() => model.DeleteAsync(this.Request));
         }
 
-        //public IHttpActionResult Options()
-        //{
-        //    var model = new Resources.CredentialOptions();
-        //    return model;
-        //}
+        public IHttpActionResult Get([FromUri]Resources.Queries.Credential model)
+        {
+            return new HttpActionResult(() => model.QueryAsync(this.Request));
+        }
+
+        public IHttpActionResult Options()
+        {
+            return new HttpActionResult(() => this.Request.CredentialOptionsAsync());
+        }
     }
 }
 

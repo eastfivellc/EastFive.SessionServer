@@ -1,6 +1,6 @@
 ﻿
 
-namespace BlackBarLabs.Security.SessionServer.Persistence.Azure
+namespace EastFive.Security.SessionServer.Persistence.Azure
 {
     public class DataContext : BlackBarLabs.Persistence.Azure.DataStores
     {

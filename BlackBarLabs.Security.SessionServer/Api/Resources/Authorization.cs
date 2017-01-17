@@ -2,9 +2,7 @@
 using System.Linq;
 using System.Runtime.Serialization;
 
-using BlackBarLabs.Security.Session;
-
-namespace BlackBarLabs.Security.SessionServer.Api.Resources
+namespace EastFive.Security.SessionServer.Api.Resources
 {
     [DataContract]
     public class Authorization : BlackBarLabs.Api.ResourceBase

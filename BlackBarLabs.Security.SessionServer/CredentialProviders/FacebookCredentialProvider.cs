@@ -3,12 +3,15 @@ using System.Threading.Tasks;
 using Facebook;
 using System.Security.Claims;
 
-namespace BlackBarLabs.Security.CredentialProvider.Facebook
+namespace EastFive.Security.CredentialProvider.Facebook
 {
     public class FacebookCredentialProvider : IProvideCredentials
     {
-        public async Task<TResult> RedeemTokenAsync<TResult>(Uri providerId, string username, string accessToken,
-            Func<Guid, Claim[], TResult> success, Func<string, TResult> invalidCredentials, Func<TResult> couldNotConnect)
+        public async Task<TResult> RedeemTokenAsync<TResult>(string accessToken, 
+            Func<Guid, Claim[], TResult> success,
+            Func<string, TResult> invalidCredentials,
+            Func<TResult> onAuthIdNotFound,
+            Func<string, TResult> couldNotConnect)
         {
             if (String.IsNullOrWhiteSpace(accessToken))
                 return invalidCredentials("accessToken is null");
@@ -18,6 +21,7 @@ namespace BlackBarLabs.Security.CredentialProvider.Facebook
                 dynamic result = await client.GetTaskAsync("me", new { fields = "name,id" });
                 if (null == result)
                     return invalidCredentials("Cannot get token from Facebook");
+                var username = ""; // TODO: Lookup from database
                 if (username != result.id)
                     return invalidCredentials("username and result.Id from Facebook do not match");
                 throw new NotImplementedException();
@@ -28,17 +32,6 @@ namespace BlackBarLabs.Security.CredentialProvider.Facebook
                     return invalidCredentials("OAuthException occurred");
                 throw ex;
             }
-        }
-
-        public Task<TResult> UpdateTokenAsync<TResult>(Uri providerId, string username, string token, Func<string, TResult> success, Func<TResult> doesNotExist,
-            Func<TResult> updateFailed)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<TResult> GetCredentialsAsync<TResult>(Uri providerId, string username, Func<string, TResult> success, Func<TResult> doesNotExist)
-        {
-            throw new NotImplementedException();
         }
     }
 }

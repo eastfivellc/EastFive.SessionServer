@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 
-namespace BlackBarLabs.Security.SessionServer.Api.Resources
+namespace EastFive.Security.SessionServer.Api.Resources
 {
     [DataContract]
-    public class Claim : Resource
+    public class Claim
     {
         [DataMember]
         public Guid Id { get; set; }
