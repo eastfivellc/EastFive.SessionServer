@@ -10,15 +10,18 @@ using System.IdentityModel.Tokens.Jwt;
 using Microsoft.IdentityModel.Tokens;
 
 using BlackBarLabs;
+using EastFive.Api.Services;
 
 namespace EastFive.Security.SessionServer
 {
     public static class Library
     {
         public static TResult SessionServerStartAsync<TResult>(this HttpConfiguration config,
+                Func<ISendMessageService> messageService,
             Func<TResult> onSuccess,
             Func<string, TResult> onFailed)
         {
+            Api.Controllers.BaseController.SetMessageService(messageService);
             //config.AddExternalControllers<SessionServer.Api.Controllers.OpenIdResponseController>();
             AddExternalControllersX<SessionServer.Api.Controllers.OpenIdResponseController>(config);
             //return InitializeAsync(audience, configurationEndpoint, onSuccess, onFailed);

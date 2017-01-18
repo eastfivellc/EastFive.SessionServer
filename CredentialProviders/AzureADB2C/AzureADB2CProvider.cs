@@ -4,14 +4,15 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 
 using EastFive.Security.LoginProvider;
+using EastFive.Api.Services;
 
 namespace EastFive.Security.CredentialProvider.AzureADB2C
 {
     public class AzureADB2CProvider : IProvideCredentials
     {
-        IProvideLogin loginProvider;
+        IIdentityService loginProvider;
 
-        public AzureADB2CProvider(IProvideLogin loginProvider)
+        public AzureADB2CProvider(IIdentityService loginProvider)
         {
             this.loginProvider = loginProvider;
         }

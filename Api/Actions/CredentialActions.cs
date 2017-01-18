@@ -9,6 +9,7 @@ using System.Threading;
 
 using BlackBarLabs.Api;
 using BlackBarLabs.Extensions;
+using System.Web.Http.Routing;
 
 namespace EastFive.Security.SessionServer.Api
 {
@@ -34,7 +35,7 @@ namespace EastFive.Security.SessionServer.Api
         }
 
         public static async Task<HttpResponseMessage> CreateAsync(this Resources.Credential credential,
-            HttpRequestMessage request)
+            HttpRequestMessage request, UrlHelper url)
         {
             //return await request.GetClaims(
             //    async (claims) =>
@@ -45,12 +46,15 @@ namespace EastFive.Security.SessionServer.Api
                         credential.Method,
                         credential.UserId, credential.IsEmail, credential.Token, credential.ForceChange,
                         claims.ToArray(),
+                        (redirectId) => url.GetLocation<Controllers.AccountRedirectController>(redirectId),
                         () => request.CreateResponse(HttpStatusCode.Created, credential),
-                        (why) => request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Authentication failed:{why}"),
-                        () =>
-                        {
-                            return request.CreateResponse(HttpStatusCode.Conflict).AddReason("Credential is already associated with an actor.");
-                        });
+                        (why) => request.CreateResponse(HttpStatusCode.Conflict)
+                            .AddReason($"Authentication failed:{why}"),
+                        () => request.CreateResponse(HttpStatusCode.Conflict)
+                            .AddReason($"Email address is already associated with account"),
+                        () => request.CreateResponse(HttpStatusCode.ServiceUnavailable),
+                        (why) => request.CreateResponse(HttpStatusCode.Conflict)
+                            .AddReason(why));
                     return creationResults;
                 //},
                 //() => request.CreateResponse(HttpStatusCode.Unauthorized).ToTask(),

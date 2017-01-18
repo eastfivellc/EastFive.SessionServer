@@ -8,7 +8,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
     {
         public IHttpActionResult Post([FromBody]Resources.Credential model)
         {
-            return new HttpActionResult(() => model.CreateAsync(this.Request));
+            return new HttpActionResult(() => model.CreateAsync(this.Request, this.Url));
         }
 
         public IHttpActionResult Put([FromBody]Credential model)

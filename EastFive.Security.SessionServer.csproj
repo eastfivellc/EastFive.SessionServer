@@ -36,28 +36,8 @@
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="BlackBarLabs.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\BlackBarLabs.Api.0.1.1\lib\BlackBarLabs.Api.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="BlackBarLabs.Core, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\BlackBarLabs.Core.1.2.5\lib\net45\BlackBarLabs.Core.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="BlackBarLabs.Persistence, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\BlackBarLabs.Storage.0.2.1\lib\BlackBarLabs.Persistence.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="BlackBarLabs.Persistence.Azure, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\BlackBarLabs.Storage.0.2.1\lib\BlackBarLabs.Persistence.Azure.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="BlackBarLabs.Security, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\BlackBarLabs.Security.0.4.3\lib\BlackBarLabs.Security.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="BlackBarLabs.Web, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\BlackBarLabs.Api.0.1.1\lib\BlackBarLabs.Web.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Facebook, Version=6.0.10.0, Culture=neutral, PublicKeyToken=58cb4f2111d1e6de, processorArchitecture=MSIL">
@@ -177,26 +157,29 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Api\Actions\ClaimActions.cs" />
+    <Compile Include="Api\Actions\AccountRedirectActions.cs" />
     <Compile Include="Api\Constants.cs" />
     <Compile Include="Api\Controllers\AuthorizeController.cs" />
     <Compile Include="Api\Controllers\BaseController.cs" />
     <Compile Include="Api\Controllers\ClaimController.cs" />
+    <Compile Include="Api\Controllers\AccountRedirectController.cs" />
     <Compile Include="Api\Controllers\CredentialController.cs" />
     <Compile Include="Api\Controllers\SessionController.cs" />
     <Compile Include="Api\RequestExtensions.cs" />
     <Compile Include="Api\Resources\AuthHeaderProps.cs" />
     <Compile Include="Api\Controllers\AccountLinksController.cs" />
+    <Compile Include="Api\Resources\Queries\AccountRedirectQuery.cs" />
     <Compile Include="Api\Resources\Queries\CredentialQuery.cs" />
     <Compile Include="CredentialProviders\AzureADB2C\AzureADB2CProvider.cs" />
     <Compile Include="LoginProvider.cs" />
-    <Compile Include="IProvideLogin.cs" />
     <Compile Include="Library.cs" />
     <Compile Include="Api\Controllers\OpenIdResponseController.cs" />
     <Compile Include="CredentialProviders\FacebookCredentialProvider.cs" />
     <Compile Include="CredentialProviders\IProvideCredentials.cs" />
     <Compile Include="CredentialProviders\Voucher\Utilities.cs" />
     <Compile Include="CredentialValidationMethodTypes.cs" />
-    <Compile Include="Persistence\Documents\Authorizations.cs" />
+    <Compile Include="Persistence\Authorizations.cs" />
+    <Compile Include="Persistence\Documents\CredentialRedirectDocument.cs" />
     <Compile Include="Persistence\Documents\CredentialsDocument.cs" />
     <Compile Include="CredentialProviders\Implicit\ImplicitlyCreatedCredentialProvider.cs" />
     <Compile Include="CredentialProviders\Voucher\VoucherCredentialProvider.cs" />
@@ -238,7 +221,31 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="EastFive.AzureADB2C\EastFive.AzureADB2C.csproj">
+    <ProjectReference Include="..\BlackBarLabs.Api\BlackBarLabs.Api.csproj">
+      <Project>{aaa1724b-0787-4ce1-bad5-e3c930db07c1}</Project>
+      <Name>BlackBarLabs.Api</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BlackBarLabs.Core\BlackBarLabs.Core.csproj">
+      <Project>{73088F1B-3ACA-476B-AA45-B7D6660F1C73}</Project>
+      <Name>BlackBarLabs.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BlackBarLabs.Persistence.Azure\BlackBarLabs.Persistence.Azure.csproj">
+      <Project>{a228d9d3-91c9-48cb-9498-8e7b39f10ffe}</Project>
+      <Name>BlackBarLabs.Persistence.Azure</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BlackBarLabs.Persistence\BlackBarLabs.Persistence.csproj">
+      <Project>{c7d886bb-2da8-47ef-9136-1cb13b44d2d7}</Project>
+      <Name>BlackBarLabs.Persistence</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BlackBarLabs.Web\BlackBarLabs.Web.csproj">
+      <Project>{5bb52391-2704-44c0-bc8a-dbbe31498814}</Project>
+      <Name>BlackBarLabs.Web</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\EastFive.Api.Services\EastFive.Api.Services.csproj">
+      <Project>{662CD006-C03A-47CA-83E3-F327E595DB0F}</Project>
+      <Name>EastFive.Api.Services</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\EastFive.AzureADB2C\EastFive.AzureADB2C.csproj">
       <Project>{08e8c50b-e8b6-43e6-ae5e-9511a3d04d2c}</Project>
       <Name>EastFive.AzureADB2C</Name>
     </ProjectReference>

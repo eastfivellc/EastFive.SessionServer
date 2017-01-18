@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 using BlackBarLabs.Extensions;
+using System.Collections.Generic;
 
 namespace EastFive.Security.SessionServer
 {
@@ -39,23 +41,92 @@ namespace EastFive.Security.SessionServer
             CredentialValidationMethodTypes method,
             string username, bool isEmail, string token, bool forceChange,
             System.Security.Claims.Claim [] claims,
+            Func<Guid, Uri> getRedirectLink,
+            Func<TResult> success,
+            Func<string, TResult> authenticationFailed,
+            Func<TResult> alreadyAssociated,
+            Func<TResult> serviceNotAvailable,
+            Func<string, TResult> onFail)
+        {
+            if (method == CredentialValidationMethodTypes.AzureADB2C)
+            {
+                if(String.IsNullOrWhiteSpace(token) && isEmail)
+                    return await SendEmailInviteAsync(actorId, username,
+                        getRedirectLink,
+                        success, 
+                        alreadyAssociated,
+                        serviceNotAvailable,
+                        onFail);
+
+                return await CreateAccountAsync(actorId,
+                    username, isEmail, token, forceChange,
+                    success, authenticationFailed, alreadyAssociated);
+            }
+            throw new NotImplementedException();
+        }
+
+        private async Task<TResult> SendEmailInviteAsync<TResult>(Guid actorId, string email,
+                Func<Guid, Uri> getRedirectLink,
+            Func<TResult> success,
+            Func<TResult> alreadyAssociated,
+            Func<TResult> serviceNotAvailable,
+            Func<string, TResult> onFailed)
+        {
+            var redirectId = BlackBarLabs.Security.SecureGuid.Generate();
+            var result = await await this.dataContext.Authorizations.CreateCredentialRedirectAsync(redirectId,
+                actorId, email,
+                async () =>
+                {
+                    var mailService = this.context.MailService;
+                    await mailService.SendEmailMessageAsync(email, string.Empty,
+                        "newaccounts@orderowl.com", "New Account Services",
+                        "newaccount",
+                        new Dictionary<string, string>()
+                        {
+                            { "create_account_link", getRedirectLink(redirectId).AbsoluteUri }
+                        },
+                        null,
+                        (sentCode) => success(),
+                        () => serviceNotAvailable(),
+                        (why) => onFailed(why));
+                    return success();
+                },
+                () => alreadyAssociated().ToTask());
+            return result;
+        }
+        
+        internal Task<TResult> GetCredentialRedirectAsync<TResult>(Guid redirectId,
+            Func<byte [], TResult> success,
+            Func<TResult> onAlreadyUsed,
+            Func<TResult> notFound)
+        {
+            return this.dataContext.Authorizations.FindCredentialRedirectAsync(redirectId,
+                (used) =>
+                {
+                    if (used)
+                        return onAlreadyUsed();
+                    var state = redirectId.ToByteArray();
+                    return success(state);
+                },
+                () => notFound());
+        }
+
+        private async Task<TResult> CreateAccountAsync<TResult>(Guid actorId,
+            string username, bool isEmail, string token, bool forceChange,
             Func<TResult> success,
             Func<string, TResult> authenticationFailed,
             Func<TResult> alreadyAssociated)
         {
-            if (method == CredentialValidationMethodTypes.AzureADB2C)
-            {
-                var result = await await this.context.LoginProvider.CreateLoginAsync("User", username, isEmail, token, forceChange,
-                    async (loginId) =>
-                    {
-                        return await this.dataContext.Authorizations.CreateCredentialAsync(loginId, actorId,
-                            () => success(),
-                            () => alreadyAssociated());
-                    },
-                    (why) => authenticationFailed(why).ToTask());
-                return result;
-            }
-            throw new NotImplementedException();
+            var loginProvider = await this.context.LoginProvider;
+            var result = await await loginProvider.CreateLoginAsync("User", username, isEmail, token, forceChange,
+                async (loginId) =>
+                {
+                    return await this.dataContext.Authorizations.CreateCredentialAsync(loginId, actorId,
+                        () => success(),
+                        () => alreadyAssociated());
+                },
+                (why) => authenticationFailed(why).ToTask());
+            return result;
         }
 
         public async Task<TResult> GetCredentialsAsync<TResult>(Guid authorizationId,

@@ -1,4 +1,5 @@
-﻿using EastFive.Security.LoginProvider;
+﻿using EastFive.Api.Services;
+using EastFive.Security.LoginProvider;
 using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
@@ -12,11 +13,12 @@ namespace EastFive.Security.SessionServer
 
         private ConcurrentDictionary<CredentialValidationMethodTypes, CredentialProvider.IProvideCredentials> credentialProviders = 
             new ConcurrentDictionary<CredentialValidationMethodTypes, CredentialProvider.IProvideCredentials>();
-        private readonly Func<CredentialValidationMethodTypes, CredentialProvider.IProvideCredentials> credentialProvidersFunc;
+        private readonly Func<CredentialValidationMethodTypes, Task<CredentialProvider.IProvideCredentials>> credentialProvidersFunc;
 
         public Context(Func<SessionServer.Persistence.Azure.DataContext> dataContextCreateFunc,
-            Func<CredentialValidationMethodTypes, CredentialProvider.IProvideCredentials> credentialProvidersFunc,
-            Func<IProvideLogin> getLoginProvider)
+            Func<CredentialValidationMethodTypes, Task<CredentialProvider.IProvideCredentials>> credentialProvidersFunc,
+            Func<Task<IIdentityService>> getLoginProvider,
+            Func<ISendMessageService> getMailService)
         {
             dataContextCreateFunc.ValidateArgumentIsNotNull("dataContextCreateFunc");
             this.dataContextCreateFunc = dataContextCreateFunc;
@@ -26,6 +28,8 @@ namespace EastFive.Security.SessionServer
 
             getLoginProvider.ValidateArgumentIsNotNull("getLoginProvider");
             this.loginProviderFunc = getLoginProvider;
+
+            this.mailServiceFunc = getMailService;
         }
 
         internal SessionServer.Persistence.Azure.DataContext DataContext
@@ -33,24 +37,31 @@ namespace EastFive.Security.SessionServer
             get { return dataContext ?? (dataContext = dataContextCreateFunc.Invoke()); }
         }
 
-        private Func<IProvideLogin> loginProviderFunc;
-        private IProvideLogin loginProvider;
-        internal IProvideLogin LoginProvider
+        private Func<Task<IIdentityService>> loginProviderFunc;
+        private Task<IIdentityService> loginProvider;
+        internal Task<IIdentityService> LoginProvider
         {
             get { return loginProvider ?? (loginProvider = loginProviderFunc.Invoke()); }
         }
 
-        internal CredentialProvider.IProvideCredentials GetCredentialProvider(CredentialValidationMethodTypes method)
+        internal async Task<CredentialProvider.IProvideCredentials> GetCredentialProvider(CredentialValidationMethodTypes method)
         {
             if (!this.credentialProviders.ContainsKey(method))
             {
-                var newProvider = this.credentialProvidersFunc.Invoke(method);
+                var newProvider = await this.credentialProvidersFunc.Invoke(method);
                 this.credentialProviders.AddOrUpdate(method, newProvider, (m, p) => newProvider);
             }
             var provider = this.credentialProviders[method];
             return provider;
         }
-        
+
+        private Func<ISendMessageService> mailServiceFunc;
+        private ISendMessageService mailService;
+        internal ISendMessageService MailService
+        {
+            get { return mailService ?? (mailService = mailServiceFunc.Invoke()); }
+        }
+
         private Sessions sessions;
         public Sessions Sessions
         {

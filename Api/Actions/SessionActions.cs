@@ -24,7 +24,7 @@ namespace EastFive.Security.SessionServer.Api
             
             //Get the session and Extrude it's information
             SessionServer.Sessions.CreateSessionSuccessDelegate<HttpResponseMessage> createSessionCallback =
-                (authorizationId, token, refreshToken) =>
+                (addr, authorizationId, token, refreshToken) =>
                 {
                     responseSession.AuthorizationId = authorizationId;
                     responseSession.SessionHeader = new Resources.AuthHeaderProps { Name = "Authorization", Value = "Bearer " + token };

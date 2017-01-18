@@ -1,4 +1,5 @@
 ﻿using BlackBarLabs.Api;
+using BlackBarLabs.Api.Extensions;
 using BlackBarLabs.Extensions;
 using System;
 using System.Collections.Generic;
@@ -24,24 +25,43 @@ namespace EastFive.Security.SessionServer.Api.Controllers
         public async Task<IHttpActionResult> Post(OpenIdConnectResult result)
         {
             var context = this.Request.GetSessionServerContext();
-            var response = context.Sessions.CreateAsync(Guid.NewGuid(), CredentialValidationMethodTypes.AzureADB2C, result.id_token,
-                (authorizationId, token, refreshToken) =>
+            var response = await context.Sessions.CreateAsync(Guid.NewGuid(),
+                CredentialValidationMethodTypes.AzureADB2C, result.id_token, result.state,
+                (redirectUrlBase, authorizationId, token, refreshToken) =>
                 {
-                    var bytes = Convert.FromBase64String(result.state);
-                    var addr = System.Text.Encoding.ASCII.GetString(bytes);
-                    
-                    var responseRedir = this.Request.CreateResponse(HttpStatusCode.Redirect);
-                    responseRedir.Headers.Location = new Uri(
-                        $"{addr}?authoriationId={authorizationId}&token={token}&refreshToken={refreshToken}");
-                    return responseRedir;
+                    var redirectUrl = redirectUrlBase
+                        .AddQuery("authoriationId", authorizationId.ToString("N"))
+                        .AddQuery("token", token)
+                        .AddQuery("refreshToken", refreshToken);
+                    var redirectResponse = Redirect(redirectUrl);
+                    return redirectResponse;
                 },
-                () => this.Request.CreateResponse(HttpStatusCode.Conflict).AddReason("Already exists"),
-                (why) => this.Request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Invalid token:{why}"),
-                () => this.Request.CreateResponse(HttpStatusCode.Conflict).AddReason("Token does not work in this system"),
-                () => this.Request.CreateResponse(HttpStatusCode.Conflict).AddReason("Token is not connected to a user in this system"),
-                (why) => this.Request.CreateResponse(HttpStatusCode.BadGateway).AddReason(why));
+                () => this.Request.CreateResponse(HttpStatusCode.Conflict)
+                    .AddReason("Already exists")
+                    .ToActionResult(),
+                (why) => this.Request.CreateResponse(HttpStatusCode.BadRequest)
+                    .AddReason($"Invalid token:{why}")
+                    .ToActionResult(),
+                (why) => this.Request.CreateResponse(HttpStatusCode.BadRequest)
+                    .AddReason($"Invalid state:{why}")
+                    .ToActionResult(),
+                () => this.Request.CreateResponse(HttpStatusCode.Conflict)
+                    .AddReason("Token does not work in this system")
+                    .ToActionResult(),
+                () => this.Request.CreateResponse(HttpStatusCode.Conflict)
+                    .AddReason("Token is not connected to a user in this system")
+                    .ToActionResult(),
+                () => this.Request.CreateResponse(HttpStatusCode.Conflict)
+                    .AddReason("Invalid account creation link")
+                    .ToActionResult(),
+                () => this.Request.CreateResponse(HttpStatusCode.Conflict)
+                    .AddReason("Token has already been redeemed")
+                    .ToActionResult(),
+                (why) => this.Request.CreateResponse(HttpStatusCode.BadGateway)
+                    .AddReason(why)
+                    .ToActionResult());
 
-            return new HttpActionResult(() => response);
+            return response;
         }
     }
 }

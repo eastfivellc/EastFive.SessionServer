@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Net.Http;
+using System.Threading.Tasks;
 
-using EastFive.Security.CredentialProvider.ImplicitCreation;
 using EastFive.Security.SessionServer.Persistence.Azure;
 
 using BlackBarLabs.Api.Extensions;
+using EastFive.Api.Services;
 
 namespace EastFive.Security.SessionServer
 {
@@ -12,10 +13,19 @@ namespace EastFive.Security.SessionServer
     {
         internal static SessionServer.Context GetSessionServerContext(this HttpRequestMessage request)
         {
-            var loginProvider = (Func<LoginProvider.IProvideLogin>)
-                request.Properties[BlackBarLabs.Api.ServicePropertyDefinitions.IdentityService];
+            object identityServiceCreateObject;
+            request.Properties.TryGetValue(
+                BlackBarLabs.Api.ServicePropertyDefinitions.IdentityService, out identityServiceCreateObject);
+            var identityServiceCreate = (Func<Task<IIdentityService>>)identityServiceCreateObject;
+
+            object mailServiceObject;
+            request.Properties.TryGetValue(
+                BlackBarLabs.Api.ServicePropertyDefinitions.MailService, out mailServiceObject);
+            var mailService = (Func<ISendMessageService>)mailServiceObject;
+
             var context = new SessionServer.Context(() => new DataContext("Azure.Authorization.Storage"),
-                (credentialValidationMethodType) =>
+                // TODO: Remove this injection
+                async (credentialValidationMethodType) =>
                 {
                     switch (credentialValidationMethodType)
                     {
@@ -30,13 +40,10 @@ namespace EastFive.Security.SessionServer
                             break;
                     }
 
-                    object identityServiceCreateObject;
-                    request.Properties.TryGetValue(
-                        BlackBarLabs.Api.ServicePropertyDefinitions.IdentityService, out identityServiceCreateObject);
-                    var identityServiceCreate = (Func<EastFive.Security.LoginProvider.IProvideLogin>)identityServiceCreateObject;
-                    var service = identityServiceCreate();
-                    return new CredentialProvider.AzureADB2C.AzureADB2CProvider(service);
-                }, loginProvider);
+                    var identityServiceTask = identityServiceCreate();
+                    var identityService = await identityServiceTask;
+                    return new CredentialProvider.AzureADB2C.AzureADB2CProvider(identityService);
+                }, identityServiceCreate, mailService);
             return context;
         }
     }

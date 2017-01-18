@@ -6,6 +6,12 @@ using BlackBarLabs.Collections.Async;
 using BlackBarLabs.Persistence.Azure;
 using BlackBarLabs.Persistence.Azure.StorageTables;
 using BlackBarLabs.Extensions;
+using BlackBarLabs.Persistence;
+using BlackBarLabs.Persistence.Azure.Extensions;
+using System.Linq;
+using BlackBarLabs.Linq;
+using BlackBarLabs;
+using System.Collections.Generic;
 
 namespace EastFive.Security.SessionServer.Persistence.Azure
 {
@@ -80,6 +86,73 @@ namespace EastFive.Security.SessionServer.Persistence.Azure
                 () => onAlreadyExists());
         }
 
+        internal Task<TResult> CreateCredentialRedirectAsync<TResult>(Guid redirectId,
+            Guid actorId, string email,
+            Func<TResult> onSuccess,
+            Func<TResult> onAlreadyAssociated)
+        {
+            var rollback = new RollbackAsync<TResult>();
+            var credentialRedirectDoc = new Documents.CredentialRedirectDocument()
+            {
+                ActorId = actorId,
+                Email = email,
+            };
+            rollback.AddTaskCreate(redirectId, credentialRedirectDoc, onAlreadyAssociated, this.repository);
+            rollback.AddTaskCreateOrUpdate(actorId,
+                (Documents.AuthorizationDocument doc) =>
+                {
+                    var associatedEmailsStorage = doc.AssociatedEmails;
+                    var associatedEmails = String.IsNullOrWhiteSpace(associatedEmailsStorage)?
+                        new string[] { }
+                        :
+                        associatedEmailsStorage.Split(new[] { ',' });
+                    if (associatedEmails.Contains(email))
+                        return false;
+                    doc.AssociatedEmails = associatedEmails.Append(email).Join(",");
+                    return true;
+                },
+                (doc) =>
+                {
+                    doc.AssociatedEmails = doc.AssociatedEmails.Split(new[] { ',' })
+                        .Where(e => e.CompareTo(email) != 0)
+                        .Join(",");
+                    return true;
+                },
+                onAlreadyAssociated,
+                this.repository);
+            return rollback.ExecuteAsync(onSuccess);
+        }
+
+        internal Task<TResult> FindCredentialRedirectAsync<TResult>(Guid redirectId,
+            Func<bool, TResult> onFound,
+            Func<TResult> onNotFound)
+        {
+            return repository.FindByIdAsync(redirectId,
+                (Documents.CredentialRedirectDocument document) => onFound(document.Redeemed),
+                () => onNotFound());
+        }
+
+        internal async Task<TResult> MarkCredentialRedirectAsync<TResult>(Guid redirectId,
+            Func<Guid, TResult> onFound,
+            Func<TResult> onNotFound,
+            Func<Guid, TResult> onAlreadyRedeemed)
+        {
+            var lookupResults = await repository.UpdateAsync<Documents.CredentialRedirectDocument, KeyValuePair<Guid, bool>?>(redirectId,
+                async (document, update) =>
+                {
+                    if (document.Redeemed)
+                        return document.ActorId.PairWithValue(true);
+                    document.Redeemed = true;
+                    await update(document);
+                    return document.ActorId.PairWithValue(false);
+                },
+                () => default(KeyValuePair<Guid, bool>?));
+            if (!lookupResults.HasValue)
+                return onNotFound();
+            if (lookupResults.Value.Value)
+                return onAlreadyRedeemed(lookupResults.Value.Key);
+            return onFound(lookupResults.Value.Key);
+        }
 
         public async Task<TResult> LookupCredentialMappingAsync<TResult>(Guid loginId,
             Func<Guid, TResult> onSuccess,

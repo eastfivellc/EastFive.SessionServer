@@ -52,7 +52,8 @@ namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
         #region Properties
 
         public byte [] Claims { get; set; }
-        
+        public string AssociatedEmails { get; set; }
+
         internal async Task<TResult> AddClaimsAsync<TResult>(ClaimDocument claimsDoc, AzureStorageRepository repository,
             Func<TResult> success,
             Func<TResult> failure)
