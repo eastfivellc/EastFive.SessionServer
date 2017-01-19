@@ -78,18 +78,19 @@ namespace EastFive.Security.SessionServer
                 async () =>
                 {
                     var mailService = this.context.MailService;
-                    await mailService.SendEmailMessageAsync(email, string.Empty,
+                    var resultMail = await mailService.SendEmailMessageAsync(email, string.Empty,
                         "newaccounts@orderowl.com", "New Account Services",
                         "newaccount",
                         new Dictionary<string, string>()
                         {
+                            { "subject", "New Order Owl Account" },
                             { "create_account_link", getRedirectLink(redirectId).AbsoluteUri }
                         },
                         null,
                         (sentCode) => success(),
                         () => serviceNotAvailable(),
                         (why) => onFailed(why));
-                    return success();
+                    return resultMail;
                 },
                 () => alreadyAssociated().ToTask());
             return result;
