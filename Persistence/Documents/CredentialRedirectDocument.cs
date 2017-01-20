@@ -9,6 +9,7 @@ namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
         #endregion
         public Guid ActorId { get; set; }
         public string Email { get; set; }
+        public bool IsToken { get; internal set; }
         public bool Redeemed { get; set; }
     }
 }

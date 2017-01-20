@@ -162,13 +162,16 @@
     <Compile Include="Api\Controllers\AuthorizeController.cs" />
     <Compile Include="Api\Controllers\BaseController.cs" />
     <Compile Include="Api\Controllers\ClaimController.cs" />
-    <Compile Include="Api\Controllers\AccountRedirectController.cs" />
+    <Compile Include="Api\Controllers\CredentialMappingController.cs" />
+    <Compile Include="Api\Controllers\InviteController.cs" />
     <Compile Include="Api\Controllers\CredentialController.cs" />
     <Compile Include="Api\Controllers\SessionController.cs" />
     <Compile Include="Api\RequestExtensions.cs" />
     <Compile Include="Api\Resources\AuthHeaderProps.cs" />
     <Compile Include="Api\Controllers\AccountLinksController.cs" />
-    <Compile Include="Api\Resources\Queries\AccountRedirectQuery.cs" />
+    <Compile Include="Api\Resources\Invite.cs" />
+    <Compile Include="Api\Resources\CredentialMapping.cs" />
+    <Compile Include="Api\Resources\Queries\InviteQuery.cs" />
     <Compile Include="Api\Resources\Queries\CredentialQuery.cs" />
     <Compile Include="CredentialProviders\AzureADB2C\AzureADB2CProvider.cs" />
     <Compile Include="LoginProvider.cs" />
@@ -178,6 +181,7 @@
     <Compile Include="CredentialProviders\IProvideCredentials.cs" />
     <Compile Include="CredentialProviders\Voucher\Utilities.cs" />
     <Compile Include="CredentialValidationMethodTypes.cs" />
+    <Compile Include="Persistence\CredentialRedirects.cs" />
     <Compile Include="Persistence\Authorizations.cs" />
     <Compile Include="Persistence\Documents\CredentialRedirectDocument.cs" />
     <Compile Include="Persistence\Documents\CredentialsDocument.cs" />
