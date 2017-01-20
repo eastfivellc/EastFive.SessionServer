@@ -6,6 +6,7 @@ using BlackBarLabs;
 using BlackBarLabs.Collections.Async;
 using BlackBarLabs.Persistence.Azure;
 using BlackBarLabs.Persistence.Azure.StorageTables;
+using BlackBarLabs.Linq;
 
 namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
 {
@@ -69,6 +70,49 @@ namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
         internal void AddProviders(AuthorizationProvider[] authorizationProviders)
         {
 
+        }
+
+        public byte[] Redirects { get; set; }
+
+        internal bool AddRedirect(Guid redirectId)
+        {
+            var redirectIds = this.Redirects.ToGuidsFromByteArray();
+            if (redirectIds.Contains(redirectId))
+                return false;
+            this.Redirects = redirectIds.Append(redirectId).ToByteArrayOfGuids();
+            return true;
+        }
+
+        internal bool RemoveRedirect(Guid redirectId)
+        {
+            var redirectIds = this.Redirects.ToGuidsFromByteArray();
+            if (!redirectIds.Contains(redirectId))
+                return false;
+            this.Redirects = redirectIds.Where(rId => rId != redirectId).ToByteArrayOfGuids();
+            return true;
+        }
+
+        internal bool AddAssociatedEmail(string email)
+        {
+            var associatedEmailsStorage = this.AssociatedEmails;
+            var associatedEmails = String.IsNullOrWhiteSpace(associatedEmailsStorage) ?
+                new string[] { }
+                :
+                associatedEmailsStorage.Split(new[] { ',' });
+            if (associatedEmails.Contains(email))
+                return false;
+            this.AssociatedEmails = associatedEmails.Append(email).Join(",");
+            return true;
+        }
+
+        internal bool RemoveAssociatedEmail(string email)
+        {
+            var associatedEmailsNew = this.AssociatedEmails.Split(new[] { ',' })
+                        .Where(e => e.CompareTo(email) != 0)
+                        .Join(",");
+            var updated = associatedEmailsNew.Length != this.AssociatedEmails.Length;
+            this.AssociatedEmails = associatedEmailsNew;
+            return updated;
         }
 
         #endregion

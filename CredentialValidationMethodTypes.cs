@@ -3,6 +3,6 @@
     public enum CredentialValidationMethodTypes
     {
         Voucher,
-        AzureADB2C
+        Password,
     }
 }

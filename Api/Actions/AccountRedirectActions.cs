@@ -19,11 +19,11 @@ namespace EastFive.Security.SessionServer.Api
     {
         #region Actionables
 
-        public static async Task<HttpResponseMessage> QueryAsync(this Resources.Queries.AccountRedirectQuery query,
+        public static async Task<HttpResponseMessage> QueryAsync(this Resources.Queries.InviteQuery query,
             HttpRequestMessage request, UrlHelper urlHelper)
         {
             return await query.ParseAsync(request,
-                q => QueryById(q.Id.ParamSingle(), request, urlHelper));
+                q => QueryById(q.Secret.ParamSingle(), request, urlHelper));
         }
 
         private async static Task<HttpResponseMessage> QueryById(Guid redirectId, HttpRequestMessage request, UrlHelper urlHelper)

@@ -46,7 +46,7 @@ namespace EastFive.Security.SessionServer.Api
                         credential.Method,
                         credential.UserId, credential.IsEmail, credential.Token, credential.ForceChange,
                         claims.ToArray(),
-                        (redirectId) => url.GetLocation<Controllers.AccountRedirectController>(redirectId),
+                        (redirectId) => url.GetLocation<Controllers.InviteController>(redirectId),
                         () => request.CreateResponse(HttpStatusCode.Created, credential),
                         (why) => request.CreateResponse(HttpStatusCode.Conflict)
                             .AddReason($"Authentication failed:{why}"),

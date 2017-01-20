@@ -41,7 +41,7 @@ namespace EastFive.Security.SessionServer
             CredentialValidationMethodTypes method,
             string username, bool isEmail, string token, bool forceChange,
             System.Security.Claims.Claim [] claims,
-            Func<Guid, Uri> getRedirectLink,
+            Func<Guid, string, Uri> getRedirectLink,
             Func<TResult> success,
             Func<string, TResult> authenticationFailed,
             Func<TResult> alreadyAssociated,
@@ -62,11 +62,56 @@ namespace EastFive.Security.SessionServer
                     username, isEmail, token, forceChange,
                     success, authenticationFailed, alreadyAssociated);
             }
+            if (CredentialValidationMethodTypes.Voucher == method)
+            {
+                return SendTokenInviteAsync(actorId, username,
+                    getRedirectLink,
+                    success,
+                    onFail);
+            }
+
             throw new NotImplementedException();
         }
 
+        private async Task<TResult> SendTokenInviteAsync<TResult>(Guid actorId, string email,
+            Func<Guid, string, Uri> getRedirectLink,
+            Func<TResult> success,
+            Func<string, TResult> onFailed,
+            Func<TResult> serviceNotAvailable)
+        {
+            var redirectId = BlackBarLabs.Security.SecureGuid.Generate();
+            var result = await await this.dataContext.Authorizations.CreateCredentialRedirectAsync(redirectId,
+                actorId, email,
+                async () =>
+                {
+                    var resultToken = await BlackBarLabs.Security.Tokens.VoucherTools.GenerateToken(actorId,
+                        DateTime.UtcNow + TimeSpan.FromDays(365),
+                        async (token) =>
+                        {
+                            var mailService = this.context.MailService;
+                            var resultMail = await mailService.SendEmailMessageAsync(email, string.Empty,
+                                "newaccounts@orderowl.com", "New Account Services",
+                                "newaccount",
+                                new Dictionary<string, string>()
+                                {
+                                    { "subject", "Login to OrderOwl" },
+                                    { "create_account_link", getRedirectLink(redirectId, token).AbsoluteUri }
+                                },
+                                null,
+                                (sentCode) => success(),
+                                () => serviceNotAvailable(),
+                                (why) => onFailed(why));
+                            return resultMail;
+                        },
+                        (why) => onFailed(why).ToTask(),
+                        (why, setting) => onFailed(why).ToTask());
+                    return resultToken;
+                });
+            return result;
+        }
+
         private async Task<TResult> SendEmailInviteAsync<TResult>(Guid actorId, string email,
-                Func<Guid, Uri> getRedirectLink,
+                Func<Guid, string, Uri> getRedirectLink,
             Func<TResult> success,
             Func<TResult> alreadyAssociated,
             Func<TResult> serviceNotAvailable,
@@ -84,7 +129,7 @@ namespace EastFive.Security.SessionServer
                         new Dictionary<string, string>()
                         {
                             { "subject", "New Order Owl Account" },
-                            { "create_account_link", getRedirectLink(redirectId).AbsoluteUri }
+                            { "create_account_link", getRedirectLink(redirectId, default(string)).AbsoluteUri }
                         },
                         null,
                         (sentCode) => success(),
