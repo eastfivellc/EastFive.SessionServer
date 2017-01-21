@@ -155,5 +155,10 @@ namespace EastFive.Security.LoginProvider.AzureADB2C
                 onSuccess,
                 onFail);
         }
+
+        public Task DeleteLoginAsync(Guid loginId)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

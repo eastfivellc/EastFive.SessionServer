@@ -1,4 +1,4 @@
-﻿
+﻿using System;
 
 namespace EastFive.Security.SessionServer.Persistence.Azure
 {
@@ -27,6 +27,17 @@ namespace EastFive.Security.SessionServer.Persistence.Azure
                 if (default(Sessions) == sessions)
                     sessions = new Sessions(this.AzureStorageRepository);
                 return sessions;
+            }
+        }
+
+        private CredentialMappings credentialMappings = null;
+        public CredentialMappings CredentialMappings
+        {
+            get
+            {
+                if (default(CredentialMappings) == credentialMappings)
+                    credentialMappings = new Persistence.Azure.CredentialMappings(this.AzureStorageRepository);
+                return credentialMappings;
             }
         }
     }

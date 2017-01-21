@@ -29,7 +29,7 @@ namespace EastFive.Security.SessionServer
                 {
                     switch (credentialValidationMethodType)
                     {
-                        case CredentialValidationMethodTypes.AzureADB2C:
+                        case CredentialValidationMethodTypes.Password:
                             {
                                 // Catch this in the default
                                 break;

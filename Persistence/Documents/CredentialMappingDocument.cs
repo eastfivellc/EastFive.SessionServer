@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.WindowsAzure.Storage.Table;
+using System;
+using System.Runtime.Serialization;
 
 namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
 {
@@ -6,9 +8,11 @@ namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
     {
         #region Properties
         
-        public Guid AuthId { get; set; }
+        [IgnoreDataMember]
+        [IgnoreProperty]
+        public Guid Id { get { return Guid.Parse(this.RowKey); } }
 
-        public byte[] ExternalClaimsLocations { get; set; }
+        public Guid ActorId { get; set; }
 
         #endregion
         

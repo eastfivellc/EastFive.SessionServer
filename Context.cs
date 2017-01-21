@@ -37,6 +37,8 @@ namespace EastFive.Security.SessionServer
             get { return dataContext ?? (dataContext = dataContextCreateFunc.Invoke()); }
         }
 
+        #region Services
+
         private Func<Task<IIdentityService>> loginProviderFunc;
         private Task<IIdentityService> loginProvider;
         internal Task<IIdentityService> LoginProvider
@@ -60,6 +62,19 @@ namespace EastFive.Security.SessionServer
         internal ISendMessageService MailService
         {
             get { return mailService ?? (mailService = mailServiceFunc.Invoke()); }
+        }
+
+        #endregion
+        
+        private CredentialMappings credentialMappings;
+        public CredentialMappings CredentialMappings
+        {
+            get
+            {
+                if (default(CredentialMappings) == credentialMappings)
+                    credentialMappings = new CredentialMappings(this, this.DataContext);
+                return credentialMappings;
+            }
         }
 
         private Sessions sessions;

@@ -157,14 +157,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Api\Actions\ClaimActions.cs" />
-    <Compile Include="Api\Actions\AccountRedirectActions.cs" />
+    <Compile Include="Api\Actions\InviteActions.cs" />
     <Compile Include="Api\Constants.cs" />
     <Compile Include="Api\Controllers\AuthorizeController.cs" />
     <Compile Include="Api\Controllers\BaseController.cs" />
     <Compile Include="Api\Controllers\ClaimController.cs" />
     <Compile Include="Api\Controllers\CredentialMappingController.cs" />
     <Compile Include="Api\Controllers\InviteController.cs" />
-    <Compile Include="Api\Controllers\CredentialController.cs" />
+    <Compile Include="Api\Controllers\PasswordCredentialController.cs" />
     <Compile Include="Api\Controllers\SessionController.cs" />
     <Compile Include="Api\RequestExtensions.cs" />
     <Compile Include="Api\Resources\AuthHeaderProps.cs" />
@@ -173,6 +173,7 @@
     <Compile Include="Api\Resources\CredentialMapping.cs" />
     <Compile Include="Api\Resources\Queries\InviteQuery.cs" />
     <Compile Include="Api\Resources\Queries\CredentialQuery.cs" />
+    <Compile Include="CredentialMappings.cs" />
     <Compile Include="CredentialProviders\AzureADB2C\AzureADB2CProvider.cs" />
     <Compile Include="LoginProvider.cs" />
     <Compile Include="Library.cs" />
@@ -181,8 +182,11 @@
     <Compile Include="CredentialProviders\IProvideCredentials.cs" />
     <Compile Include="CredentialProviders\Voucher\Utilities.cs" />
     <Compile Include="CredentialValidationMethodTypes.cs" />
-    <Compile Include="Persistence\CredentialRedirects.cs" />
+    <Compile Include="Persistence\CredentialMappings.cs" />
     <Compile Include="Persistence\Authorizations.cs" />
+    <Compile Include="Persistence\Documents\CredentialMappingActorLookupDocument.cs" />
+    <Compile Include="Persistence\Documents\CredentialMappingLoginLookupDocument.cs" />
+    <Compile Include="Persistence\Documents\InviteTokenDocument.cs" />
     <Compile Include="Persistence\Documents\CredentialRedirectDocument.cs" />
     <Compile Include="Persistence\Documents\CredentialsDocument.cs" />
     <Compile Include="CredentialProviders\Implicit\ImplicitlyCreatedCredentialProvider.cs" />
@@ -205,7 +209,7 @@
     <Compile Include="Api\Resources\Authorization.cs" />
     <Compile Include="Api\Resources\Authorize.cs" />
     <Compile Include="Api\Resources\Claim.cs" />
-    <Compile Include="Api\Resources\Credential.cs" />
+    <Compile Include="Api\Resources\PasswordCredential.cs" />
     <Compile Include="Api\Actions\CredentialActions.cs" />
     <Compile Include="Api\Resources\Session.cs" />
     <Compile Include="Sessions.cs" />
@@ -230,7 +234,7 @@
       <Name>BlackBarLabs.Api</Name>
     </ProjectReference>
     <ProjectReference Include="..\BlackBarLabs.Core\BlackBarLabs.Core.csproj">
-      <Project>{73088F1B-3ACA-476B-AA45-B7D6660F1C73}</Project>
+      <Project>{73088f1b-3aca-476b-aa45-b7d6660f1c73}</Project>
       <Name>BlackBarLabs.Core</Name>
     </ProjectReference>
     <ProjectReference Include="..\BlackBarLabs.Persistence.Azure\BlackBarLabs.Persistence.Azure.csproj">

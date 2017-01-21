@@ -7,6 +7,7 @@ using BlackBarLabs.Collections.Async;
 using BlackBarLabs.Persistence.Azure;
 using BlackBarLabs.Persistence.Azure.StorageTables;
 using BlackBarLabs.Linq;
+using System.Collections.Generic;
 
 namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
 {
@@ -48,6 +49,44 @@ namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
             return claims.Where(claim => claim.HasValue).Select(claim => claim.Value).ToArray();
         }
 
+        public byte [] CredentialMappings { get; set; }
+
+        internal IDictionary<Guid, Guid?> GetCredentialMappings()
+        {
+            return CredentialMappings.FromByteArray(
+                    (mappingBytes) => new Guid(mappingBytes),
+                    (loginBytes) => loginBytes.Length == 0 ?
+                        default(Guid?) : new Guid(loginBytes));
+        }
+
+        internal void SetCredentialMappings(IDictionary<Guid, Guid?> mappings)
+        {
+            CredentialMappings = mappings.ToByteArray(
+                    (actorId) => actorId.ToByteArray(),
+                    (loginId) => loginId.HasValue ?
+                        loginId.Value.ToByteArray() : new byte[] { });
+        }
+
+        internal bool RemoveCredentialMapping(Guid credentialMappingId)
+        {
+            var mappings = GetCredentialMappings();
+            if (!mappings.ContainsKey(credentialMappingId))
+                return false;
+            mappings.Remove(credentialMappingId);
+            SetCredentialMappings(mappings);
+            return true;
+        }
+
+        internal bool AddCredentialMapping(Guid credentialMappingId, Guid? loginId)
+        {
+            var mappings = GetCredentialMappings();
+            if (mappings.ContainsKey(credentialMappingId))
+                return false;
+            mappings.Add(credentialMappingId, loginId);
+            SetCredentialMappings(mappings);
+            return true;
+        }
+
         #endregion
 
         #region Properties
@@ -74,9 +113,14 @@ namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
 
         public byte[] Redirects { get; set; }
 
+        internal Guid[] GetClaimMappings()
+        {
+            return this.Redirects.ToGuidsFromByteArray();
+        }
+
         internal bool AddRedirect(Guid redirectId)
         {
-            var redirectIds = this.Redirects.ToGuidsFromByteArray();
+            var redirectIds = this.GetClaimMappings();
             if (redirectIds.Contains(redirectId))
                 return false;
             this.Redirects = redirectIds.Append(redirectId).ToByteArrayOfGuids();
@@ -85,7 +129,7 @@ namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
 
         internal bool RemoveRedirect(Guid redirectId)
         {
-            var redirectIds = this.Redirects.ToGuidsFromByteArray();
+            var redirectIds = this.GetClaimMappings();
             if (!redirectIds.Contains(redirectId))
                 return false;
             this.Redirects = redirectIds.Where(rId => rId != redirectId).ToByteArrayOfGuids();

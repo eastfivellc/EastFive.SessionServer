@@ -1,7 +1,4 @@
-﻿using BlackBarLabs.Api;
-using BlackBarLabs.Api.Extensions;
-using BlackBarLabs.Extensions;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -9,6 +6,9 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
+
+using BlackBarLabs;
+using BlackBarLabs.Api;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
@@ -26,13 +26,13 @@ namespace EastFive.Security.SessionServer.Api.Controllers
         {
             var context = this.Request.GetSessionServerContext();
             var response = await context.Sessions.CreateAsync(Guid.NewGuid(),
-                CredentialValidationMethodTypes.AzureADB2C, result.id_token, result.state,
+                CredentialValidationMethodTypes.Password, result.id_token, result.state,
                 (redirectUrlBase, authorizationId, token, refreshToken) =>
                 {
                     var redirectUrl = redirectUrlBase
-                        .AddQuery("authoriationId", authorizationId.ToString("N"))
-                        .AddQuery("token", token)
-                        .AddQuery("refreshToken", refreshToken);
+                        .SetQueryParam("authoriationId", authorizationId.ToString("N"))
+                        .SetQueryParam("token", token)
+                        .SetQueryParam("refreshToken", refreshToken);
                     var redirectResponse = Redirect(redirectUrl);
                     return redirectResponse;
                 },

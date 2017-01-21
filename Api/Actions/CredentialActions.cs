@@ -34,38 +34,11 @@ namespace EastFive.Security.SessionServer.Api
                 () => request.CreateResponse(HttpStatusCode.NotFound));
         }
 
-        public static async Task<HttpResponseMessage> CreateAsync(this Resources.Credential credential,
-            HttpRequestMessage request, UrlHelper url)
-        {
-            //return await request.GetClaims(
-            //    async (claims) =>
-            //    {
-            var claims = new System.Security.Claims.Claim[] { };
-                    var context = request.GetSessionServerContext();
-                    var creationResults = await context.Authorizations.CreateCredentialsAsync(credential.AuthorizationId.UUID,
-                        credential.Method,
-                        credential.UserId, credential.IsEmail, credential.Token, credential.ForceChange,
-                        claims.ToArray(),
-                        (redirectId) => url.GetLocation<Controllers.InviteController>(redirectId),
-                        () => request.CreateResponse(HttpStatusCode.Created, credential),
-                        (why) => request.CreateResponse(HttpStatusCode.Conflict)
-                            .AddReason($"Authentication failed:{why}"),
-                        () => request.CreateResponse(HttpStatusCode.Conflict)
-                            .AddReason($"Email address is already associated with account"),
-                        () => request.CreateResponse(HttpStatusCode.ServiceUnavailable),
-                        (why) => request.CreateResponse(HttpStatusCode.Conflict)
-                            .AddReason(why));
-                    return creationResults;
-                //},
-                //() => request.CreateResponse(HttpStatusCode.Unauthorized).ToTask(),
-                //(why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why).ToTask());
-        }
-
-        public static async Task<HttpResponseMessage> PutAsync(this Resources.Credential credential,
+        public static async Task<HttpResponseMessage> PutAsync(this Resources.PasswordCredential credential,
             HttpRequestMessage request)
         {
             var context = request.GetSessionServerContext();
-            var creationResults = await context.Authorizations.UpdateCredentialsAsync(credential.AuthorizationId.UUID,
+            var creationResults = await context.Authorizations.UpdateCredentialsAsync(credential.CredentialMappingId.UUID,
                 credential.UserId, credential.IsEmail, credential.Token, credential.ForceChange,
                 () => request.CreateResponse(HttpStatusCode.NoContent),
                 () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("Authorization does not exist"),
@@ -84,21 +57,21 @@ namespace EastFive.Security.SessionServer.Api
 
         public static Task<HttpResponseMessage> CredentialOptionsAsync(this HttpRequestMessage request)
         {
-            var credentialProviders = new Resources.Credential[]
+            var credentialProviders = new Resources.PasswordCredential[]
             {
-                new Resources.Credential
+                new Resources.PasswordCredential
                 {   
                     UserId = "0123456789",
                     Token = "ABC.123.MXC",
                 },
-                new Resources.Credential
+                new Resources.PasswordCredential
                 {
                     //Method = CredentialValidationMethodTypes.OpenIdConnect,
                     //Provider = new Uri("urn:auth.gibbits.nc2media.com/AuthOpenIdConnect/"),
                     UserId = Guid.NewGuid().ToString("N"),
                     Token = "EDF.123.A3EF",
                 },
-                new Resources.Credential
+                new Resources.PasswordCredential
                 {
                     //Method = CredentialValidationMethodTypes.Implicit,
                     //Provider = new Uri("http://www.example.com/ImplicitAuth"),

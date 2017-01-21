@@ -46,11 +46,11 @@ namespace EastFive.Security.SessionServer
             Func<T> credentialNotInSystem,
             Func<string, T> systemOffline)
         {
-                    var result = await await AuthenticateCredentialsAsync(method, token,
-                        async (authorizationId, claims) =>
-                        {
+            var result = await await AuthenticateCredentialsAsync(method, token,
+                async (authorizationId, claims) =>
+                {
                             // Convert authentication unique ID to Actor ID
-                            return await await dataContext.Authorizations.LookupCredentialMappingAsync(authorizationId,
+                            return await await dataContext.CredentialMappings.LookupCredentialMappingAsync(authorizationId,
                                 async (actorId) =>
                                 {
                                     var refreshToken = BlackBarLabs.Security.SecureGuid.Generate().ToString("N");
@@ -66,11 +66,11 @@ namespace EastFive.Security.SessionServer
                                     return resultFound;
                                 },
                                 () => credentialNotInSystem().ToTask());
-                        },
-                        (why) => invalidToken(why).ToTask(),
-                        () => authIdNotFound().ToTask(),
-                        (why) => systemOffline(why).ToTask());
-                    return result;
+                },
+                (why) => invalidToken(why).ToTask(),
+                () => authIdNotFound().ToTask(),
+                (why) => systemOffline(why).ToTask());
+            return result;
         }
 
         public async Task<T> CreateAsync<T>(Guid sessionId,
@@ -118,40 +118,35 @@ namespace EastFive.Security.SessionServer
             Func<TResult> lookupCredentialNotFound,
             Func<TResult> alreadyRedeemed)
         {
-            var redirectId = new Guid(data);
-            return await await this.dataContext.Authorizations.MarkCredentialRedirectAsync(redirectId,
+            var inviteToken = new Guid(data);
+            return await await this.dataContext.CredentialMappings.MarkCredentialRedirectAsync(inviteToken,
+                loginId,
                 async (actorId) =>
                 {
-                    Func<Task<TResult>> createSession = 
-                    async () =>
-                    {
-                        var refreshToken = BlackBarLabs.Security.SecureGuid.Generate().ToString("N");
-                        var resultFound = await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, actorId,
-                            () =>
-                            {
-                                var jwtToken = GenerateToken(sessionId, actorId, claims
+                    var refreshToken = BlackBarLabs.Security.SecureGuid.Generate().ToString("N");
+                    var resultFound = await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, actorId,
+                        () =>
+                        {
+                            var jwtToken = GenerateToken(sessionId, actorId, claims
                                     .Select(claim => new KeyValuePair<string, string>(claim.Type, claim.Value))
                                     .ToDictionary());
-                                return onSuccess(redirectUri, actorId, jwtToken, refreshToken);
-                            },
-                            () => alreadyExists());
-                        return resultFound;
-                    };
-                    return await await dataContext.Authorizations.CreateCredentialAsync(loginId, actorId,
-                        createSession, createSession);
+                            return onSuccess(redirectUri, actorId, jwtToken, refreshToken);
+                        },
+                        () => alreadyExists());
+                    return resultFound;
                 },
                 () => lookupCredentialNotFound().ToTask(),
                 (connectedActorId) => alreadyRedeemed().ToTask());
         }
 
-        private async Task<TResult> LookupCredentialMappingAsync<TResult>(Guid authorizationId, Guid sessionId,
+        private async Task<TResult> LookupCredentialMappingAsync<TResult>(Guid loginId, Guid sessionId,
             System.Security.Claims.Claim[] claims, Uri redirectUri,
             CreateSessionSuccessDelegate<TResult> onSuccess,
             CreateSessionAlreadyExistsDelegate<TResult> alreadyExists,
             Func<TResult> credentialNotInSystem)
         {
             // Convert authentication unique ID to Actor ID
-            var result = await await dataContext.Authorizations.LookupCredentialMappingAsync(authorizationId,
+            var result = await await dataContext.CredentialMappings.LookupCredentialMappingAsync(loginId,
                 async (actorId) =>
                 {
                     var refreshToken = BlackBarLabs.Security.SecureGuid.Generate().ToString("N");
@@ -168,6 +163,23 @@ namespace EastFive.Security.SessionServer
                 },
                 () => credentialNotInSystem().ToTask());
             return result;
+        }
+
+        internal async Task<TResult> CreateAsync<TResult>(Guid sessionId, Guid actorId, System.Security.Claims.Claim[] claims,
+            Func<string, string, TResult> onSuccess,
+            Func<TResult> alreadyExists)
+        {
+            var refreshToken = BlackBarLabs.Security.SecureGuid.Generate().ToString("N");
+            var resultFound = await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, actorId,
+                () =>
+                {
+                    var jwtToken = GenerateToken(sessionId, actorId, claims
+                        .Select(claim => new KeyValuePair<string, string>(claim.Type, claim.Value))
+                        .ToDictionary());
+                    return onSuccess(jwtToken, refreshToken);
+                },
+                () => alreadyExists());
+            return resultFound;
         }
 
         public delegate T AuthenticateSuccessDelegate<T>(Guid authorizationId, string token, string refreshToken);

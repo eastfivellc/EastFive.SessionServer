@@ -16,9 +16,6 @@ namespace EastFive.Security.SessionServer.Api.Resources
         [DataMember]
         public string Email { get; set; }
         
-        [DataMember]
-        public CredentialValidationMethodTypes Method { get; set; }
-
         #endregion
     }
 }
