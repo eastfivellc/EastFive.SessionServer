@@ -13,9 +13,6 @@ namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
             get { return Guid.Parse(this.RowKey); }
         }
 
-        public Guid ActorId { get; set; }
-
-        public Guid InviteId { get; set; }
-        public Guid? LoginId { get; internal set; }
+        public Guid CredentialMappingId { get; set; }
     }
 }

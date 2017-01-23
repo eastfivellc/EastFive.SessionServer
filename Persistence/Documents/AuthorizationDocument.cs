@@ -92,7 +92,6 @@ namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
         #region Properties
 
         public byte [] Claims { get; set; }
-        public string AssociatedEmails { get; set; }
 
         internal async Task<TResult> AddClaimsAsync<TResult>(ClaimDocument claimsDoc, AzureStorageRepository repository,
             Func<TResult> success,
@@ -136,27 +135,29 @@ namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
             return true;
         }
 
-        internal bool AddAssociatedEmail(string email)
+        public byte [] InviteIds { get; set; }
+
+        internal bool AddInviteId(Guid inviteId)
         {
-            var associatedEmailsStorage = this.AssociatedEmails;
-            var associatedEmails = String.IsNullOrWhiteSpace(associatedEmailsStorage) ?
-                new string[] { }
-                :
-                associatedEmailsStorage.Split(new[] { ',' });
-            if (associatedEmails.Contains(email))
+            var inviteIds = this.GetInviteIds();
+            if (inviteIds.Contains(inviteId))
                 return false;
-            this.AssociatedEmails = associatedEmails.Append(email).Join(",");
+            this.InviteIds = inviteIds.Append(inviteId).ToByteArrayOfGuids();
             return true;
         }
 
-        internal bool RemoveAssociatedEmail(string email)
+        internal bool RemoveInviteId(Guid inviteId)
         {
-            var associatedEmailsNew = this.AssociatedEmails.Split(new[] { ',' })
-                        .Where(e => e.CompareTo(email) != 0)
-                        .Join(",");
-            var updated = associatedEmailsNew.Length != this.AssociatedEmails.Length;
-            this.AssociatedEmails = associatedEmailsNew;
-            return updated;
+            var inviteIds = this.GetInviteIds();
+            if (!inviteIds.Contains(inviteId))
+                return false;
+            this.InviteIds = inviteIds.Where(rId => rId != inviteId).ToByteArrayOfGuids();
+            return true;
+        }
+
+        internal Guid[] GetInviteIds()
+        {
+            return this.InviteIds.ToGuidsFromByteArray();
         }
 
         #endregion

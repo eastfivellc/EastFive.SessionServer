@@ -157,6 +157,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Api\Actions\ClaimActions.cs" />
+    <Compile Include="Api\Actions\CredentialMappingActions.cs" />
+    <Compile Include="Api\Actions\PasswordCredentialActions.cs" />
     <Compile Include="Api\Actions\InviteActions.cs" />
     <Compile Include="Api\Constants.cs" />
     <Compile Include="Api\Controllers\AuthorizeController.cs" />
@@ -171,6 +173,7 @@
     <Compile Include="Api\Controllers\AccountLinksController.cs" />
     <Compile Include="Api\Resources\Invite.cs" />
     <Compile Include="Api\Resources\CredentialMapping.cs" />
+    <Compile Include="Api\Resources\Queries\CredentialMappingQuery.cs" />
     <Compile Include="Api\Resources\Queries\InviteQuery.cs" />
     <Compile Include="Api\Resources\Queries\CredentialQuery.cs" />
     <Compile Include="CredentialMappings.cs" />

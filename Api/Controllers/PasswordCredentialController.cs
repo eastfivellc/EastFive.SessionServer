@@ -9,42 +9,14 @@ using System.Web.Http.Routing;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
+    [RoutePrefix("aadb2c")]
     public class PasswordCredentialController : BaseController
     {
         public IHttpActionResult Post([FromBody]Resources.PasswordCredential model)
         {
-            return new HttpActionResult(() => CreateAsync(model, this.Request, this.Url));
+            return new HttpActionResult(() => model.CreateAsync(this.Request, this.Url));
         }
-
-        public async Task<HttpResponseMessage> CreateAsync(Resources.PasswordCredential credential,
-            HttpRequestMessage request, UrlHelper url)
-        {
-            var credentialMappingId = credential.CredentialMappingId.ToGuid();
-            //return await request.GetClaims(
-            //    async (claims) =>
-            //    {
-            var claims = new System.Security.Claims.Claim[] { };
-            var context = request.GetSessionServerContext();
-            var creationResults = await context.CredentialMappings.CreatePasswordCredentialsAsync(
-                credential.Id.UUID, credentialMappingId.Value,
-                credential.UserId, credential.IsEmail, credential.Token, credential.ForceChange,
-                claims.ToArray(),
-                () => request.CreateResponse(HttpStatusCode.Created),
-                (why) => request.CreateResponse(HttpStatusCode.Conflict)
-                    .AddReason($"Authentication failed:{why}"),
-                () => request.CreateResponse(HttpStatusCode.Conflict)
-                    .AddReason($"Credential already exists"),
-                () => request.CreateResponse(HttpStatusCode.Conflict)
-                    .AddReason($"Credential mapping not found"),
-                () => request.CreateResponse(HttpStatusCode.ServiceUnavailable),
-                (why) => request.CreateResponse(HttpStatusCode.Conflict)
-                    .AddReason(why));
-            return creationResults;
-            //},
-            //() => request.CreateResponse(HttpStatusCode.Unauthorized).ToTask(),
-            //(why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why).ToTask());
-        }
-
+        
         public IHttpActionResult Put([FromBody]PasswordCredential model)
         {
             return new HttpActionResult(() => model.PutAsync(this.Request));

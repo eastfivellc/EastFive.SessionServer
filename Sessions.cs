@@ -93,7 +93,7 @@ namespace EastFive.Security.SessionServer
                         async (loginId, claims) =>
                         {
                             if (action == 1)
-                                return await CreateLookupCredentialMappingAsync(loginId, sessionId, data,
+                                return await CreateWithNewNewAccountAsync(loginId, sessionId, data,
                                     claims, redirectUri,
                                     onSuccess, alreadyExists, lookupCredentialNotFound, alreadyRedeemed);
 
@@ -110,7 +110,7 @@ namespace EastFive.Security.SessionServer
             return parseResult;
         }
 
-        private async Task<TResult> CreateLookupCredentialMappingAsync<TResult>(Guid loginId, Guid sessionId,
+        private async Task<TResult> CreateWithNewNewAccountAsync<TResult>(Guid loginId, Guid sessionId,
             byte [] data,
             System.Security.Claims.Claim[] claims, Uri redirectUri,
             CreateSessionSuccessDelegate<TResult> onSuccess,
@@ -119,7 +119,7 @@ namespace EastFive.Security.SessionServer
             Func<TResult> alreadyRedeemed)
         {
             var inviteToken = new Guid(data);
-            return await await this.dataContext.CredentialMappings.MarkCredentialRedirectAsync(inviteToken,
+            return await await this.dataContext.CredentialMappings.MarkInviteRedeemedAsync(inviteToken,
                 loginId,
                 async (actorId) =>
                 {

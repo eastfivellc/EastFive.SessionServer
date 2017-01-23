@@ -71,35 +71,35 @@ namespace EastFive.Security.SessionServer
         //    throw new NotImplementedException();
         //}
 
-        private async Task<TResult> SendTokenInviteAsync<TResult>(Guid inviteId, Guid actorId, string email,
-            Func<Guid, Guid, Uri> getRedirectLink,
-            Func<TResult> success,
-            Func<string, TResult> onFailed,
-            Func<TResult> serviceNotAvailable)
-        {
-            var token = BlackBarLabs.Security.SecureGuid.Generate();
-            var result = await await this.dataContext.CredentialMappings.CreateTokenAsync(inviteId,
-                actorId, email, token,
-                async () =>
-                {
-                            var mailService = this.context.MailService;
-                            var resultMail = await mailService.SendEmailMessageAsync(email, string.Empty,
-                                "newaccounts@orderowl.com", "New Account Services",
-                                "newaccount",
-                                new Dictionary<string, string>()
-                                {
-                                    { "subject", "Login to OrderOwl" },
-                                    { "create_account_link", getRedirectLink(inviteId, token).AbsoluteUri }
-                                },
-                                null,
-                                (sentCode) => success(),
-                                () => serviceNotAvailable(),
-                                (why) => onFailed(why));
-                            return resultMail;
-                },
-                () => onFailed("Already associated").ToTask());
-            return result;
-        }
+        //private async Task<TResult> SendTokenInviteAsync<TResult>(Guid inviteId, Guid actorId, string email,
+        //    Func<Guid, Guid, Uri> getRedirectLink,
+        //    Func<TResult> success,
+        //    Func<string, TResult> onFailed,
+        //    Func<TResult> serviceNotAvailable)
+        //{
+        //    var token = BlackBarLabs.Security.SecureGuid.Generate();
+        //    var result = await await this.dataContext.CredentialMappings.CreateTokenAsync(inviteId,
+        //        actorId, email, token,
+        //        async () =>
+        //        {
+        //                    var mailService = this.context.MailService;
+        //                    var resultMail = await mailService.SendEmailMessageAsync(email, string.Empty,
+        //                        "newaccounts@orderowl.com", "New Account Services",
+        //                        "newaccount",
+        //                        new Dictionary<string, string>()
+        //                        {
+        //                            { "subject", "Login to OrderOwl" },
+        //                            { "create_account_link", getRedirectLink(inviteId, token).AbsoluteUri }
+        //                        },
+        //                        null,
+        //                        (sentCode) => success(),
+        //                        () => serviceNotAvailable(),
+        //                        (why) => onFailed(why));
+        //                    return resultMail;
+        //        },
+        //        () => onFailed("Already associated").ToTask());
+        //    return result;
+        //}
 
         public async Task<TResult> GetCredentialsAsync<TResult>(Guid authorizationId,
             Func<Guid, TResult> success,

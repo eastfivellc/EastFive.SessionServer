@@ -57,7 +57,7 @@ namespace EastFive.Security.LoginProvider.AzureADB2C
 
         public Uri GetLoginUrl(string redirect_uri, byte mode, byte[] state, Uri callbackLocation)
         {
-            return GetUrl(this.signupEndpoint, redirect_uri, mode, state, callbackLocation);
+            return GetUrl(this.loginEndpoint, redirect_uri, mode, state, callbackLocation);
         }
 
         public Uri GetSignupUrl(string redirect_uri, byte mode, byte[] state, Uri callbackLocation)

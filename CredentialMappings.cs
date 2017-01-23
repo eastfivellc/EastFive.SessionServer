@@ -9,6 +9,20 @@ using System.Security.Claims;
 
 namespace EastFive.Security.SessionServer
 {
+    public struct CredentialMapping
+    {
+        public Guid id;
+        public Guid actorId;
+        public Guid? loginId;
+    }
+
+    public struct Invite
+    {
+        public Guid id;
+        public Guid credentialMappingId;
+        public string email;
+    }
+
     public class CredentialMappings
     {
         private Context context;
@@ -33,7 +47,35 @@ namespace EastFive.Security.SessionServer
                 onMappingAlreadyExists,
                 onLoginAlreadyUsed);
         }
+
+        internal Task<TResult> GetAsync<TResult>(Guid credentialMappingId,
+            Func<Guid, Guid?, TResult> success,
+            Func<TResult> notFound)
+        {
+            return this.dataContext.CredentialMappings.FindByIdAsync(credentialMappingId,
+                (actorId, loginId) => success(actorId, loginId),
+                () => notFound());
+        }
         
+        internal Task<TResult> GetByActorAsync<TResult>(Guid actorId,
+            Func<CredentialMapping[], TResult> success,
+            Func<TResult> notFound)
+        {
+            return this.dataContext.CredentialMappings.FindByActorAsync(actorId,
+                (credentialMappings) => success(credentialMappings.Select(Convert).ToArray()),
+                () => notFound());
+        }
+
+        private CredentialMapping Convert(Persistence.Azure.CredentialMapping mapping)
+        {
+            return new CredentialMapping
+            {
+                id = mapping.id,
+                actorId = mapping.actorId,
+                loginId = mapping.loginId,
+            };
+        }
+
         public async Task<TResult> CreatePasswordCredentialsAsync<TResult>(Guid credentialId, Guid credentialMappingId,
             string username, bool isEmail, string token, bool forceChange,
             System.Security.Claims.Claim[] claims,
@@ -107,17 +149,18 @@ namespace EastFive.Security.SessionServer
         }
 
         internal Task<TResult> GetInviteAsync<TResult>(Guid inviteId,
-            Func<byte [], TResult> success,
-            Func<TResult> onAlreadyUsed,
+            Func<Invite, TResult> success,
             Func<TResult> notFound)
         {
             return this.dataContext.CredentialMappings.FindInviteAsync(inviteId,
-                (actorId, loginId) =>
+                (credentialMappingId, email) =>
                 {
-                    if (loginId.HasValue)
-                        return onAlreadyUsed();
-                    var state = inviteId.ToByteArray();
-                    return success(state);
+                    return success(new Invite
+                    {
+                        id = inviteId,
+                        credentialMappingId = credentialMappingId,
+                        email = email,
+                    });
                 },
                 () => notFound());
         }
@@ -136,6 +179,18 @@ namespace EastFive.Security.SessionServer
 
                     var state = token.ToByteArray();
                     return redirect(state);
+                },
+                () => notFound());
+        }
+
+        internal Task<TResult> GetInvitesByActorAsync<TResult>(Guid actorId,
+            Func<Invite[], TResult> success,
+            Func<TResult> notFound)
+        {
+            return this.dataContext.CredentialMappings.FindInviteByActorAsync(actorId,
+                (invites) =>
+                {
+                    return success(invites);
                 },
                 () => notFound());
         }

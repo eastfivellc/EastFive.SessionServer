@@ -10,35 +10,17 @@ using EastFive.Security.SessionServer.Api.Resources;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
+    [RoutePrefix("aadb2c")]
     public class CredentialMappingController : BaseController
     {
-        public IHttpActionResult Post([FromBody]Resources.CredentialMapping resource)
+        public IHttpActionResult Get([FromUri]Resources.Queries.CredentialMappingQuery model)
         {
-            return new HttpActionResult(() => this.CreateAsync(resource));
+            return new HttpActionResult(() => model.QueryAsync(this.Request, this.Url));
         }
 
-        private async Task<HttpResponseMessage> CreateAsync(Resources.CredentialMapping resource)
+        public IHttpActionResult Post([FromBody]Resources.CredentialMapping resource)
         {
-            var credentialMappingId = resource.Id.ToGuid();
-            if (!credentialMappingId.HasValue)
-                return this.Request.CreateResponse(HttpStatusCode.BadRequest)
-                    .AddReason("Cannot create resource without Id");
-            var actorId = resource.ActorId.ToGuid();
-            if (!actorId.HasValue)
-                return this.Request.CreateResponse(HttpStatusCode.BadRequest)
-                    .AddReason("Actor Id is required");
-
-            var claims = new System.Security.Claims.Claim[] { };
-            var context = this.Request.GetSessionServerContext();
-            var creationResults = await context.CredentialMappings.CreateAsync(credentialMappingId.Value,
-                actorId.Value, resource.LoginId.ToGuid(),
-                claims.ToArray(),
-                () => this.Request.CreateResponse(HttpStatusCode.Created),
-                () => this.Request.CreateResponse(HttpStatusCode.Conflict)
-                    .AddReason($"Mapping already exists"),
-                () => this.Request.CreateResponse(HttpStatusCode.Conflict)
-                    .AddReason($"Login already exists"));
-            return creationResults;
+            return new HttpActionResult(() => resource.CreateAsync(this.Request, this.Url));
         }
     }
 }
