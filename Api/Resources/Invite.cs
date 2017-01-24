@@ -11,7 +11,7 @@ namespace EastFive.Security.SessionServer.Api.Resources
         #region Properties
         
         [DataMember]
-        public WebId CredentialMapping { get; set; }
+        public Guid ActorId { get; set; }
         
         [DataMember]
         public string Email { get; set; }

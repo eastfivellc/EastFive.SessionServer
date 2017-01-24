@@ -4,17 +4,17 @@ using System.Runtime.Serialization;
 
 namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
 {
-    internal class CredentialMappingLoginLookupDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
-    {
-        #region Properties
+    //internal class CredentialMappingLoginLookupDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
+    //{
+    //    #region Properties
         
-        [IgnoreDataMember]
-        [IgnoreProperty]
-        public Guid Id { get { return Guid.Parse(this.RowKey); } }
+    //    [IgnoreDataMember]
+    //    [IgnoreProperty]
+    //    public Guid Id { get { return Guid.Parse(this.RowKey); } }
 
-        public Guid ActorId { get; set; }
+    //    public Guid ActorId { get; set; }
 
-        #endregion
+    //    #endregion
         
-    }
+    //}
 }

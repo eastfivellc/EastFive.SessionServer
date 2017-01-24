@@ -5,17 +5,17 @@ using BlackBarLabs.Api.Resources;
 
 namespace EastFive.Security.SessionServer.Api.Resources
 {
-    [DataContract]
-    public class CredentialMapping : BlackBarLabs.Api.ResourceBase
-    {
-        #region Properties
+    //[DataContract]
+    //public class CredentialMapping : BlackBarLabs.Api.ResourceBase
+    //{
+    //    #region Properties
         
-        [DataMember]
-        public WebId ActorId { get; set; }
+    //    [DataMember]
+    //    public WebId ActorId { get; set; }
         
-        [DataMember]
-        public WebId LoginId { get; set; }
+    //    [DataMember]
+    //    public WebId LoginId { get; set; }
 
-        #endregion
-    }
+    //    #endregion
+    //}
 }

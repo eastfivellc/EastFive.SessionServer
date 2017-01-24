@@ -37,7 +37,7 @@ namespace EastFive.Security.SessionServer.Api
                     var response = request.CreateResponse(HttpStatusCode.OK, new Resources.Invite
                     {
                         Id = invite.id,
-                        CredentialMapping = urlHelper.GetWebId<Controllers.CredentialMappingController>(invite.credentialMappingId),
+                        ActorId = invite.actorId,
                         Email = invite.email,
                     });
                     return response;
@@ -107,7 +107,7 @@ namespace EastFive.Security.SessionServer.Api
             return new Resources.Invite
             {
                 Id = invite.id,
-                CredentialMapping = urlHelper.GetWebId<Controllers.CredentialMappingController>(invite.credentialMappingId),
+                ActorId = invite.actorId,
                 Email = invite.email,
             };
         }
@@ -117,14 +117,14 @@ namespace EastFive.Security.SessionServer.Api
         public static async Task<HttpResponseMessage> CreateAsync(this Resources.Invite credential,
             HttpRequestMessage request, UrlHelper url)
         {
-            var credentialMappingId = credential.CredentialMapping.ToGuid();
+            var actorId = credential.ActorId;
             //return await request.GetClaims(
             //    async (claims) =>
             //    {
             var claims = new System.Security.Claims.Claim[] { };
             var context = request.GetSessionServerContext();
             var creationResults = await context.CredentialMappings.SendEmailInviteAsync(
-                credential.Id.UUID, credentialMappingId.Value, credential.Email,
+                credential.Id.UUID, actorId, credential.Email,
                 claims.ToArray(),
                 (inviteId, token) => url.GetLocation<Controllers.InviteController>().SetQueryParam("token", token.ToString("N")),
                 () => request.CreateResponse(HttpStatusCode.Created),

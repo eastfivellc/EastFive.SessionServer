@@ -28,6 +28,7 @@ namespace EastFive.Security.LoginProvider.AzureADB2C
         private Uri signupConfiguration;
         private string loginEndpoint;
         private string signupEndpoint;
+        private string logoutEndpoint;
 
         public LoginProvider()
         {
@@ -42,10 +43,11 @@ namespace EastFive.Security.LoginProvider.AzureADB2C
         public async Task InitializeAsync()
         {
             await EastFive.AzureADB2C.Libary.InitializeAsync(this.signupConfiguration, this.signinConfiguration, this.audience,
-                (signupEndpoint, signinEndpoint, validationParams) =>
+                (signupEndpoint, signinEndpoint, logoutEndpoint, validationParams) =>
                 {
                     this.signupEndpoint = signupEndpoint;
                     this.loginEndpoint = signinEndpoint;
+                    this.logoutEndpoint = logoutEndpoint;
                     this.validationParameters = validationParams;
                     return true;
                 },
@@ -64,7 +66,12 @@ namespace EastFive.Security.LoginProvider.AzureADB2C
         {
             return GetUrl(this.signupEndpoint, redirect_uri, mode, state, callbackLocation);
         }
-
+        
+        public Uri GetLogoutUrl(string redirect_uri, byte mode, byte[] state, Uri callbackLocation)
+        {
+            return GetUrl(this.logoutEndpoint, redirect_uri, mode, state, callbackLocation);
+        }
+        
         private Uri GetUrl(string longurl, string redirect_uri, byte mode, byte[] state,
             Uri callbackLocation)
         {

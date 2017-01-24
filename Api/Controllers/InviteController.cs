@@ -13,7 +13,7 @@ using BlackBarLabs.Extensions;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
-    [RoutePrefix("aadb2c")]
+    [RoutePrefix("api")]
     public class InviteController : BaseController
     {
         #region Get

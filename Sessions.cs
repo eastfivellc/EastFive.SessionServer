@@ -83,6 +83,7 @@ namespace EastFive.Security.SessionServer
             Func<T> credentialNotInSystem,
             Func<T> lookupCredentialNotFound,
             Func<T> alreadyRedeemed,
+            Func<T> onAlreadyInUse,
             Func<string, T> systemOffline)
         {
             var loginProvider = await this.context.LoginProvider;
@@ -95,7 +96,8 @@ namespace EastFive.Security.SessionServer
                             if (action == 1)
                                 return await CreateWithNewNewAccountAsync(loginId, sessionId, data,
                                     claims, redirectUri,
-                                    onSuccess, alreadyExists, lookupCredentialNotFound, alreadyRedeemed);
+                                    onSuccess, alreadyExists, lookupCredentialNotFound, alreadyRedeemed,
+                                    onAlreadyInUse, onAlreadyInUse);
 
                             return await LookupCredentialMappingAsync(loginId, sessionId,
                                 claims, redirectUri,
@@ -116,7 +118,9 @@ namespace EastFive.Security.SessionServer
             CreateSessionSuccessDelegate<TResult> onSuccess,
             CreateSessionAlreadyExistsDelegate<TResult> alreadyExists,
             Func<TResult> lookupCredentialNotFound,
-            Func<TResult> alreadyRedeemed)
+            Func<TResult> alreadyRedeemed,
+            Func<TResult> onAlreadyInUse,
+            Func<TResult> onAlreadyConnected)
         {
             var inviteToken = new Guid(data);
             return await await this.dataContext.CredentialMappings.MarkInviteRedeemedAsync(inviteToken,
@@ -136,7 +140,9 @@ namespace EastFive.Security.SessionServer
                     return resultFound;
                 },
                 () => lookupCredentialNotFound().ToTask(),
-                (connectedActorId) => alreadyRedeemed().ToTask());
+                (connectedActorId) => alreadyRedeemed().ToTask(),
+                () => onAlreadyInUse().ToTask(),
+                () => onAlreadyConnected().ToTask());
         }
 
         private async Task<TResult> LookupCredentialMappingAsync<TResult>(Guid loginId, Guid sessionId,

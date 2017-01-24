@@ -213,7 +213,6 @@
     <Compile Include="Api\Resources\Authorize.cs" />
     <Compile Include="Api\Resources\Claim.cs" />
     <Compile Include="Api\Resources\PasswordCredential.cs" />
-    <Compile Include="Api\Actions\CredentialActions.cs" />
     <Compile Include="Api\Resources\Session.cs" />
     <Compile Include="Sessions.cs" />
     <Compile Include="Extensions.cs" />

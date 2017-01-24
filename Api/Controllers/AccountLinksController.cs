@@ -21,6 +21,9 @@ namespace EastFive.Security.SessionServer.Api.Controllers
 
         [JsonProperty(PropertyName = "signup")]
         public Uri Signup { get; set; }
+
+        [JsonProperty(PropertyName = "logout")]
+        public Uri Logout { get; set; }
     }
 
     public class AccountLinksQuery
@@ -55,6 +58,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 {
                     Login = loginProvider.GetLoginUrl(redirect_uri, 0, new byte[] { }, callbackUrl),
                     Signup = loginProvider.GetSignupUrl(redirect_uri, 0, new byte[] { }, callbackUrl),
+                    Logout = loginProvider.GetLogoutUrl(redirect_uri, 0, new byte[] { }, callbackUrl),
                 }).ToActionResult();
         }
     }

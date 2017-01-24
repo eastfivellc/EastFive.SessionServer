@@ -30,38 +30,38 @@ namespace EastFive.Security.SessionServer.Persistence.Azure
             this.repository = repository;
         }
         
-        public async Task<TResult> CreateCredentialMappingAsync<TResult>(Guid credentialMappingId,
-            Guid actorId, Guid? loginId, 
-            Func<TResult> onSuccess,
-            Func<TResult> onMappingAlreadyExists,
-            Func<TResult> onLoginAlreadyUsed)
-        {
-            var rollback = new RollbackAsync<TResult>();
-            var credentialMappingDoc = new Documents.CredentialMappingDocument
-            {
-                ActorId = actorId,
-            };
-            rollback.AddTaskCreate(credentialMappingId, credentialMappingDoc,
-                onMappingAlreadyExists, this.repository);
+        //public async Task<TResult> CreateCredentialMappingAsync<TResult>(Guid credentialMappingId,
+        //    Guid actorId, Guid? loginId, 
+        //    Func<TResult> onSuccess,
+        //    Func<TResult> onMappingAlreadyExists,
+        //    Func<TResult> onLoginAlreadyUsed)
+        //{
+        //    var rollback = new RollbackAsync<TResult>();
+        //    var credentialMappingDoc = new Documents.CredentialMappingDocument
+        //    {
+        //        ActorId = actorId,
+        //    };
+        //    rollback.AddTaskCreate(credentialMappingId, credentialMappingDoc,
+        //        onMappingAlreadyExists, this.repository);
 
-            rollback.AddTaskCreateOrUpdate(actorId,
-                (Documents.AuthorizationDocument actorDoc) => 
-                    actorDoc.AddCredentialMapping(credentialMappingId, loginId),
-                actorDoc => actorDoc.RemoveCredentialMapping(credentialMappingId),
-                onMappingAlreadyExists,
-                this.repository);
+        //    rollback.AddTaskCreateOrUpdate(actorId,
+        //        (Documents.AuthorizationDocument actorDoc) => 
+        //            actorDoc.AddCredentialMapping(credentialMappingId, loginId),
+        //        actorDoc => actorDoc.RemoveCredentialMapping(credentialMappingId),
+        //        onMappingAlreadyExists,
+        //        this.repository);
 
-            if (loginId.HasValue)
-            {
-                var credentialMappingLoginLookupDoc = new Documents.CredentialMappingLoginLookupDocument
-                {
-                    ActorId = actorId,
-                };
-                rollback.AddTaskCreate(loginId.Value, credentialMappingLoginLookupDoc,
-                    onLoginAlreadyUsed, this.repository);
-            }
-            return await rollback.ExecuteAsync(onSuccess);
-        }
+        //    if (loginId.HasValue)
+        //    {
+        //        var credentialMappingLoginLookupDoc = new Documents.CredentialMappingLoginLookupDocument
+        //        {
+        //            ActorId = actorId,
+        //        };
+        //        rollback.AddTaskCreate(loginId.Value, credentialMappingLoginLookupDoc,
+        //            onLoginAlreadyUsed, this.repository);
+        //    }
+        //    return await rollback.ExecuteAsync(onSuccess);
+        //}
 
         public async Task<TResult> FindByIdAsync<TResult>(Guid credentialMappingId,
             Func<Guid, Guid?, TResult> onSuccess,
@@ -73,75 +73,37 @@ namespace EastFive.Security.SessionServer.Persistence.Azure
                 () => onNotFound());
         }
 
-        public async Task<TResult> FindByActorAsync<TResult>(Guid actorId,
-            Func<CredentialMapping[], TResult> onSuccess,
-            Func<TResult> onNotFound)
-        {
-            return await repository.FindByIdAsync(actorId,
-                (Documents.AuthorizationDocument actorDoc) =>
-                {
-                    var mappingLogins = actorDoc.GetCredentialMappings();
-                    var mappings = mappingLogins.Select(kvp => new CredentialMapping
-                    {
-                        id = kvp.Key,
-                        actorId = actorId,
-                        loginId = kvp.Value,
-                    }).ToArray();
-                    return onSuccess(mappings);
-                },
-                () => onNotFound());
-        }
+        //public async Task<TResult> FindByActorAsync<TResult>(Guid actorId,
+        //    Func<CredentialMapping[], TResult> onSuccess,
+        //    Func<TResult> onNotFound)
+        //{
+        //    return await repository.FindByIdAsync(actorId,
+        //        (Documents.AuthorizationDocument actorDoc) =>
+        //        {
+        //            var mappingLogins = actorDoc.GetCredentialMappings();
+        //            var mappings = mappingLogins.Select(kvp => new CredentialMapping
+        //            {
+        //                id = kvp.Key,
+        //                actorId = actorId,
+        //                loginId = kvp.Value,
+        //            }).ToArray();
+        //            return onSuccess(mappings);
+        //        },
+        //        () => onNotFound());
+        //}
 
-        public async Task<TResult> UpdateLoginIdAsync<TResult>(Guid credentialMappingId,
-            Func<CredentialMapping, Func<Guid?, Task>, Task<TResult>> onSuccess,
-            Func<TResult> credentialAlreadyExists,
-            Func<TResult> credentialMappingNotFound)
+        public async Task<TResult> CreateLoginIdAsync<TResult>(Guid actorId, Guid loginId,
+            Func<TResult> onSuccess,
+            Func<TResult> onRelationshipAlreadyExists)
         {
-            var resultFind = await await this.repository.FindByIdAsync(credentialMappingId,
-                async (Documents.CredentialMappingDocument doc) =>
-                {
-                    var resultUpdate = await this.repository.UpdateAsync<Documents.AuthorizationDocument, TResult>(doc.ActorId,
-                        async (actorDoc, updateActorDocAsync) =>
-                        {
-                            var credentialMappings = actorDoc.GetCredentialMappings();
-                            if (!credentialMappings.ContainsKey(credentialMappingId))
-                            {
-                                // TODO: Log data corruption
-                                return credentialMappingNotFound();
-                            }
-                            var loginId = credentialMappings[credentialMappingId];
-                            var result = await onSuccess(
-                                new CredentialMapping
-                                {
-                                    id = credentialMappingId,
-                                    actorId = doc.ActorId,
-                                    loginId = loginId,
-                                },
-                                async (newLoginId) =>
-                                {
-                                    credentialMappings[credentialMappingId] = newLoginId;
-                                    actorDoc.SetCredentialMappings(credentialMappings);
-                                    var lookupDoc = new Documents.CredentialMappingLoginLookupDocument
-                                    {
-                                        ActorId = doc.ActorId,
-                                    };
-                                    // TODO: Figure out how to delete and rollback the lookup doc
-                                    if(newLoginId.HasValue)
-                                        await this.repository.CreateAsync(newLoginId.Value, lookupDoc,
-                                            () => true, () => false);
-                                    await updateActorDocAsync(actorDoc);
-                                });
-                            return result;
-                        },
-                        () =>
-                        {
-                            // TODO: Log data corruption
-                            return credentialMappingNotFound();
-                        });
-                    return resultUpdate;
-                },
-                () => credentialMappingNotFound().ToTask());
-            return resultFind;
+            var lookupDoc = new Documents.LoginActorLookupDocument
+            {
+                ActorId = actorId,
+            };
+            var resultUpdate = await this.repository.CreateAsync(loginId, lookupDoc,
+                () => onSuccess(),
+                () => onRelationshipAlreadyExists());
+            return resultUpdate;
         }
 
         public async Task<TResult> LookupCredentialMappingAsync<TResult>(Guid loginId,
@@ -149,44 +111,44 @@ namespace EastFive.Security.SessionServer.Persistence.Azure
             Func<TResult> onNotExist)
         {
             return await repository.FindByIdAsync(loginId,
-                (Documents.CredentialMappingLoginLookupDocument document) => onSuccess(document.ActorId),
+                (Documents.LoginActorLookupDocument document) => onSuccess(document.ActorId),
                 () => onNotExist());
         }
 
-        internal Task<TResult> FindCredentialMappingByAuthIdAsync<TResult>(Guid actorId,
-            Func<CredentialMapping[], TResult> onFound,
-            Func<TResult> onNotFound)
-        {
-            return repository.FindByIdAsync(actorId,
-                (Documents.AuthorizationDocument document) =>
-                {
-                    return onFound(document.GetCredentialMappings()
-                        .Select(kvp => new CredentialMapping
-                        {
-                            id = kvp.Key,
-                            actorId = actorId,
-                            loginId = kvp.Value,
-                        }).ToArray());
-                },
-                () => onNotFound());
-        }
+        //internal Task<TResult> FindCredentialMappingByAuthIdAsync<TResult>(Guid actorId,
+        //    Func<CredentialMapping[], TResult> onFound,
+        //    Func<TResult> onNotFound)
+        //{
+        //    return repository.FindByIdAsync(actorId,
+        //        (Documents.AuthorizationDocument document) =>
+        //        {
+        //            return onFound(document.GetCredentialMappings()
+        //                .Select(kvp => new CredentialMapping
+        //                {
+        //                    id = kvp.Key,
+        //                    actorId = actorId,
+        //                    loginId = kvp.Value,
+        //                }).ToArray());
+        //        },
+        //        () => onNotFound());
+        //}
 
-        internal Task<TResult> FindCredentialMappingByIdAsync<TResult>(Guid credentialMappingId,
-            Func<CredentialMapping, TResult> onFound,
-            Func<TResult> onNotFound)
-        {
-            return repository.FindByIdAsync(credentialMappingId,
-                (Documents.CredentialMappingDocument document) =>
-                {
-                    return onFound(new CredentialMapping
-                    {
-                        id = document.Id,
-                        actorId = document.ActorId,
-                        loginId = document.LoginId,
-                    });
-                },
-                () => onNotFound());
-        }
+        //internal Task<TResult> FindCredentialMappingByIdAsync<TResult>(Guid credentialMappingId,
+        //    Func<CredentialMapping, TResult> onFound,
+        //    Func<TResult> onNotFound)
+        //{
+        //    return repository.FindByIdAsync(credentialMappingId,
+        //        (Documents.CredentialMappingDocument document) =>
+        //        {
+        //            return onFound(new CredentialMapping
+        //            {
+        //                id = document.Id,
+        //                actorId = document.ActorId,
+        //                loginId = document.LoginId,
+        //            });
+        //        },
+        //        () => onNotFound());
+        //}
 
         //internal Task<TResult> CreateTokenAsync<TResult>(Guid inviteId,
         //    Guid actorId, string email, Guid token,
@@ -210,48 +172,34 @@ namespace EastFive.Security.SessionServer.Persistence.Azure
         //}
         
         internal async Task<TResult> CreateInviteAsync<TResult>(Guid inviteId,
-            Guid credentialMappingId, string email, Guid token,
+            Guid actorId, string email, Guid token,
             Func<TResult> onSuccess,
-            Func<TResult> XonAlreadyExists,
-            Func<TResult> onCredentialMappingNotFound)
+            Func<TResult> onAlreadyExists,
+            Func<TResult> onInviteAlreadySetForActor)
         {
-            Func<TResult> onAlreadyExists = () =>
-                {
-                    return XonAlreadyExists();
-                };
-            var resultFind = await await this.repository.FindByIdAsync(credentialMappingId,
-                async (Documents.CredentialMappingDocument doc) =>
-                {
-                    var rollback = new RollbackAsync<TResult>();
+            var rollback = new RollbackAsync<TResult>();
 
-                    var inviteDocument = new Documents.InviteDocument()
-                    {
-                        CredentialMappingId = credentialMappingId,
-                        ActorId = doc.ActorId,
-                        Email = email,
-                    };
-                    rollback.AddTaskCreate(inviteId, inviteDocument, onAlreadyExists, this.repository);
+            var inviteDocument = new Documents.InviteDocument()
+            {
+                ActorId = actorId,
+                Email = email,
+            };
+            rollback.AddTaskCreate(inviteId, inviteDocument, onAlreadyExists, this.repository);
 
-                    var inviteTokenDocument = new Documents.InviteTokenDocument()
-                    {
-                        CredentialMappingId = credentialMappingId,
-                    };
-                    rollback.AddTaskCreate(token, inviteTokenDocument, onAlreadyExists, this.repository);
+            var inviteTokenDocument = new Documents.InviteTokenDocument()
+            {
+                ActorId = actorId,
+                InviteId = inviteId,
+            };
+            rollback.AddTaskCreate(token, inviteTokenDocument, onAlreadyExists, this.repository);
 
-                    rollback.AddTaskUpdate(doc.ActorId,
-                        (Documents.AuthorizationDocument authDoc) => authDoc.AddInviteId(inviteId),
-                        (authDoc) => authDoc.RemoveInviteId(inviteId),
-                        () =>
-                        {
-                            // TODO: Log data inconsistency
-                            return onCredentialMappingNotFound();
-                        },
-                        this.repository);
+            rollback.AddTaskCreateOrUpdate(actorId,
+                (Documents.AuthorizationDocument authDoc) => authDoc.AddInviteId(inviteId),
+                (authDoc) => authDoc.RemoveInviteId(inviteId),
+                onInviteAlreadySetForActor,
+                this.repository);
 
-                    return await rollback.ExecuteAsync(onSuccess);
-                },
-                () => onCredentialMappingNotFound().ToTask());
-            return resultFind;
+            return await rollback.ExecuteAsync(onSuccess);
         }
 
         internal Task<TResult> FindInviteAsync<TResult>(Guid inviteId,
@@ -259,7 +207,7 @@ namespace EastFive.Security.SessionServer.Persistence.Azure
             Func<TResult> onNotFound)
         {
             return repository.FindByIdAsync(inviteId,
-                (Documents.InviteDocument document) => onFound(document.CredentialMappingId, document.Email),
+                (Documents.InviteDocument document) => onFound(document.ActorId, document.Email),
                 () => onNotFound());
         }
         
@@ -269,10 +217,10 @@ namespace EastFive.Security.SessionServer.Persistence.Azure
         {
             return await await repository.FindByIdAsync(token,
                 (Documents.InviteTokenDocument document) =>
-                    FindCredentialMappingByIdAsync(document.CredentialMappingId,
-                        (credentialMapping) =>
+                    repository.FindByIdAsync(document.InviteId,
+                        (Documents.InviteDocument inviteDoc) =>
                         {
-                            return onSuccess(credentialMapping.id, credentialMapping.actorId, credentialMapping.loginId);
+                            return onSuccess(document.InviteId, inviteDoc.ActorId, inviteDoc.LoginId);
                         },
                         () =>
                         {
@@ -301,7 +249,7 @@ namespace EastFive.Security.SessionServer.Persistence.Azure
             return new Invite
             {
                 id = inviteDoc.Id,
-                credentialMappingId = inviteDoc.CredentialMappingId,
+                actorId = inviteDoc.ActorId,
                 email = inviteDoc.Email,
             };
         }
@@ -309,30 +257,28 @@ namespace EastFive.Security.SessionServer.Persistence.Azure
         internal async Task<TResult> MarkInviteRedeemedAsync<TResult>(Guid inviteToken, Guid loginId,
             Func<Guid, TResult> onFound,
             Func<TResult> onNotFound,
-            Func<Guid, TResult> onAlreadyRedeemed)
+            Func<Guid, TResult> onAlreadyRedeemed,
+            Func<TResult> onAlreadyInUse,
+            Func<TResult> onAlreadyConnected)
         {
             var lookupResults = await await repository.FindByIdAsync(inviteToken,
                 async (Documents.InviteTokenDocument tokenDocument) =>
                 {
-                    return await repository.UpdateAsync<Documents.CredentialMappingDocument, TResult>(tokenDocument.CredentialMappingId,
-                        async (credentialMappingDoc, updateAsync) =>
-                        {
-                            if (credentialMappingDoc.LoginId.HasValue)
-                            {
-                                if (loginId != credentialMappingDoc.LoginId.Value)
-                                    return onAlreadyRedeemed(credentialMappingDoc.LoginId.Value);
+                    var rollback = new RollbackAsync<TResult>();
 
-                                return onFound(credentialMappingDoc.ActorId);
-                            }
-                            credentialMappingDoc.LoginId = loginId;
-                            await updateAsync(credentialMappingDoc);
-                            return onFound(credentialMappingDoc.ActorId);
-                        },
-                        () =>
-                        {
-                            // TODO: LOg data inconsistency
-                            return onNotFound();
-                        });
+                    rollback.AddTaskUpdate(tokenDocument.InviteId,
+                        (Documents.InviteDocument inviteDoc) => { inviteDoc.LoginId = loginId; },
+                        (inviteDoc) => { inviteDoc.LoginId = default(Guid?); },
+                        onNotFound,
+                        this.repository);
+
+                    var loginLookup = new Documents.LoginActorLookupDocument()
+                    {
+                        ActorId = tokenDocument.ActorId,
+                    };
+                    rollback.AddTaskCreate(loginId, loginLookup, onAlreadyInUse, this.repository);
+
+                    return await rollback.ExecuteAsync(() => onFound(tokenDocument.ActorId));
                 },
                 () => onNotFound().ToTask());
             return lookupResults;

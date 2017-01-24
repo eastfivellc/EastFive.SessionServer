@@ -57,6 +57,9 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 () => this.Request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason("Token has already been redeemed")
                     .ToActionResult(),
+                () => this.Request.CreateResponse(HttpStatusCode.Conflict)
+                    .AddReason("The provided login credentials are already in use for another account")
+                    .ToActionResult(),
                 (why) => this.Request.CreateResponse(HttpStatusCode.BadGateway)
                     .AddReason(why)
                     .ToActionResult());

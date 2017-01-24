@@ -49,44 +49,6 @@ namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
             return claims.Where(claim => claim.HasValue).Select(claim => claim.Value).ToArray();
         }
 
-        public byte [] CredentialMappings { get; set; }
-
-        internal IDictionary<Guid, Guid?> GetCredentialMappings()
-        {
-            return CredentialMappings.FromByteArray(
-                    (mappingBytes) => new Guid(mappingBytes),
-                    (loginBytes) => loginBytes.Length == 0 ?
-                        default(Guid?) : new Guid(loginBytes));
-        }
-
-        internal void SetCredentialMappings(IDictionary<Guid, Guid?> mappings)
-        {
-            CredentialMappings = mappings.ToByteArray(
-                    (actorId) => actorId.ToByteArray(),
-                    (loginId) => loginId.HasValue ?
-                        loginId.Value.ToByteArray() : new byte[] { });
-        }
-
-        internal bool RemoveCredentialMapping(Guid credentialMappingId)
-        {
-            var mappings = GetCredentialMappings();
-            if (!mappings.ContainsKey(credentialMappingId))
-                return false;
-            mappings.Remove(credentialMappingId);
-            SetCredentialMappings(mappings);
-            return true;
-        }
-
-        internal bool AddCredentialMapping(Guid credentialMappingId, Guid? loginId)
-        {
-            var mappings = GetCredentialMappings();
-            if (mappings.ContainsKey(credentialMappingId))
-                return false;
-            mappings.Add(credentialMappingId, loginId);
-            SetCredentialMappings(mappings);
-            return true;
-        }
-
         #endregion
 
         #region Properties

@@ -14,8 +14,7 @@ namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
         }
 
         public Guid ActorId { get; set; }
-        public Guid? LoginId { get; set; }
         public string Email { get; set; }
-        public Guid CredentialMappingId { get; set; }
+        public Guid? LoginId { get; set; }
     }
 }
