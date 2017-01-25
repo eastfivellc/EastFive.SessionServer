@@ -24,11 +24,20 @@ namespace EastFive.Security.SessionServer.Api
             //return await request.GetClaims(
             //    async (claims) =>
             //    {
+
+            var loginProviderTaskGetter = (Func<Task<IIdentityService>>)
+                request.Properties[ServicePropertyDefinitions.IdentityService];
+            var loginProviderTask = loginProviderTaskGetter();
+            var loginProvider = await loginProviderTask;
+            var callbackUrl = url.GetLocation<Controllers.OpenIdResponseController>();
+            var loginUrl = loginProvider.GetLoginUrl(("http://orderowl.com"), 0, new byte[] { }, callbackUrl);
+
             var claims = new System.Security.Claims.Claim[] { };
             var context = request.GetSessionServerContext();
             var creationResults = await context.CredentialMappings.CreatePasswordCredentialsAsync(
                 credential.Id.UUID, actorId.Value,
                 credential.UserId, credential.IsEmail, credential.Token, credential.ForceChange,
+                default(DateTime?), loginUrl,
                 claims.ToArray(),
                 () => request.CreateResponse(HttpStatusCode.Created),
                 (why) => request.CreateResponse(HttpStatusCode.Conflict)

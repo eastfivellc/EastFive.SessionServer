@@ -44,13 +44,14 @@ namespace EastFive.Security.SessionServer
 
         public async Task<TResult> CreatePasswordCredentialsAsync<TResult>(Guid passwordCredentialId, Guid actorId,
             string username, bool isEmail, string token, bool forceChange,
+            DateTime? emailLastSent, Uri loginUrl,
             System.Security.Claims.Claim[] claims,
             Func<TResult> onSuccess,
             Func<string, TResult> authenticationFailed,
             Func<TResult> credentialAlreadyExists,
             Func<TResult> onRelationshipAlreadyExists,
             Func<TResult> onLoginAlreadyUsed,
-            Func<TResult> serviceNotAvailable,
+            Func<TResult> onServiceNotAvailable,
             Func<string, TResult> onFailure)
         {
             var loginProvider = await this.context.LoginProvider;
@@ -61,7 +62,28 @@ namespace EastFive.Security.SessionServer
                 {
                     var result = await await dataContext.CredentialMappings.CreatePasswordCredentialAsync(
                         passwordCredentialId, actorId, loginId,
-                        () => onSuccess().ToTask(),
+                        async () =>
+                        {
+                            if (!isEmail || !emailLastSent.HasValue)
+                                return onSuccess();
+
+                            var mailService = this.context.MailService;
+                            var resultMail = await mailService.SendEmailMessageAsync(username, string.Empty,
+                                "newaccounts@orderowl.com", "New Account Services",
+                                Configuration.EmailTemplateDefinitions.InvitePassword,
+                                new Dictionary<string, string>()
+                                {
+                                    { "subject",    "New Order Owl Account" },
+                                    { "login_link", loginUrl.AbsoluteUri },
+                                    { "username",   username },
+                                    { "password",   token }
+                                },
+                                null,
+                                (sentCode) => onSuccess(),
+                                () => onServiceNotAvailable(),
+                                (why) => onFailure(why));
+                            return resultMail;
+                        },
                         async () =>
                         {
                             await loginProvider.DeleteLoginAsync(loginId);
@@ -167,7 +189,7 @@ namespace EastFive.Security.SessionServer
                     var mailService = this.context.MailService;
                     var resultMail = await mailService.SendEmailMessageAsync(email, string.Empty,
                         "newaccounts@orderowl.com", "New Account Services",
-                        "newaccount",
+                        Configuration.EmailTemplateDefinitions.InviteNewAccount,
                         new Dictionary<string, string>()
                         {
                             { "subject", "New Order Owl Account" },
@@ -250,7 +272,7 @@ namespace EastFive.Security.SessionServer
                     var mailService = this.context.MailService;
                     var resultMail = await mailService.SendEmailMessageAsync(email, string.Empty,
                         "newaccounts@orderowl.com", "New Account Services",
-                        "tokenlink",
+                        Configuration.EmailTemplateDefinitions.LoginToken,
                         new Dictionary<string, string>()
                         {
                             { "subject", "New Order Owl Account" },
@@ -289,7 +311,7 @@ namespace EastFive.Security.SessionServer
                         var mailService = this.context.MailService;
                         var resultMail = await await mailService.SendEmailMessageAsync(email, string.Empty,
                             "newaccounts@orderowl.com", "New Account Services",
-                            "tokenlink",
+                            Configuration.EmailTemplateDefinitions.LoginToken,
                             new Dictionary<string, string>()
                             {
                                 { "subject", "New Order Owl Account" },

@@ -168,10 +168,9 @@ namespace EastFive.Security.LoginProvider.AzureADB2C
             Func<TResult> onNotFound,
             Func<string, TResult> onServiceNotAvailable)
         {
-            var user = await client.GetUserByObjectId(loginId.ToString());
-            return onSuccess(user.SignInNames[0].Value,
-                String.Compare(user.SignInNames[0].Type, "emailAddress") == 0,
-                user.PasswordProfile.ForceChangePasswordNextLogin);
+            return await client.GetUserByObjectId(loginId.ToString(),
+                onSuccess,
+                (why) => onServiceNotAvailable(why));
         }
 
         public Task DeleteLoginAsync(Guid loginId)
