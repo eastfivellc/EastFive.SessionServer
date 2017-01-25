@@ -139,27 +139,15 @@ namespace EastFive.Security.LoginProvider.AzureADB2C
         public async Task<TResult> CreateLoginAsync<TResult>(string displayName,
             string userId, bool isEmail, string secret, bool forceChange,
             Func<Guid, TResult> onSuccess,
+            Func<Guid, TResult> usernameAlreadyInUse,
+            Func<TResult> onPasswordInsufficent,
             Func<string, TResult> onFail)
         {
-            var user = new EastFive.AzureADB2C.Resources.User()
-            {
-                DisplayName = displayName,
-                AccountEnabled = true,
-                SignInNames = new[] {
-                    new EastFive.AzureADB2C.Resources.User.SignInName
-                    {
-                        Type = isEmail? "emailAddress" : "userName",
-                        Value = userId,
-                    }
-                },
-                PasswordProfile = new EastFive.AzureADB2C.Resources.User.PasswordProfileResource
-                {
-                    ForceChangePasswordNextLogin = forceChange,
-                    Password = secret,
-                },
-            };
-            return await client.CreateUser(user,
+            return await client.CreateUser(displayName,
+                userId, isEmail, secret, forceChange,
                 onSuccess,
+                (loginId) => usernameAlreadyInUse(loginId),
+                onPasswordInsufficent,
                 onFail);
         }
 

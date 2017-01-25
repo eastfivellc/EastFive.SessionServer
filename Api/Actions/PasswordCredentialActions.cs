@@ -42,6 +42,10 @@ namespace EastFive.Security.SessionServer.Api
                 () => request.CreateResponse(HttpStatusCode.Created),
                 () => request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason($"Credential already exists"),
+                (actorUsingId) => request.CreateResponse(HttpStatusCode.Conflict)
+                    .AddReason($"Username already in use with Actor:{actorUsingId}"),
+                () => request.CreateResponse(HttpStatusCode.Conflict)
+                    .AddReason($"Password is insufficient."),
                 () => request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason($"Relationship already exists"),
                 () => request.CreateResponse(HttpStatusCode.Conflict)

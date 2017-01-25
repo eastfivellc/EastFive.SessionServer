@@ -49,6 +49,8 @@ namespace EastFive.Security.SessionServer
             System.Security.Claims.Claim[] claims,
             Func<TResult> onSuccess,
             Func<TResult> credentialAlreadyExists,
+            Func<Guid, TResult> onUsernameAlreadyInUse,
+            Func<TResult> onPasswordInsufficent,
             Func<TResult> onRelationshipAlreadyExists,
             Func<TResult> onLoginAlreadyUsed,
             Func<TResult> onServiceNotAvailable,
@@ -89,6 +91,8 @@ namespace EastFive.Security.SessionServer
 
                     return result;
                 },
+                (loginId) => onUsernameAlreadyInUse(loginId).ToTask(),
+                () => onPasswordInsufficent().ToTask(),
                 (why) => onFailure(why).ToTask());
             return createLoginResult;
         }
@@ -234,10 +238,10 @@ namespace EastFive.Security.SessionServer
                 templateName,
                 new Dictionary<string, string>()
                 {
-                                    { "subject",    "New Order Owl Account" },
-                                    { "login_link", loginUrl.AbsoluteUri },
-                                    { "username",   emailAddress },
-                                    { "password",   password }
+                    { "subject",    "New Order Owl Account" },
+                    { "login_link", loginUrl.AbsoluteUri },
+                    { "username",   emailAddress },
+                    { "password",   password }
                 },
                 null,
                 (sentCode) => onSuccess(),
