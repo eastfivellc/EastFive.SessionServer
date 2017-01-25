@@ -44,6 +44,12 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             var response_mode = q.response_mode;
             var redirect_uri = q.redirect_uri;
 
+            if (String.IsNullOrWhiteSpace(redirect_uri))
+                return new HttpActionResult(() => this.Request
+                    .CreateResponse(System.Net.HttpStatusCode.BadRequest)
+                    .AddReason("Missing redirect_uri parameter")
+                    .ToTask());
+
             var loginProviderTaskGetter = (Func<Task<IIdentityService>>)
                 this.Request.Properties[ServicePropertyDefinitions.IdentityService];
             var loginProviderTask = loginProviderTaskGetter();

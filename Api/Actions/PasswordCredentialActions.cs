@@ -36,7 +36,9 @@ namespace EastFive.Security.SessionServer.Api
                 () => request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason($"Credential already exists"),
                 () => request.CreateResponse(HttpStatusCode.Conflict)
-                    .AddReason($"Credential mapping not found"),
+                    .AddReason($"Relationship already exists"),
+                () => request.CreateResponse(HttpStatusCode.Conflict)
+                    .AddReason($"Login is already in use"),
                 () => request.CreateResponse(HttpStatusCode.ServiceUnavailable),
                 (why) => request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason(why));
@@ -60,24 +62,47 @@ namespace EastFive.Security.SessionServer.Api
 
         #region Actionables
 
-        public static async Task<HttpResponseMessage> QueryAsync(this Resources.Queries.CredentialQuery credential,
-            HttpRequestMessage request)
+        public static async Task<HttpResponseMessage> QueryAsync(this Resources.Queries.PasswordCredentialQuery credential,
+            HttpRequestMessage request, UrlHelper urlHelper)
         {
             return await credential.ParseAsync(request,
-                q => QueryByAuthId(q.AuthorizationId.ParamSingle(), request));
+                q => QueryByIdAsync(q.Id.ParamSingle(), request, urlHelper),
+                q => QueryByActorId(q.Actor.ParamSingle(), request));
         }
 
-        private async static Task<HttpResponseMessage> QueryByAuthId(Guid authorizationId, HttpRequestMessage request)
+        private static async Task<HttpResponseMessage> QueryByIdAsync(Guid passwordCredentialId, HttpRequestMessage request, UrlHelper urlHelper)
+        {
+            var context = request.GetSessionServerContext();
+            return await context.CredentialMappings.GetPasswordCredentialAsync(passwordCredentialId,
+                (passwordCredential) =>
+                {
+                    var response = request.CreateResponse(HttpStatusCode.OK, new Resources.PasswordCredential
+                    {
+                        Id = passwordCredential.id,
+                        Actor = passwordCredential.actorId,
+                        UserId = passwordCredential.userId,
+                        IsEmail = passwordCredential.isEmail,
+                        ForceChange = passwordCredential.forceChangePassword,
+                        Token = "************",
+                    });
+                    return response;
+                },
+                () => request.CreateResponse(HttpStatusCode.NotFound),
+                (why) => request.CreateResponse(HttpStatusCode.NotFound));
+        }
+
+        private async static Task<HttpResponseMessage> QueryByActorId(Guid actorId, HttpRequestMessage request)
         {
             var context = request.GetSessionServerContext();
 
-            return await context.Authorizations.GetCredentialsAsync(
-                authorizationId,
+            return await context.CredentialMappings.GetPasswordCredentialByActorAsync(
+                actorId,
                 (id) => request.CreateResponse(HttpStatusCode.OK, id),
-                () => request.CreateResponse(HttpStatusCode.NotFound));
+                () => request.CreateResponse(HttpStatusCode.NotFound),
+                (why) => request.CreateResponse(HttpStatusCode.ServiceUnavailable).AddReason(why));
         }
 
-        public static Task<HttpResponseMessage> DeleteAsync(this Resources.Queries.CredentialQuery credential,
+        public static Task<HttpResponseMessage> DeleteAsync(this Resources.Queries.PasswordCredentialQuery credential,
             HttpRequestMessage request)
         {
             return request

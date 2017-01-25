@@ -66,13 +66,13 @@ namespace EastFive.Security.SessionServer
 
         #endregion
         
-        private CredentialMappings credentialMappings;
-        public CredentialMappings CredentialMappings
+        private Credentials credentialMappings;
+        public Credentials CredentialMappings
         {
             get
             {
-                if (default(CredentialMappings) == credentialMappings)
-                    credentialMappings = new CredentialMappings(this, this.DataContext);
+                if (default(Credentials) == credentialMappings)
+                    credentialMappings = new Credentials(this, this.DataContext);
                 return credentialMappings;
             }
         }

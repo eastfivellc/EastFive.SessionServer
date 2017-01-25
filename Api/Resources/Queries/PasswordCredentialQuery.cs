@@ -6,18 +6,15 @@ using BlackBarLabs.Api.Resources;
 namespace EastFive.Security.SessionServer.Api.Resources.Queries
 {
     [DataContract]
-    public class CredentialQuery : BlackBarLabs.Api.ResourceQueryBase
+    public class PasswordCredentialQuery : BlackBarLabs.Api.ResourceQueryBase
     {
         #region Properties
         
         [DataMember]
-        public WebIdQuery AuthorizationId { get; set; }
-        
-        [DataMember]
-        public string UserId { get; set; }
+        public WebIdQuery Actor { get; set; }
 
         [DataMember]
-        public string Token { get; set; }
+        public WebIdQuery Token { get; set; }
 
         #endregion
     }

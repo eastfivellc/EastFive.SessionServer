@@ -14,18 +14,18 @@ using BlackBarLabs.Extensions;
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
     [RoutePrefix("api")]
-    public class InviteController : BaseController
+    public class InviteCredentialController : BaseController
     {
         #region Get
 
-        public IHttpActionResult Get([FromUri]Resources.Queries.InviteQuery model)
+        public IHttpActionResult Get([FromUri]Resources.Queries.InviteCredentialQuery model)
         {
             return new HttpActionResult(() => model.QueryAsync(this.Request, this.Url));
         }
 
         #endregion
 
-        public IHttpActionResult Post([FromBody]Resources.Invite model)
+        public IHttpActionResult Post([FromBody]Resources.InviteCredential model)
         {
             return new HttpActionResult(() => model.CreateAsync(this.Request, this.Url));
         }

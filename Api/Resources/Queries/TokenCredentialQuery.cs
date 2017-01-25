@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 namespace EastFive.Security.SessionServer.Api.Resources.Queries
 {
     [DataContract]
-    public class InviteQuery : BlackBarLabs.Api.ResourceQueryBase
+    public class TokenCredentialQuery : BlackBarLabs.Api.ResourceQueryBase
     {
         [JsonProperty("actor")]
         public WebIdQuery Actor { get; set; }

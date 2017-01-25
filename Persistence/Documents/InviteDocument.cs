@@ -16,5 +16,8 @@ namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
         public Guid ActorId { get; set; }
         public string Email { get; set; }
         public Guid? LoginId { get; set; }
+        public bool IsToken { get; set; }
+        public DateTime? LastSent { get; set; }
+        public Guid Token { get; set; }
     }
 }

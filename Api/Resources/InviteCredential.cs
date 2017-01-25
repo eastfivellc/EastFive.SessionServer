@@ -6,7 +6,7 @@ using BlackBarLabs.Api.Resources;
 namespace EastFive.Security.SessionServer.Api.Resources
 {
     [DataContract]
-    public class Invite : BlackBarLabs.Api.ResourceBase
+    public class InviteCredential : BlackBarLabs.Api.ResourceBase
     {
         #region Properties
         

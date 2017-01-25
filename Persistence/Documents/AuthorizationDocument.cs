@@ -67,33 +67,28 @@ namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
                         () => failure());
         }
 
-        internal void AddProviders(AuthorizationProvider[] authorizationProviders)
-        {
+        public byte[] PasswordCredentials { get; set; }
 
+        internal Guid[] GetPasswordCredentials()
+        {
+            return this.PasswordCredentials.ToGuidsFromByteArray();
         }
 
-        public byte[] Redirects { get; set; }
-
-        internal Guid[] GetClaimMappings()
+        internal bool AddPasswordCredential(Guid redirectId)
         {
-            return this.Redirects.ToGuidsFromByteArray();
-        }
-
-        internal bool AddRedirect(Guid redirectId)
-        {
-            var redirectIds = this.GetClaimMappings();
+            var redirectIds = this.GetPasswordCredentials();
             if (redirectIds.Contains(redirectId))
                 return false;
-            this.Redirects = redirectIds.Append(redirectId).ToByteArrayOfGuids();
+            this.PasswordCredentials = redirectIds.Append(redirectId).ToByteArrayOfGuids();
             return true;
         }
 
-        internal bool RemoveRedirect(Guid redirectId)
+        internal bool RemovePasswordCredential(Guid redirectId)
         {
-            var redirectIds = this.GetClaimMappings();
+            var redirectIds = this.GetPasswordCredentials();
             if (!redirectIds.Contains(redirectId))
                 return false;
-            this.Redirects = redirectIds.Where(rId => rId != redirectId).ToByteArrayOfGuids();
+            this.PasswordCredentials = redirectIds.Where(rId => rId != redirectId).ToByteArrayOfGuids();
             return true;
         }
 

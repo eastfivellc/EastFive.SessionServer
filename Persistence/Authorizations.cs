@@ -48,22 +48,6 @@ namespace EastFive.Security.SessionServer.Persistence.Azure
             throw new NotImplementedException();
         }
 
-        public async Task<T> CreateAuthorizationAsync<T>(Guid authorizationId,
-                AuthorizationProvider [] authorizationProviders,
-            Func<T> onSuccess,
-            Func<T> onAlreadyExist)
-        {
-            var authorizationDocument = new Documents.AuthorizationDocument()
-            {
-
-            };
-            authorizationDocument.AddProviders(authorizationProviders);
-
-            return await repository.CreateAsync(authorizationId, authorizationDocument,
-                () => onSuccess(),
-                () => onAlreadyExist());
-        }
-
         static Guid GetMd5Hash(MD5 md5Hash, string input)
         {
 

@@ -163,6 +163,17 @@ namespace EastFive.Security.LoginProvider.AzureADB2C
                 onFail);
         }
 
+        public async Task<TResult> GetLoginAsync<TResult>(Guid loginId, 
+            Func<string, bool, bool, TResult> onSuccess,
+            Func<TResult> onNotFound,
+            Func<string, TResult> onServiceNotAvailable)
+        {
+            var user = await client.GetUserByObjectId(loginId.ToString());
+            return onSuccess(user.SignInNames[0].Value,
+                String.Compare(user.SignInNames[0].Type, "emailAddress") == 0,
+                user.PasswordProfile.ForceChangePasswordNextLogin);
+        }
+
         public Task DeleteLoginAsync(Guid loginId)
         {
             throw new NotImplementedException();

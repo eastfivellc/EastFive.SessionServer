@@ -15,11 +15,11 @@ using EastFive.Api.Services;
 
 namespace EastFive.Security.SessionServer.Api
 {
-    public static class InviteActions
+    public static class InviteCredentialActions
     {
         #region Queries
         
-        public static async Task<HttpResponseMessage> QueryAsync(this Resources.Queries.InviteQuery query,
+        public static async Task<HttpResponseMessage> QueryAsync(this Resources.Queries.InviteCredentialQuery query,
             HttpRequestMessage request, UrlHelper urlHelper)
         {
             return await query.ParseAsync(request,
@@ -34,7 +34,7 @@ namespace EastFive.Security.SessionServer.Api
             return await context.CredentialMappings.GetInviteAsync(inviteId,
                 (invite) =>
                 {
-                    var response = request.CreateResponse(HttpStatusCode.OK, new Resources.Invite
+                    var response = request.CreateResponse(HttpStatusCode.OK, new Resources.InviteCredential
                     {
                         Id = invite.id,
                         ActorId = invite.actorId,
@@ -102,9 +102,9 @@ namespace EastFive.Security.SessionServer.Api
                 () => request.CreateResponse(HttpStatusCode.NotFound).ToEnumerable().ToArray());
         }
 
-        private static Resources.Invite Convert(Invite invite, UrlHelper urlHelper)
+        private static Resources.InviteCredential Convert(Invite invite, UrlHelper urlHelper)
         {
-            return new Resources.Invite
+            return new Resources.InviteCredential
             {
                 Id = invite.id,
                 ActorId = invite.actorId,
@@ -114,7 +114,7 @@ namespace EastFive.Security.SessionServer.Api
 
         #endregion
 
-        public static async Task<HttpResponseMessage> CreateAsync(this Resources.Invite credential,
+        public static async Task<HttpResponseMessage> CreateAsync(this Resources.InviteCredential credential,
             HttpRequestMessage request, UrlHelper url)
         {
             var actorId = credential.ActorId;
@@ -126,7 +126,7 @@ namespace EastFive.Security.SessionServer.Api
             var creationResults = await context.CredentialMappings.SendEmailInviteAsync(
                 credential.Id.UUID, actorId, credential.Email,
                 claims.ToArray(),
-                (inviteId, token) => url.GetLocation<Controllers.InviteController>().SetQueryParam("token", token.ToString("N")),
+                (inviteId, token) => url.GetLocation<Controllers.InviteCredentialController>().SetQueryParam("token", token.ToString("N")),
                 () => request.CreateResponse(HttpStatusCode.Created),
                 () => request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason($"Invite already exists"),
