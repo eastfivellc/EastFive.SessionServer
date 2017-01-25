@@ -106,9 +106,10 @@ namespace EastFive.Security.SessionServer.Api
         {
             return new Resources.InviteCredential
             {
-                Id = invite.id,
+                Id = urlHelper.GetWebId<Controllers.InviteCredentialController>(invite.id),
                 ActorId = invite.actorId,
                 Email = invite.email,
+                LastEmailSent = invite.lastSent,
             };
         }
 

@@ -41,7 +41,7 @@ namespace EastFive.Security.SessionServer.Api
                             Id = invite.id,
                             ActorId = invite.actorId,
                             Email = invite.email,
-                            LastSent = invite.lastSent,
+                            LastEmailSent = invite.lastSent,
                         });
                     return response;
                 },
@@ -86,10 +86,10 @@ namespace EastFive.Security.SessionServer.Api
         {
             return new Resources.TokenCredential
             {
-                Id = invite.id,
+                Id = urlHelper.GetWebId<Controllers.InviteCredentialController>(invite.id),
                 ActorId = invite.actorId,
                 Email = invite.email,
-                LastSent = invite.lastSent,
+                LastEmailSent = invite.lastSent,
             };
         }
 
@@ -130,7 +130,7 @@ namespace EastFive.Security.SessionServer.Api
             var claims = new System.Security.Claims.Claim[] { };
             var context = request.GetSessionServerContext();
             var creationResults = await context.CredentialMappings.UpdateTokenCredentialAsync(
-                credential.Id.UUID, credential.Email, credential.LastSent,
+                credential.Id.UUID, credential.Email, credential.LastEmailSent,
                 claims.ToArray(),
                 (inviteId, token) => url.GetLocation<Controllers.TokenCredentialController>()
                     .SetQueryParam("token", token.ToString("N")),

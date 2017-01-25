@@ -37,11 +37,9 @@ namespace EastFive.Security.SessionServer.Api
             var creationResults = await context.CredentialMappings.CreatePasswordCredentialsAsync(
                 credential.Id.UUID, actorId.Value,
                 credential.UserId, credential.IsEmail, credential.Token, credential.ForceChange,
-                default(DateTime?), loginUrl,
+                credential.LastEmailSent, loginUrl,
                 claims.ToArray(),
                 () => request.CreateResponse(HttpStatusCode.Created),
-                (why) => request.CreateResponse(HttpStatusCode.Conflict)
-                    .AddReason($"Authentication failed:{why}"),
                 () => request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason($"Credential already exists"),
                 () => request.CreateResponse(HttpStatusCode.Conflict)
@@ -100,15 +98,28 @@ namespace EastFive.Security.SessionServer.Api
                 (why) => request.CreateResponse(HttpStatusCode.NotFound));
         }
 
-        private async static Task<HttpResponseMessage> QueryByActorId(Guid actorId, HttpRequestMessage request)
+        private async static Task<HttpResponseMessage[]> QueryByActorId(Guid actorId, HttpRequestMessage request)
         {
             var context = request.GetSessionServerContext();
 
             return await context.CredentialMappings.GetPasswordCredentialByActorAsync(
                 actorId,
-                (id) => request.CreateResponse(HttpStatusCode.OK, id),
-                () => request.CreateResponse(HttpStatusCode.NotFound),
-                (why) => request.CreateResponse(HttpStatusCode.ServiceUnavailable).AddReason(why));
+                (credentials) => credentials.Select(
+                    passwordCredential =>
+                    {
+                        var response = request.CreateResponse(HttpStatusCode.OK, new Resources.PasswordCredential
+                        {
+                            Id = passwordCredential.id,
+                            Actor = passwordCredential.actorId,
+                            UserId = passwordCredential.userId,
+                            IsEmail = passwordCredential.isEmail,
+                            ForceChange = passwordCredential.forceChangePassword,
+                            Token = "************",
+                        });
+                        return response;
+                    }).ToArray(),
+                () => request.CreateResponse(HttpStatusCode.NotFound).ToEnumerable().ToArray(),
+                (why) => request.CreateResponse(HttpStatusCode.ServiceUnavailable).AddReason(why).ToEnumerable().ToArray());
         }
 
         public static Task<HttpResponseMessage> DeleteAsync(this Resources.Queries.PasswordCredentialQuery credential,

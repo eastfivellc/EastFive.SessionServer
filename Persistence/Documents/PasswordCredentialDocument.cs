@@ -6,6 +6,7 @@ namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
 {
     internal class PasswordCredentialDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
     {
+
         [IgnoreDataMember]
         [IgnoreProperty]
         public Guid Id
@@ -14,5 +15,6 @@ namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
         }
 
         public Guid LoginId { get; set; }
+        public DateTime? EmailLastSent { get; set; }
     }
 }

@@ -32,7 +32,7 @@ namespace EastFive.Security.SessionServer.Persistence.Azure
         }
 
         public async Task<TResult> CreatePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
-            Guid actorId, Guid loginId,
+            Guid actorId, Guid loginId, DateTime? emailLastSent,
             Func<TResult> onSuccess,
             Func<TResult> onAlreadyExists,
             Func<TResult> onRelationshipAlreadyExists,
@@ -57,6 +57,7 @@ namespace EastFive.Security.SessionServer.Persistence.Azure
             var passwordCredentialDoc = new Documents.PasswordCredentialDocument
             {
                 LoginId = loginId,
+                EmailLastSent = emailLastSent,
             };
             rollback.AddTaskCreate(passwordCredentialId, passwordCredentialDoc,
                     onAlreadyExists, this.repository);
@@ -103,62 +104,6 @@ namespace EastFive.Security.SessionServer.Persistence.Azure
                 (Documents.LoginActorLookupDocument document) => onSuccess(document.ActorId),
                 () => onNotExist());
         }
-
-        //internal Task<TResult> FindCredentialMappingByAuthIdAsync<TResult>(Guid actorId,
-        //    Func<CredentialMapping[], TResult> onFound,
-        //    Func<TResult> onNotFound)
-        //{
-        //    return repository.FindByIdAsync(actorId,
-        //        (Documents.AuthorizationDocument document) =>
-        //        {
-        //            return onFound(document.GetCredentialMappings()
-        //                .Select(kvp => new CredentialMapping
-        //                {
-        //                    id = kvp.Key,
-        //                    actorId = actorId,
-        //                    loginId = kvp.Value,
-        //                }).ToArray());
-        //        },
-        //        () => onNotFound());
-        //}
-
-        //internal Task<TResult> FindCredentialMappingByIdAsync<TResult>(Guid credentialMappingId,
-        //    Func<CredentialMapping, TResult> onFound,
-        //    Func<TResult> onNotFound)
-        //{
-        //    return repository.FindByIdAsync(credentialMappingId,
-        //        (Documents.CredentialMappingDocument document) =>
-        //        {
-        //            return onFound(new CredentialMapping
-        //            {
-        //                id = document.Id,
-        //                actorId = document.ActorId,
-        //                loginId = document.LoginId,
-        //            });
-        //        },
-        //        () => onNotFound());
-        //}
-
-        //internal Task<TResult> CreateTokenAsync<TResult>(Guid inviteId,
-        //    Guid actorId, string email, Guid token,
-        //    Func<TResult> onSuccess,
-        //    Func<TResult> onAlreadyAssociated)
-        //{
-        //    var rollback = new RollbackAsync<TResult>();
-        //    var credentialRedirectDoc = new Documents.InviteDocument()
-        //    {
-        //        ActorId = actorId,
-        //        Email = email,
-        //        //IsToken = true,
-        //    };
-        //    rollback.AddTaskCreate(inviteId, credentialRedirectDoc, onAlreadyAssociated, this.repository);
-        //    rollback.AddTaskCreateOrUpdate(actorId,
-        //        (Documents.AuthorizationDocument doc) => doc.AddRedirect(inviteId),
-        //        (doc) => doc.RemoveRedirect(inviteId),
-        //        onAlreadyAssociated,
-        //        this.repository);
-        //    return rollback.ExecuteAsync(onSuccess);
-        //}
         
         internal async Task<TResult> CreateInviteAsync<TResult>(Guid inviteId,
             Guid actorId, string email, Guid token, DateTime lastSent, bool isToken,
@@ -193,6 +138,13 @@ namespace EastFive.Security.SessionServer.Persistence.Azure
             return await rollback.ExecuteAsync(onSuccess);
         }
 
+        internal Task<TResult> UpdatePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
+            Func<Guid, string, bool, DateTime?, Func<DateTime, Task>, TResult> onFound,
+            Func<TResult> onNotFound)
+        {
+            throw new NotImplementedException();
+        }
+
         internal Task<TResult> UpdateTokenCredentialAsync<TResult>(Guid tokenCredentialId,
             Func<string, DateTime?, Guid, Func<string, DateTime?, Task>, Task<TResult>> onFound,
             Func<TResult> onNotFound)
@@ -225,7 +177,7 @@ namespace EastFive.Security.SessionServer.Persistence.Azure
                 () => onNotFound());
         }
         
-        internal async Task<TResult> FindInviteByTokenAsync<TResult>(Guid token, bool isToken,
+        internal async Task<TResult> FindInviteByTokenAsync<TResult>(Guid token,
             Func<Guid, Guid, Guid?, TResult> onSuccess,
             Func<TResult> onNotFound)
         {
@@ -234,6 +186,8 @@ namespace EastFive.Security.SessionServer.Persistence.Azure
                     repository.FindByIdAsync(document.InviteId,
                         (Documents.InviteDocument inviteDoc) =>
                         {
+                            if (inviteDoc.IsToken)
+                                return onNotFound();
                             return onSuccess(document.InviteId, inviteDoc.ActorId, inviteDoc.LoginId);
                         },
                         () =>
@@ -273,7 +227,7 @@ namespace EastFive.Security.SessionServer.Persistence.Azure
                 (document) => document.GetInviteIds(),
                 (Documents.AuthorizationDocument authDoc, Documents.InviteDocument[] inviteDocs) =>
                 {
-                    var invites = inviteDocs.Select(Convert).ToArray();
+                    var invites = inviteDocs.Where(doc => doc.IsToken == isToken).Select(Convert).ToArray();
                     return onSuccess(invites);
                 },
                 () => onNotFound());

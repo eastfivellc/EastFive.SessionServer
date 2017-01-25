@@ -177,5 +177,10 @@ namespace EastFive.Security.LoginProvider.AzureADB2C
         {
             throw new NotImplementedException();
         }
+
+        public TResult UpdateLoginPassword<TResult>(string password, Func<TResult> onSuccess, Func<string, TResult> onFailure)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

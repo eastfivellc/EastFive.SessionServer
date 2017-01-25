@@ -19,6 +19,7 @@ namespace EastFive.Security.SessionServer.Api.Resources
         public string UserId { get; set; }
 
         [DataMember]
+        [JsonProperty("token")]
         public string Token { get; set; }
 
         [DataMember]
@@ -28,6 +29,10 @@ namespace EastFive.Security.SessionServer.Api.Resources
         [DataMember]
         [JsonProperty(PropertyName = "force_change")]
         public bool ForceChange { get; set; }
+
+        [DataMember]
+        [JsonProperty(PropertyName = "last_email_sent")]
+        public DateTime? LastEmailSent { get; set; }
 
         #endregion
     }

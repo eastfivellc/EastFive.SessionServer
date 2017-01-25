@@ -47,7 +47,6 @@ namespace EastFive.Security.SessionServer
             DateTime? emailLastSent, Uri loginUrl,
             System.Security.Claims.Claim[] claims,
             Func<TResult> onSuccess,
-            Func<string, TResult> authenticationFailed,
             Func<TResult> credentialAlreadyExists,
             Func<TResult> onRelationshipAlreadyExists,
             Func<TResult> onLoginAlreadyUsed,
@@ -61,27 +60,14 @@ namespace EastFive.Security.SessionServer
                 async loginId =>
                 {
                     var result = await await dataContext.CredentialMappings.CreatePasswordCredentialAsync(
-                        passwordCredentialId, actorId, loginId,
+                        passwordCredentialId, actorId, loginId, emailLastSent,
                         async () =>
                         {
                             if (!isEmail || !emailLastSent.HasValue)
                                 return onSuccess();
 
-                            var mailService = this.context.MailService;
-                            var resultMail = await mailService.SendEmailMessageAsync(username, string.Empty,
-                                "newaccounts@orderowl.com", "New Account Services",
-                                Configuration.EmailTemplateDefinitions.InvitePassword,
-                                new Dictionary<string, string>()
-                                {
-                                    { "subject",    "New Order Owl Account" },
-                                    { "login_link", loginUrl.AbsoluteUri },
-                                    { "username",   username },
-                                    { "password",   token }
-                                },
-                                null,
-                                (sentCode) => onSuccess(),
-                                () => onServiceNotAvailable(),
-                                (why) => onFailure(why));
+                            var resultMail = await SendInvitePasswordAsync(username, token, loginUrl,
+                                onSuccess, onServiceNotAvailable, onFailure);
                             return resultMail;
                         },
                         async () =>
@@ -102,7 +88,7 @@ namespace EastFive.Security.SessionServer
 
                     return result;
                 },
-                (why) => authenticationFailed(why).ToTask());
+                (why) => onFailure(why).ToTask());
             return createLoginResult;
         }
 
@@ -168,6 +154,93 @@ namespace EastFive.Security.SessionServer
                 () => notFound().ToTask());
         }
 
+        internal async Task<TResult> UpdatePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
+            string password, bool forceChange, DateTime? emailLastSent, Uri loginUrl,
+            System.Security.Claims.Claim[] claims,
+            Func<TResult> onSuccess,
+            Func<TResult> onNotFound,
+            Func<TResult> onRelationshipAlreadyExists,
+            Func<TResult> onLoginAlreadyUsed,
+            Func<TResult> onServiceNotAvailable,
+            Func<string, TResult> onFailure)
+        {
+            var resultUpdatePassword = await await dataContext.CredentialMappings.UpdatePasswordCredentialAsync(passwordCredentialId,
+                async (loginId, username, isEmail, emailLastSentCurrent, updateEmailLastSentAsync)  =>
+                {
+                    DiscriminatedDelegate<Guid, TResult, Task<TResult>> resultSuccess =
+                        (success, fail) => success(loginId);
+                    var failureMessage = "";
+                    DiscriminatedDelegate<Guid, TResult, Task<TResult>> resultFailure =
+                               (success, fail) => fail(onFailure(failureMessage));
+                    if (emailLastSent.HasValue &&
+                        (!emailLastSentCurrent.HasValue ||
+                          emailLastSent.Value > emailLastSentCurrent.Value))
+                    {
+                        if (!isEmail)
+                        {
+                            failureMessage = "UserID is not an email address";
+                            return resultFailure;
+                        }
+                        return await SendInvitePasswordAsync(username, "*********", loginUrl,
+                            () => resultSuccess,
+                            () =>
+                            {
+                                DiscriminatedDelegate<Guid, TResult, Task<TResult>> resultServiceUnavailable =
+                                    (success, fail) => fail(onServiceNotAvailable());
+                                return resultServiceUnavailable;
+                            },
+                            (why) =>
+                            {
+                                failureMessage = why;
+                                return resultFailure;
+                            });
+                    }
+                    
+                    return resultSuccess;
+                },
+                () =>
+                {
+                    DiscriminatedDelegate<Guid, TResult, Task<TResult>> result =
+                           (success, fail) => fail(onNotFound());
+                    return result.ToTask();
+                });
+            return await resultUpdatePassword(
+                async (loginId) =>
+                {
+                    if (string.IsNullOrWhiteSpace(password))
+                        return onSuccess();
+
+                    var loginProvider = await this.context.LoginProvider;
+                    return loginProvider.UpdateLoginPassword(password,
+                        () => onSuccess(),
+                        (why) => onFailure(why));
+                },
+                (r) => r.ToTask());
+        }
+
+        private async Task<TResult> SendInvitePasswordAsync<TResult>(string emailAddress, string password, Uri loginUrl,
+            Func<TResult> onSuccess,
+            Func<TResult> onServiceNotAvailable,
+            Func<string, TResult> onFailure)
+        {
+            var mailService = this.context.MailService;
+            var resultMail = await mailService.SendEmailMessageAsync(emailAddress, string.Empty,
+                "newaccounts@orderowl.com", "New Account Services",
+                Configuration.EmailTemplateDefinitions.InvitePassword,
+                new Dictionary<string, string>()
+                {
+                                    { "subject",    "New Order Owl Account" },
+                                    { "login_link", loginUrl.AbsoluteUri },
+                                    { "username",   emailAddress },
+                                    { "password",   password }
+                },
+                null,
+                (sentCode) => onSuccess(),
+                () => onServiceNotAvailable(),
+                (why) => onFailure(why));
+            return resultMail;
+        }
+
         #endregion
 
         #region InviteCredential
@@ -228,7 +301,7 @@ namespace EastFive.Security.SessionServer
             Func<TResult> onAlreadyUsed,
             Func<TResult> notFound)
         {
-            return this.dataContext.CredentialMappings.FindInviteByTokenAsync(token, false,
+            return this.dataContext.CredentialMappings.FindInviteByTokenAsync(token,
                 (inviteId, actorId, loginId) =>
                 {
                     if (loginId.HasValue)
