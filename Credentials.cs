@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Net.Http;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Threading.Tasks;
 
 using BlackBarLabs.Extensions;
@@ -65,9 +66,9 @@ namespace EastFive.Security.SessionServer
                         {
                             if (!isEmail || !emailLastSent.HasValue)
                                 return onSuccess();
-
                             var resultMail = await SendInvitePasswordAsync(username, token, loginUrl,
                                 onSuccess, onServiceNotAvailable, onFailure);
+
                             return resultMail;
                         },
                         async () =>
@@ -223,10 +224,14 @@ namespace EastFive.Security.SessionServer
             Func<TResult> onServiceNotAvailable,
             Func<string, TResult> onFailure)
         {
+            var templateName = ConfigurationManager.AppSettings[Configuration.EmailTemplateDefinitions.InvitePassword];
+            if (string.IsNullOrEmpty(templateName))
+                return onFailure($"Email template setting not found.  Expected template value for key {Configuration.EmailTemplateDefinitions.InvitePassword}");
+            
             var mailService = this.context.MailService;
             var resultMail = await mailService.SendEmailMessageAsync(emailAddress, string.Empty,
                 "newaccounts@orderowl.com", "New Account Services",
-                Configuration.EmailTemplateDefinitions.InvitePassword,
+                templateName,
                 new Dictionary<string, string>()
                 {
                                     { "subject",    "New Order Owl Account" },
@@ -259,10 +264,14 @@ namespace EastFive.Security.SessionServer
                 actorId, email, token, DateTime.UtcNow, false,
                 async () =>
                 {
+                    var templateName = ConfigurationManager.AppSettings[Configuration.EmailTemplateDefinitions.InviteNewAccount];
+                    if (string.IsNullOrEmpty(templateName))
+                        return onFailed($"Email template setting not found.  Expected template value for key {Configuration.EmailTemplateDefinitions.InviteNewAccount}");
+
                     var mailService = this.context.MailService;
                     var resultMail = await mailService.SendEmailMessageAsync(email, string.Empty,
                         "newaccounts@orderowl.com", "New Account Services",
-                        Configuration.EmailTemplateDefinitions.InviteNewAccount,
+                        templateName,
                         new Dictionary<string, string>()
                         {
                             { "subject", "New Order Owl Account" },
@@ -342,10 +351,14 @@ namespace EastFive.Security.SessionServer
                 actorId, email, token, DateTime.UtcNow, true,
                 async () =>
                 {
+                    var templateName = ConfigurationManager.AppSettings[Configuration.EmailTemplateDefinitions.LoginToken];
+                    if (string.IsNullOrEmpty(templateName))
+                        return onFailed($"Email template setting not found.  Expected template value for key {Configuration.EmailTemplateDefinitions.LoginToken}");
+
                     var mailService = this.context.MailService;
                     var resultMail = await mailService.SendEmailMessageAsync(email, string.Empty,
                         "newaccounts@orderowl.com", "New Account Services",
-                        Configuration.EmailTemplateDefinitions.LoginToken,
+                        templateName,
                         new Dictionary<string, string>()
                         {
                             { "subject", "New Order Owl Account" },
@@ -379,12 +392,16 @@ namespace EastFive.Security.SessionServer
                         (lastSent.HasValue && (!lastSentCurrent.HasValue)) ||
                         String.Compare(emailCurrent, email) != 0)
                     {
+                        var templateName = ConfigurationManager.AppSettings[Configuration.EmailTemplateDefinitions.LoginToken];
+                        if (string.IsNullOrEmpty(templateName))
+                            return onFailure($"Email template setting not found.  Expected template value for key {Configuration.EmailTemplateDefinitions.LoginToken}");
+
                         if (String.IsNullOrWhiteSpace(email))
                             email = emailCurrent;
                         var mailService = this.context.MailService;
                         var resultMail = await await mailService.SendEmailMessageAsync(email, string.Empty,
                             "newaccounts@orderowl.com", "New Account Services",
-                            Configuration.EmailTemplateDefinitions.LoginToken,
+                            templateName,
                             new Dictionary<string, string>()
                             {
                                 { "subject", "New Order Owl Account" },
