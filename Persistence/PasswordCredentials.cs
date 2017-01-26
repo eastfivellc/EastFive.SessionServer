@@ -35,11 +35,21 @@ namespace EastFive.Security.SessionServer.Persistence
             this.context = context;
         }
 
-        internal Task<TResult> UpdatePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
-            Func<Guid, string, bool, DateTime?, Func<DateTime, Task>, TResult> onFound,
+        internal async Task<TResult> UpdatePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
+            Func<Guid, DateTime?, Func<DateTime, Task>, Task<TResult>> onFound,
             Func<TResult> onNotFound)
         {
-            throw new NotImplementedException();
+            return await this.repository.UpdateAsync<Documents.PasswordCredentialDocument, TResult>(passwordCredentialId,
+                async (doc, saveAsync) =>
+                {
+                    return await onFound(doc.LoginId, doc.EmailLastSent,
+                        async (emailLastSentUpdated) =>
+                        {
+                            doc.EmailLastSent = emailLastSentUpdated;
+                            await saveAsync(doc);
+                        });
+                },
+                () => onNotFound());
         }
 
         public async Task<TResult> CreatePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
@@ -59,7 +69,7 @@ namespace EastFive.Security.SessionServer.Persistence
                 onLoginAlreadyUsed, this.repository);
 
             rollback.AddTaskCreateOrUpdate(actorId,
-                (Documents.ActorDocument actorDoc) =>
+                (Documents.ActorMappingsDocument actorDoc) =>
                     actorDoc.AddPasswordCredential(passwordCredentialId),
                 actorDoc => actorDoc.RemovePasswordCredential(passwordCredentialId),
                 onRelationshipAlreadyExists,
@@ -88,7 +98,7 @@ namespace EastFive.Security.SessionServer.Persistence
                         async (lookupDoc, deleteLookupDocAsync) =>
                         {
                             await deleteLookupDocAsync();
-                            return await this.repository.UpdateAsync<Documents.ActorDocument, TResult>(lookupDoc.ActorId,
+                            return await this.repository.UpdateAsync<Documents.ActorMappingsDocument, TResult>(lookupDoc.ActorId,
                                 async (actorDoc, saveActorDocAsync) =>
                                 {
                                     actorDoc.RemovePasswordCredential(passwordCredentialId);
@@ -120,7 +130,7 @@ namespace EastFive.Security.SessionServer.Persistence
         {
             return await repository.FindLinkedDocumentsAsync(actorId,
                 (document) => document.GetPasswordCredentials(),
-                (Documents.ActorDocument authDoc, Documents.PasswordCredentialDocument[] passwordCredentialDocs) =>
+                (Documents.ActorMappingsDocument authDoc, Documents.PasswordCredentialDocument[] passwordCredentialDocs) =>
                 {
                     var invites = passwordCredentialDocs.Select(pcDoc => new CredentialMapping
                     {

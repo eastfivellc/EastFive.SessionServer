@@ -11,11 +11,11 @@ using System.Collections.Generic;
 
 namespace EastFive.Security.SessionServer.Persistence.Documents
 {
-    internal class ActorDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
+    internal class ActorMappingsDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
     {
         #region Constructors
 
-        public ActorDocument() { }
+        public ActorMappingsDocument() { }
 
         internal async Task<Claim[]> GetClaims(AzureStorageRepository repository)
         {

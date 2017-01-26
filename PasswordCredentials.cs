@@ -161,8 +161,8 @@ namespace EastFive.Security.SessionServer
             Func<TResult> onServiceNotAvailable,
             Func<string, TResult> onFailure)
         {
-            var resultUpdatePassword = await await dataContext.PasswordCredentials.UpdatePasswordCredentialAsync(passwordCredentialId,
-                async (loginId, username, isEmail, emailLastSentCurrent, updateEmailLastSentAsync)  =>
+            var resultUpdatePassword = await dataContext.PasswordCredentials.UpdatePasswordCredentialAsync(passwordCredentialId,
+                async (loginId, emailLastSentCurrent, updateEmailLastSentAsync)  =>
                 {
                     DiscriminatedDelegate<Guid, TResult, Task<TResult>> resultSuccess =
                         (success, fail) => success(loginId);
@@ -173,33 +173,40 @@ namespace EastFive.Security.SessionServer
                         (!emailLastSentCurrent.HasValue ||
                           emailLastSent.Value > emailLastSentCurrent.Value))
                     {
-                        if (!isEmail)
-                        {
-                            failureMessage = "UserID is not an email address";
-                            return resultFailure;
-                        }
-                        return await SendInvitePasswordAsync(username, "*********", loginUrl,
-                            () => resultSuccess,
-                            () =>
+                        var loginProvider = await this.context.LoginProvider;
+                        var resultGetLogin = await await loginProvider.GetLoginAsync(loginId,
+                            async (username, isEmail, forceChangePassword) =>
                             {
-                                DiscriminatedDelegate<Guid, TResult, Task<TResult>> resultServiceUnavailable =
-                                    (success, fail) => fail(onServiceNotAvailable());
-                                return resultServiceUnavailable;
+                                if (!isEmail)
+                                {
+                                    failureMessage = "UserID is not an email address";
+                                    return resultFailure;
+                                }
+                                return await SendInvitePasswordAsync(username, "*********", loginUrl,
+                                    () => resultSuccess,
+                                    () =>
+                                    {
+                                        DiscriminatedDelegate<Guid, TResult, Task<TResult>> resultServiceUnavailable =
+                                        (success, fail) => fail(onServiceNotAvailable());
+                                        return resultServiceUnavailable;
+                                    },
+                                    (why) =>
+                                    {
+                                        failureMessage = why;
+                                        return resultFailure;
+                                    });
                             },
-                            (why) =>
-                            {
-                                failureMessage = why;
-                                return resultFailure;
-                            });
+                            () => resultFailure.ToTask(),
+                            (why) => resultFailure.ToTask());
+                        return resultGetLogin;
                     }
-                    
                     return resultSuccess;
                 },
                 () =>
                 {
                     DiscriminatedDelegate<Guid, TResult, Task<TResult>> result =
                            (success, fail) => fail(onNotFound());
-                    return result.ToTask();
+                    return result;
                 });
             return await resultUpdatePassword(
                 async (loginId) =>

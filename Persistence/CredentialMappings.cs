@@ -58,7 +58,7 @@ namespace EastFive.Security.SessionServer.Persistence
             rollback.AddTaskCreate(token, inviteTokenDocument, onAlreadyExists, this.repository);
 
             rollback.AddTaskCreateOrUpdate(actorId,
-                (Documents.ActorDocument authDoc) => authDoc.AddInviteId(inviteId),
+                (Documents.ActorMappingsDocument authDoc) => authDoc.AddInviteId(inviteId),
                 (authDoc) => authDoc.RemoveInviteId(inviteId),
                 onAlreadyExists, // This should fail on the action above as well
                 this.repository);
@@ -146,7 +146,7 @@ namespace EastFive.Security.SessionServer.Persistence
         {
             return await repository.FindLinkedDocumentsAsync(actorId,
                 (document) => document.GetInviteIds(),
-                (Documents.ActorDocument authDoc, Documents.InviteDocument[] inviteDocs) =>
+                (Documents.ActorMappingsDocument authDoc, Documents.InviteDocument[] inviteDocs) =>
                 {
                     var invites = inviteDocs.Where(doc => doc.IsToken == isToken).Select(Convert).ToArray();
                     return onSuccess(invites);
