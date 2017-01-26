@@ -35,6 +35,13 @@ namespace EastFive.Security.SessionServer.Persistence
             this.context = context;
         }
 
+        internal Task<TResult> UpdatePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
+            Func<Guid, string, bool, DateTime?, Func<DateTime, Task>, TResult> onFound,
+            Func<TResult> onNotFound)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task<TResult> CreatePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
             Guid actorId, Guid loginId, DateTime? emailLastSent,
             Func<TResult> onSuccess,

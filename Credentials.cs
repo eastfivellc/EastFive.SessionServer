@@ -76,13 +76,14 @@ namespace EastFive.Security.SessionServer
             Func<TResult> notFound)
         {
             return this.dataContext.CredentialMappings.FindInviteAsync(inviteId, false,
-                (actorId, email) =>
+                (actorId, email, lastSent) =>
                 {
                     return success(new Invite
                     {
                         id = inviteId,
                         actorId = actorId,
                         email = email,
+                        lastSent = lastSent,
                     });
                 },
                 () => notFound());
@@ -214,13 +215,14 @@ namespace EastFive.Security.SessionServer
             Func<TResult> notFound)
         {
             return this.dataContext.CredentialMappings.FindInviteAsync(inviteId, true,
-                (actorId, email) =>
+                (actorId, email, lastSent) =>
                 {
                     return success(new Invite
                     {
                         id = inviteId,
                         actorId = actorId,
                         email = email,
+                        lastSent = lastSent,
                         isToken = true,
                     });
                 },

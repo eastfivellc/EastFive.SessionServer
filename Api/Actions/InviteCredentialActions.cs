@@ -39,6 +39,7 @@ namespace EastFive.Security.SessionServer.Api
                         Id = invite.id,
                         ActorId = invite.actorId,
                         Email = invite.email,
+                        LastEmailSent = invite.lastSent,
                     });
                     return response;
                 },

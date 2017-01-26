@@ -66,13 +66,6 @@ namespace EastFive.Security.SessionServer.Persistence
             return await rollback.ExecuteAsync(onSuccess);
         }
 
-        internal Task<TResult> UpdatePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
-            Func<Guid, string, bool, DateTime?, Func<DateTime, Task>, TResult> onFound,
-            Func<TResult> onNotFound)
-        {
-            throw new NotImplementedException();
-        }
-
         internal Task<TResult> UpdateTokenCredentialAsync<TResult>(Guid tokenCredentialId,
             Func<string, DateTime?, Guid, Func<string, DateTime?, Task>, Task<TResult>> onFound,
             Func<TResult> onNotFound)
@@ -92,7 +85,7 @@ namespace EastFive.Security.SessionServer.Persistence
         }
 
         internal Task<TResult> FindInviteAsync<TResult>(Guid inviteId, bool isToken,
-            Func<Guid, string, TResult> onFound,
+            Func<Guid, string, DateTime?, TResult> onFound,
             Func<TResult> onNotFound)
         {
             return repository.FindByIdAsync(inviteId,
@@ -100,7 +93,7 @@ namespace EastFive.Security.SessionServer.Persistence
                 {
                     if (isToken != document.IsToken)
                         return onNotFound();
-                    return onFound(document.ActorId, document.Email);
+                    return onFound(document.ActorId, document.Email, document.LastSent);
                 },
                 () => onNotFound());
         }
@@ -168,6 +161,7 @@ namespace EastFive.Security.SessionServer.Persistence
                 id = inviteDoc.Id,
                 actorId = inviteDoc.ActorId,
                 email = inviteDoc.Email,
+                lastSent = inviteDoc.LastSent,
             };
         }
 

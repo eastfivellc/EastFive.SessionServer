@@ -89,7 +89,7 @@ namespace EastFive.Security.SessionServer.Api
         {
             return await credential.ParseAsync(request,
                 q => QueryByIdAsync(q.Id.ParamSingle(), request, urlHelper),
-                q => QueryByActorId(q.Actor.ParamSingle(), request));
+                q => QueryByActorId(q.Actor.ParamSingle(), request, urlHelper));
         }
 
         private static async Task<HttpResponseMessage> QueryByIdAsync(Guid passwordCredentialId, HttpRequestMessage request, UrlHelper urlHelper)
@@ -100,7 +100,7 @@ namespace EastFive.Security.SessionServer.Api
                 {
                     var response = request.CreateResponse(HttpStatusCode.OK, new Resources.PasswordCredential
                     {
-                        Id = passwordCredential.id,
+                        Id = urlHelper.GetWebId<Controllers.PasswordCredentialController>(passwordCredential.id),
                         Actor = passwordCredential.actorId,
                         UserId = passwordCredential.userId,
                         IsEmail = passwordCredential.isEmail,
@@ -114,7 +114,7 @@ namespace EastFive.Security.SessionServer.Api
                 (why) => request.CreateResponse(HttpStatusCode.NotFound));
         }
 
-        private async static Task<HttpResponseMessage[]> QueryByActorId(Guid actorId, HttpRequestMessage request)
+        private async static Task<HttpResponseMessage[]> QueryByActorId(Guid actorId, HttpRequestMessage request, UrlHelper urlHelper)
         {
             var context = request.GetSessionServerContext();
 
@@ -125,7 +125,7 @@ namespace EastFive.Security.SessionServer.Api
                     {
                         var response = request.CreateResponse(HttpStatusCode.OK, new Resources.PasswordCredential
                         {
-                            Id = passwordCredential.id,
+                            Id = urlHelper.GetWebId<Controllers.PasswordCredentialController>(passwordCredential.id),
                             Actor = passwordCredential.actorId,
                             UserId = passwordCredential.userId,
                             IsEmail = passwordCredential.isEmail,

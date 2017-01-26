@@ -161,7 +161,7 @@ namespace EastFive.Security.SessionServer
             Func<TResult> onServiceNotAvailable,
             Func<string, TResult> onFailure)
         {
-            var resultUpdatePassword = await await dataContext.CredentialMappings.UpdatePasswordCredentialAsync(passwordCredentialId,
+            var resultUpdatePassword = await await dataContext.PasswordCredentials.UpdatePasswordCredentialAsync(passwordCredentialId,
                 async (loginId, username, isEmail, emailLastSentCurrent, updateEmailLastSentAsync)  =>
                 {
                     DiscriminatedDelegate<Guid, TResult, Task<TResult>> resultSuccess =

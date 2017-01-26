@@ -161,9 +161,10 @@ namespace EastFive.Security.LoginProvider.AzureADB2C
                 (why) => onServiceNotAvailable(why));
         }
 
-        public Task DeleteLoginAsync(Guid loginId)
+        public async Task DeleteLoginAsync(Guid loginId)
         {
-            throw new NotImplementedException();
+            var result = await client.DeleteUser(loginId.ToString());
+            result.GetType();
         }
 
         public TResult UpdateLoginPassword<TResult>(string password, Func<TResult> onSuccess, Func<string, TResult> onFailure)
