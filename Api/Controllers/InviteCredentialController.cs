@@ -29,6 +29,11 @@ namespace EastFive.Security.SessionServer.Api.Controllers
         {
             return new HttpActionResult(() => model.CreateAsync(this.Request, this.Url));
         }
+
+        public IHttpActionResult Delete([FromBody]Resources.Queries.InviteCredentialQuery model)
+        {
+            return new HttpActionResult(() => model.DeleteAsync(this.Request, this.Url));
+        }
     }
 }
 

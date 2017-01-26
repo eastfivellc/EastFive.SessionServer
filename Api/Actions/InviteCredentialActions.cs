@@ -142,5 +142,24 @@ namespace EastFive.Security.SessionServer.Api
             //() => request.CreateResponse(HttpStatusCode.Unauthorized).ToTask(),
             //(why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why).ToTask());
         }
+
+        public static async Task<HttpResponseMessage> DeleteAsync(this Resources.Queries.InviteCredentialQuery query,
+           HttpRequestMessage request, UrlHelper urlHelper)
+        {
+            return await query.ParseAsync(request,
+                q => DeleteByIdAsync(q.Id.ParamSingle(), request, urlHelper));
+        }
+
+        private static async Task<HttpResponseMessage> DeleteByIdAsync(Guid inviteId, HttpRequestMessage request, UrlHelper urlHelper)
+        {
+            var context = request.GetSessionServerContext();
+            return await context.CredentialMappings.DeleteByIdAsync(inviteId,
+                () =>
+                {
+                    var response = request.CreateResponse(HttpStatusCode.NoContent);
+                    return response;
+                },
+                () => request.CreateResponse(HttpStatusCode.NotFound));
+        }
     }
 }

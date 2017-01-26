@@ -167,9 +167,13 @@ namespace EastFive.Security.LoginProvider.AzureADB2C
             result.GetType();
         }
 
-        public TResult UpdateLoginPassword<TResult>(string password, Func<TResult> onSuccess, Func<string, TResult> onFailure)
+        public async Task<TResult> UpdateLoginPasswordAsync<TResult>(Guid loginId, string password, bool forceChange,
+            Func<TResult> onSuccess,
+            Func<string, TResult> onServiceNotAvailable,
+            Func<string, TResult> onFailure)
         {
-            throw new NotImplementedException();
+            var result = await client.UpdateUserPasswordAsync(loginId.ToString(), password, forceChange);
+            return onSuccess();
         }
     }
 }

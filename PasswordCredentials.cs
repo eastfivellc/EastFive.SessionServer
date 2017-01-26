@@ -215,8 +215,9 @@ namespace EastFive.Security.SessionServer
                         return onSuccess();
 
                     var loginProvider = await this.context.LoginProvider;
-                    return loginProvider.UpdateLoginPassword(password,
+                    return await loginProvider.UpdateLoginPasswordAsync(loginId, password, forceChange,
                         () => onSuccess(),
+                        (why) => onFailure(why),
                         (why) => onFailure(why));
                 },
                 (r) => r.ToTask());

@@ -210,6 +210,14 @@ namespace EastFive.Security.SessionServer
             return result;
         }
 
+        internal Task<TResult> DeleteByIdAsync<TResult>(Guid inviteId,
+            Func<TResult> onSuccess, 
+            Func<TResult> onNotFound)
+        {
+            return this.dataContext.CredentialMappings.DeleteInviteCredentialAsync(inviteId,
+                onSuccess, onNotFound);
+        }
+
         internal Task<TResult> GetTokenCredentialAsync<TResult>(Guid inviteId,
             Func<Invite, TResult> success,
             Func<TResult> notFound)
@@ -259,6 +267,14 @@ namespace EastFive.Security.SessionServer
                     return success(invites);
                 },
                 () => notFound());
+        }
+
+        internal Task<TResult> DeleteTokenByIdAsync<TResult>(Guid inviteId,
+            Func<TResult> onSuccess,
+            Func<TResult> onNotFound)
+        {
+            return this.dataContext.CredentialMappings.DeleteInviteCredentialAsync(inviteId,
+                onSuccess, onNotFound);
         }
 
         #endregion

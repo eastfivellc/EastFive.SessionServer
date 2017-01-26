@@ -65,6 +65,34 @@ namespace EastFive.Security.SessionServer.Persistence
 
             return await rollback.ExecuteAsync(onSuccess);
         }
+        
+        internal async Task<TResult> DeleteInviteCredentialAsync<TResult>(Guid inviteId, Func<TResult> onSuccess, Func<TResult> onNotFound)
+        {
+            return await this.repository.DeleteIfAsync<Documents.InviteDocument, TResult>(inviteId,
+                async (inviteDoc, deleteInviteAsync) =>
+                {
+                    var deletedInviteTask = this.repository.DeleteIfAsync<Documents.InviteTokenDocument, bool>(inviteDoc.Token,
+                        async (inviteTokenDoc, deleteInviteTokenAsync) =>
+                        {
+                            await deleteInviteTokenAsync();
+                            return true;
+                        },
+                        () => false);
+                    var updatedActorMappingTask = this.repository.UpdateAsync<Documents.ActorMappingsDocument, bool>(inviteDoc.ActorId,
+                        async (actorDoc, saveAsync) =>
+                        {
+                            var r = actorDoc.RemoveInviteId(inviteId);
+                            await saveAsync(actorDoc);
+                            return r;
+                        },
+                        () => false);
+                    await deleteInviteAsync();
+                    await deletedInviteTask;
+                    await updatedActorMappingTask;
+                    return onSuccess();
+                },
+                () => onNotFound());
+        }
 
         internal Task<TResult> UpdateTokenCredentialAsync<TResult>(Guid tokenCredentialId,
             Func<string, DateTime?, Guid, Func<string, DateTime?, Task>, Task<TResult>> onFound,

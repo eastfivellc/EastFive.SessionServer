@@ -98,16 +98,8 @@ namespace EastFive.Security.SessionServer.Api
             return await context.PasswordCredentials.GetPasswordCredentialAsync(passwordCredentialId,
                 (passwordCredential) =>
                 {
-                    var response = request.CreateResponse(HttpStatusCode.OK, new Resources.PasswordCredential
-                    {
-                        Id = urlHelper.GetWebId<Controllers.PasswordCredentialController>(passwordCredential.id),
-                        Actor = passwordCredential.actorId,
-                        UserId = passwordCredential.userId,
-                        IsEmail = passwordCredential.isEmail,
-                        ForceChange = passwordCredential.forceChangePassword,
-                        Token = "************",
-                        LastEmailSent = passwordCredential.lastSent,
-                    });
+                    var response = request.CreateResponse(HttpStatusCode.OK,
+                        Convert(passwordCredential, urlHelper));
                     return response;
                 },
                 () => request.CreateResponse(HttpStatusCode.NotFound),
@@ -123,20 +115,26 @@ namespace EastFive.Security.SessionServer.Api
                 (credentials) => credentials.Select(
                     passwordCredential =>
                     {
-                        var response = request.CreateResponse(HttpStatusCode.OK, new Resources.PasswordCredential
-                        {
-                            Id = urlHelper.GetWebId<Controllers.PasswordCredentialController>(passwordCredential.id),
-                            Actor = passwordCredential.actorId,
-                            UserId = passwordCredential.userId,
-                            IsEmail = passwordCredential.isEmail,
-                            ForceChange = passwordCredential.forceChangePassword,
-                            Token = "************",
-                            LastEmailSent = passwordCredential.lastSent,
-                        });
+                        var response = request.CreateResponse(HttpStatusCode.OK, 
+                            Convert(passwordCredential, urlHelper));
                         return response;
                     }).ToArray(),
                 () => request.CreateResponse(HttpStatusCode.NotFound).ToEnumerable().ToArray(),
                 (why) => request.CreateResponse(HttpStatusCode.ServiceUnavailable).AddReason(why).ToEnumerable().ToArray());
+        }
+
+        private static Resources.PasswordCredential Convert(PasswordCredential passwordCredential, UrlHelper urlHelper)
+        {
+            return new Resources.PasswordCredential
+            {
+                Id = urlHelper.GetWebId<Controllers.PasswordCredentialController>(passwordCredential.id),
+                Actor = passwordCredential.actorId,
+                UserId = passwordCredential.userId,
+                IsEmail = passwordCredential.isEmail,
+                ForceChange = passwordCredential.forceChangePassword,
+                Token = String.Empty,
+                LastEmailSent = passwordCredential.lastSent,
+            };
         }
 
         public static async Task<HttpResponseMessage> DeleteAsync(this Resources.Queries.PasswordCredentialQuery credential,
