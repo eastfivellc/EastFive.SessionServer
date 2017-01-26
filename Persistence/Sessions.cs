@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 using BlackBarLabs.Persistence.Azure.StorageTables;
 
-namespace EastFive.Security.SessionServer.Persistence.Azure
+namespace EastFive.Security.SessionServer.Persistence
 {
     public class Sessions
     {

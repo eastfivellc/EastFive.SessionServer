@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
+namespace EastFive.Security.SessionServer.Persistence.Documents
 {
     internal class ClaimDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
     {

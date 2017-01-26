@@ -2,9 +2,8 @@
 using System.Net.Http;
 using System.Threading.Tasks;
 
-using EastFive.Security.SessionServer.Persistence.Azure;
+using EastFive.Security.SessionServer.Persistence;
 
-using BlackBarLabs.Api.Extensions;
 using EastFive.Api.Services;
 
 namespace EastFive.Security.SessionServer

@@ -8,14 +8,14 @@ namespace EastFive.Security.SessionServer
 {
     public class Context
     {
-        private SessionServer.Persistence.Azure.DataContext dataContext;
-        private readonly Func<SessionServer.Persistence.Azure.DataContext> dataContextCreateFunc;
+        private SessionServer.Persistence.DataContext dataContext;
+        private readonly Func<SessionServer.Persistence.DataContext> dataContextCreateFunc;
 
         private ConcurrentDictionary<CredentialValidationMethodTypes, CredentialProvider.IProvideCredentials> credentialProviders = 
             new ConcurrentDictionary<CredentialValidationMethodTypes, CredentialProvider.IProvideCredentials>();
         private readonly Func<CredentialValidationMethodTypes, Task<CredentialProvider.IProvideCredentials>> credentialProvidersFunc;
 
-        public Context(Func<SessionServer.Persistence.Azure.DataContext> dataContextCreateFunc,
+        public Context(Func<SessionServer.Persistence.DataContext> dataContextCreateFunc,
             Func<CredentialValidationMethodTypes, Task<CredentialProvider.IProvideCredentials>> credentialProvidersFunc,
             Func<Task<IIdentityService>> getLoginProvider,
             Func<ISendMessageService> getMailService)
@@ -32,7 +32,7 @@ namespace EastFive.Security.SessionServer
             this.mailServiceFunc = getMailService;
         }
 
-        internal SessionServer.Persistence.Azure.DataContext DataContext
+        internal SessionServer.Persistence.DataContext DataContext
         {
             get { return dataContext ?? (dataContext = dataContextCreateFunc.Invoke()); }
         }
@@ -77,6 +77,17 @@ namespace EastFive.Security.SessionServer
             }
         }
 
+        private PasswordCredentials passwordCredentials;
+        public PasswordCredentials PasswordCredentials
+        {
+            get
+            {
+                if (default(PasswordCredentials) == passwordCredentials)
+                    passwordCredentials = new PasswordCredentials(this, this.DataContext);
+                return passwordCredentials;
+            }
+        }
+
         private Sessions sessions;
         public Sessions Sessions
         {
@@ -104,8 +115,8 @@ namespace EastFive.Security.SessionServer
         {
             get
             {
-                if (default(Claims) == claims)
-                    claims = new Claims(this, this.DataContext);
+                //if (default(Claims) == claims)
+                //    claims = new Claims(this, this.DataContext);
                 return claims;
             }
         }

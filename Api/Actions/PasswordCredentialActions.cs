@@ -34,7 +34,7 @@ namespace EastFive.Security.SessionServer.Api
 
             var claims = new System.Security.Claims.Claim[] { };
             var context = request.GetSessionServerContext();
-            var creationResults = await context.CredentialMappings.CreatePasswordCredentialsAsync(
+            var creationResults = await context.PasswordCredentials.CreatePasswordCredentialsAsync(
                 credential.Id.UUID, actorId.Value,
                 credential.UserId, credential.IsEmail, credential.Token, credential.ForceChange,
                 credential.LastEmailSent, loginUrl,
@@ -60,13 +60,24 @@ namespace EastFive.Security.SessionServer.Api
         }
 
         public static async Task<HttpResponseMessage> PutAsync(this Resources.PasswordCredential credential,
-            HttpRequestMessage request)
+            HttpRequestMessage request, UrlHelper url)
         {
+
+            var loginProviderTaskGetter = (Func<Task<IIdentityService>>)
+                request.Properties[ServicePropertyDefinitions.IdentityService];
+            var loginProviderTask = loginProviderTaskGetter();
+            var loginProvider = await loginProviderTask;
+            var callbackUrl = url.GetLocation<Controllers.OpenIdResponseController>();
+            var loginUrl = loginProvider.GetLoginUrl(("http://orderowl.com"), 0, new byte[] { }, callbackUrl);
+
             var context = request.GetSessionServerContext();
-            var creationResults = await context.Authorizations.UpdateCredentialsAsync(credential.Id.UUID,
-                credential.UserId, credential.IsEmail, credential.Token, credential.ForceChange,
+            var claims = new System.Security.Claims.Claim[] { };
+            var creationResults = await context.PasswordCredentials.UpdatePasswordCredentialAsync(credential.Id.UUID,
+                credential.Token, credential.ForceChange, credential.LastEmailSent, loginUrl,
+                claims,
                 () => request.CreateResponse(HttpStatusCode.NoContent),
-                () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("Authorization does not exist"),
+                () => request.CreateResponse(HttpStatusCode.NotFound),
+                () => request.CreateResponse(HttpStatusCode.ServiceUnavailable),
                 (why) => request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Update failed:{why}"));
             return creationResults;
         }
@@ -84,7 +95,7 @@ namespace EastFive.Security.SessionServer.Api
         private static async Task<HttpResponseMessage> QueryByIdAsync(Guid passwordCredentialId, HttpRequestMessage request, UrlHelper urlHelper)
         {
             var context = request.GetSessionServerContext();
-            return await context.CredentialMappings.GetPasswordCredentialAsync(passwordCredentialId,
+            return await context.PasswordCredentials.GetPasswordCredentialAsync(passwordCredentialId,
                 (passwordCredential) =>
                 {
                     var response = request.CreateResponse(HttpStatusCode.OK, new Resources.PasswordCredential
@@ -95,6 +106,7 @@ namespace EastFive.Security.SessionServer.Api
                         IsEmail = passwordCredential.isEmail,
                         ForceChange = passwordCredential.forceChangePassword,
                         Token = "************",
+                        LastEmailSent = passwordCredential.lastSent,
                     });
                     return response;
                 },
@@ -106,7 +118,7 @@ namespace EastFive.Security.SessionServer.Api
         {
             var context = request.GetSessionServerContext();
 
-            return await context.CredentialMappings.GetPasswordCredentialByActorAsync(
+            return await context.PasswordCredentials.GetPasswordCredentialByActorAsync(
                 actorId,
                 (credentials) => credentials.Select(
                     passwordCredential =>
@@ -119,6 +131,7 @@ namespace EastFive.Security.SessionServer.Api
                             IsEmail = passwordCredential.isEmail,
                             ForceChange = passwordCredential.forceChangePassword,
                             Token = "************",
+                            LastEmailSent = passwordCredential.lastSent,
                         });
                         return response;
                     }).ToArray(),
@@ -126,13 +139,24 @@ namespace EastFive.Security.SessionServer.Api
                 (why) => request.CreateResponse(HttpStatusCode.ServiceUnavailable).AddReason(why).ToEnumerable().ToArray());
         }
 
-        public static Task<HttpResponseMessage> DeleteAsync(this Resources.Queries.PasswordCredentialQuery credential,
-            HttpRequestMessage request)
+        public static async Task<HttpResponseMessage> DeleteAsync(this Resources.Queries.PasswordCredentialQuery credential,
+            HttpRequestMessage request, UrlHelper urlHelper)
         {
-            return request
-                .CreateResponse(HttpStatusCode.Unauthorized)
-                .AddReason("Deleting Credential Resource is not yet supported")
-                .ToTask();
+            return await credential.ParseAsync(request,
+                q => DeleteByIdAsync(q.Id.ParamSingle(), request, urlHelper));
+        }
+
+        private static async Task<HttpResponseMessage> DeleteByIdAsync(Guid passwordCredentialId, HttpRequestMessage request, UrlHelper urlHelper)
+        {
+            var context = request.GetSessionServerContext();
+            return await context.PasswordCredentials.DeletePasswordCredentialAsync(passwordCredentialId,
+                () =>
+                {
+                    var response = request.CreateResponse(HttpStatusCode.NoContent);
+                    return response;
+                },
+                () => request.CreateResponse(HttpStatusCode.NotFound),
+                (why) => request.CreateResponse(HttpStatusCode.NotFound));
         }
 
         public static Task<HttpResponseMessage> CredentialOptionsAsync(this HttpRequestMessage request)

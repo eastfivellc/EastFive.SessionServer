@@ -19,12 +19,12 @@ namespace EastFive.Security.SessionServer.Api.Controllers
         
         public IHttpActionResult Put([FromBody]Resources.PasswordCredential model)
         {
-            return new HttpActionResult(() => model.PutAsync(this.Request));
+            return new HttpActionResult(() => model.PutAsync(this.Request, this.Url));
         }
 
         public IHttpActionResult Delete([FromBody]Resources.Queries.PasswordCredentialQuery model)
         {
-            return new HttpActionResult(() => model.DeleteAsync(this.Request));
+            return new HttpActionResult(() => model.DeleteAsync(this.Request, this.Url));
         }
         
         public IHttpActionResult Get([FromUri]Resources.Queries.PasswordCredentialQuery model)

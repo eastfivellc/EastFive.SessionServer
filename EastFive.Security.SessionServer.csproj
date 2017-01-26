@@ -180,6 +180,7 @@
     <Compile Include="Api\Resources\Queries\InviteCredentialQuery.cs" />
     <Compile Include="Api\Resources\Queries\PasswordCredentialQuery.cs" />
     <Compile Include="Configuration\EmailTemplateDefinitions.cs" />
+    <Compile Include="PasswordCredentials.cs" />
     <Compile Include="Credentials.cs" />
     <Compile Include="CredentialProviders\AzureADB2C\AzureADB2CProvider.cs" />
     <Compile Include="LoginProvider.cs" />
@@ -189,10 +190,9 @@
     <Compile Include="CredentialProviders\IProvideCredentials.cs" />
     <Compile Include="CredentialProviders\Voucher\Utilities.cs" />
     <Compile Include="CredentialValidationMethodTypes.cs" />
+    <Compile Include="Persistence\PasswordCredentials.cs" />
     <Compile Include="Persistence\CredentialMappings.cs" />
-    <Compile Include="Persistence\Authorizations.cs" />
-    <Compile Include="Persistence\Documents\CredentialMappingActorLookupDocument.cs" />
-    <Compile Include="Persistence\Documents\CredentialMappingLoginLookupDocument.cs" />
+    <Compile Include="Persistence\Documents\LoginActorLookupDocument.cs" />
     <Compile Include="Persistence\Documents\PasswordCredentialDocument.cs" />
     <Compile Include="Persistence\Documents\InviteTokenDocument.cs" />
     <Compile Include="Persistence\Documents\InviteDocument.cs" />
@@ -204,7 +204,7 @@
     <Compile Include="Api\Actions\AuthorizeActions.cs" />
     <Compile Include="Api\Actions\SessionActions.cs" />
     <Compile Include="Persistence\Documents\CredentialMappingDocument.cs" />
-    <Compile Include="Persistence\Documents\AuthorizationDocument.cs" />
+    <Compile Include="Persistence\Documents\ActorDocument.cs" />
     <Compile Include="Persistence\Documents\ClaimDocument.cs" />
     <Compile Include="Persistence\DataContext.cs" />
     <Compile Include="Persistence\Documents\SessionDocument.cs" />

@@ -9,13 +9,13 @@ using BlackBarLabs.Persistence.Azure.StorageTables;
 using BlackBarLabs.Linq;
 using System.Collections.Generic;
 
-namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
+namespace EastFive.Security.SessionServer.Persistence.Documents
 {
-    internal class AuthorizationDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
+    internal class ActorDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
     {
         #region Constructors
 
-        public AuthorizationDocument() { }
+        public ActorDocument() { }
 
         internal async Task<Claim[]> GetClaims(AzureStorageRepository repository)
         {

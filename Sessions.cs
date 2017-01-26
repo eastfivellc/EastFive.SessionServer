@@ -13,9 +13,9 @@ namespace EastFive.Security.SessionServer
     public class Sessions
     {
         private Context context;
-        private Persistence.Azure.DataContext dataContext;
+        private Persistence.DataContext dataContext;
 
-        internal Sessions(Context context, Persistence.Azure.DataContext dataContext)
+        internal Sessions(Context context, Persistence.DataContext dataContext)
         {
             this.dataContext = dataContext;
             this.context = context;
@@ -49,10 +49,10 @@ namespace EastFive.Security.SessionServer
             var result = await await AuthenticateCredentialsAsync(method, token,
                 async (authorizationId, claims) =>
                 {
-                            // Convert authentication unique ID to Actor ID
-                            return await await dataContext.CredentialMappings.LookupCredentialMappingAsync(authorizationId,
-                                async (actorId) =>
-                                {
+                    // Convert authentication unique ID to Actor ID
+                    return await await dataContext.CredentialMappings.LookupCredentialMappingAsync(authorizationId,
+                        async (actorId) =>
+                        {
                                     var refreshToken = BlackBarLabs.Security.SecureGuid.Generate().ToString("N");
                                     var resultFound = await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, actorId,
                                         () =>
@@ -64,8 +64,8 @@ namespace EastFive.Security.SessionServer
                                         },
                                         () => alreadyExists());
                                     return resultFound;
-                                },
-                                () => credentialNotInSystem().ToTask());
+                        },
+                        () => credentialNotInSystem().ToTask());
                 },
                 (why) => invalidToken(why).ToTask(),
                 () => authIdNotFound().ToTask(),

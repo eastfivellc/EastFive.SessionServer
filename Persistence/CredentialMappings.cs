@@ -14,86 +14,14 @@ using BlackBarLabs;
 using System.Collections.Generic;
 using System.Net.Http;
 
-namespace EastFive.Security.SessionServer.Persistence.Azure
+namespace EastFive.Security.SessionServer.Persistence
 {
-    public struct CredentialMapping
-    {
-        public Guid id;
-        public Guid actorId;
-        public Guid loginId;
-    }
-
     public class CredentialMappings
     {
         private AzureStorageRepository repository;
         public CredentialMappings(AzureStorageRepository repository)
         {
             this.repository = repository;
-        }
-
-        public async Task<TResult> CreatePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
-            Guid actorId, Guid loginId, DateTime? emailLastSent,
-            Func<TResult> onSuccess,
-            Func<TResult> onAlreadyExists,
-            Func<TResult> onRelationshipAlreadyExists,
-            Func<TResult> onLoginAlreadyUsed)
-        {
-            var rollback = new RollbackAsync<TResult>();
-
-            var lookupDoc = new Documents.LoginActorLookupDocument
-            {
-                ActorId = actorId,
-            };
-            rollback.AddTaskCreate(loginId, lookupDoc,
-                onLoginAlreadyUsed, this.repository);
-
-            rollback.AddTaskCreateOrUpdate(actorId,
-                (Documents.AuthorizationDocument actorDoc) =>
-                    actorDoc.AddPasswordCredential(passwordCredentialId),
-                actorDoc => actorDoc.RemovePasswordCredential(passwordCredentialId),
-                onRelationshipAlreadyExists,
-                this.repository);
-
-            var passwordCredentialDoc = new Documents.PasswordCredentialDocument
-            {
-                LoginId = loginId,
-                EmailLastSent = emailLastSent,
-            };
-            rollback.AddTaskCreate(passwordCredentialId, passwordCredentialDoc,
-                    onAlreadyExists, this.repository);
-
-            return await rollback.ExecuteAsync(onSuccess);
-        }
-
-        public async Task<TResult> FindPasswordCredentialAsync<TResult>(Guid passwordCredentialId,
-            Func<Guid, Guid, TResult> onSuccess,
-            Func<TResult> onNotFound)
-        {
-            return await await repository.FindByIdAsync(passwordCredentialId,
-                (Documents.PasswordCredentialDocument document) =>
-                    LookupCredentialMappingAsync(document.LoginId,
-                        (actorId) => onSuccess(actorId, document.LoginId),
-                        () => onNotFound()),
-                () => onNotFound().ToTask());
-        }
-
-        public async Task<TResult> FindPasswordCredentialByActorAsync<TResult>(Guid actorId,
-            Func<CredentialMapping[], TResult> onSuccess,
-            Func<TResult> onNotFound)
-        {
-            return await repository.FindLinkedDocumentsAsync(actorId,
-                (document) => document.GetPasswordCredentials(),
-                (Documents.AuthorizationDocument authDoc, Documents.PasswordCredentialDocument[] passwordCredentialDocs) =>
-                {
-                    var invites = passwordCredentialDocs.Select(pcDoc => new CredentialMapping
-                    {
-                        id = pcDoc.Id,
-                        actorId = actorId,
-                        loginId = pcDoc.LoginId,
-                    }).ToArray();
-                    return onSuccess(invites);
-                },
-                () => onNotFound());
         }
         
         public async Task<TResult> LookupCredentialMappingAsync<TResult>(Guid loginId,
@@ -130,7 +58,7 @@ namespace EastFive.Security.SessionServer.Persistence.Azure
             rollback.AddTaskCreate(token, inviteTokenDocument, onAlreadyExists, this.repository);
 
             rollback.AddTaskCreateOrUpdate(actorId,
-                (Documents.AuthorizationDocument authDoc) => authDoc.AddInviteId(inviteId),
+                (Documents.ActorDocument authDoc) => authDoc.AddInviteId(inviteId),
                 (authDoc) => authDoc.RemoveInviteId(inviteId),
                 onAlreadyExists, // This should fail on the action above as well
                 this.repository);
@@ -225,7 +153,7 @@ namespace EastFive.Security.SessionServer.Persistence.Azure
         {
             return await repository.FindLinkedDocumentsAsync(actorId,
                 (document) => document.GetInviteIds(),
-                (Documents.AuthorizationDocument authDoc, Documents.InviteDocument[] inviteDocs) =>
+                (Documents.ActorDocument authDoc, Documents.InviteDocument[] inviteDocs) =>
                 {
                     var invites = inviteDocs.Where(doc => doc.IsToken == isToken).Select(Convert).ToArray();
                     return onSuccess(invites);
