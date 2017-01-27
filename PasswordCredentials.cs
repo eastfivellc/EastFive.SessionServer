@@ -182,18 +182,22 @@ namespace EastFive.Security.SessionServer
                                     failureMessage = "UserID is not an email address";
                                     return resultFailure;
                                 }
-                                return await SendInvitePasswordAsync(username, "*********", loginUrl,
-                                    () => resultSuccess,
+                                return await await SendInvitePasswordAsync(username, "*********", loginUrl,
+                                    async () =>
+                                    {
+                                        await updateEmailLastSentAsync(emailLastSent.Value);
+                                        return resultSuccess;
+                                    },
                                     () =>
                                     {
                                         DiscriminatedDelegate<Guid, TResult, Task<TResult>> resultServiceUnavailable =
                                         (success, fail) => fail(onServiceNotAvailable());
-                                        return resultServiceUnavailable;
+                                        return resultServiceUnavailable.ToTask();
                                     },
                                     (why) =>
                                     {
                                         failureMessage = why;
-                                        return resultFailure;
+                                        return resultFailure.ToTask();
                                     });
                             },
                             () => resultFailure.ToTask(),

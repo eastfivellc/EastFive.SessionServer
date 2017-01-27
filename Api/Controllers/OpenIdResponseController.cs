@@ -9,6 +9,7 @@ using System.Web.Http;
 
 using BlackBarLabs;
 using BlackBarLabs.Api;
+using EastFive.Api.Services;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
@@ -22,6 +23,35 @@ namespace EastFive.Security.SessionServer.Api.Controllers
     [RoutePrefix("aadb2c")]
     public class OpenIdResponseController : BaseController
     {
+        public async Task<IHttpActionResult> Get([FromUri]OpenIdConnectResult result)
+        {
+            var loginProviderTaskGetter = (Func<Task<IIdentityService>>)
+                this.Request.Properties[ServicePropertyDefinitions.IdentityService];
+            var loginProviderTask = loginProviderTaskGetter();
+            var loginProvider = await loginProviderTask;
+            var callbackUrl = this.Url.GetLocation<OpenIdResponseController>();
+            if(null == result)
+            {
+                var redirect_uri = "http://orderowl.com/";
+                var loginUrl = loginProvider.GetLoginUrl(redirect_uri, 0, new byte[] { }, callbackUrl);
+                return Redirect(loginUrl);
+            }
+            
+            var parseResult = loginProvider.ParseState(result.state,
+                (redirect_uri, action, data) =>
+                {
+                    var loginUrl = loginProvider.GetLoginUrl(redirect_uri.AbsoluteUri, 0, new byte[] { }, callbackUrl);
+                    return Redirect(loginUrl);
+                },
+                (why) =>
+                {
+                    var redirect_uri = "http://orderowl.com/";
+                    var loginUrl = loginProvider.GetLoginUrl(redirect_uri, 0, new byte[] { }, callbackUrl);
+                    return Redirect(loginUrl);
+                });
+            return parseResult;
+        }
+
         public async Task<IHttpActionResult> Post(OpenIdConnectResult result)
         {
             var context = this.Request.GetSessionServerContext();
