@@ -23,26 +23,7 @@ namespace EastFive.Security.SessionServer
             var mailService = (Func<ISendMessageService>)mailServiceObject;
 
             var context = new SessionServer.Context(() => new DataContext("Azure.Authorization.Storage"),
-                // TODO: Remove this injection
-                async (credentialValidationMethodType) =>
-                {
-                    switch (credentialValidationMethodType)
-                    {
-                        case CredentialValidationMethodTypes.Password:
-                            {
-                                // Catch this in the default
-                                break;
-                            }
-                        case CredentialValidationMethodTypes.Voucher:
-                            return new CredentialProvider.Voucher.VoucherCredentialProvider();
-                        default:
-                            break;
-                    }
-
-                    var identityServiceTask = identityServiceCreate();
-                    var identityService = await identityServiceTask;
-                    return new CredentialProvider.AzureADB2C.AzureADB2CProvider(identityService);
-                }, identityServiceCreate, mailService);
+                identityServiceCreate, mailService);
             return context;
         }
     }

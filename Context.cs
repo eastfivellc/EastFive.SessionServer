@@ -13,19 +13,14 @@ namespace EastFive.Security.SessionServer
 
         private ConcurrentDictionary<CredentialValidationMethodTypes, CredentialProvider.IProvideCredentials> credentialProviders = 
             new ConcurrentDictionary<CredentialValidationMethodTypes, CredentialProvider.IProvideCredentials>();
-        private readonly Func<CredentialValidationMethodTypes, Task<CredentialProvider.IProvideCredentials>> credentialProvidersFunc;
 
         public Context(Func<SessionServer.Persistence.DataContext> dataContextCreateFunc,
-            Func<CredentialValidationMethodTypes, Task<CredentialProvider.IProvideCredentials>> credentialProvidersFunc,
             Func<Task<IIdentityService>> getLoginProvider,
             Func<ISendMessageService> getMailService)
         {
             dataContextCreateFunc.ValidateArgumentIsNotNull("dataContextCreateFunc");
             this.dataContextCreateFunc = dataContextCreateFunc;
-
-            credentialProvidersFunc.ValidateArgumentIsNotNull("credentialProvidersFunc");
-            this.credentialProvidersFunc = credentialProvidersFunc;
-
+            
             getLoginProvider.ValidateArgumentIsNotNull("getLoginProvider");
             this.loginProviderFunc = getLoginProvider;
 
@@ -50,7 +45,7 @@ namespace EastFive.Security.SessionServer
         {
             if (!this.credentialProviders.ContainsKey(method))
             {
-                var newProvider = await this.credentialProvidersFunc.Invoke(method);
+                var newProvider = new CredentialProvider.AzureADB2C.AzureADB2CProvider(await this.LoginProvider);
                 this.credentialProviders.AddOrUpdate(method, newProvider, (m, p) => newProvider);
             }
             var provider = this.credentialProviders[method];
