@@ -120,6 +120,13 @@ namespace EastFive.Security.SessionServer
         }
 
         #endregion
+        
+        public Task<TResult> LookupAccountIdAsync<TResult>(Guid loginId,
+            Func<Guid, TResult> onSuccess,
+            Func<TResult> onNotFound)
+        {
+            return this.dataContext.CredentialMappings.LookupCredentialMappingAsync(loginId, onSuccess, onNotFound)
+        }
 
         #region Tokens
 

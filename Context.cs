@@ -45,7 +45,7 @@ namespace EastFive.Security.SessionServer
         {
             if (!this.credentialProviders.ContainsKey(method))
             {
-                var newProvider = new CredentialProvider.AzureADB2C.AzureADB2CProvider(await this.LoginProvider);
+                var newProvider = new CredentialProvider.AzureADB2C.AzureADB2CProvider(await this.LoginProvider, this);
                 this.credentialProviders.AddOrUpdate(method, newProvider, (m, p) => newProvider);
             }
             var provider = this.credentialProviders[method];

@@ -46,30 +46,30 @@ namespace EastFive.Security.SessionServer
         //    this.context = context;
         //}
 
-        //public async Task<TResult> CreateAsync<TResult>(Guid claimId,
-        //    Guid authorizationId, Uri issuer, Uri type, string value, string signature,
-        //    Func<TResult> success,
-        //    Func<TResult> authorizationNotFound,
-        //    Func<TResult> alreadyExist,
-        //    Func<string, TResult> failure)
-        //{
-        //    return await this.dataContext.Authorizations.UpdateClaims<TResult, bool>(authorizationId,
-        //        async (claimsStored, addClaim) =>
-        //        {
-        //            if (claimsStored.Any(claim => claim.claimId == claimId))
-        //                return alreadyExist();
+        public async Task<TResult> CreateAsync<TResult>(Guid claimId,
+            Guid accountId, string type, string value,
+            Func<TResult> success,
+            Func<TResult> onAccountNotFound,
+            Func<TResult> alreadyExist,
+            Func<string, TResult> failure)
+        {
+            return await this.dataContext.UpdateClaims<TResult, bool>(authorizationId,
+                async (claimsStored, addClaim) =>
+                {
+                    if (claimsStored.Any(claim => claim.claimId == claimId))
+                        return alreadyExist();
 
-        //            var successAddingClaim = await addClaim(claimId, issuer, type, value);
-        //            if (successAddingClaim)
-        //                return success();
+                    var successAddingClaim = await addClaim(claimId, issuer, type, value);
+                    if (successAddingClaim)
+                        return success();
 
-        //            return failure("Could not add claim");
-        //        },
-        //        () => true,
-        //        () => false,
-        //        () => authorizationNotFound(),
-        //        (whyFailed) => failure(whyFailed));
-        //}
+                    return failure("Could not add claim");
+                },
+                () => true,
+                () => false,
+                () => authorizationNotFound(),
+                (whyFailed) => failure(whyFailed));
+        }
 
         //public async Task<TResult> UpdateAsync<TResult>(Guid claimId,
         //    Guid authorizationId, Uri issuer, Uri type, string value, string signature,
