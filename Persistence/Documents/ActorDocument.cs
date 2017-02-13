@@ -74,8 +74,6 @@ namespace EastFive.Security.SessionServer.Persistence.Documents
                 });
             return result;
         }
-        
-
 
         public byte[] PasswordCredentials { get; set; }
 

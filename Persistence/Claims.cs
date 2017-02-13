@@ -20,15 +20,16 @@ namespace EastFive.Security.SessionServer.Persistence
     public class Claims
     {
         private AzureStorageRepository repository;
+
         public Claims(AzureStorageRepository repository)
         {
             this.repository = repository;
         }
 
         public async Task<TResult> CreateOrUpdateAsync<TResult>(Guid actorId, Guid claimId, string type, string value,
-              Func<TResult> onSuccess,
-              Func<TResult> onFailure,
-              Func<TResult> onActorNotFound)
+            Func<TResult> onSuccess,
+            Func<TResult> onFailure,
+            Func<TResult> onActorNotFound)
         {
             return await await repository.FindByIdAsync(actorId,
                 (ActorMappingsDocument document) =>
@@ -46,6 +47,16 @@ namespace EastFive.Security.SessionServer.Persistence
                     return result;
                 },
                 () => onActorNotFound().ToTask());
+        }
+
+        public async Task<TResult> FindAsync<TResult>(Guid actorId,
+            Func<Claim[], TResult> found,
+            Func<TResult> actorNotFound)
+        {
+            var results = await await repository.FindByIdAsync(actorId,
+                async (ActorMappingsDocument document) => found(await document.GetClaims(repository)),
+                () => actorNotFound().ToTask());
+            return results;
         }
     }
 }

@@ -69,8 +69,7 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
                             return success(authId, returnedClaims);
 
                         },
-                        () => success(authId, claims.Claims.ToArray()),
-                        (why) => success(authId, claims.Claims.ToArray()));
+                        () => success(authId, claims.Claims.ToArray()));
                     return result;
                 },
                 (why) =>
