@@ -55,16 +55,24 @@ namespace EastFive.Security.SessionServer.Persistence.Documents
 
         public byte [] Claims { get; set; }
 
-        internal async Task<TResult> AddClaimsAsync<TResult>(ClaimDocument claimsDoc, AzureStorageRepository repository,
+        internal async Task<TResult> AddOrUpdateClaimsAsync<TResult>(ClaimDocument claimsDoc, AzureStorageRepository repository,
             Func<TResult> success,
             Func<TResult> failure)
         {
             var claimDocumentIdsCurrent = Claims.ToGuidsFromByteArray();
-            var claimDocumentIds = claimDocumentIdsCurrent.Concat(new Guid[] { claimsDoc.ClaimId });
-            this.Claims = claimDocumentIds.ToByteArrayOfGuids();
-            return await repository.CreateAsync(claimsDoc.ClaimId, claimsDoc,
-                        () => success(),
-                        () => failure());
+            var updatedClaimDocumentIdsCurrent = claimDocumentIdsCurrent.AddIfNotExisting(claimsDoc.ClaimId);
+            this.Claims = updatedClaimDocumentIdsCurrent.ToByteArrayOfGuids();
+            var result = await repository.CreateOrUpdateAsync<ClaimDocument, TResult>(claimsDoc.ClaimId,
+                async (created, doc, save) =>
+                {
+                    doc.ClaimId = claimsDoc.ClaimId;
+                    doc.Issuer = claimsDoc.Issuer;
+                    doc.Type = claimsDoc.Type;
+                    doc.Value = claimsDoc.Value;
+                    await save(doc);
+                    return success();
+                });
+            return result;
         }
 
         public byte[] PasswordCredentials { get; set; }

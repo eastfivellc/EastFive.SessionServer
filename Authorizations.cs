@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BlackBarLabs.Extensions;
 using System.Collections.Generic;
 using BlackBarLabs;
+using EastFive.Security.SessionServer.Persistence.Documents;
 
 namespace EastFive.Security.SessionServer
 {
@@ -63,7 +64,7 @@ namespace EastFive.Security.SessionServer
             //return result;
         }
 
-
+ 
         #endregion
 
     }

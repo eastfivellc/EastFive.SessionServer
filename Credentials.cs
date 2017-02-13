@@ -125,7 +125,7 @@ namespace EastFive.Security.SessionServer
             Func<Guid, TResult> onSuccess,
             Func<TResult> onNotFound)
         {
-            return this.dataContext.CredentialMappings.LookupCredentialMappingAsync(loginId, onSuccess, onNotFound)
+            return this.dataContext.CredentialMappings.LookupCredentialMappingAsync(loginId, onSuccess, onNotFound);
         }
 
         #region Tokens
