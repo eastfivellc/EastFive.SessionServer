@@ -161,6 +161,7 @@
     <Compile Include="Api\Actions\InviteCredentialActions.cs" />
     <Compile Include="Api\Constants.cs" />
     <Compile Include="Api\Controllers\BaseController.cs" />
+    <Compile Include="Api\Controllers\RoleController.cs" />
     <Compile Include="Api\Controllers\TokenCredentialController.cs" />
     <Compile Include="Api\Controllers\InviteCredentialController.cs" />
     <Compile Include="Api\Controllers\PasswordCredentialController.cs" />
@@ -168,7 +169,9 @@
     <Compile Include="Api\RequestExtensions.cs" />
     <Compile Include="Api\Resources\AuthHeaderProps.cs" />
     <Compile Include="Api\Controllers\AccountLinksController.cs" />
+    <Compile Include="Api\Resources\Queries\RoleQuery.cs" />
     <Compile Include="Api\Resources\Queries\TokenCredentialQuery.cs" />
+    <Compile Include="Api\Resources\Role.cs" />
     <Compile Include="Api\Resources\TokenCredential.cs" />
     <Compile Include="Api\Resources\InviteCredential.cs" />
     <Compile Include="Api\Resources\CredentialMapping.cs" />
@@ -186,6 +189,7 @@
     <Compile Include="CredentialProviders\IProvideCredentials.cs" />
     <Compile Include="CredentialProviders\Voucher\Utilities.cs" />
     <Compile Include="CredentialValidationMethodTypes.cs" />
+    <Compile Include="Persistence\Documents\RoleDocument.cs" />
     <Compile Include="Persistence\PasswordCredentials.cs" />
     <Compile Include="Persistence\CredentialMappings.cs" />
     <Compile Include="Persistence\Documents\LoginActorLookupDocument.cs" />
@@ -202,6 +206,7 @@
     <Compile Include="Persistence\Documents\ClaimDocument.cs" />
     <Compile Include="Persistence\DataContext.cs" />
     <Compile Include="Persistence\Documents\SessionDocument.cs" />
+    <Compile Include="Persistence\Roles.cs" />
     <Compile Include="Persistence\Sessions.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -213,6 +218,7 @@
     <Compile Include="Api\Resources\Claim.cs" />
     <Compile Include="Api\Resources\PasswordCredential.cs" />
     <Compile Include="Api\Resources\Session.cs" />
+    <Compile Include="Roles.cs" />
     <Compile Include="Sessions.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="Context.cs" />
