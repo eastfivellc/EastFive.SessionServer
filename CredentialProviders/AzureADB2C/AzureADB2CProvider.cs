@@ -45,8 +45,8 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
             //This will return the rolling keys to validate the jwt signature
             //We will want to cache the key here and only go fetch again if the signature look up fails.  The keys rotate about every 24 hours.
 
-            return await await loginProvider.ValidateToken(id_token,
-                async (claims) =>
+            return await loginProvider.ValidateToken(id_token,
+                (claims) =>
                 {
                     var claimType = Microsoft.Azure.CloudConfigurationManager.GetSetting(
                         "BlackBarLabs.Security.CredentialProvider.AzureADB2C.ClaimType");
@@ -59,23 +59,9 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
                     if(!Guid.TryParse(authClaims[0].Value, out authId))
                         return invalidToken("User has invalid auth claim for this system");
 
-                    // LOAD CLAIMS FROM IDENTITY SYSTEM HERE
-
-                    var result = await this.context.Claims.FindByAccountIdAsync(authId,
-                        (customClaims) =>
-                        {
-                            var returnedClaims = claims.Claims.Concat(customClaims).ToArray();
-
-                            return success(authId, returnedClaims);
-
-                        },
-                        () => success(authId, claims.Claims.ToArray()));
-                    return result;
-                },
-                (why) =>
-                {
-                    return invalidToken(why).ToTask();
-                });
+                    return success(authId, null);
+               },
+                invalidToken);
         }
     }
 }

@@ -50,22 +50,30 @@ namespace EastFive.Security.SessionServer
                 async (authorizationId, claims) =>
                 {
                     // Convert authentication unique ID to Actor ID
-                    return await await dataContext.CredentialMappings.LookupCredentialMappingAsync(authorizationId,
+                    var inner = await await dataContext.CredentialMappings.LookupCredentialMappingAsync<Task<T>>(authorizationId,
                         async (actorId) =>
                         {
-                                    var refreshToken = BlackBarLabs.Security.SecureGuid.Generate().ToString("N");
-                                    var resultFound = await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, actorId,
-                                        () =>
+                            var refreshToken = BlackBarLabs.Security.SecureGuid.Generate().ToString("N");
+                            var resultFound = await await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, actorId,
+                                async() =>
+                                {
+                                    // LOAD CLAIMS FROM IDENTITY SYSTEM HERE
+                                    var claimResult = await this.context.Claims.FindByAccountIdAsync(actorId,
+                                        (customClaims) =>
                                         {
-                                            var jwtToken = GenerateToken(sessionId, actorId, claims
+                                            var jwtToken = GenerateToken(sessionId, actorId, customClaims
                                                 .Select(claim => new KeyValuePair<string, string>(claim.Type, claim.Value))
                                                 .ToDictionary());
                                             return onSuccess(default(Uri), actorId, jwtToken, refreshToken);
                                         },
-                                        () => alreadyExists());
-                                    return resultFound;
+                                        () => onSuccess(default(Uri), actorId, string.Empty, refreshToken));
+                                    return claimResult;
+                                },
+                                () => alreadyExists().ToTask());
+                            return resultFound;
                         },
                         () => credentialNotInSystem().ToTask());
+                    return inner;
                 },
                 (why) => invalidToken(why).ToTask(),
                 () => authIdNotFound().ToTask(),
