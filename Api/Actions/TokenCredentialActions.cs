@@ -80,7 +80,7 @@ namespace EastFive.Security.SessionServer.Api
             return new Resources.TokenCredential
             {
                 Id = urlHelper.GetWebId<Controllers.InviteCredentialController>(invite.id),
-                ActorId = invite.actorId,
+                ActorId = Library.getActorLink(invite.actorId, urlHelper),
                 Email = invite.email,
                 LastEmailSent = invite.lastSent,
             };
@@ -91,14 +91,14 @@ namespace EastFive.Security.SessionServer.Api
         public static async Task<HttpResponseMessage> CreateAsync(this Resources.TokenCredential credential,
             HttpRequestMessage request, UrlHelper url)
         {
-            var actorId = credential.ActorId;
+            var actorId = credential.ActorId.ToGuid();
             //return await request.GetClaims(
             //    async (claims) =>
             //    {
             var claims = new System.Security.Claims.Claim[] { };
             var context = request.GetSessionServerContext();
             var creationResults = await context.CredentialMappings.CreateTokenCredentialAsync(
-                credential.Id.UUID, actorId, credential.Email,
+                credential.Id.UUID, actorId.Value, credential.Email,
                 claims.ToArray(),
                 (inviteId, token) => url.GetLocation<Controllers.TokenCredentialController>().SetQueryParam("token", token.ToString("N")),
                 () => request.CreateResponse(HttpStatusCode.Created),
@@ -116,7 +116,7 @@ namespace EastFive.Security.SessionServer.Api
         public static async Task<HttpResponseMessage> UpdateAsync(this Resources.TokenCredential credential,
             HttpRequestMessage request, UrlHelper url)
         {
-            var actorId = credential.ActorId;
+            var actorId = credential.ActorId.ToGuid();
             //return await request.GetClaims(
             //    async (claims) =>
             //    {

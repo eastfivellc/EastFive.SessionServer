@@ -175,8 +175,6 @@
     <Compile Include="Api\Resources\Role.cs" />
     <Compile Include="Api\Resources\TokenCredential.cs" />
     <Compile Include="Api\Resources\InviteCredential.cs" />
-    <Compile Include="Api\Resources\CredentialMapping.cs" />
-    <Compile Include="Api\Resources\Queries\CredentialMappingQuery.cs" />
     <Compile Include="Api\Resources\Queries\InviteCredentialQuery.cs" />
     <Compile Include="Api\Resources\Queries\PasswordCredentialQuery.cs" />
     <Compile Include="Configuration\EmailTemplateDefinitions.cs" />
@@ -215,8 +213,6 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="Api\Resources\Authorization.cs" />
-    <Compile Include="Api\Resources\Authorize.cs" />
     <Compile Include="Api\Resources\Claim.cs" />
     <Compile Include="Api\Resources\PasswordCredential.cs" />
     <Compile Include="Api\Resources\Session.cs" />
