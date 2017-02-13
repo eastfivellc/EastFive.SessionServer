@@ -160,9 +160,7 @@
     <Compile Include="Api\Actions\PasswordCredentialActions.cs" />
     <Compile Include="Api\Actions\InviteCredentialActions.cs" />
     <Compile Include="Api\Constants.cs" />
-    <Compile Include="Api\Controllers\AuthorizeController.cs" />
     <Compile Include="Api\Controllers\BaseController.cs" />
-    <Compile Include="Api\Controllers\ClaimController.cs" />
     <Compile Include="Api\Controllers\TokenCredentialController.cs" />
     <Compile Include="Api\Controllers\InviteCredentialController.cs" />
     <Compile Include="Api\Controllers\PasswordCredentialController.cs" />

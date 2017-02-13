@@ -29,9 +29,11 @@ namespace EastFive.Security.LoginProvider.AzureADB2C
         private string loginEndpoint;
         private string signupEndpoint;
         private string logoutEndpoint;
+        private SessionServer.Context context;
 
-        public LoginProvider()
+        public LoginProvider(SessionServer.Context context)
         {
+            this.context = context;
             this.audience = Microsoft.Azure.CloudConfigurationManager.GetSetting(
                 "EastFive.Security.LoginProvider.AzureADB2C.Audience");
             this.signinConfiguration = new Uri(Microsoft.Azure.CloudConfigurationManager.GetSetting(
@@ -176,9 +178,15 @@ namespace EastFive.Security.LoginProvider.AzureADB2C
             return onSuccess();
         }
 
-        public Task<TResult> CreateOrUpdateClaim<TResult>(string claimType, string claimValue, Func<TResult> onSuccess, Func<string, TResult> onFailure)
+        public async Task<TResult> CreateOrUpdateClaim<TResult>(Guid accountId, string claimType, string claimValue, 
+            Func<TResult> onSuccess,
+            Func<string, TResult> onFailure)
         {
-            throw new NotImplementedException();
+            return await context.Claims.CreateAsync(Guid.NewGuid(), accountId, claimType, claimValue,
+                onSuccess,
+                () => onFailure("Account was not found"),
+                () => onFailure("Claim is already in use"),
+                onFailure);
         }
     }
 }

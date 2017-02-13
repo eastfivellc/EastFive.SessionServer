@@ -11,10 +11,12 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
     public class AzureADB2CProvider : IProvideCredentials
     {
         IIdentityService loginProvider;
+        SessionServer.Context context;
 
-        public AzureADB2CProvider(IIdentityService loginProvider)
+        public AzureADB2CProvider(IIdentityService loginProvider, SessionServer.Context context)
         {
             this.loginProvider = loginProvider;
+            this.context = context;
         }
 
         public Task<TResult> RedeemTokenAsync<TResult>(string token, 
@@ -55,7 +57,13 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
                     Guid authId;
                     if(!Guid.TryParse(authClaims[0].Value, out authId))
                         return invalidToken("User has invalid auth claim for this system");
-                    return success(authId, claims.Claims.ToArray());
+
+                    // LOAD CLAIMS FROM IDENTITY SYSTEM HERE
+                    
+                    var customClaims = this.context.Claims.FindByAccountIdAsync(authId);
+                    var returnedClaims = claims.Claims.Concat(customClaims).ToArray();
+
+                    return success(authId, returnedClaims);
                 },
                 (why) =>
                 {
