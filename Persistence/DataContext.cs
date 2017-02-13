@@ -40,5 +40,16 @@ namespace EastFive.Security.SessionServer.Persistence
                 return passwordCredentials;
             }
         }
+
+        private Claims claims = null;
+        public Claims Claims
+        {
+            get
+            {
+                if (default(Claims) == claims)
+                    claims = new Claims(this.AzureStorageRepository);
+                return claims;
+            }
+        }
     }
 }

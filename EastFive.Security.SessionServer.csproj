@@ -186,6 +186,7 @@
     <Compile Include="CredentialProviders\IProvideCredentials.cs" />
     <Compile Include="CredentialProviders\Voucher\Utilities.cs" />
     <Compile Include="CredentialValidationMethodTypes.cs" />
+    <Compile Include="Persistence\Claims.cs" />
     <Compile Include="Persistence\PasswordCredentials.cs" />
     <Compile Include="Persistence\CredentialMappings.cs" />
     <Compile Include="Persistence\Documents\LoginActorLookupDocument.cs" />

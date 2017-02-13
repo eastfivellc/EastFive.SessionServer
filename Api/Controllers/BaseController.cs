@@ -16,7 +16,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
         {
             if (default(LoginProvider.AzureADB2C.LoginProvider) == loginProvider)
             {
-                loginProvider = new LoginProvider.AzureADB2C.LoginProvider(null);
+                loginProvider = new LoginProvider.AzureADB2C.LoginProvider();
                 await loginProvider.InitializeAsync();
             }
             return loginProvider;

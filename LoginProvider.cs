@@ -29,13 +29,9 @@ namespace EastFive.Security.LoginProvider.AzureADB2C
         private string loginEndpoint;
         private string signupEndpoint;
         private string logoutEndpoint;
-        private StoreClaim storeClaim;
 
-        public delegate Task StoreClaim(Guid accountId, string claimType, string claimValue);
-
-        public LoginProvider(StoreClaim storeClaim)
+        public LoginProvider()
         {
-            this.storeClaim = storeClaim;
             this.audience = Microsoft.Azure.CloudConfigurationManager.GetSetting(
                 "EastFive.Security.LoginProvider.AzureADB2C.Audience");
             this.signinConfiguration = new Uri(Microsoft.Azure.CloudConfigurationManager.GetSetting(
@@ -178,18 +174,6 @@ namespace EastFive.Security.LoginProvider.AzureADB2C
         {
             var result = await client.UpdateUserPasswordAsync(loginId.ToString(), password, forceChange);
             return onSuccess();
-        }
-
-        public async Task<TResult> CreateOrUpdateClaim<TResult>(Guid accountId, string claimType, string claimValue, 
-            Func<TResult> onSuccess,
-            Func<string, TResult> onFailure)
-        {
-            return onSuccess();
-            //return await context.Claims.CreateAsync(Guid.NewGuid(), accountId, claimType, claimValue,
-            //    onSuccess,
-            //    () => onFailure("Account was not found"),
-            //    () => onFailure("Claim is already in use"),
-            //    onFailure);
         }
     }
 }

@@ -3,6 +3,7 @@ using EastFive.Security.LoginProvider;
 using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
+using BlackBarLabs.Persistence.Azure;
 
 namespace EastFive.Security.SessionServer
 {
@@ -39,6 +40,17 @@ namespace EastFive.Security.SessionServer
         internal Task<IIdentityService> LoginProvider
         {
             get { return loginProvider ?? (loginProvider = loginProviderFunc.Invoke()); }
+        }
+
+        public async Task<TResult> CreateOrUpdateClaim<TResult>(Guid accountId, string claimType, string claimValue,
+            Func<TResult> onSuccess,
+            Func<string, TResult> onFailure)
+        {
+            var claimId = (accountId + claimType).MD5HashGuid();
+            return await this.Claims.CreateOrUpdateAsync(accountId, claimId, claimType, claimValue,
+                onSuccess,
+                () => onFailure("Account was not found"),
+                () => onFailure("Claim is already in use"));
         }
 
         internal async Task<CredentialProvider.IProvideCredentials> GetCredentialProvider(CredentialValidationMethodTypes method)
@@ -110,8 +122,8 @@ namespace EastFive.Security.SessionServer
         {
             get
             {
-                //if (default(Claims) == claims)
-                //    claims = new Claims(this, this.DataContext);
+                if (default(Claims) == claims)
+                    claims = new Claims(this, this.DataContext);
                 return claims;
             }
         }

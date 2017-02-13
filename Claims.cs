@@ -3,6 +3,8 @@ using System.Threading.Tasks;
 using System.Linq;
 
 using BlackBarLabs.Collections.Async;
+using BlackBarLabs.Extensions;
+using EastFive.Security.SessionServer.Persistence.Documents;
 
 namespace EastFive.Security.SessionServer
 {
@@ -10,6 +12,12 @@ namespace EastFive.Security.SessionServer
     {
         private Context context;
         private Persistence.DataContext dataContext;
+
+        internal Claims(Context context, Persistence.DataContext dataContext)
+        {
+            this.dataContext = dataContext;
+            this.context = context;
+        }
 
         public async Task<TResult> FindByAccountIdAsync<TResult>(Guid accountId,
             Func<System.Security.Claims.Claim [], TResult> found,
@@ -47,7 +55,7 @@ namespace EastFive.Security.SessionServer
         //    this.context = context;
         //}
 
-        public async Task<TResult> CreateAsync<TResult>(Guid claimId,
+        public async Task<TResult> CreateOrUpdateAsync<TResult>(Guid claimId,
             Guid accountId, string type, string value,
             Func<TResult> success,
             Func<TResult> onAccountNotFound,
@@ -71,6 +79,17 @@ namespace EastFive.Security.SessionServer
             //    () => false,
             //    () => authorizationNotFound(),
             //    (whyFailed) => failure(whyFailed));
+        }
+
+        public async Task<TResult> CreateOrUpdateAsync<TResult>(Guid actorId, Guid claimId, string type, string value,
+            Func<TResult> onSuccess,
+            Func<TResult> onFailure,
+            Func<TResult> onActorNotFound)
+        {
+            return await dataContext.Claims.CreateOrUpdateAsync(actorId, claimId, type, value,
+                onSuccess,
+                onFailure,
+                onActorNotFound);
         }
 
         //public async Task<TResult> UpdateAsync<TResult>(Guid claimId,
