@@ -21,33 +21,13 @@ namespace EastFive.Security.SessionServer.Api
         public static async Task<HttpResponseMessage> CreateAsync(this Resources.PasswordCredential credential,
             HttpRequestMessage request, UrlHelper url)
         {
-            request.Headers.Authorization.HasSiteAdminAuthorization(
+            return await request.Headers.Authorization.HasSiteAdminAuthorization(
                 async () =>
                 {
                     var response = await CreatePasswordCredentialAsync(credential, request, url);
                     return response;
                 },
-                ()=>
-                {
-                    request.GetClaims(
-                        claims =>
-                        {
-                            claims.
-                        },
-                        () =>
-                        {
-                            
-                        },
-                        () =>
-                        {
-                            
-                        });
-                }
-                );
-
-
-
-            
+                (why) => request.CreateResponse(HttpStatusCode.Forbidden).AddReason(why).ToTask());
         }
 
         private static async Task<HttpResponseMessage> CreatePasswordCredentialAsync(Resources.PasswordCredential credential,
