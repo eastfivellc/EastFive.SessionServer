@@ -156,8 +156,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Api\Actions\ClaimActions.cs" />
-    <Compile Include="Api\Actions\CredentialMappingActions.cs" />
     <Compile Include="Api\Actions\TokenCredentialActions.cs" />
     <Compile Include="Api\Actions\PasswordCredentialActions.cs" />
     <Compile Include="Api\Actions\InviteCredentialActions.cs" />
@@ -200,8 +198,6 @@
     <Compile Include="CredentialProviders\Implicit\ImplicitlyCreatedCredentialProvider.cs" />
     <Compile Include="CredentialProviders\Voucher\VoucherCredentialProvider.cs" />
     <Compile Include="Claims.cs" />
-    <Compile Include="Api\Actions\AuthorizationActions.cs" />
-    <Compile Include="Api\Actions\AuthorizeActions.cs" />
     <Compile Include="Api\Actions\SessionActions.cs" />
     <Compile Include="Persistence\Documents\CredentialMappingDocument.cs" />
     <Compile Include="Persistence\Documents\ActorDocument.cs" />
