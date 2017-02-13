@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IdentityModel.Protocols.WSTrust;
 using System.Linq;
 using System.Net;
 using System.Runtime.Serialization;
@@ -20,11 +21,39 @@ namespace EastFive.Security.SessionServer.Api
         public static async Task<HttpResponseMessage> CreateAsync(this Resources.PasswordCredential credential,
             HttpRequestMessage request, UrlHelper url)
         {
-            var actorId = credential.Actor.ToGuid();
-            //return await request.GetClaims(
-            //    async (claims) =>
-            //    {
+            request.Headers.Authorization.HasSiteAdminAuthorization(
+                async () =>
+                {
+                    var response = await CreatePasswordCredentialAsync(credential, request, url);
+                    return response;
+                },
+                ()=>
+                {
+                    request.GetClaims(
+                        claims =>
+                        {
+                            claims.
+                        },
+                        () =>
+                        {
+                            
+                        },
+                        () =>
+                        {
+                            
+                        });
+                }
+                );
 
+
+
+            
+        }
+
+        private static async Task<HttpResponseMessage> CreatePasswordCredentialAsync(Resources.PasswordCredential credential,
+            HttpRequestMessage request, UrlHelper url)
+        {
+            var actorId = credential.Actor.ToGuid();
             var loginProviderTaskGetter = (Func<Task<IIdentityService>>)
                 request.Properties[ServicePropertyDefinitions.IdentityService];
             var loginProviderTask = loginProviderTaskGetter();
@@ -54,9 +83,6 @@ namespace EastFive.Security.SessionServer.Api
                 (why) => request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason(why));
             return creationResults;
-            //},
-            //() => request.CreateResponse(HttpStatusCode.Unauthorized).ToTask(),
-            //(why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why).ToTask());
         }
 
         public static async Task<HttpResponseMessage> PutAsync(this Resources.PasswordCredential credential,
