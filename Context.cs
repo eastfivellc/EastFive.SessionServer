@@ -128,6 +128,18 @@ namespace EastFive.Security.SessionServer
             }
         }
 
+        private Roles roles;
+        public Roles Roles
+        {
+
+            get
+            {
+                if (default(Roles) == roles)
+                    roles = new Roles(this, DataContext);
+                return roles;
+            }
+        }
+
 
         #region Authorizations
 

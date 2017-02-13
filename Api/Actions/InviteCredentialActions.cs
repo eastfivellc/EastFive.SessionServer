@@ -34,13 +34,7 @@ namespace EastFive.Security.SessionServer.Api
             return await context.CredentialMappings.GetInviteAsync(inviteId,
                 (invite) =>
                 {
-                    var response = request.CreateResponse(HttpStatusCode.OK, new Resources.InviteCredential
-                    {
-                        Id = invite.id,
-                        ActorId = invite.actorId,
-                        Email = invite.email,
-                        LastEmailSent = invite.lastSent,
-                    });
+                    var response = request.CreateResponse(HttpStatusCode.OK, Convert(invite, urlHelper));
                     return response;
                 },
                 () => request.CreateResponse(HttpStatusCode.NotFound));
@@ -108,7 +102,7 @@ namespace EastFive.Security.SessionServer.Api
             return new Resources.InviteCredential
             {
                 Id = urlHelper.GetWebId<Controllers.InviteCredentialController>(invite.id),
-                ActorId = invite.actorId,
+                ActorId = Library.getActorLink(invite.actorId, urlHelper),
                 Email = invite.email,
                 LastEmailSent = invite.lastSent,
             };
@@ -119,14 +113,17 @@ namespace EastFive.Security.SessionServer.Api
         public static async Task<HttpResponseMessage> CreateAsync(this Resources.InviteCredential credential,
             HttpRequestMessage request, UrlHelper url)
         {
-            var actorId = credential.ActorId;
+            var actorId = credential.ActorId.ToGuid();
+            if (!actorId.HasValue)
+                return request.CreateResponse(HttpStatusCode.BadRequest).AddReason("Actor value must be set");
+
             //return await request.GetClaims(
             //    async (claims) =>
             //    {
             var claims = new System.Security.Claims.Claim[] { };
             var context = request.GetSessionServerContext();
             var creationResults = await context.CredentialMappings.SendEmailInviteAsync(
-                credential.Id.UUID, actorId, credential.Email,
+                credential.Id.UUID, actorId.Value, credential.Email,
                 claims.ToArray(),
                 (inviteId, token) => url.GetLocation<Controllers.InviteCredentialController>().SetQueryParam("token", token.ToString("N")),
                 () => request.CreateResponse(HttpStatusCode.Created),

@@ -2,10 +2,9 @@
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
-using OrderOwl.Persistence;
 using System.Linq;
 
-namespace OrderOwl
+namespace EastFive.Security.SessionServer
 {
     public struct Role
     {
@@ -17,9 +16,9 @@ namespace OrderOwl
     public class Roles
     {
         private readonly Context context;
-        private readonly Persistence.Azure.DataContext dataContext;
+        private readonly Persistence.DataContext dataContext;
         
-        public Roles(Context context, Persistence.Azure.DataContext dataContext)
+        public Roles(Context context, Persistence.DataContext dataContext)
         {
             this.context = context;
             this.dataContext = dataContext;

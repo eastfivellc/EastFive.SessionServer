@@ -1,10 +1,9 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using System.Web.Http;
-using OrderOwl.Api.Models;
 using BlackBarLabs.Api;
-using System;
 
-namespace OrderOwl.Api.Controllers
+namespace EastFive.Security.SessionServer.Api.Controllers
 {
     public class RoleController : BaseController
     {

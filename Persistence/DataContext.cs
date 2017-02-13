@@ -51,5 +51,16 @@ namespace EastFive.Security.SessionServer.Persistence
                 return claims;
             }
         }
+
+        private Roles roles = default(Roles);
+        public Roles Roles
+        {
+            get
+            {
+                if (default(Roles) == roles)
+                    roles = new Roles(this);
+                return roles;
+            }
+        }
     }
 }

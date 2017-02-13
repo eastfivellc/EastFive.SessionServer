@@ -3,7 +3,7 @@ using BlackBarLabs.Api;
 using Newtonsoft.Json;
 using BlackBarLabs.Api.Resources;
 
-namespace OrderOwl.Api.Resources
+namespace EastFive.Security.SessionServer.Api.Resources
 {
     [DataContract]
     public class Role : ResourceBase

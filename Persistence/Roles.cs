@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
 using BlackBarLabs.Persistence.Azure.StorageTables;
-using OrderOwl.Persistence.Azure.Documents;
 using BlackBarLabs.Persistence;
 using BlackBarLabs.Persistence.Azure;
 using System.Linq;
-using OrderOwl.Persistence.Azure;
-using OrderOwl.Persistence.Azure.Documents;
 
-namespace OrderOwl.Persistence
+namespace EastFive.Security.SessionServer.Persistence
 {
     public struct Role
     {
@@ -43,7 +40,7 @@ namespace OrderOwl.Persistence
             rollback.AddTaskCreate(id, document, onAlreadyExists, this.azureStorageRepository);
 
             rollback.AddTaskUpdate(actorId,
-                (ActorDocument actorDoc) => actorDoc.AddRole(id),
+                (Documents.ActorMappingsDocument actorDoc) => actorDoc.AddRole(id),
                 (actorDoc) => actorDoc.RemoveRole(id),
                 onActorNotFound,
                 this.azureStorageRepository);
@@ -66,8 +63,8 @@ namespace OrderOwl.Persistence
             Func<T> notFound)
         {
             var result = await this.azureStorageRepository.FindLinkedDocumentsAsync(actorId,
-                (ActorDocument doc) => doc.GetRoles(),
-                (ActorDocument actorDoc, Documents.RoleDocument[] roleDocs) => 
+                (doc) => doc.GetRoles(),
+                (Documents.ActorMappingsDocument actorDoc, Documents.RoleDocument[] roleDocs) => 
                     found(roleDocs.Select(Convert).ToArray()),
                 () => notFound());
             return result;

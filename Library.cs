@@ -11,16 +11,22 @@ using Microsoft.IdentityModel.Tokens;
 
 using BlackBarLabs;
 using EastFive.Api.Services;
+using BlackBarLabs.Api.Resources;
+using System.Web.Http.Routing;
 
 namespace EastFive.Security.SessionServer
 {
     public static class Library
     {
+        internal static Func<Guid, UrlHelper, WebId> getActorLink;
+
         public static TResult SessionServerStartAsync<TResult>(this HttpConfiguration config,
                 Func<ISendMessageService> messageService,
+                Func<Guid, UrlHelper, WebId> getActorLink,
             Func<TResult> onSuccess,
             Func<string, TResult> onFailed)
         {
+            Library.getActorLink = getActorLink;
             Api.Controllers.BaseController.SetMessageService(messageService);
             //config.AddExternalControllers<SessionServer.Api.Controllers.OpenIdResponseController>();
             AddExternalControllersX<SessionServer.Api.Controllers.OpenIdResponseController>(config);

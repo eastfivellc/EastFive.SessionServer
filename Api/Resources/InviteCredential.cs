@@ -13,7 +13,7 @@ namespace EastFive.Security.SessionServer.Api.Resources
         
         [DataMember]
         [JsonProperty("actor_id")]
-        public Guid ActorId { get; set; }
+        public WebId ActorId { get; set; }
         
         [DataMember]
         [JsonProperty("email")]

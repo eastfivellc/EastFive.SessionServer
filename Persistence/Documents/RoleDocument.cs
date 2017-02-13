@@ -4,7 +4,7 @@ using System.Runtime.Serialization;
 using BlackBarLabs.Persistence.Azure;
 using Microsoft.WindowsAzure.Storage.Table;
 
-namespace OrderOwl.Persistence.Documents
+namespace EastFive.Security.SessionServer.Persistence.Documents
 {
     [Serializable]
     [DataContract]

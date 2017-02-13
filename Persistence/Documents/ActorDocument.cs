@@ -125,6 +125,40 @@ namespace EastFive.Security.SessionServer.Persistence.Documents
             return this.InviteIds.ToGuidsFromByteArray();
         }
 
+
+        #region Roles
+
+        public byte[] Roles { get; set; }
+
+        public Guid[] GetRoles()
+        {
+            return this.Roles.ToGuidsFromByteArray();
+        }
+
+        public bool AddRole(Guid roleId)
+        {
+            var roles = this.GetRoles();
+            if (roles.Contains(roleId))
+                return false;
+            this.Roles = roles
+                .Append(roleId)
+                .ToByteArrayOfGuids();
+            return true;
+        }
+
+        internal bool RemoveRole(Guid roleId)
+        {
+            var roles = this.GetRoles();
+            if (!roles.Contains(roleId))
+                return false;
+            this.Roles = roles
+                .Where(rId => rId != roleId)
+                .ToByteArrayOfGuids();
+            return true;
+        }
+
+        #endregion
+
         #endregion
 
     }
