@@ -154,29 +154,47 @@ namespace EastFive.Security.SessionServer
         }
 
         private async Task<TResult> LookupCredentialMappingAsync<TResult>(Guid loginId, Guid sessionId,
-            System.Security.Claims.Claim[] claims, Uri redirectUri,
+            System.Security.Claims.Claim[] claimsDiscard, Uri redirectUri,
             CreateSessionSuccessDelegate<TResult> onSuccess,
             CreateSessionAlreadyExistsDelegate<TResult> alreadyExists,
             Func<TResult> credentialNotInSystem)
         {
             // Convert authentication unique ID to Actor ID
-            var result = await await dataContext.CredentialMappings.LookupCredentialMappingAsync(loginId,
+            var resultLookup = await await dataContext.CredentialMappings.LookupCredentialMappingAsync(loginId,
                 async (actorId) =>
                 {
-                    var refreshToken = BlackBarLabs.Security.SecureGuid.Generate().ToString("N");
-                    var resultFound = await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, actorId,
-                        () =>
+                    var result = await await this.context.Claims.FindByAccountIdAsync(actorId,
+                        async (claims) =>
                         {
-                            var jwtToken = GenerateToken(sessionId, actorId, claims
-                                .Select(claim => new KeyValuePair<string, string>(claim.Type, claim.Value))
-                                .ToDictionary());
-                            return onSuccess(redirectUri, actorId, jwtToken, refreshToken);
+                            var refreshToken = BlackBarLabs.Security.SecureGuid.Generate().ToString("N");
+                            var resultFound = await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, actorId,
+                                () =>
+                                {
+                                    var jwtToken = GenerateToken(sessionId, actorId, claims
+                                        .Select(claim => new KeyValuePair<string, string>(claim.Type, claim.Value))
+                                        .ToDictionary());
+                                    return onSuccess(redirectUri, actorId, jwtToken, refreshToken);
+                                },
+                                () => alreadyExists());
+                            return resultFound;
                         },
-                        () => alreadyExists());
-                    return resultFound;
+                        async () =>
+                        {
+                            var refreshToken = BlackBarLabs.Security.SecureGuid.Generate().ToString("N");
+                            var resultFound = await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, actorId,
+                                () =>
+                                {
+                                    var jwtToken = GenerateToken(sessionId, actorId,
+                                        new Dictionary<string, string>());
+                                    return onSuccess(redirectUri, actorId, jwtToken, refreshToken);
+                                },
+                                () => alreadyExists());
+                            return resultFound;
+                        });
+                    return result;
                 },
                 () => credentialNotInSystem().ToTask());
-            return result;
+            return resultLookup;
         }
 
         internal async Task<TResult> CreateAsync<TResult>(Guid sessionId, Guid actorId, System.Security.Claims.Claim[] claims,
