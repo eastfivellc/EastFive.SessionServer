@@ -177,13 +177,14 @@
     <Compile Include="Api\Resources\InviteCredential.cs" />
     <Compile Include="Api\Resources\Queries\InviteCredentialQuery.cs" />
     <Compile Include="Api\Resources\Queries\PasswordCredentialQuery.cs" />
+    <Compile Include="Configuration\AADB2CDefinitions.cs" />
     <Compile Include="Configuration\RouteDefinitions.cs" />
     <Compile Include="Configuration\ClaimsDefinitions.cs" />
     <Compile Include="Configuration\EmailTemplateDefinitions.cs" />
     <Compile Include="IConfigureIdentityServer.cs" />
     <Compile Include="PasswordCredentials.cs" />
     <Compile Include="Credentials.cs" />
-    <Compile Include="CredentialProviders\AzureADB2C\AzureADB2CProvider.cs" />
+    <Compile Include="CredentialProviders\AzureADB2CProvider.cs" />
     <Compile Include="LoginProvider.cs" />
     <Compile Include="Library.cs" />
     <Compile Include="Api\Controllers\OpenIdResponseController.cs" />
@@ -200,7 +201,7 @@
     <Compile Include="Persistence\Documents\InviteTokenDocument.cs" />
     <Compile Include="Persistence\Documents\InviteDocument.cs" />
     <Compile Include="Persistence\Documents\CredentialsDocument.cs" />
-    <Compile Include="CredentialProviders\Implicit\ImplicitlyCreatedCredentialProvider.cs" />
+    <Compile Include="CredentialProviders\ImplicitlyCreatedCredentialProvider.cs" />
     <Compile Include="CredentialProviders\Voucher\VoucherCredentialProvider.cs" />
     <Compile Include="Claims.cs" />
     <Compile Include="Api\Actions\SessionActions.cs" />
