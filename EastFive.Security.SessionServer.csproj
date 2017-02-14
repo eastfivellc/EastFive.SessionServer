@@ -177,7 +177,10 @@
     <Compile Include="Api\Resources\InviteCredential.cs" />
     <Compile Include="Api\Resources\Queries\InviteCredentialQuery.cs" />
     <Compile Include="Api\Resources\Queries\PasswordCredentialQuery.cs" />
+    <Compile Include="Configuration\RouteDefinitions.cs" />
+    <Compile Include="Configuration\ClaimsDefinitions.cs" />
     <Compile Include="Configuration\EmailTemplateDefinitions.cs" />
+    <Compile Include="IConfigureIdentityServer.cs" />
     <Compile Include="PasswordCredentials.cs" />
     <Compile Include="Credentials.cs" />
     <Compile Include="CredentialProviders\AzureADB2C\AzureADB2CProvider.cs" />

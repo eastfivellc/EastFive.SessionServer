@@ -6,8 +6,7 @@ using System.Configuration;
 using System.Threading.Tasks;
 
 using BlackBarLabs.Extensions;
-using System.Security.Claims;
-using BlackBarLabs;
+using BlackBarLabs.Api;
 using BlackBarLabs.Linq.Async;
 
 namespace EastFive.Security.SessionServer
@@ -35,14 +34,18 @@ namespace EastFive.Security.SessionServer
         #region InviteCredential
 
         public async Task<TResult> SendEmailInviteAsync<TResult>(Guid inviteId, Guid actorId, string email,
-                System.Security.Claims.Claim[] claim,
+                Guid performingActorId, System.Security.Claims.Claim[] claims,
                 Func<Guid, Guid, Uri> getRedirectLink,
             Func<TResult> success,
             Func<TResult> inviteAlreadyExists,
             Func<TResult> onCredentialMappingDoesNotExists,
+            Func<TResult> onUnauthorized,
             Func<TResult> onServiceNotAvailable,
             Func<string, TResult> onFailed)
         {
+            if (!await Library.configurationManager.CanAdministerCredentialAsync(actorId, performingActorId, claims))
+                return onUnauthorized();
+
             var token = BlackBarLabs.Security.SecureGuid.Generate();
             var result = await await this.dataContext.CredentialMappings.CreateInviteAsync(inviteId,
                 actorId, email, token, DateTime.UtcNow, false,
@@ -218,11 +221,22 @@ namespace EastFive.Security.SessionServer
         }
 
         internal Task<TResult> DeleteByIdAsync<TResult>(Guid inviteId,
+            Guid performingActorId, System.Security.Claims.Claim [] claims,
             Func<TResult> onSuccess, 
-            Func<TResult> onNotFound)
+            Func<TResult> onNotFound,
+            Func<TResult> onUnathorized)
         {
             return this.dataContext.CredentialMappings.DeleteInviteCredentialAsync(inviteId,
-                onSuccess, onNotFound);
+                async (current, deleteAsync) =>
+                {
+                    if (!await Library.configurationManager.CanAdministerCredentialAsync(
+                        current.actorId, performingActorId, claims))
+                        return onUnathorized();
+
+                    await deleteAsync();
+                    return onSuccess();
+                },
+                onNotFound);
         }
 
         internal Task<TResult> GetTokenCredentialAsync<TResult>(Guid inviteId,
@@ -277,11 +291,16 @@ namespace EastFive.Security.SessionServer
         }
 
         internal Task<TResult> DeleteTokenByIdAsync<TResult>(Guid inviteId,
-            Func<TResult> onSuccess,
+            Func<TResult> onFound,
             Func<TResult> onNotFound)
         {
             return this.dataContext.CredentialMappings.DeleteInviteCredentialAsync(inviteId,
-                onSuccess, onNotFound);
+                async (invite, delete) =>
+                {
+                    await delete();
+                    return onFound();
+                },
+                onNotFound);
         }
 
         #endregion

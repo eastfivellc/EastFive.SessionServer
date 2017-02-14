@@ -12,6 +12,7 @@ using BlackBarLabs.Extensions;
 using System.Web.Http.Routing;
 using BlackBarLabs;
 using EastFive.Api.Services;
+using System.Configuration;
 
 namespace EastFive.Security.SessionServer.Api
 {
@@ -48,7 +49,9 @@ namespace EastFive.Security.SessionServer.Api
             return await context.CredentialMappings.GetTokenCredentialByTokenAsync(token,
                 (sessionId, actorId, jwtToken, refreshToken) =>
                 {
-                    var redirectUrl = new Uri("http://orderowl.com/Login")
+                    var landingPage = ConfigurationManager.AppSettings[
+                        EastFive.IdentityServer.Configuration.RouteDefinitions.LandingPage];
+                    var redirectUrl = new Uri(landingPage)
                         .SetQueryParam("sessionId", sessionId.ToString("N"))
                         .SetQueryParam("actorId", actorId.ToString("N"))
                         .SetQueryParam("token", jwtToken)
@@ -80,7 +83,7 @@ namespace EastFive.Security.SessionServer.Api
             return new Resources.TokenCredential
             {
                 Id = urlHelper.GetWebId<Controllers.InviteCredentialController>(invite.id),
-                ActorId = Library.getActorLink(invite.actorId, urlHelper),
+                ActorId = Library.configurationManager.GetActorLink(invite.actorId, urlHelper),
                 Email = invite.email,
                 LastEmailSent = invite.lastSent,
             };

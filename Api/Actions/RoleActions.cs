@@ -55,7 +55,7 @@ namespace EastFive.Security.SessionServer.Api
                     var roleResource = new Resources.Role()
                     {
                         Id = url.GetWebId<RoleController>(role.id),
-                        Actor = Library.getActorLink(role.actorId, url),
+                        Actor = Library.configurationManager.GetActorLink(role.actorId, url),
                         Name = role.name,
                     };
                     return request.CreateResponse(HttpStatusCode.OK, roleResource);
@@ -74,7 +74,7 @@ namespace EastFive.Security.SessionServer.Api
                         var resourceRole = new Resources.Role()
                         {
                             Id = url.GetWebId<RoleController>(role.id),
-                            Actor = Library.getActorLink(role.actorId, url),
+                            Actor = Library.configurationManager.GetActorLink(role.actorId, url),
                             Name = role.name,
                         };
 

@@ -38,16 +38,21 @@ namespace EastFive.Security.SessionServer
         public async Task<TResult> CreatePasswordCredentialsAsync<TResult>(Guid passwordCredentialId, Guid actorId,
             string username, bool isEmail, string token, bool forceChange,
             DateTime? emailLastSent, Uri loginUrl,
-            System.Security.Claims.Claim[] claims,
+            Guid performingActorId, System.Security.Claims.Claim[] claims,
             Func<TResult> onSuccess,
             Func<TResult> credentialAlreadyExists,
             Func<Guid, TResult> onUsernameAlreadyInUse,
             Func<TResult> onPasswordInsufficent,
             Func<TResult> onRelationshipAlreadyExists,
             Func<TResult> onLoginAlreadyUsed,
+            Func<TResult> onUnathorized,
             Func<TResult> onServiceNotAvailable,
             Func<string, TResult> onFailure)
         {
+            if (!await Library.configurationManager.CanAdministerCredentialAsync(
+                actorId, performingActorId, claims))
+                return onUnathorized();
+
             var loginProvider = await this.context.LoginProvider;
 
             var createLoginResult = await await loginProvider.CreateLoginAsync("User",
@@ -155,20 +160,26 @@ namespace EastFive.Security.SessionServer
 
         internal async Task<TResult> UpdatePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
             string password, bool forceChange, DateTime? emailLastSent, Uri loginUrl,
-            System.Security.Claims.Claim[] claims,
+            Guid performingActorId, System.Security.Claims.Claim[] claims,
             Func<TResult> onSuccess,
             Func<TResult> onNotFound,
+            Func<TResult> onUnathorized,
             Func<TResult> onServiceNotAvailable,
             Func<string, TResult> onFailure)
         {
             var resultUpdatePassword = await dataContext.PasswordCredentials.UpdatePasswordCredentialAsync(passwordCredentialId,
-                async (loginId, emailLastSentCurrent, updateEmailLastSentAsync)  =>
+                async (actorId, loginId, emailLastSentCurrent, updateEmailLastSentAsync)  =>
                 {
                     DiscriminatedDelegate<Guid, TResult, Task<TResult>> resultSuccess =
                         (success, fail) => success(loginId);
                     var failureMessage = "";
                     DiscriminatedDelegate<Guid, TResult, Task<TResult>> resultFailure =
-                               (success, fail) => fail(onFailure(failureMessage));
+                        (success, fail) => fail(onFailure(failureMessage));
+
+                    if (!await Library.configurationManager.CanAdministerCredentialAsync(
+                        actorId, performingActorId, claims))
+                        return (success, fail) => fail(onUnathorized());
+
                     if (emailLastSent.HasValue &&
                         (!emailLastSentCurrent.HasValue ||
                           emailLastSent.Value > emailLastSentCurrent.Value))

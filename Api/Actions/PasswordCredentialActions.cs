@@ -13,6 +13,8 @@ using BlackBarLabs.Extensions;
 using System.Web.Http.Routing;
 using BlackBarLabs;
 using EastFive.Api.Services;
+using EastFive.IdentityServer.Configuration;
+using System.Configuration;
 
 namespace EastFive.Security.SessionServer.Api
 {
@@ -21,17 +23,17 @@ namespace EastFive.Security.SessionServer.Api
         public static async Task<HttpResponseMessage> CreateAsync(this Resources.PasswordCredential credential,
             HttpRequestMessage request, UrlHelper url)
         {
-            return await request.Headers.Authorization.HasSiteAdminAuthorization(
-                async () =>
+            return await request.GetActorIdClaimsAsync(ClaimsDefinitions.AccountIdClaimType,
+                async (performingActorId, claims) =>
                 {
-                    var response = await CreatePasswordCredentialAsync(credential, request, url);
+                    var response = await CreatePasswordCredentialAsync(credential, request, url, performingActorId, claims);
                     return response;
-                },
-                (why) => request.CreateResponse(HttpStatusCode.Forbidden).AddReason(why).ToTask());
+                });
         }
 
         private static async Task<HttpResponseMessage> CreatePasswordCredentialAsync(Resources.PasswordCredential credential,
-            HttpRequestMessage request, UrlHelper url)
+            HttpRequestMessage request, UrlHelper url,
+            Guid performingActorId, System.Security.Claims.Claim[]claims)
         {
             var actorId = credential.Actor.ToGuid();
             var loginProviderTaskGetter = (Func<Task<IIdentityService>>)
@@ -39,15 +41,15 @@ namespace EastFive.Security.SessionServer.Api
             var loginProviderTask = loginProviderTaskGetter();
             var loginProvider = await loginProviderTask;
             var callbackUrl = url.GetLocation<Controllers.OpenIdResponseController>();
-            var loginUrl = loginProvider.GetLoginUrl(("http://orderowl.com"), 0, new byte[] { }, callbackUrl);
-
-            var claims = new System.Security.Claims.Claim[] { };
+            var landingPage = ConfigurationManager.AppSettings[EastFive.IdentityServer.Configuration.RouteDefinitions.LandingPage];
+            var loginUrl = loginProvider.GetLoginUrl(landingPage, 0, new byte[] { }, callbackUrl);
+            
             var context = request.GetSessionServerContext();
             var creationResults = await context.PasswordCredentials.CreatePasswordCredentialsAsync(
                 credential.Id.UUID, actorId.Value,
                 credential.UserId, credential.IsEmail, credential.Token, credential.ForceChange,
                 credential.LastEmailSent, loginUrl,
-                claims.ToArray(),
+                performingActorId, claims,
                 () => request.CreateResponse(HttpStatusCode.Created),
                 () => request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason($"Credential already exists"),
@@ -59,6 +61,7 @@ namespace EastFive.Security.SessionServer.Api
                     .AddReason($"Relationship already exists"),
                 () => request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason($"Login is already in use"),
+                () => request.CreateResponse(HttpStatusCode.Unauthorized),
                 () => request.CreateResponse(HttpStatusCode.ServiceUnavailable),
                 (why) => request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason(why));
@@ -68,54 +71,68 @@ namespace EastFive.Security.SessionServer.Api
         public static async Task<HttpResponseMessage> PutAsync(this Resources.PasswordCredential credential,
             HttpRequestMessage request, UrlHelper url)
         {
+            return await request.GetActorIdClaimsAsync(ClaimsDefinitions.AccountIdClaimType,
+                async (performingActorId, claims) =>
+                {
+                    var loginProviderTaskGetter = (Func<Task<IIdentityService>>)
+                    request.Properties[ServicePropertyDefinitions.IdentityService];
+                    var loginProviderTask = loginProviderTaskGetter();
+                    var loginProvider = await loginProviderTask;
+                    var callbackUrl = url.GetLocation<Controllers.OpenIdResponseController>();
+                    var landingPage = ConfigurationManager.AppSettings[
+                        EastFive.IdentityServer.Configuration.RouteDefinitions.LandingPage];
+                    var loginUrl = loginProvider.GetLoginUrl(landingPage, 0, new byte[] { }, callbackUrl);
 
-            var loginProviderTaskGetter = (Func<Task<IIdentityService>>)
-                request.Properties[ServicePropertyDefinitions.IdentityService];
-            var loginProviderTask = loginProviderTaskGetter();
-            var loginProvider = await loginProviderTask;
-            var callbackUrl = url.GetLocation<Controllers.OpenIdResponseController>();
-            var loginUrl = loginProvider.GetLoginUrl(("http://orderowl.com"), 0, new byte[] { }, callbackUrl);
-
-            var context = request.GetSessionServerContext();
-            var claims = new System.Security.Claims.Claim[] { };
-            var creationResults = await context.PasswordCredentials.UpdatePasswordCredentialAsync(credential.Id.UUID,
-                credential.Token, credential.ForceChange, credential.LastEmailSent, loginUrl,
-                claims,
-                () => request.CreateResponse(HttpStatusCode.NoContent),
-                () => request.CreateResponse(HttpStatusCode.NotFound),
-                () => request.CreateResponse(HttpStatusCode.ServiceUnavailable),
-                (why) => request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Update failed:{why}"));
-            return creationResults;
+                    var context = request.GetSessionServerContext();
+                    var creationResults = await context.PasswordCredentials.UpdatePasswordCredentialAsync(credential.Id.UUID,
+                        credential.Token, credential.ForceChange, credential.LastEmailSent, loginUrl,
+                        performingActorId, claims,
+                        () => request.CreateResponse(HttpStatusCode.NoContent),
+                        () => request.CreateResponse(HttpStatusCode.NotFound),
+                        () => request.CreateResponse(HttpStatusCode.Unauthorized),
+                        () => request.CreateResponse(HttpStatusCode.ServiceUnavailable),
+                        (why) => request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Update failed:{why}"));
+                    return creationResults;
+                });
         }
 
         #region Actionables
 
-        public static async Task<HttpResponseMessage> QueryAsync(this Resources.Queries.PasswordCredentialQuery credential,
+        public static Task<HttpResponseMessage> QueryAsync(this Resources.Queries.PasswordCredentialQuery credential,
             HttpRequestMessage request, UrlHelper urlHelper)
         {
-            return await credential.ParseAsync(request,
-                q => QueryByIdAsync(q.Id.ParamSingle(), request, urlHelper),
-                q => QueryByActorId(q.Actor.ParamSingle(), request, urlHelper));
+            return request.GetActorIdClaimsAsync(ClaimsDefinitions.AccountIdClaimType,
+                (actorPerformingId, claims) => credential.ParseAsync(request,
+                    q => QueryByIdAsync(q.Id.ParamSingle(), request, urlHelper, actorPerformingId, claims),
+                    q => QueryByActorId(q.Actor.ParamSingle(), request, urlHelper, actorPerformingId, claims)));
         }
 
-        private static async Task<HttpResponseMessage> QueryByIdAsync(Guid passwordCredentialId, HttpRequestMessage request, UrlHelper urlHelper)
+        private static async Task<HttpResponseMessage> QueryByIdAsync(Guid passwordCredentialId,
+            HttpRequestMessage request, UrlHelper urlHelper,
+            Guid actorPerformingId, System.Security.Claims.Claim [] claims)
         {
             var context = request.GetSessionServerContext();
-            return await context.PasswordCredentials.GetPasswordCredentialAsync(passwordCredentialId,
-                (passwordCredential) =>
+            return await await context.PasswordCredentials.GetPasswordCredentialAsync(passwordCredentialId,
+                async (passwordCredential) =>
                 {
+                    if (!await Library.configurationManager.CanAdministerCredentialAsync(passwordCredential.actorId, actorPerformingId, claims))
+                        return request.CreateResponse(HttpStatusCode.NotFound);
                     var response = request.CreateResponse(HttpStatusCode.OK,
                         Convert(passwordCredential, urlHelper));
                     return response;
                 },
-                () => request.CreateResponse(HttpStatusCode.NotFound),
-                (why) => request.CreateResponse(HttpStatusCode.NotFound));
+                () => request.CreateResponse(HttpStatusCode.NotFound).ToTask(),
+                (why) => request.CreateResponse(HttpStatusCode.NotFound).ToTask());
         }
 
-        private async static Task<HttpResponseMessage[]> QueryByActorId(Guid actorId, HttpRequestMessage request, UrlHelper urlHelper)
+        private async static Task<HttpResponseMessage[]> QueryByActorId(Guid actorId,
+            HttpRequestMessage request, UrlHelper urlHelper,
+            Guid actorPerformingId, System.Security.Claims.Claim[] claims)
         {
-            var context = request.GetSessionServerContext();
+            if (!await Library.configurationManager.CanAdministerCredentialAsync(actorId, actorPerformingId, claims))
+                return request.CreateResponse(HttpStatusCode.NotFound).ToEnumerable().ToArray();
 
+            var context = request.GetSessionServerContext();
             return await context.PasswordCredentials.GetPasswordCredentialByActorAsync(
                 actorId,
                 (credentials) => credentials.Select(

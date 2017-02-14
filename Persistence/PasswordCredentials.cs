@@ -36,18 +36,23 @@ namespace EastFive.Security.SessionServer.Persistence
         }
 
         internal async Task<TResult> UpdatePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
-            Func<Guid, DateTime?, Func<DateTime, Task>, Task<TResult>> onFound,
+            Func<Guid, Guid, DateTime?, Func<DateTime, Task>, Task<TResult>> onFound,
             Func<TResult> onNotFound)
         {
             return await this.repository.UpdateAsync<Documents.PasswordCredentialDocument, TResult>(passwordCredentialId,
                 async (doc, saveAsync) =>
                 {
-                    return await onFound(doc.LoginId, doc.EmailLastSent,
-                        async (emailLastSentUpdated) =>
+                    return await await this.repository.FindByIdAsync(doc.LoginId,
+                        (Documents.LoginActorLookupDocument lookupDoc) =>
                         {
-                            doc.EmailLastSent = emailLastSentUpdated;
-                            await saveAsync(doc);
-                        });
+                            return onFound(lookupDoc.ActorId, doc.LoginId, doc.EmailLastSent,
+                                async (emailLastSentUpdated) =>
+                                {
+                                    doc.EmailLastSent = emailLastSentUpdated;
+                                    await saveAsync(doc);
+                                });
+                        },
+                        () => onNotFound().ToTask()); // TODO: Log data corruption here
                 },
                 () => onNotFound());
         }

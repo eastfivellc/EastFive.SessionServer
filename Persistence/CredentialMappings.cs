@@ -66,30 +66,36 @@ namespace EastFive.Security.SessionServer.Persistence
             return await rollback.ExecuteAsync(onSuccess);
         }
         
-        internal async Task<TResult> DeleteInviteCredentialAsync<TResult>(Guid inviteId, Func<TResult> onSuccess, Func<TResult> onNotFound)
+        internal async Task<TResult> DeleteInviteCredentialAsync<TResult>(Guid inviteId, 
+            Func<Invite, Func<Task>, Task<TResult>> onFound, 
+            Func<TResult> onNotFound)
         {
             return await this.repository.DeleteIfAsync<Documents.InviteDocument, TResult>(inviteId,
-                async (inviteDoc, deleteInviteAsync) =>
+                (inviteDoc, deleteInviteAsync) =>
                 {
-                    var deletedInviteTask = this.repository.DeleteIfAsync<Documents.InviteTokenDocument, bool>(inviteDoc.Token,
-                        async (inviteTokenDoc, deleteInviteTokenAsync) =>
+                    var invite = Convert(inviteDoc);
+                    return onFound(invite,
+                        async () =>
                         {
-                            await deleteInviteTokenAsync();
-                            return true;
-                        },
-                        () => false);
-                    var updatedActorMappingTask = this.repository.UpdateAsync<Documents.ActorMappingsDocument, bool>(inviteDoc.ActorId,
-                        async (actorDoc, saveAsync) =>
-                        {
-                            var r = actorDoc.RemoveInviteId(inviteId);
-                            await saveAsync(actorDoc);
-                            return r;
-                        },
-                        () => false);
-                    await deleteInviteAsync();
-                    await deletedInviteTask;
-                    await updatedActorMappingTask;
-                    return onSuccess();
+                            var deletedInviteTask = this.repository.DeleteIfAsync<Documents.InviteTokenDocument, bool>(inviteDoc.Token,
+                                async (inviteTokenDoc, deleteInviteTokenAsync) =>
+                                {
+                                    await deleteInviteTokenAsync();
+                                    return true;
+                                },
+                                () => false);
+                            var updatedActorMappingTask = this.repository.UpdateAsync<Documents.ActorMappingsDocument, bool>(inviteDoc.ActorId,
+                                async (actorDoc, saveAsync) =>
+                                {
+                                    var r = actorDoc.RemoveInviteId(inviteId);
+                                    await saveAsync(actorDoc);
+                                    return r;
+                                },
+                                () => false);
+                            await deleteInviteAsync();
+                            await deletedInviteTask;
+                            await updatedActorMappingTask;
+                        });
                 },
                 () => onNotFound());
         }
