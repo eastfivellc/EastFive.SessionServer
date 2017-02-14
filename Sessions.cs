@@ -263,7 +263,8 @@ namespace EastFive.Security.SessionServer
                 throw new SystemException("TokenExpirationInMinutes was not found in the configuration file");
             var tokenExpirationInMinutes = Double.Parse(tokenExpirationInMinutesConfig);
 
-            claims.AddOrReplace("actorId", actorId.ToString());
+            var actorIdClaimType = ConfigurationManager.AppSettings[EastFive.Api.Configuration.SecurityDefinitions.ActorIdClaimType];
+            claims.AddOrReplace(actorIdClaimType, actorId.ToString());
 
             var jwtToken = BlackBarLabs.Security.Tokens.JwtTools.CreateToken(
                 sessionId, new Uri("http://example.com/Auth"),
