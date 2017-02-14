@@ -8,7 +8,7 @@ namespace EastFive.Security.CredentialProvider.Voucher
     public class VoucherCredentialProvider : IProvideCredentials
     {
         public Task<TResult> RedeemTokenAsync<TResult>(string accessToken,
-            Func<Guid, Claim[], TResult> success,
+            Func<Guid, TResult> success,
             Func<string, TResult> invalidCredentials, Func<TResult> onAuthIdNotFound, Func<string, TResult> couldNotConnect)
         {
             //var trustedProvider = Utilities.GetTrustedProviderId();
@@ -19,7 +19,7 @@ namespace EastFive.Security.CredentialProvider.Voucher
             return Utilities.ValidateToken(accessToken,
                 (authId) =>
                 {
-                    return success(authId, null);
+                    return success(authId);
                 },
                 (errorMessage) => invalidCredentials(errorMessage),
                 (errorMessage) => invalidCredentials(errorMessage),

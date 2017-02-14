@@ -8,7 +8,7 @@ namespace EastFive.Security.CredentialProvider.Facebook
     public class FacebookCredentialProvider : IProvideCredentials
     {
         public async Task<TResult> RedeemTokenAsync<TResult>(string accessToken, 
-            Func<Guid, Claim[], TResult> success,
+            Func<Guid, TResult> success,
             Func<string, TResult> invalidCredentials,
             Func<TResult> onAuthIdNotFound,
             Func<string, TResult> couldNotConnect)

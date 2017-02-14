@@ -21,7 +21,7 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
         }
 
         public Task<TResult> RedeemTokenAsync<TResult>(string token, 
-            Func<Guid, Claim[], TResult> success,
+            Func<Guid, TResult> success,
             Func<string, TResult> invalidCredentials,
             Func<TResult> onAuthIdNotFound, 
             Func<string, TResult> couldNotConnect)
@@ -32,7 +32,7 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
         }
         
         public async Task<TResult> RedeemTokenInternalAsync<TResult>(string id_token,
-            Func<Guid, System.Security.Claims.Claim[], TResult> success,
+            Func<Guid, TResult> success,
             Func<string, TResult> invalidToken,
             Func<string, TResult> couldNotConnect)
         {
@@ -59,7 +59,7 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
                     if(!Guid.TryParse(authClaims[0].Value, out authId))
                         return invalidToken("User has invalid auth claim for this system");
 
-                    return success(authId, null);
+                    return success(authId);
                 },
                 invalidToken);
         }

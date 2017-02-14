@@ -18,7 +18,7 @@ namespace EastFive.Security.CredentialProvider
         /// <returns>Value which will be stored for future access to this system. The return value must
         /// not be a default or empty string if the token was valid.</returns>
         Task<TResult> RedeemTokenAsync<TResult>(string token,
-            Func<Guid, System.Security.Claims.Claim[], TResult> success,
+            Func<Guid, TResult> success,
             Func<string, TResult> invalidCredentials,
             Func<TResult> onAuthIdNotFound,
             Func<string, TResult> couldNotConnect);
