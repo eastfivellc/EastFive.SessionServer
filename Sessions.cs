@@ -256,13 +256,15 @@ namespace EastFive.Security.SessionServer
         //    return GenerateToken(sessionId, authorizationId, jwtClaims);
         //}
 
-        private string GenerateToken(Guid sessionId, Guid authorizationId, Dictionary<string, string> claims)
+        private string GenerateToken(Guid sessionId, Guid actorId, IDictionary<string, string> claims)
         {
             var tokenExpirationInMinutesConfig = ConfigurationManager.AppSettings["BlackBarLabs.Security.SessionServer.tokenExpirationInMinutes"];
             if (string.IsNullOrEmpty(tokenExpirationInMinutesConfig))
                 throw new SystemException("TokenExpirationInMinutes was not found in the configuration file");
             var tokenExpirationInMinutes = Double.Parse(tokenExpirationInMinutesConfig);
-            
+
+            claims.AddOrReplace("actorId", actorId.ToString());
+
             var jwtToken = BlackBarLabs.Security.Tokens.JwtTools.CreateToken(
                 sessionId, new Uri("http://example.com/Auth"),
                 TimeSpan.FromMinutes(tokenExpirationInMinutes),

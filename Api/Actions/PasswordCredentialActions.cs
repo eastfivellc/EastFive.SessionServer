@@ -24,14 +24,14 @@ namespace EastFive.Security.SessionServer.Api
             return await request.Headers.Authorization.HasSiteAdminAuthorization(
                 async () =>
                 {
-                    var response = await CreatePasswordCredentialAsync(credential, request, url);
+                    var response = await CreatePasswordCredentialAsync(credential, request, url,  setSiteAdminClaim: true);
                     return response;
                 },
                 (why) => request.CreateResponse(HttpStatusCode.Forbidden).AddReason(why).ToTask());
         }
 
         private static async Task<HttpResponseMessage> CreatePasswordCredentialAsync(Resources.PasswordCredential credential,
-            HttpRequestMessage request, UrlHelper url)
+            HttpRequestMessage request, UrlHelper url, bool setSiteAdminClaim)
         {
             var actorId = credential.Actor.ToGuid();
             var loginProviderTaskGetter = (Func<Task<IIdentityService>>)
