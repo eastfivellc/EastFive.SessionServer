@@ -1,20 +1,16 @@
 ﻿using System;
-using System.IdentityModel.Protocols.WSTrust;
 using System.Linq;
 using System.Net;
-using System.Runtime.Serialization;
 using System.Threading.Tasks;
-using System.Web.Http;
 using System.Net.Http;
-using System.Threading;
+using System.Web.Http.Routing;
+using System.Configuration;
 
+using BlackBarLabs;
 using BlackBarLabs.Api;
 using BlackBarLabs.Extensions;
-using System.Web.Http.Routing;
-using BlackBarLabs;
 using EastFive.Api.Services;
 using EastFive.IdentityServer.Configuration;
-using System.Configuration;
 
 namespace EastFive.Security.SessionServer.Api
 {
