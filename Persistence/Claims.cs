@@ -12,6 +12,7 @@ using System.Linq;
 using BlackBarLabs.Linq;
 using BlackBarLabs;
 using System.Collections.Generic;
+using System.IdentityModel;
 using System.Net.Http;
 using EastFive.Security.SessionServer.Persistence.Documents;
 
@@ -31,29 +32,53 @@ namespace EastFive.Security.SessionServer.Persistence
             Func<TResult> onFailure,
             Func<TResult> onActorNotFound)
         {
-            return await await repository.FindByIdAsync(actorId,
-                (ActorMappingsDocument document) =>
+            return await await repository.FindLinkedDocumentsAsync<ActorMappingsDocument, ClaimDocument, Task<TResult>>(actorId,
+                (ActorMappingsDocument actorMappingsDocument) => actorMappingsDocument.Claims.ToGuidsFromByteArray(),
+                async (ActorMappingsDocument actorMappingsDocument, ClaimDocument[] claimDocuments) =>
                 {
-                    var claimDoc = new ClaimDocument()
+                    var claimDocs =
+                        claimDocuments.Where(
+                            doc => string.Compare(doc.Type, type, StringComparison.OrdinalIgnoreCase) == 0)
+                            .ToArray();
+                    if (claimDocs.Length >= 1)
+                    {
+                        var claimDoc = claimDocs[0];
+                        return await repository.UpdateAsync<ClaimDocument, TResult>(claimDoc.ClaimId,
+                            async (currentDoc, saveAsync) =>
+                            {
+                                currentDoc.Value = value;
+                                await saveAsync(currentDoc);
+                                return onSuccess();
+                            },
+                            ()=> onFailure());
+                    }
+
+                    var rollback = new RollbackAsync<TResult>();
+                    var newClaimDoc = new ClaimDocument()
                     {
                         ClaimId = claimId,
                         Issuer = actorId.ToString("N"), //TODO - Is this is the correct issuer data???
                         Type = type,
                         Value = value
                     };
-                    var result = document.AddOrUpdateClaimsAsync(claimDoc, repository,
-                        onSuccess,
-                        onFailure);
-                    return result;
+                    rollback.AddTaskCreate(claimId, newClaimDoc, onFailure, repository);
+                    rollback.AddTaskUpdate(actorId,
+                        (ActorMappingsDocument actorMapDocument) => actorMapDocument.AddClaim(claimId),
+                        (actorMapDocument) => actorMapDocument.RemoveClaim(claimId),
+                        onActorNotFound, repository);
+                    return await rollback.ExecuteAsync(onSuccess);
                 },
-                () => onActorNotFound().ToTask());
+                ()=> onActorNotFound().ToTask());
         }
 
         public async Task<TResult> FindAsync<TResult>(Guid actorId,
             Func<Claim[], TResult> found,
             Func<TResult> actorNotFound)
         {
-            var results = await await repository.FindByIdAsync(actorId,
+            var results = await await repository.FindLinkedDocumentsAsync(actorId,
+                (ActorMappingsDocument actorMappingsDocument) => actorMappingsDocument.Claims.ToGuidsFromByteArray(),
+
+
                 async (ActorMappingsDocument document) => found(await document.GetClaims(repository)),
                 () => actorNotFound().ToTask());
             return results;
