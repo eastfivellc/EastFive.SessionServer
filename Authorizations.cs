@@ -20,8 +20,8 @@ namespace EastFive.Security.SessionServer
     public struct Claim
     {
         public Guid claimId;
-        public Uri issuer;
-        public Uri type;
+        public string issuer;
+        public string type;
         public string value;
     }
 

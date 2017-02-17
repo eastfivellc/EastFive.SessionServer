@@ -17,37 +17,37 @@ namespace EastFive.Security.SessionServer.Persistence.Documents
 
         public ActorMappingsDocument() { }
 
-        internal async Task<Claim[]> GetClaims(AzureStorageRepository repository)
-        {
-            var claimDocumentIds = Claims.ToGuidsFromByteArray();
-            var claims = await claimDocumentIds
-                .Select(
-                     async (claimDocumentId) =>
-                     {
-                         return await repository.FindByIdAsync(claimDocumentId,
-                             (ClaimDocument claimsDoc) =>
-                             {
-                                 Uri issuer;
-                                 Uri.TryCreate(claimsDoc.Issuer, UriKind.RelativeOrAbsolute, out issuer);
-                                 Uri type;
-                                 Uri.TryCreate(claimsDoc.Type, UriKind.RelativeOrAbsolute, out type);
-                                 return new Claim
-                                 {
-                                     claimId = claimsDoc.ClaimId,
-                                     issuer = issuer,
-                                     type = type,
-                                     value = claimsDoc.Value,
-                                 };
-                             },
-                             () =>
-                             {
-                                 // TODO: Flag data inconsitency
-                                 return default(Claim?);
-                             });
-                     })
-                .WhenAllAsync();
-            return claims.Where(claim => claim.HasValue).Select(claim => claim.Value).ToArray();
-        }
+        //internal async Task<Claim[]> GetClaims(AzureStorageRepository repository)
+        //{
+        //    var claimDocumentIds = Claims.ToGuidsFromByteArray();
+        //    var claims = await claimDocumentIds
+        //        .Select(
+        //             async (claimDocumentId) =>
+        //             {
+        //                 return await repository.FindByIdAsync(claimDocumentId,
+        //                     (ClaimDocument claimsDoc) =>
+        //                     {
+        //                         Uri issuer;
+        //                         Uri.TryCreate(claimsDoc.Issuer, UriKind.RelativeOrAbsolute, out issuer);
+        //                         Uri type;
+        //                         Uri.TryCreate(claimsDoc.Type, UriKind.RelativeOrAbsolute, out type);
+        //                         return new Claim
+        //                         {
+        //                             claimId = claimsDoc.ClaimId,
+        //                             issuer = issuer,
+        //                             type = type,
+        //                             value = claimsDoc.Value,
+        //                         };
+        //                     },
+        //                     () =>
+        //                     {
+        //                         // TODO: Flag data inconsitency
+        //                         return default(Claim?);
+        //                     });
+        //             })
+        //        .WhenAllAsync();
+        //    return claims.Where(claim => claim.HasValue).Select(claim => claim.Value).ToArray();
+        //}
 
         #endregion
 

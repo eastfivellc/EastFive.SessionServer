@@ -75,12 +75,17 @@ namespace EastFive.Security.SessionServer.Persistence
             Func<Claim[], TResult> found,
             Func<TResult> actorNotFound)
         {
-            var results = await await repository.FindLinkedDocumentsAsync(actorId,
+            var results = await repository.FindLinkedDocumentsAsync(actorId,
                 (ActorMappingsDocument actorMappingsDocument) => actorMappingsDocument.Claims.ToGuidsFromByteArray(),
-
-
-                async (ActorMappingsDocument document) => found(await document.GetClaims(repository)),
-                () => actorNotFound().ToTask());
+                (ActorMappingsDocument document, ClaimDocument [] claims) => found(claims.Select(claim =>
+                    new Claim
+                    {
+                        claimId = claim.ClaimId,
+                        issuer = claim.Issuer,
+                        type = claim.Type,
+                        value = claim.Value,
+                    }).ToArray()),
+                () => actorNotFound());
             return results;
         }
     }
