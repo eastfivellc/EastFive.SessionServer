@@ -12,8 +12,8 @@ namespace EastFive.Security.SessionServer.Api.Resources
         #region Properties
         
         [DataMember]
-        [JsonProperty("actor_id")]
-        public WebId ActorId { get; set; }
+        [JsonProperty("actor")]
+        public WebId Actor { get; set; }
         
         [DataMember]
         [JsonProperty("email")]
