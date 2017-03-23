@@ -148,5 +148,29 @@ namespace EastFive.Security.SessionServer.Persistence
                 },
                 () => onNotFound());
         }
+
+        public struct PasswordCredentialInfo
+        {
+            public Guid Id { get; set; }
+            public Guid LoginId { get; set; }
+            public DateTime? EmailLastSent { get; set; }
+        }
+
+        public async Task<TResult> FindAllAsync<TResult>(
+            Func<PasswordCredentialInfo[], TResult> success)
+        {
+            var passwordCredentialDocs = this.repository.FindAllAsync<Documents.PasswordCredentialDocument>();
+            var passwordCredentialInfos = passwordCredentialDocs
+                .ToEnumerable(
+                    (Documents.PasswordCredentialDocument passwordCredentialDoc) =>
+                        new PasswordCredentialInfo
+                        {
+                            Id = passwordCredentialDoc.Id,
+                            LoginId = passwordCredentialDoc.LoginId,
+                            EmailLastSent = passwordCredentialDoc.EmailLastSent
+                        })
+                .ToArray();
+            return success(passwordCredentialInfos);
+        }
     }
 }

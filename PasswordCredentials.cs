@@ -49,9 +49,9 @@ namespace EastFive.Security.SessionServer
             Func<TResult> onServiceNotAvailable,
             Func<string, TResult> onFailure)
         {
-            if (!await Library.configurationManager.CanAdministerCredentialAsync(
-                actorId, performingActorId, claims))
-                return onUnathorized();
+            //if (!await Library.configurationManager.CanAdministerCredentialAsync(
+            //    actorId, performingActorId, claims))
+            //    return onUnathorized();
 
             var loginProvider = await this.context.LoginProvider;
 
@@ -158,6 +158,46 @@ namespace EastFive.Security.SessionServer
                 () => notFound().ToTask());
         }
 
+        public struct LoginInfo
+        {
+            public string UserId;
+            public Guid LoginId;
+        }
+        internal async Task<TResult> GetAllLoginInfoAsync<TResult>(
+            Func<LoginInfo[], TResult> success)
+        {
+            var finalResult = await await this.dataContext.PasswordCredentials.FindAllAsync<Task<TResult>>(
+                async (passwordCredentialInfos) =>
+                {
+                    var loginProvider = await context.LoginProvider;
+                    var result = await passwordCredentialInfos.Select(
+                        async passwordCredentialInfo =>
+                        {
+                            try
+                            {
+                                var credInfo = await loginProvider.GetLoginAsync(passwordCredentialInfo.LoginId,
+                                    (userId, isEmail, forceChangePassword) =>
+                                    {
+                                        return new LoginInfo
+                                        {
+                                            LoginId = passwordCredentialInfo.LoginId,
+                                            UserId = userId
+                                        };
+                                    },
+                                    () => { return default(LoginInfo); }, 
+                                    (why) => { return default(LoginInfo); });
+                                    return credInfo;
+                            }
+                            catch(Exception ex)
+                            {
+                                return default(LoginInfo); 
+                            }
+                        }).WhenAllAsync();
+                    return success(result);
+                });
+            return finalResult;
+        }
+        
         internal async Task<TResult> UpdatePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
             string password, bool forceChange, DateTime? emailLastSent, Uri loginUrl,
             Guid performingActorId, System.Security.Claims.Claim[] claims,

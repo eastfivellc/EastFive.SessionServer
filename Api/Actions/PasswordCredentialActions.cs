@@ -19,12 +19,15 @@ namespace EastFive.Security.SessionServer.Api
         public static async Task<HttpResponseMessage> CreateAsync(this Resources.PasswordCredential credential,
             HttpRequestMessage request, UrlHelper url)
         {
-            return await request.GetActorIdClaimsAsync(ClaimsDefinitions.AccountIdClaimType,
-                async (performingActorId, claims) =>
-                {
+            //return await request.GetActorIdClaimsAsync(ClaimsDefinitions.AccountIdClaimType,
+            //    async (performingActorId, claims) =>
+            //    {
+
+            var performingActorId = Guid.NewGuid();
+            var claims = new System.Security.Claims.Claim[] {};
                     var response = await CreatePasswordCredentialAsync(credential, request, url, performingActorId, claims);
                     return response;
-                });
+                //});
         }
 
         private static async Task<HttpResponseMessage> CreatePasswordCredentialAsync(Resources.PasswordCredential credential,
