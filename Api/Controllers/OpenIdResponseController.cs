@@ -18,6 +18,10 @@ namespace EastFive.Security.SessionServer.Api.Controllers
         public string id_token { get; set; }
 
         public string state { get; set; }
+
+        public string error { get; set; }
+
+        public string error_description { get; set; }
     }
 
     [RoutePrefix("aadb2c")]
@@ -54,6 +58,11 @@ namespace EastFive.Security.SessionServer.Api.Controllers
 
         public async Task<IHttpActionResult> Post(OpenIdConnectResult result)
         {
+            if (!String.IsNullOrWhiteSpace(result.error))
+                return this.Request.CreateResponse(HttpStatusCode.Conflict, result.error_description)
+                    .AddReason(result.error_description)
+                    .ToActionResult();
+
             var context = this.Request.GetSessionServerContext();
             var response = await context.Sessions.CreateAsync(Guid.NewGuid(),
                 CredentialValidationMethodTypes.Password, result.id_token, result.state,
