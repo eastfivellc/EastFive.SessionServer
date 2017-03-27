@@ -8,9 +8,9 @@ using EastFive.Api.Services;
 
 namespace EastFive.Security.SessionServer
 {
-    internal static class RequestExtensions
+    public static class RequestExtensions
     {
-        internal static SessionServer.Context GetSessionServerContext(this HttpRequestMessage request)
+        public static SessionServer.Context GetSessionServerContext(this HttpRequestMessage request)
         {
             object identityServiceCreateObject;
             request.Properties.TryGetValue(
