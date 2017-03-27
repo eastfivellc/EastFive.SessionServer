@@ -22,7 +22,7 @@ namespace EastFive.Security.SessionServer
             dataContextCreateFunc.ValidateArgumentIsNotNull("dataContextCreateFunc");
             this.dataContextCreateFunc = dataContextCreateFunc;
             
-            getLoginProvider.ValidateArgumentIsNotNull("getLoginProvider");
+            //getLoginProvider.ValidateArgumentIsNotNull("getLoginProvider");
             this.loginProviderFunc = getLoginProvider;
 
             this.mailServiceFunc = getMailService;

@@ -17,43 +17,44 @@ namespace EastFive.Security.SessionServer.Persistence.Documents
 
         public ActorMappingsDocument() { }
 
-        internal async Task<Claim[]> GetClaims(AzureStorageRepository repository)
-        {
-            var claimDocumentIds = Claims.ToGuidsFromByteArray();
-            var claims = await claimDocumentIds
-                .Select(
-                     async (claimDocumentId) =>
-                     {
-                         return await repository.FindByIdAsync(claimDocumentId,
-                             (ClaimDocument claimsDoc) =>
-                             {
-                                 Uri issuer;
-                                 Uri.TryCreate(claimsDoc.Issuer, UriKind.RelativeOrAbsolute, out issuer);
-                                 Uri type;
-                                 Uri.TryCreate(claimsDoc.Type, UriKind.RelativeOrAbsolute, out type);
-                                 return new Claim
-                                 {
-                                     claimId = claimsDoc.ClaimId,
-                                     issuer = issuer,
-                                     type = type,
-                                     value = claimsDoc.Value,
-                                 };
-                             },
-                             () =>
-                             {
-                                 // TODO: Flag data inconsitency
-                                 return default(Claim?);
-                             });
-                     })
-                .WhenAllAsync();
-            return claims.Where(claim => claim.HasValue).Select(claim => claim.Value).ToArray();
-        }
+        //internal async Task<Claim[]> GetClaims(AzureStorageRepository repository)
+        //{
+        //    var claimDocumentIds = Claims.ToGuidsFromByteArray();
+        //    var claims = await claimDocumentIds
+        //        .Select(
+        //             async (claimDocumentId) =>
+        //             {
+        //                 return await repository.FindByIdAsync(claimDocumentId,
+        //                     (ClaimDocument claimsDoc) =>
+        //                     {
+        //                         Uri issuer;
+        //                         Uri.TryCreate(claimsDoc.Issuer, UriKind.RelativeOrAbsolute, out issuer);
+        //                         Uri type;
+        //                         Uri.TryCreate(claimsDoc.Type, UriKind.RelativeOrAbsolute, out type);
+        //                         return new Claim
+        //                         {
+        //                             claimId = claimsDoc.ClaimId,
+        //                             issuer = issuer,
+        //                             type = type,
+        //                             value = claimsDoc.Value,
+        //                         };
+        //                     },
+        //                     () =>
+        //                     {
+        //                         // TODO: Flag data inconsitency
+        //                         return default(Claim?);
+        //                     });
+        //             })
+        //        .WhenAllAsync();
+        //    return claims.Where(claim => claim.HasValue).Select(claim => claim.Value).ToArray();
+        //}
 
         #endregion
 
         #region Properties
 
         public byte [] Claims { get; set; }
+
 
         internal async Task<TResult> AddOrUpdateClaimsAsync<TResult>(ClaimDocument claimsDoc, AzureStorageRepository repository,
             Func<TResult> success,
@@ -75,6 +76,33 @@ namespace EastFive.Security.SessionServer.Persistence.Documents
             return result;
         }
 
+        public Guid[] GetClaims()
+        {
+            return this.Claims.ToGuidsFromByteArray();
+        }
+
+        public bool AddClaim(Guid claimId)
+        {
+            var claims = this.GetClaims();
+            if (claims.Contains(claimId))
+                return false;
+            this.Claims = claims
+                .Append(claimId)
+                .ToByteArrayOfGuids();
+            return true;
+        }
+
+        internal bool RemoveClaim(Guid claimId)
+        {
+            var claims = this.GetClaims();
+            if (!claims.Contains(claimId))
+                return false;
+            this.Claims = claims
+                .Where(rId => rId != claimId)
+                .ToByteArrayOfGuids();
+            return true;
+        }
+        
         public byte[] PasswordCredentials { get; set; }
 
         internal Guid[] GetPasswordCredentials()

@@ -165,7 +165,7 @@ namespace EastFive.Security.SessionServer
                 () => onAlreadyConnected().ToTask());
         }
 
-        private async Task<TResult> LookupCredentialMappingAsync<TResult>(Guid loginId, Guid sessionId,
+        public async Task<TResult> LookupCredentialMappingAsync<TResult>(Guid loginId, Guid sessionId,
             Uri redirectUri,
             CreateSessionSuccessDelegate<TResult> onSuccess,
             CreateSessionAlreadyExistsDelegate<TResult> alreadyExists,
