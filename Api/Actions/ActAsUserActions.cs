@@ -79,12 +79,20 @@ namespace EastFive.Security.SessionServer.Api
                         .SetQueryParam("authoriationId", authorizationId.ToString("N"))
                         .SetQueryParam("token", tken)
                         .SetQueryParam("refreshToken", refreshToken);
-                    var redirectResponse = redirect(redirectUrl.AbsoluteUri);
-                    return request.CreateResponse(HttpStatusCode.OK);
+                    //var redirectResponse = redirect(redirectUrl.AbsoluteUri);
+                    //return request.CreateResponse(HttpStatusCode.OK);
+                    var response = request.CreateHtmlResponse($"<script>window.location=\"{redirectUrl}\"</script>");
+                    var cookie = new System.Net.Http.Headers.CookieHeaderValue(Api.Constants.Cookies.FakingId, token);
+                    cookie.Expires = DateTimeOffset.Now.AddDays(1);
+                    cookie.Domain = request.RequestUri.Host;
+                    cookie.Path = "/";
+                    response.Headers.AddCookies(new System.Net.Http.Headers.CookieHeaderValue[] { cookie });
+                    return response;
                 },
                 () =>
                 {
-                    return request.CreateResponse(HttpStatusCode.Conflict);
+                    var response = request.CreateResponse(HttpStatusCode.Conflict);
+                    return response;
                 },
                 () =>
                 {
