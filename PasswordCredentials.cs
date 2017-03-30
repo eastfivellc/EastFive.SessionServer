@@ -184,20 +184,23 @@ namespace EastFive.Security.SessionServer
                                             UserId = userId
                                         };
                                     },
-                                    () => { return default(LoginInfo); }, 
-                                    (why) => { return default(LoginInfo); });
-                                    return credInfo;
+                                    () => { return default(LoginInfo?); },
+                                    (why) => { return default(LoginInfo?); });
+                                return credInfo;
                             }
-                            catch(Exception ex)
+                            catch (Exception ex)
                             {
-                                return default(LoginInfo); 
+                                return default(LoginInfo?);
                             }
-                        }).WhenAllAsync();
+                        })
+                        .WhenAllAsync()
+                        .SelectWhereHasValueAsync()
+                        .ToArrayAsync();
                     return success(result);
                 });
             return finalResult;
         }
-        
+
         internal async Task<TResult> UpdatePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
             string password, bool forceChange, DateTime? emailLastSent, Uri loginUrl,
             Guid performingActorId, System.Security.Claims.Claim[] claims,

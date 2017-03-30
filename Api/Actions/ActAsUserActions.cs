@@ -36,7 +36,7 @@ namespace EastFive.Security.SessionServer.Api
         {
             var urlQuery = request.RequestUri.Query;
             var baseUrl = url.GetLocationWithQuery(typeof(Controllers.ActAsUserController), urlQuery);
-            
+
             var context = request.GetSessionServerContext();
             var userInfos = await context.PasswordCredentials.GetAllLoginInfoAsync(
                 credentials =>
@@ -53,6 +53,10 @@ namespace EastFive.Security.SessionServer.Api
                     return userInfo;
                 });
 
+            var jsonHeader = request.Headers.Accept.FirstOrDefault(asdfff => asdfff.MediaType == "application/json");
+            if (default(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue) != jsonHeader)
+                return request.CreateResponse(HttpStatusCode.OK, userInfos);
+
             var html = GenerateActAsUserHtml(userInfos);
             return request.CreateHtmlResponse(html);
         }
@@ -68,7 +72,7 @@ namespace EastFive.Security.SessionServer.Api
             return html;
         }
 
-        private static async Task<HttpResponseMessage> QueryByTokenAndActorIdAsync(string redirectBase, string token, Guid loginId, 
+        private static async Task<HttpResponseMessage> QueryByTokenAndActorIdAsync(string redirectBase, string token, Guid loginId,
         HttpRequestMessage request, UrlHelper url, Func<string, RedirectResult> redirect)
         {
             var context = request.GetSessionServerContext();
