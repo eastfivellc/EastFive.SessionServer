@@ -53,8 +53,7 @@ namespace EastFive.Security.SessionServer.Api
                     return userInfo;
                 });
 
-            var jsonHeader = request.Headers.Accept.FirstOrDefault(asdfff => asdfff.MediaType == "application/json");
-            if (default(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue) != jsonHeader)
+            if(request.Headers.Accept.Where(accept => accept.MediaType == "application/json").Any())
                 return request.CreateResponse(HttpStatusCode.OK, userInfos);
 
             var html = GenerateActAsUserHtml(userInfos);
