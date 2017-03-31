@@ -32,7 +32,7 @@ namespace EastFive.Security.SessionServer.Api
         }
 
         private static async Task<HttpResponseMessage> QueryAllActorsAsync(string redirectUri, string token,
-         HttpRequestMessage request, UrlHelper url)
+            HttpRequestMessage request, UrlHelper url)
         {
             var urlQuery = request.RequestUri.Query;
             var baseUrl = url.GetLocationWithQuery(typeof(Controllers.ActAsUserController), urlQuery);
@@ -47,7 +47,7 @@ namespace EastFive.Security.SessionServer.Api
                             return new UserInfo
                             {
                                 UserId = info.UserId,
-                                Link = baseUrl.AddParameter("query.actorId", info.LoginId.ToString()).ToString()
+                                Link = baseUrl.AddParameter("ActorId", info.LoginId.ToString()).ToString()
                             };
                         }).ToArray();
                     return userInfo;
@@ -62,9 +62,9 @@ namespace EastFive.Security.SessionServer.Api
             var tableContents = "";
             foreach (var userInfo in userInfos)
             {
-                tableContents += $"<tr><td>{userInfo.UserId}</td><td><a href={userInfo.Link}>{userInfo.Link}</a></td></tr>";
+                tableContents += $"<tr><td><a href=\"{userInfo.Link}\">Username: {userInfo.UserId}</a></td></tr>\n";
             }
-            var html = $"<html><body><table><tr><td>UserId</td><td>Link</td></tr>{tableContents}</table></body></html>";
+            var html = $"<html><body><table><tr><th>UserId</th></tr>{tableContents}</table></body></html>";
             return html;
         }
 
@@ -91,12 +91,14 @@ namespace EastFive.Security.SessionServer.Api
                 },
                 () =>
                 {
+                    // Can't happen
                     var response = request.CreateResponse(HttpStatusCode.Conflict);
                     return response;
                 },
                 () =>
                 {
-                    return request.CreateResponse(HttpStatusCode.Conflict);
+                    return request.CreateResponse(HttpStatusCode.NotFound)
+                        .AddReason($"The provided loginId [{loginId}] was not found");
                 });
             return result;
         }
