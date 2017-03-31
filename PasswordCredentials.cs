@@ -188,7 +188,7 @@ namespace EastFive.Security.SessionServer
                                     (why) => { return default(LoginInfo?); });
                                     return credInfo;
                             }
-                            catch(Exception ex)
+                            catch (Exception ex)
                             {
                                 return default(LoginInfo?); 
                             }
@@ -199,7 +199,7 @@ namespace EastFive.Security.SessionServer
                 });
             return finalResult;
         }
-        
+
         internal async Task<TResult> UpdatePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
             string password, bool forceChange, DateTime? emailLastSent, Uri loginUrl,
             Guid performingActorId, System.Security.Claims.Claim[] claims,

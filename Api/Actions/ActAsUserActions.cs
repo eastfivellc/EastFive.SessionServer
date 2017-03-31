@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Net;
 using System.Threading.Tasks;
 using System.Net.Http;
@@ -16,7 +16,6 @@ namespace EastFive.Security.SessionServer.Api
 {
     public static class ActAsUserActions
     {
-
         public static async Task<HttpResponseMessage> GetAsync(this Resources.Queries.ActAsUserQuery query,
             HttpRequestMessage request, UrlHelper urlHelper, Func<string, RedirectResult> redirect)
         {
@@ -53,10 +52,13 @@ namespace EastFive.Security.SessionServer.Api
                     return userInfo;
                 });
 
+            if (request.Headers.Accept.Where(accept => accept.MediaType == "application/json").Any())
+                return request.CreateResponse(HttpStatusCode.OK, userInfos);
+
             var html = GenerateActAsUserHtml(userInfos);
             return request.CreateHtmlResponse(html);
         }
-
+        
         private static string GenerateActAsUserHtml(UserInfo[] userInfos)
         {
             var tableContents = "";
@@ -67,7 +69,7 @@ namespace EastFive.Security.SessionServer.Api
             var html = $"<html><body><table><tr><th>UserId</th></tr>{tableContents}</table></body></html>";
             return html;
         }
-
+        
         private static async Task<HttpResponseMessage> QueryByTokenAndActorIdAsync(string redirectBase, string token, Guid loginId, 
         HttpRequestMessage request, UrlHelper url, Func<string, RedirectResult> redirect)
         {
