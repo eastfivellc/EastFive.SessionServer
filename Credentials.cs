@@ -56,15 +56,14 @@ namespace EastFive.Security.SessionServer
                         return onFailed($"Email template setting not found.  Expected template value for key {Configuration.EmailTemplateDefinitions.InviteNewAccount}");
 
                     var mailService = this.context.MailService;
-                    var resultMail = await mailService.SendEmailMessageAsync(email, string.Empty,
+                    var resultMail = await mailService.SendEmailMessageAsync(templateName, 
+                        email, string.Empty,
                         "newaccounts@orderowl.com", "New Account Services",
-                        templateName,
+                        "New Order Owl Account",
                         new Dictionary<string, string>()
                         {
-                            { "subject", "New Order Owl Account" },
                             { "create_account_link", getRedirectLink(inviteId, token).AbsoluteUri }
                         },
-                        null,
                         (sentCode) => success(),
                         () => onServiceNotAvailable(),
                         (why) => onFailed(why));
@@ -151,15 +150,14 @@ namespace EastFive.Security.SessionServer
                         return onFailed($"Email template setting not found.  Expected template value for key {Configuration.EmailTemplateDefinitions.LoginToken}");
 
                     var mailService = this.context.MailService;
-                    var resultMail = await mailService.SendEmailMessageAsync(email, string.Empty,
+                    var resultMail = await mailService.SendEmailMessageAsync(templateName,
+                        email, string.Empty,
                         "newaccounts@orderowl.com", "New Account Services",
-                        templateName,
+                        "New Order Owl Account",
                         new Dictionary<string, string>()
                         {
-                            { "subject", "New Order Owl Account" },
                             { "token_login_link", getRedirectLink(inviteId, token).AbsoluteUri }
                         },
-                        null,
                         (sentCode) => success(),
                         () => onServiceNotAvailable(),
                         (why) => onFailed(why));
@@ -194,15 +192,14 @@ namespace EastFive.Security.SessionServer
                         if (String.IsNullOrWhiteSpace(email))
                             email = emailCurrent;
                         var mailService = this.context.MailService;
-                        var resultMail = await await mailService.SendEmailMessageAsync(email, string.Empty,
+                        var resultMail = await await mailService.SendEmailMessageAsync(templateName,
+                            email, string.Empty,
                             "newaccounts@orderowl.com", "New Account Services",
-                            templateName,
+                            "New Order Owl Account",
                             new Dictionary<string, string>()
                             {
-                                { "subject", "New Order Owl Account" },
                                 { "token_login_link", getRedirectLink(tokenCredentialId, token).AbsoluteUri }
                             },
-                            null,
                             async (sentCode) =>
                             {
                                 if (!lastSent.HasValue)
