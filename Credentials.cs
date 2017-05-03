@@ -64,6 +64,7 @@ namespace EastFive.Security.SessionServer
                         {
                             { "create_account_link", getRedirectLink(inviteId, token).AbsoluteUri }
                         },
+                        null,
                         (sentCode) => success(),
                         () => onServiceNotAvailable(),
                         (why) => onFailed(why));
@@ -158,6 +159,7 @@ namespace EastFive.Security.SessionServer
                         {
                             { "token_login_link", getRedirectLink(inviteId, token).AbsoluteUri }
                         },
+                        default(IDictionary<string, IDictionary<string, string>[]>),
                         (sentCode) => success(),
                         () => onServiceNotAvailable(),
                         (why) => onFailed(why));
@@ -200,6 +202,7 @@ namespace EastFive.Security.SessionServer
                             {
                                 { "token_login_link", getRedirectLink(tokenCredentialId, token).AbsoluteUri }
                             },
+                            default(IDictionary<string, IDictionary<string, string>[]>),
                             async (sentCode) =>
                             {
                                 if (!lastSent.HasValue)

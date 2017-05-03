@@ -299,6 +299,7 @@ namespace EastFive.Security.SessionServer
                     { "username",   emailAddress },
                     { "password",   password }
                 },
+                default(IDictionary<string, IDictionary<string, string>[]>),
                 (sentCode) => onSuccess(),
                 () => onServiceNotAvailable(),
                 (why) => onFailure(why));
