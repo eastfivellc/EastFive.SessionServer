@@ -290,7 +290,9 @@ namespace EastFive.Security.SessionServer
                 return onFailure($"Email template setting not found.  Expected template value for key {Configuration.EmailTemplateDefinitions.InvitePassword}");
             
             var mailService = this.context.MailService;
-            var resultMail = await mailService.SendEmailMessageAsync(templateName, emailAddress, string.Empty,
+            var resultMail = await mailService.SendEmailMessageAsync(
+                templateName, 
+                emailAddress, string.Empty,
                 "newaccounts@orderowl.com", "New Account Services",
                 "New Order Owl Account",
                 new Dictionary<string, string>()
