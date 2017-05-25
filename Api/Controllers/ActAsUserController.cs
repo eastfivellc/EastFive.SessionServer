@@ -12,7 +12,30 @@ namespace EastFive.Security.SessionServer.Api.Controllers
     {
         public IHttpActionResult Get([FromUri]Resources.Queries.ActAsUserQuery query)
         {
-            return this.ActionResult(() => query.GetAsync(this.Request, this.Url, this.Redirect));
+            return this.ActionResult(
+                () =>
+                {
+                    var request = this.Request;
+                    return request.GetActorIdClaimsAsync(
+                        (actorId, claims) =>
+                        {
+                            var superAdminId = default(Guid);
+                            var superAdminIdStr = EastFive.Web.Configuration.Settings.Get(
+                                EastFive.Api.Configuration.SecurityDefinitions.ActorIdSuperAdmin);
+                            if (!Guid.TryParse(superAdminIdStr, out superAdminId))
+                            {
+                                return request.CreateResponse(System.Net.HttpStatusCode.Conflict)
+                                    .AddReason($"Configuration parameter[{ EastFive.Api.Configuration.SecurityDefinitions.ActorIdSuperAdmin}] is not set").ToTask();
+                            }
+                            if (actorId != superAdminId)
+                            {
+                                return request.CreateResponse(System.Net.HttpStatusCode.Conflict)
+                                    .AddReason($"Actor [{actorId}] is not site admin").ToTask();
+                            }
+
+                            return query.GetAsync(this.Request, this.Url, this.Redirect);
+                        });
+                });
         }
 
         public IHttpActionResult Options(Nullable<Guid> Id = default(Nullable<Guid>))
