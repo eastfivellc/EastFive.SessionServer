@@ -46,7 +46,7 @@ namespace EastFive.Security.SessionServer
             if (!await Library.configurationManager.CanAdministerCredentialAsync(actorId, performingActorId, claims))
                 return onUnauthorized();
 
-            var token = BlackBarLabs.Security.SecureGuid.Generate();
+            var token = SecureGuid.Generate();
             var result = await await this.dataContext.CredentialMappings.CreateInviteAsync(inviteId,
                 actorId, email, token, DateTime.UtcNow, false,
                 async () =>
@@ -141,7 +141,7 @@ namespace EastFive.Security.SessionServer
             Func<TResult> onServiceNotAvailable,
             Func<string, TResult> onFailed)
         {
-            var token = BlackBarLabs.Security.SecureGuid.Generate();
+            var token = EastFive.Security.SecureGuid.Generate();
             var result = await await this.dataContext.CredentialMappings.CreateInviteAsync(inviteId,
                 actorId, email, token, DateTime.UtcNow, true,
                 async () =>

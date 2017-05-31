@@ -48,8 +48,8 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
             return await loginProvider.ValidateToken(id_token,
                 (claims) =>
                 {
-                    var claimType = Microsoft.Azure.CloudConfigurationManager.GetSetting(
-                        EastFive.IdentityServer.Configuration.AADB2CDefinitions.LoginIdClaimType);
+                    var claimType = Web.Configuration.Settings.Get(
+                        EastFive.Security.SessionServer.Configuration.AppSettings.LoginIdClaimType);
                     var authClaims = claims.Claims
                         .Where(claim => claim.Type.CompareTo(claimType) == 0)
                         .ToArray();

@@ -36,10 +36,6 @@
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="BlackBarLabs.Security, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\BlackBarLabs.Security.0.4.3\lib\BlackBarLabs.Security.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="Facebook, Version=6.0.10.0, Culture=neutral, PublicKeyToken=58cb4f2111d1e6de, processorArchitecture=MSIL">
       <HintPath>..\packages\Facebook.7.0.6\lib\net45\Facebook.dll</HintPath>
       <Private>True</Private>
@@ -182,8 +178,7 @@
     <Compile Include="Api\Resources\InviteCredential.cs" />
     <Compile Include="Api\Resources\Queries\InviteCredentialQuery.cs" />
     <Compile Include="Api\Resources\Queries\PasswordCredentialQuery.cs" />
-    <Compile Include="Configuration\AADB2CDefinitions.cs" />
-    <Compile Include="Configuration\RouteDefinitions.cs" />
+    <Compile Include="Configuration\AppSettings.cs" />
     <Compile Include="Configuration\ClaimsDefinitions.cs" />
     <Compile Include="Configuration\EmailTemplateDefinitions.cs" />
     <Compile Include="IConfigureIdentityServer.cs" />
@@ -259,6 +254,10 @@
     <ProjectReference Include="..\BlackBarLabs.Persistence\BlackBarLabs.Persistence.csproj">
       <Project>{c7d886bb-2da8-47ef-9136-1cb13b44d2d7}</Project>
       <Name>BlackBarLabs.Persistence</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BlackBarLabs.Security\BlackBarLabs.Security.csproj">
+      <Project>{17a2e027-c32a-41db-9b46-5222d55c0e26}</Project>
+      <Name>BlackBarLabs.Security</Name>
     </ProjectReference>
     <ProjectReference Include="..\BlackBarLabs.Web\BlackBarLabs.Web.csproj">
       <Project>{5bb52391-2704-44c0-bc8a-dbbe31498814}</Project>
