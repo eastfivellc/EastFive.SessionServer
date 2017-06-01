@@ -59,13 +59,14 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                             .GetCustomAttributes<RoutePrefixAttribute>()
                             .Select(routePrefix => routePrefix.Prefix)
                             .First());
-            return this.Request.CreateResponse(System.Net.HttpStatusCode.OK,
+            var response = this.Request.CreateResponse(System.Net.HttpStatusCode.OK,
                 new AccountLinks
                 {
                     Login = loginProvider.GetLoginUrl(redirect_uri, 0, new byte[] { }, callbackUrl),
                     Signup = loginProvider.GetSignupUrl(redirect_uri, 0, new byte[] { }, callbackUrl),
                     Logout = loginProvider.GetLogoutUrl(redirect_uri, 0, new byte[] { }, callbackUrl),
                 }).ToActionResult();
+            return response;
         }
     }
 }

@@ -33,30 +33,46 @@ namespace EastFive.Security.SessionServer.Api
         private static async Task<HttpResponseMessage> QueryAllActorsAsync(string redirectUri, string token,
             HttpRequestMessage request, UrlHelper url)
         {
-            var urlQuery = request.RequestUri.Query;
-            var baseUrl = url.GetLocationWithQuery(typeof(Controllers.ActAsUserController), urlQuery);
-            
-            var context = request.GetSessionServerContext();
-            var userInfos = await context.PasswordCredentials.GetAllLoginInfoAsync(
-                credentials =>
+            return await request.GetActorIdClaimsAsync(
+                async (actorId, claims) =>
                 {
-                    var userInfo = credentials.Select(
-                        info =>
+                    var superAdminId = default(Guid);
+                    var superAdminIdStr = EastFive.Web.Configuration.Settings.Get(
+                        EastFive.Api.Configuration.SecurityDefinitions.ActorIdSuperAdmin);
+                    if (!Guid.TryParse(superAdminIdStr, out superAdminId))
+                    {
+                        request.CreateResponse(HttpStatusCode.Unauthorized, $"Configuration parameter [{EastFive.Api.Configuration.SecurityDefinitions.ActorIdSuperAdmin}] is not set");
+                    }
+                    if (actorId != superAdminId)
+                    {
+                        request.CreateResponse(HttpStatusCode.Unauthorized, $"Actor [{actorId}] is not site admin");
+                    }
+
+                    var urlQuery = request.RequestUri.Query;
+                    var baseUrl = url.GetLocationWithQuery(typeof(Controllers.ActAsUserController), urlQuery);
+
+                    var context = request.GetSessionServerContext();
+                    var userInfos = await context.PasswordCredentials.GetAllLoginInfoAsync(
+                        credentials =>
                         {
-                            return new UserInfo
-                            {
-                                UserId = info.UserId,
-                                Link = baseUrl.AddParameter("ActorId", info.LoginId.ToString()).ToString()
-                            };
-                        }).ToArray();
-                    return userInfo;
+                            var userInfo = credentials.Select(
+                                info =>
+                                {
+                                    return new UserInfo
+                                    {
+                                        UserId = info.UserId,
+                                        Link = baseUrl.AddParameter("ActorId", info.LoginId.ToString()).ToString()
+                                    };
+                                }).ToArray();
+                            return userInfo;
+                        });
+
+                    if (request.Headers.Accept.Where(accept => accept.MediaType == "application/json").Any())
+                        return request.CreateResponse(HttpStatusCode.OK, userInfos);
+
+                    var html = GenerateActAsUserHtml(userInfos);
+                    return request.CreateHtmlResponse(html);
                 });
-
-            if (request.Headers.Accept.Where(accept => accept.MediaType == "application/json").Any())
-                return request.CreateResponse(HttpStatusCode.OK, userInfos);
-
-            var html = GenerateActAsUserHtml(userInfos);
-            return request.CreateHtmlResponse(html);
         }
         
         private static string GenerateActAsUserHtml(UserInfo[] userInfos)
