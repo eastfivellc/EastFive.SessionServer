@@ -49,8 +49,7 @@ namespace EastFive.Security.SessionServer.Api
             return await context.CredentialMappings.GetTokenCredentialByTokenAsync(token,
                 (sessionId, actorId, jwtToken, refreshToken) =>
                 {
-                    var landingPage = ConfigurationManager.AppSettings[
-                        EastFive.IdentityServer.Configuration.RouteDefinitions.LandingPage];
+                    var landingPage = Web.Configuration.Settings.Get(SessionServer.Configuration.AppSettings.LandingPage);
                     var redirectUrl = new Uri(landingPage)
                         .SetQueryParam("sessionId", sessionId.ToString("N"))
                         .SetQueryParam("actorId", actorId.ToString("N"))

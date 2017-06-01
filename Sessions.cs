@@ -27,7 +27,7 @@ namespace EastFive.Security.SessionServer
             CreateSessionSuccessDelegate<T> onSuccess,
             CreateSessionAlreadyExistsDelegate<T> alreadyExists)
         {
-            var refreshToken = BlackBarLabs.Security.SecureGuid.Generate().ToString("N");
+            var refreshToken = EastFive.Security.SecureGuid.Generate().ToString("N");
             return await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, default(Guid),
                 () =>
                 {
@@ -53,7 +53,7 @@ namespace EastFive.Security.SessionServer
                     var inner = await await dataContext.CredentialMappings.LookupCredentialMappingAsync<Task<T>>(authorizationId,
                         async (actorId) =>
                         {
-                            var refreshToken = BlackBarLabs.Security.SecureGuid.Generate().ToString("N");
+                            var refreshToken = EastFive.Security.SecureGuid.Generate().ToString("N");
                             var resultFound = await await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, actorId,
                                 async() =>
                                 {
@@ -134,7 +134,7 @@ namespace EastFive.Security.SessionServer
                 loginId,
                 async (actorId) =>
                 {
-                    var refreshToken = BlackBarLabs.Security.SecureGuid.Generate().ToString("N");
+                    var refreshToken = EastFive.Security.SecureGuid.Generate().ToString("N");
 
                     var resultCreated = await await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, actorId,
                         async () =>
@@ -178,7 +178,7 @@ namespace EastFive.Security.SessionServer
                     var result = await await this.context.Claims.FindByAccountIdAsync(actorId,
                         async (claims) =>
                         {
-                            var refreshToken = BlackBarLabs.Security.SecureGuid.Generate().ToString("N");
+                            var refreshToken = EastFive.Security.SecureGuid.Generate().ToString("N");
                             var resultFound = await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, actorId,
                                 () =>
                                 {
@@ -192,7 +192,7 @@ namespace EastFive.Security.SessionServer
                         },
                         async () =>
                         {
-                            var refreshToken = BlackBarLabs.Security.SecureGuid.Generate().ToString("N");
+                            var refreshToken = EastFive.Security.SecureGuid.Generate().ToString("N");
                             var resultFound = await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, actorId,
                                 () =>
                                 {
@@ -213,7 +213,7 @@ namespace EastFive.Security.SessionServer
             Func<string, string, TResult> onSuccess,
             Func<TResult> alreadyExists)
         {
-            var refreshToken = BlackBarLabs.Security.SecureGuid.Generate().ToString("N");
+            var refreshToken = EastFive.Security.SecureGuid.Generate().ToString("N");
             var resultFound = await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, actorId,
                 () =>
                 {
@@ -288,7 +288,7 @@ namespace EastFive.Security.SessionServer
 
         private string GenerateToken(Guid sessionId, Guid actorId, IDictionary<string, string> claims)
         {
-            var tokenExpirationInMinutesConfig = ConfigurationManager.AppSettings["BlackBarLabs.Security.SessionServer.tokenExpirationInMinutes"];
+            var tokenExpirationInMinutesConfig = ConfigurationManager.AppSettings[Configuration.AppSettings.TokenExpirationInMinutes];
             if (string.IsNullOrEmpty(tokenExpirationInMinutesConfig))
                 throw new SystemException("TokenExpirationInMinutes was not found in the configuration file");
             var tokenExpirationInMinutes = Double.Parse(tokenExpirationInMinutesConfig);
@@ -297,14 +297,14 @@ namespace EastFive.Security.SessionServer
             claims.AddOrReplace(actorIdClaimType, actorId.ToString());
 
             var jwtToken = BlackBarLabs.Security.Tokens.JwtTools.CreateToken(
-                sessionId, new Uri("http://example.com/Auth"),
+                sessionId, Web.Configuration.Settings.GetUri(AppSettings.TokenScope),
                 TimeSpan.FromMinutes(tokenExpirationInMinutes),
                 claims,
                 (token) => token,
                 (configName) => configName,
                 (configName, issue) => configName + ":" + issue,
-                "BlackBarLabs.Security.SessionServer.issuer",
-                "BlackBarLabs.Security.SessionServer.key");
+                AppSettings.TokenIssuer,
+                AppSettings.TokenKey);
 
             return jwtToken;
         }

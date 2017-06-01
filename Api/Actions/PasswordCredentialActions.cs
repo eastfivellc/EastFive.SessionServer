@@ -40,7 +40,7 @@ namespace EastFive.Security.SessionServer.Api
             var loginProviderTask = loginProviderTaskGetter();
             var loginProvider = await loginProviderTask;
             var callbackUrl = url.GetLocation<Controllers.OpenIdResponseController>();
-            var landingPage = ConfigurationManager.AppSettings[EastFive.IdentityServer.Configuration.RouteDefinitions.LandingPage];
+            var landingPage = Web.Configuration.Settings.Get(SessionServer.Configuration.AppSettings.LandingPage);
             var loginUrl = loginProvider.GetLoginUrl(landingPage, 0, new byte[] { }, callbackUrl);
             
             var context = request.GetSessionServerContext();
@@ -78,8 +78,7 @@ namespace EastFive.Security.SessionServer.Api
                     var loginProviderTask = loginProviderTaskGetter();
                     var loginProvider = await loginProviderTask;
                     var callbackUrl = url.GetLocation<Controllers.OpenIdResponseController>();
-                    var landingPage = ConfigurationManager.AppSettings[
-                        EastFive.IdentityServer.Configuration.RouteDefinitions.LandingPage];
+                    var landingPage = Web.Configuration.Settings.Get(SessionServer.Configuration.AppSettings.LandingPage);
                     var loginUrl = loginProvider.GetLoginUrl(landingPage, 0, new byte[] { }, callbackUrl);
 
                     var context = request.GetSessionServerContext();

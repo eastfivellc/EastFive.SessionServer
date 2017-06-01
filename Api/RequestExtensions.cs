@@ -22,7 +22,7 @@ namespace EastFive.Security.SessionServer
                 BlackBarLabs.Api.ServicePropertyDefinitions.MailService, out mailServiceObject);
             var mailService = (Func<ISendMessageService>)mailServiceObject;
 
-            var context = new SessionServer.Context(() => new DataContext("Azure.Authorization.Storage"),
+            var context = new SessionServer.Context(() => new DataContext(Configuration.AppSettings.Storage),
                 identityServiceCreate, mailService);
             return context;
         }

@@ -4,6 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using BlackBarLabs.Persistence.Azure;
+using EastFive.Security.CredentialProvider;
 
 namespace EastFive.Security.SessionServer
 {
@@ -12,8 +13,8 @@ namespace EastFive.Security.SessionServer
         private SessionServer.Persistence.DataContext dataContext;
         private readonly Func<SessionServer.Persistence.DataContext> dataContextCreateFunc;
 
-        private ConcurrentDictionary<CredentialValidationMethodTypes, CredentialProvider.IProvideCredentials> credentialProviders = 
-            new ConcurrentDictionary<CredentialValidationMethodTypes, CredentialProvider.IProvideCredentials>();
+        private ConcurrentDictionary<CredentialValidationMethodTypes, IProvideCredentials> credentialProviders = 
+            new ConcurrentDictionary<CredentialValidationMethodTypes, IProvideCredentials>();
 
         public Context(Func<SessionServer.Persistence.DataContext> dataContextCreateFunc,
             Func<Task<IIdentityService>> getLoginProvider,
@@ -53,11 +54,11 @@ namespace EastFive.Security.SessionServer
                 () => onFailure("Claim is already in use"));
         }
 
-        internal async Task<CredentialProvider.IProvideCredentials> GetCredentialProvider(CredentialValidationMethodTypes method)
+        internal async Task<IProvideCredentials> GetCredentialProvider(CredentialValidationMethodTypes method)
         {
             if (!this.credentialProviders.ContainsKey(method))
             {
-                var newProvider = new CredentialProvider.AzureADB2C.AzureADB2CProvider(await this.LoginProvider, this);
+                var newProvider = new Security.CredentialProvider.AzureADB2C.AzureADB2CProvider(await this.LoginProvider, this);
                 this.credentialProviders.AddOrUpdate(method, newProvider, (m, p) => newProvider);
             }
             var provider = this.credentialProviders[method];

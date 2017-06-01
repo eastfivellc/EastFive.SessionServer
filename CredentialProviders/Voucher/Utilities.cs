@@ -9,7 +9,7 @@ namespace EastFive.Security.CredentialProvider.Voucher
     {
         public static Uri GetTrustedProviderId()
         {
-            var trustedVoucherProviderString = ConfigurationManager.AppSettings["BlackbarLabs.Security.CredentialProvider.Voucher.provider"];
+            var trustedVoucherProviderString = ConfigurationManager.AppSettings[AppSettings.CredentialProviderVoucherProviderId];
             var trustedVoucherProviderId = new Uri(trustedVoucherProviderString);
             return trustedVoucherProviderId;
         }
@@ -19,7 +19,7 @@ namespace EastFive.Security.CredentialProvider.Voucher
             byte[] signatureData;
             var hashedData = ComputeHashData(authId, validUntilUtc, out signatureData);
 
-            return BlackBarLabs.Security.RSA.FromConfig("BlackbarLabs.Security.CredentialProvider.Voucher.key",
+            return BlackBarLabs.Security.RSA.FromConfig(AppSettings.CredentialProviderVoucherKey,
                 (trustedVoucherPrivateKey) =>
                 {
                     var signature = trustedVoucherPrivateKey.SignHash(hashedData, CryptoConfig.MapNameToOID("SHA256"));
@@ -67,7 +67,7 @@ namespace EastFive.Security.CredentialProvider.Voucher
             byte[] signatureData;
             var hashedData = ComputeHashData(authId, validUntilUtc, out signatureData);
 
-            var result = BlackBarLabs.Security.RSA.FromConfig("BlackbarLabs.Security.Voucher.key.pub",
+            var result = BlackBarLabs.Security.RSA.FromConfig(AppSettings.CredentialProviderVoucherKey,
                 (trustedVoucher) =>
                 {
                     if (!trustedVoucher.VerifyHash(hashedData, CryptoConfig.MapNameToOID("SHA256"), providedSignature))

@@ -32,12 +32,9 @@ namespace EastFive.Security.LoginProvider.AzureADB2C
 
         public LoginProvider()
         {
-            this.audience = Microsoft.Azure.CloudConfigurationManager.GetSetting(
-                "EastFive.Security.LoginProvider.AzureADB2C.Audience");
-            this.signinConfiguration = new Uri(Microsoft.Azure.CloudConfigurationManager.GetSetting(
-                "BlackBarLabs.Security.CredentialProvider.AzureADB2C.SigninEndpoint"));
-            this.signupConfiguration = new Uri(Microsoft.Azure.CloudConfigurationManager.GetSetting(
-                "BlackBarLabs.Security.CredentialProvider.AzureADB2C.SignupEndpoint"));
+            this.audience = Web.Configuration.Settings.Get(SessionServer.Configuration.AppSettings.AADB2CAudience);
+            this.signinConfiguration = Web.Configuration.Settings.GetUri(SessionServer.Configuration.AppSettings.AADB2CSigninConfiguration);
+            this.signupConfiguration = Web.Configuration.Settings.GetUri(SessionServer.Configuration.AppSettings.AADB2CSignupConfiguration);
         }
         
         public async Task InitializeAsync()

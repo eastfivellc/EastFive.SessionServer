@@ -45,8 +45,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                     Id.Value, authId, new Uri("http://example.com"), TimeSpan.FromDays(200000),
                     (token) => token,
                     (config) => string.Empty,
-                    (config, why) => string.Empty,
-                    "AuthServer.issuer", "AuthServer.key");
+                    (config, why) => string.Empty);
 
                 var put1 = new Resources.Session
                 {

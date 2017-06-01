@@ -5,8 +5,9 @@ using System.Threading.Tasks;
 using System.Configuration;
 using BlackBarLabs.Extensions;
 using System.Security.Claims;
+using EastFive.Security.CredentialProvider.ImplicitCreation;
 
-namespace EastFive.Security.CredentialProvider.ImplicitCreation
+namespace EastFive.Security.SessionServer.CredentialProvider.ImplicitCreation
 {
     public class ImplicitlyCreatedCredentialProvider
     {
@@ -33,7 +34,7 @@ namespace EastFive.Security.CredentialProvider.ImplicitCreation
 
             // Create or fetch the document with that key
 
-            const string connectionStringKeyName = "Azure.Authorization.Storage";
+            const string connectionStringKeyName = Configuration.AppSettings.Storage;
             var context = new BlackBarLabs.Persistence.Azure.DataStores(connectionStringKeyName);
             var result = await context.AzureStorageRepository.DeleteIfAsync<CredentialsDocument, TResult>(authId,
                 async (document, delete) =>
@@ -52,29 +53,5 @@ namespace EastFive.Security.CredentialProvider.ImplicitCreation
                 () => onNotFound());
             return result;
         }
-
-        //public async Task<TResult> GetCredentialsAsync<TResult>(Uri providerId, string username,
-        //    Func<string, TResult> success, Func<TResult> doesNotExist)
-        //{
-        //    #region User MD5 hash to create a unique key for each providerId and username combination
-
-        //    var concatination = providerId.AbsoluteUri + username;
-        //    var md5 = MD5.Create();
-        //    byte[] md5data = md5.ComputeHash(Encoding.UTF8.GetBytes(concatination));
-        //    var md5guid = new Guid(md5data);
-
-        //    #endregion
-
-        //    // Fetch the document with that key
-
-        //    const string connectionStringKeyName = "Azure.Authorization.Storage";
-        //    var context = new BlackBarLabs.Persistence.Azure.DataStores(connectionStringKeyName);
-
-        //    var result = await context.AzureStorageRepository.FindByIdAsync<CredentialsDocument, TResult>(md5guid, 
-        //        document => success(document.RowKey), 
-        //        doesNotExist);
-
-        //    return result;
-        //}
     }
 }
