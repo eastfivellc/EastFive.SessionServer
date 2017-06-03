@@ -54,7 +54,7 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
                         .Where(claim => claim.Type.CompareTo(claimType) == 0)
                         .ToArray();
                     if (authClaims.Length == 0)
-                        return invalidToken($"Token does not contain claim for [{claimType}] which is necessary to operate with this sytem");
+                        return invalidToken($"Token does not contain claim for [{claimType}] which is necessary to operate with this system");
                     Guid authId;
                     if(!Guid.TryParse(authClaims[0].Value, out authId))
                         return invalidToken("User has invalid auth claim for this system");
