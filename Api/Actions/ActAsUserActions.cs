@@ -87,7 +87,8 @@ namespace EastFive.Security.SessionServer.Api
         }
         
         private static async Task<HttpResponseMessage> QueryByTokenAndActorIdAsync(string redirectBase, string token, Guid loginId, 
-        HttpRequestMessage request, UrlHelper url, Func<string, RedirectResult> redirect)
+            HttpRequestMessage request, UrlHelper url, 
+            Func<string, RedirectResult> redirect)
         {
             var context = request.GetSessionServerContext();
             var result = await context.Sessions.LookupCredentialMappingAsync(loginId, Guid.NewGuid(), new Uri(redirectBase),
@@ -117,6 +118,11 @@ namespace EastFive.Security.SessionServer.Api
                 {
                     return request.CreateResponse(HttpStatusCode.NotFound)
                         .AddReason($"The provided loginId [{loginId}] was not found");
+                },
+                (why) =>
+                {
+                    return request.CreateResponse(HttpStatusCode.ServiceUnavailable)
+                        .AddReason(why);
                 });
             return result;
         }

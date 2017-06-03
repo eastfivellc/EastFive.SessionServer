@@ -92,7 +92,8 @@ namespace EastFive.Security.SessionServer
             Func<T> lookupCredentialNotFound,
             Func<T> alreadyRedeemed,
             Func<T> onAlreadyInUse,
-            Func<string, T> systemOffline)
+            Func<string, T> systemOffline,
+            Func<string, T> onNotConfigured)
         {
             var loginProvider = await this.context.LoginProvider;
             var parseResult = await loginProvider.ParseState(state,
@@ -109,7 +110,7 @@ namespace EastFive.Security.SessionServer
 
                             return await LookupCredentialMappingAsync(loginId, sessionId,
                                 redirectUri,
-                                onSuccess, alreadyExists, credentialNotInSystem);
+                                onSuccess, alreadyExists, credentialNotInSystem, onNotConfigured);
                         },
                         (why) => invalidToken(why).ToTask(),
                         () => authIdNotFound().ToTask(),
@@ -169,23 +170,26 @@ namespace EastFive.Security.SessionServer
             Uri redirectUri,
             CreateSessionSuccessDelegate<TResult> onSuccess,
             CreateSessionAlreadyExistsDelegate<TResult> alreadyExists,
-            Func<TResult> credentialNotInSystem)
+            Func<TResult> credentialNotInSystem,
+            Func<string, TResult> onConfigurationFailure)
         {
             // Convert authentication unique ID to Actor ID
             var resultLookup = await await dataContext.CredentialMappings.LookupCredentialMappingAsync(loginId,
                 async (actorId) =>
                 {
-                    var result = await await this.context.Claims.FindByAccountIdAsync(actorId,
+                    var resultFindByAccount = await await this.context.Claims.FindByAccountIdAsync(actorId,
                         async (claims) =>
                         {
                             var refreshToken = EastFive.Security.SecureGuid.Generate().ToString("N");
                             var resultFound = await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, actorId,
                                 () =>
                                 {
-                                    var jwtToken = GenerateToken(sessionId, actorId, claims
-                                        .Select(claim => new KeyValuePair<string, string>(claim.Type, claim.Value))
-                                        .ToDictionary());
-                                    return onSuccess(redirectUri, actorId, jwtToken, refreshToken);
+                                    var result = GenerateToken(sessionId, actorId, claims
+                                            .Select(claim => new KeyValuePair<string, string>(claim.Type, claim.Value))
+                                            .ToDictionary(),
+                                            (jwtToken) => onSuccess(redirectUri, actorId, jwtToken, refreshToken),
+                                            (why) => onConfigurationFailure(why));
+                                    return result;
                                 },
                                 () => alreadyExists());
                             return resultFound;
@@ -196,14 +200,15 @@ namespace EastFive.Security.SessionServer
                             var resultFound = await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, actorId,
                                 () =>
                                 {
-                                    var jwtToken = GenerateToken(sessionId, actorId,
-                                        new Dictionary<string, string>());
-                                    return onSuccess(redirectUri, actorId, jwtToken, refreshToken);
+                                    return GenerateToken(sessionId, actorId,
+                                        new Dictionary<string, string>(),
+                                        (jwtToken) => onSuccess(redirectUri, actorId, jwtToken, refreshToken),
+                                        (why) => onConfigurationFailure(why));
                                 },
                                 () => alreadyExists());
                             return resultFound;
                         });
-                    return result;
+                    return resultFindByAccount;
                 },
                 () => credentialNotInSystem().ToTask());
             return resultLookup;
@@ -250,8 +255,9 @@ namespace EastFive.Security.SessionServer
                             await saveAuthId(authorizationId);
 
                             var claims = new Dictionary<string, string>(); // TODO: load these
-                            var jwtToken = GenerateToken(sessionId, authorizationId, claims);
-                            return onSuccess.Invoke(authorizationId, jwtToken, string.Empty);
+                            return GenerateToken(sessionId, authorizationId, claims,
+                                jwtToken => onSuccess.Invoke(authorizationId, jwtToken, string.Empty),
+                                (why) => systemOffline(why));
                         },
                         () => onNotFound("Error updating authentication"));
                     return updateAuthResult;
@@ -286,6 +292,7 @@ namespace EastFive.Security.SessionServer
         //    return GenerateToken(sessionId, authorizationId, jwtClaims);
         //}
 
+        [Obsolete]
         private string GenerateToken(Guid sessionId, Guid actorId, IDictionary<string, string> claims)
         {
             var tokenExpirationInMinutesConfig = ConfigurationManager.AppSettings[Configuration.AppSettings.TokenExpirationInMinutes];
@@ -308,6 +315,39 @@ namespace EastFive.Security.SessionServer
 
             return jwtToken;
         }
-        
+
+        private TResult GenerateToken<TResult>(Guid sessionId, Guid actorId, IDictionary<string, string> claims,
+            Func<string, TResult> onTokenGenerated,
+            Func<string, TResult> onConfigurationIssue)
+        {
+            var resultExpiration = Web.Configuration.Settings.GetDouble(Configuration.AppSettings.TokenExpirationInMinutes,
+                tokenExpirationInMinutes =>
+                {
+                    return Web.Configuration.Settings.GetString(EastFive.Api.Configuration.SecurityDefinitions.ActorIdClaimType,
+                        actorIdClaimType =>
+                        {
+                            claims.AddOrReplace(actorIdClaimType, actorId.ToString());
+                            var result = Web.Configuration.Settings.GetUri(AppSettings.TokenScope,
+                                (scope) =>
+                                {
+                                    var jwtToken = BlackBarLabs.Security.Tokens.JwtTools.CreateToken(
+                                        sessionId, scope,
+                                        TimeSpan.FromMinutes(tokenExpirationInMinutes),
+                                        claims,
+                                        (token) => token,
+                                        (configName) => configName,
+                                        (configName, issue) => configName + ":" + issue,
+                                        AppSettings.TokenIssuer,
+                                        AppSettings.TokenKey);
+                                    return onTokenGenerated(jwtToken);
+                                },
+                                (why) => onConfigurationIssue(why));
+                            return result;
+                        },
+                        (why) => onConfigurationIssue(why));
+                },
+                (why) => onConfigurationIssue(why));
+            return resultExpiration;
+        }
     }
 }

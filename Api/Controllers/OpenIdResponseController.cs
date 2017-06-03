@@ -101,6 +101,9 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                     .ToActionResult(),
                 (why) => this.Request.CreateResponse(HttpStatusCode.BadGateway)
                     .AddReason(why)
+                    .ToActionResult(),
+                (why) => this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
+                    .AddReason(why)
                     .ToActionResult());
 
             return response;

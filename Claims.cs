@@ -37,13 +37,23 @@ namespace EastFive.Security.SessionServer
             var result = await dataContext.Claims.FindAsync<TResult>(accountId,
                 claims =>
                 {
-                    var claimResult = found(
-                        claims.Select(
+                    var claimsSystem = claims.Select(
                             claim =>
                             {
-                                return new System.Security.Claims.Claim(claim.type.ToString(), claim.value);
-                            }).ToArray());
-                    return claimResult;
+                                var claimName = claim.type.ToString();
+                                var claimValue = claim.value;
+                                var claimSystem = new System.Security.Claims.Claim(claimName, claimValue);
+                                return claimSystem;
+                            }).ToArray();
+                    try
+                    {
+                        var claimResult = found(claimsSystem);
+                        return claimResult;
+                    } catch(Exception ex)
+                    {
+                        ex.GetType();
+                        return found(claimsSystem);
+                    }
                 },
                 accountNotFound);
             return result;
