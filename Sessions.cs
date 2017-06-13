@@ -166,6 +166,33 @@ namespace EastFive.Security.SessionServer
                 () => onAlreadyConnected().ToTask());
         }
 
+        public async Task<TResult> CreateToken<TResult>(Guid actorId, Guid sessionId, Guid actingAsActorId,
+            Func<string, TResult> onSuccess,
+            Func<TResult> onNotAllowed,
+            Func<TResult> onAccountNotFound,
+            Func<string, TResult> onConfigurationFailure)
+        {
+            return await EastFive.Web.Configuration.Settings.GetGuid(EastFive.Api.AppSettings.ActorIdSuperAdmin,
+                async superAdminActorId =>
+                {
+                    if (actingAsActorId != superAdminActorId)
+                        return onNotAllowed();
+                    var resultFindByAccount = await this.context.Claims.FindByAccountIdAsync(actorId,
+                        (claims) =>
+                        {
+                            var result = GenerateToken(sessionId, actorId, claims
+                                    .Select(claim => claim.Type.PairWithValue(claim.Value))
+                                    .ToDictionary(),
+                                (jwtToken) => onSuccess(jwtToken),
+                                (why) => onConfigurationFailure(why));
+                            return result;
+                        },
+                        onAccountNotFound);
+                    return resultFindByAccount;
+                },
+                (why) => onConfigurationFailure(why).ToTask());
+        }
+
         public async Task<TResult> LookupCredentialMappingAsync<TResult>(Guid loginId, Guid sessionId,
             Uri redirectUri,
             CreateSessionSuccessDelegate<TResult> onSuccess,

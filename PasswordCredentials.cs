@@ -162,7 +162,9 @@ namespace EastFive.Security.SessionServer
         {
             public string UserId;
             public Guid LoginId;
+            public Guid ActorId;
         }
+
         internal async Task<TResult> GetAllLoginInfoAsync<TResult>(
             Func<LoginInfo[], TResult> success)
         {
@@ -175,17 +177,20 @@ namespace EastFive.Security.SessionServer
                         {
                             try
                             {
-                                var credInfo = await loginProvider.GetLoginAsync(passwordCredentialInfo.LoginId,
+                                var credInfo = await await loginProvider.GetLoginAsync(passwordCredentialInfo.LoginId,
                                     (userId, isEmail, forceChangePassword) =>
                                     {
-                                        return new LoginInfo
-                                        {
-                                            LoginId = passwordCredentialInfo.LoginId,
-                                            UserId = userId
-                                        };
+                                        return this.context.CredentialMappings.LookupAccountIdAsync(passwordCredentialInfo.LoginId,
+                                            (actorId) => new LoginInfo
+                                            {
+                                                LoginId = passwordCredentialInfo.LoginId,
+                                                UserId = userId,
+                                                ActorId = actorId,
+                                            },
+                                            () => default(LoginInfo?));
                                     },
-                                    () => { return default(LoginInfo?); }, 
-                                    (why) => { return default(LoginInfo?); });
+                                    () => { return default(LoginInfo?).ToTask(); }, 
+                                    (why) => { return default(LoginInfo?).ToTask(); });
                                     return credInfo;
                             }
                             catch (Exception ex)

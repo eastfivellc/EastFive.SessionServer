@@ -152,6 +152,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Api\Actions\TokenActions.cs" />
     <Compile Include="Api\Actions\RoleActions.cs" />
     <Compile Include="Api\Actions\ActAsUserActions.cs" />
     <Compile Include="Api\Actions\TokenCredentialActions.cs" />
@@ -161,6 +162,7 @@
     <Compile Include="Api\Controllers\ActAsUserViewController.cs" />
     <Compile Include="Api\Controllers\BaseController.cs" />
     <Compile Include="Api\Controllers\ActAsUserController.cs" />
+    <Compile Include="Api\Controllers\TokenController.cs" />
     <Compile Include="Api\Controllers\RoleController.cs" />
     <Compile Include="Api\Controllers\TokenCredentialController.cs" />
     <Compile Include="Api\Controllers\InviteCredentialController.cs" />
@@ -170,6 +172,7 @@
     <Compile Include="Api\Resources\AuthHeaderProps.cs" />
     <Compile Include="Api\Controllers\AccountLinksController.cs" />
     <Compile Include="Api\Resources\ActAsUser.cs" />
+    <Compile Include="Api\Resources\Queries\TokenQuery.cs" />
     <Compile Include="Api\Resources\Queries\RoleQuery.cs" />
     <Compile Include="Api\Resources\Queries\ActAsUserQuery.cs" />
     <Compile Include="Api\Resources\Queries\TokenCredentialQuery.cs" />

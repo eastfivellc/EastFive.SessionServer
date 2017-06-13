@@ -28,6 +28,7 @@ namespace EastFive.Security.SessionServer.Api
         {
             public string UserId;
             public string Link;
+            public Guid ActorId;
         }
 
         private static async Task<HttpResponseMessage> QueryAllActorsAsync(string redirectUri, string token,
@@ -61,7 +62,8 @@ namespace EastFive.Security.SessionServer.Api
                                     return new UserInfo
                                     {
                                         UserId = info.UserId,
-                                        Link = baseUrl.AddParameter("ActorId", info.LoginId.ToString()).ToString()
+                                        Link = baseUrl.AddParameter("ActorId", info.LoginId.ToString()).ToString(),
+                                        ActorId = info.ActorId,
                                     };
                                 }).ToArray();
                             return userInfo;
