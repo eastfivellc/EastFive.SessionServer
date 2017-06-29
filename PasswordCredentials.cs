@@ -94,6 +94,59 @@ namespace EastFive.Security.SessionServer
             return createLoginResult;
         }
 
+        public async Task<TResult> CreatePasswordCredentialsAsync<TResult>(Guid passwordCredentialId, Guid actorId,
+            string username, bool isEmail, string token, bool forceChange,
+            DateTime? emailLastSent, Uri loginUrl,
+            Func<TResult> onSuccess,
+            Func<TResult> credentialAlreadyExists,
+            Func<Guid, TResult> onUsernameAlreadyInUse,
+            Func<TResult> onPasswordInsufficent,
+            Func<TResult> onRelationshipAlreadyExists,
+            Func<TResult> onLoginAlreadyUsed,
+            Func<TResult> onServiceNotAvailable,
+            Func<string, TResult> onFailure)
+        {
+            var loginProvider = await this.context.LoginProvider;
+
+            var createLoginResult = await await loginProvider.CreateLoginAsync("User",
+                username, isEmail, token, forceChange,
+                async loginId =>
+                {
+                    var result = await await dataContext.PasswordCredentials.CreatePasswordCredentialAsync(
+                        passwordCredentialId, actorId, loginId, emailLastSent,
+                        async () =>
+                        {
+                            if (!isEmail || !emailLastSent.HasValue)
+                                return onSuccess();
+                            var resultMail = await SendInvitePasswordAsync(username, token, loginUrl,
+                                onSuccess, onServiceNotAvailable, onFailure);
+
+                            return resultMail;
+                        },
+                        async () =>
+                        {
+                            await loginProvider.DeleteLoginAsync(loginId);
+                            return credentialAlreadyExists();
+                        },
+                        async () =>
+                        {
+                            await loginProvider.DeleteLoginAsync(loginId);
+                            return onRelationshipAlreadyExists();
+                        },
+                        async () =>
+                        {
+                            await loginProvider.DeleteLoginAsync(loginId);
+                            return onLoginAlreadyUsed();
+                        });
+
+                    return result;
+                },
+                (loginId) => onUsernameAlreadyInUse(loginId).ToTask(),
+                () => onPasswordInsufficent().ToTask(),
+                (why) => onFailure(why).ToTask());
+            return createLoginResult;
+        }
+
         internal async Task<TResult> GetPasswordCredentialAsync<TResult>(Guid passwordCredentialId,
             Func<PasswordCredential, TResult> success,
             Func<TResult> notFound,
