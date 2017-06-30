@@ -149,6 +149,27 @@ namespace EastFive.Security.SessionServer.Persistence
                 () => onNotFound());
         }
 
+        public async Task<TResult> FindPasswordCredentialByLoginIdAsync<TResult>(Guid loginId,
+            Func<CredentialMapping, TResult> onSuccess,
+            Func<TResult> onNotFound)
+        {
+            return await await repository.FindByIdAsync(loginId,
+                (Documents.LoginActorLookupDocument loginDoc) =>
+                {
+                    return this.FindPasswordCredentialByActorAsync(loginDoc.ActorId,
+                        (mappings) =>
+                        {
+                            var matches = mappings.Where(mapping => mapping.loginId == loginId).ToArray();
+                            if (matches.Length == 0)
+                                return onNotFound();
+                            var match = matches.First();
+                            return onSuccess(match);
+                        },
+                        onNotFound);
+                },
+                () => onNotFound().ToTask());
+        }
+
         public struct PasswordCredentialInfo
         {
             public Guid Id { get; set; }
@@ -159,18 +180,35 @@ namespace EastFive.Security.SessionServer.Persistence
         public async Task<TResult> FindAllAsync<TResult>(
             Func<PasswordCredentialInfo[], TResult> success)
         {
-            var passwordCredentialDocs = this.repository.FindAllAsync<Documents.PasswordCredentialDocument>();
-            var passwordCredentialInfos = passwordCredentialDocs
-                .ToEnumerable(
-                    (Documents.PasswordCredentialDocument passwordCredentialDoc) =>
-                        new PasswordCredentialInfo
-                        {
-                            Id = passwordCredentialDoc.Id,
-                            LoginId = passwordCredentialDoc.LoginId,
-                            EmailLastSent = passwordCredentialDoc.EmailLastSent
-                        })
-                .ToArray();
-            return success(passwordCredentialInfos);
+            var results = await this.repository.FindAllAsync<Documents.PasswordCredentialDocument, TResult>(
+                (passwordCredentialDocs) =>
+                {
+                    var passwordCredentialInfos = passwordCredentialDocs
+                        .Select(
+                            (Documents.PasswordCredentialDocument passwordCredentialDoc) =>
+                                new PasswordCredentialInfo
+                                {
+                                    Id = passwordCredentialDoc.Id,
+                                    LoginId = passwordCredentialDoc.LoginId,
+                                    EmailLastSent = passwordCredentialDoc.EmailLastSent,
+                                })
+                        .ToArray();
+                    return success(passwordCredentialInfos);
+                });
+            return results;
+
+            //var passwordCredentialDocs = this.repository.FindAllAsync<Documents.PasswordCredentialDocument>();
+            //var passwordCredentialInfos = passwordCredentialDocs
+            //    .ToEnumerable(
+            //        (Documents.PasswordCredentialDocument passwordCredentialDoc) =>
+            //            new PasswordCredentialInfo
+            //            {
+            //                Id = passwordCredentialDoc.Id,
+            //                LoginId = passwordCredentialDoc.LoginId,
+            //                EmailLastSent = passwordCredentialDoc.EmailLastSent
+            //            })
+            //    .ToArray();
+            //return success(passwordCredentialInfos);
         }
     }
 }

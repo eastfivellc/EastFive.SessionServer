@@ -95,11 +95,17 @@ namespace EastFive.Security.SessionServer
         }
 
         public async Task<TResult> CreatePasswordCredentialsAsync<TResult>(Guid passwordCredentialId, Guid actorId,
-            string username, bool isEmail, string token, bool forceChange,
+            string displayName, string username, bool isEmail, string token, bool forceChange,
             DateTime? emailLastSent, Uri loginUrl,
             Func<TResult> onSuccess,
             Func<TResult> credentialAlreadyExists,
-            Func<Guid, TResult> onUsernameAlreadyInUse,
+            Func<
+                Guid,
+                Func<
+                    Func<PasswordCredential, TResult>,
+                    Func<TResult>,
+                    Task<TResult>>,
+                Task<TResult>> onUsernameAlreadyInUse,
             Func<TResult> onPasswordInsufficent,
             Func<TResult> onRelationshipAlreadyExists,
             Func<TResult> onLoginAlreadyUsed,
@@ -108,7 +114,7 @@ namespace EastFive.Security.SessionServer
         {
             var loginProvider = await this.context.LoginProvider;
 
-            var createLoginResult = await await loginProvider.CreateLoginAsync("User",
+            var createLoginResult = await await loginProvider.CreateLoginAsync(displayName,
                 username, isEmail, token, forceChange,
                 async loginId =>
                 {
@@ -141,7 +147,27 @@ namespace EastFive.Security.SessionServer
 
                     return result;
                 },
-                (loginId) => onUsernameAlreadyInUse(loginId).ToTask(),
+                (loginId) =>
+                {
+                    return onUsernameAlreadyInUse(loginId,
+                        async (found, notInSystem) =>
+                        {
+                            return await dataContext.PasswordCredentials.FindPasswordCredentialByLoginIdAsync(loginId,
+                                (match) =>
+                                {
+                                    return found(new PasswordCredential
+                                    {
+                                        id = match.id,
+                                        actorId = match.actorId,
+                                        userId = username,
+                                        isEmail = isEmail,
+                                        forceChangePassword = forceChange,
+                                        lastSent = emailLastSent,
+                                    });
+                                },
+                                () => notInSystem());
+                        });
+                },
                 () => onPasswordInsufficent().ToTask(),
                 (why) => onFailure(why).ToTask());
             return createLoginResult;
