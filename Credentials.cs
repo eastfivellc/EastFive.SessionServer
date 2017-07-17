@@ -134,39 +134,59 @@ namespace EastFive.Security.SessionServer
         #region Tokens
 
         public async Task<TResult> CreateTokenCredentialAsync<TResult>(Guid inviteId, Guid actorId, string email,
-                System.Security.Claims.Claim[] claim,
+                Guid loggedInActorId, System.Security.Claims.Claim[] claim,
                 Func<Guid, Guid, Uri> getRedirectLink,
-            Func<TResult> success,
-            Func<TResult> inviteAlreadyExists,
-            Func<TResult> onServiceNotAvailable,
+            Func<TResult> onSuccess,
+            Func<TResult> onInviteAlreadyExists,
+            Func<string, TResult> onServiceNotAvailable,
             Func<string, TResult> onFailed)
         {
+            // TODO: Verify that the logged in user is the admin
             var token = EastFive.Security.SecureGuid.Generate();
             var result = await await this.dataContext.CredentialMappings.CreateInviteAsync(inviteId,
                 actorId, email, token, DateTime.UtcNow, true,
                 async () =>
                 {
-                    var templateName = ConfigurationManager.AppSettings[Configuration.EmailTemplateDefinitions.LoginToken];
-                    if (string.IsNullOrEmpty(templateName))
-                        return onFailed($"Email template setting not found.  Expected template value for key {Configuration.EmailTemplateDefinitions.LoginToken}");
-
-                    var mailService = this.context.MailService;
-                    var resultMail = await mailService.SendEmailMessageAsync(templateName,
-                        email, string.Empty,
-                        "newaccounts@orderowl.com", "New Account Services",
-                        "New Order Owl Account",
-                        new Dictionary<string, string>()
+                    return await LoadConfiguration(
+                        async (templateName, fromEmail, fromName, subject) =>
                         {
-                            { "token_login_link", getRedirectLink(inviteId, token).AbsoluteUri }
+                            var mailService = this.context.MailService;
+                            var resultMail = await mailService.SendEmailMessageAsync(templateName,
+                                email, string.Empty,
+                                fromEmail, fromName,
+                                subject,
+                                new Dictionary<string, string>()
+                                {
+                                    { "token_login_link", getRedirectLink(inviteId, token).AbsoluteUri }
+                                },
+                                default(IDictionary<string, IDictionary<string, string>[]>),
+                                (sentCode) => onSuccess(),
+                                () => onServiceNotAvailable("Email system s offline"),
+                                (why) => onFailed(why));
+                            return resultMail;
                         },
-                        default(IDictionary<string, IDictionary<string, string>[]>),
-                        (sentCode) => success(),
-                        () => onServiceNotAvailable(),
-                        (why) => onFailed(why));
-                    return resultMail;
+                        (why) => onFailed(why).ToTask());
                 },
-                () => inviteAlreadyExists().ToTask());
+                () => onInviteAlreadyExists().ToTask());
             return result;
+        }
+
+        private static TResult LoadConfiguration<TResult>(
+            Func<string, string, string, string, TResult> onLoaded,
+            Func<string, TResult> onFailed)
+        {
+            return Web.Configuration.Settings.GetString(Configuration.EmailTemplateDefinitions.LoginToken,
+                        (templateName) =>
+                            Web.Configuration.Settings.GetString(Configuration.AppSettings.TokenCredential.FromEmail,
+                                (fromEmail) =>
+                                    Web.Configuration.Settings.GetString(Configuration.AppSettings.TokenCredential.FromName,
+                                        (fromName) =>
+                                            Web.Configuration.Settings.GetString(Configuration.AppSettings.TokenCredential.Subject,
+                                                (subject) => onLoaded(templateName, fromEmail, fromName, subject),
+                                                onFailed),
+                                        onFailed),
+                                onFailed),
+                        onFailed);
         }
 
         internal async Task<TResult> UpdateTokenCredentialAsync<TResult>(Guid tokenCredentialId,

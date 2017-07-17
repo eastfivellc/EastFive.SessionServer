@@ -13,19 +13,19 @@ namespace EastFive.Security.SessionServer.Api.Controllers
     {
         public IHttpActionResult Get()
         {
-            return new HttpActionResult(() => this.Request.CreateResponse(HttpStatusCode.Unauthorized)
+            return this.ActionResult(() => this.Request.CreateResponse(HttpStatusCode.Unauthorized)
                 .AddReason("Get not permitted on Session Resource")
                 .ToTask());
         }
         
-        public async Task<IHttpActionResult> Post([FromBody]Resources.Session model)
+        public IHttpActionResult Post([FromBody]Resources.Session model)
         {
-            return (await model.CreateAsync(this.Request)).ToActionResult();
+            return this.ActionResult(() => model.CreateAsync(this.Request));
         }
         
         public IHttpActionResult Put([FromBody]Resources.Session model)
         {
-            return new HttpActionResult(() => model.UpdateAsync(this.Request));
+            return this.ActionResult(() => model.UpdateAsync(this.Request));
         }
         
         public IHttpActionResult Options(Nullable<Guid> Id = default(Nullable<Guid>))

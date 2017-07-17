@@ -162,6 +162,7 @@
     <Compile Include="Api\Controllers\ActAsUserViewController.cs" />
     <Compile Include="Api\Controllers\BaseController.cs" />
     <Compile Include="Api\Controllers\ActAsUserController.cs" />
+    <Compile Include="Api\Controllers\AppleAppSiteAssociationController.cs" />
     <Compile Include="Api\Controllers\TokenController.cs" />
     <Compile Include="Api\Controllers\RoleController.cs" />
     <Compile Include="Api\Controllers\TokenCredentialController.cs" />
