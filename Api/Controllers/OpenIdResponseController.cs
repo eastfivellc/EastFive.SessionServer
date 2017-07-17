@@ -87,8 +87,8 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 () => this.Request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason("Token does not work in this system")
                     .ToActionResult(),
-                () => this.Request.CreateResponse(HttpStatusCode.Conflict)
-                    .AddReason("Token is not connected to a user in this system")
+                (loginId) => this.Request.CreateResponse(HttpStatusCode.Conflict)
+                    .AddReason($"Token is for user [{loginId}] which is not connected to a user in this system")
                     .ToActionResult(),
                 () => this.Request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason("Invalid account creation link")
