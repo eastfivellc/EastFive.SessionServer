@@ -58,10 +58,22 @@ namespace EastFive.Security.SessionServer
         {
             if (!this.credentialProviders.ContainsKey(method))
             {
-                var newProvider = (CredentialValidationMethodTypes.SAML == method)?
-                    (IProvideCredentials)new EastFive.Security.SessionServer.CredentialProvider.SAML.SAMLProvider()
-                    :
-                    (IProvideCredentials)new Security.CredentialProvider.AzureADB2C.AzureADB2CProvider(await this.LoginProvider, this);
+                var newProvider = default(IProvideCredentials);
+                switch (method)
+                {
+                    case CredentialValidationMethodTypes.SAML:
+                        newProvider = new EastFive.Security.SessionServer.CredentialProvider.SAML.SAMLProvider();
+                        break;
+                    case CredentialValidationMethodTypes.Password:
+                        newProvider = new Security.CredentialProvider.AzureADB2C.AzureADB2CProvider(await this.LoginProvider, this);
+                        break;
+                    case CredentialValidationMethodTypes.Voucher:
+                        newProvider = new Security.CredentialProvider.Voucher.VoucherCredentialProvider();
+                        break;
+                    case CredentialValidationMethodTypes.Token:
+                        newProvider = new Security.CredentialProvider.Token.TokenCredentialProvider(this.dataContext);
+                        break;
+                }
                 this.credentialProviders.AddOrUpdate(method, newProvider, (m, p) => newProvider);
             }
             var provider = this.credentialProviders[method];

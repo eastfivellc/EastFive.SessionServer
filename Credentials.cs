@@ -47,8 +47,9 @@ namespace EastFive.Security.SessionServer
                 return onUnauthorized();
 
             var token = SecureGuid.Generate();
+            var loginId = Guid.NewGuid(); // This creates a "user" in the invite system
             var result = await await this.dataContext.CredentialMappings.CreateInviteAsync(inviteId,
-                actorId, email, token, DateTime.UtcNow, false,
+                loginId, actorId, email, token, DateTime.UtcNow, false,
                 async () =>
                 {
                     var templateName = ConfigurationManager.AppSettings[Configuration.EmailTemplateDefinitions.InviteNewAccount];
@@ -143,8 +144,9 @@ namespace EastFive.Security.SessionServer
         {
             // TODO: Verify that the logged in user is the admin
             var token = EastFive.Security.SecureGuid.Generate();
+            var loginId = Guid.NewGuid(); // This creates a "user" in the "Token system"
             var result = await await this.dataContext.CredentialMappings.CreateInviteAsync(inviteId,
-                actorId, email, token, DateTime.UtcNow, true,
+                loginId, actorId, email, token, DateTime.UtcNow, true,
                 async () =>
                 {
                     return await LoadConfiguration(

@@ -34,7 +34,7 @@ namespace EastFive.Security.SessionServer.Persistence
         }
         
         internal async Task<TResult> CreateInviteAsync<TResult>(Guid inviteId,
-            Guid actorId, string email, Guid token, DateTime lastSent, bool isToken,
+            Guid loginId, Guid actorId, string email, Guid token, DateTime lastSent, bool isToken,
             Func<TResult> onSuccess,
             Func<TResult> onAlreadyExists)
         {
@@ -47,6 +47,7 @@ namespace EastFive.Security.SessionServer.Persistence
                 IsToken = isToken,
                 LastSent = lastSent,
                 Token = token,
+                LoginId = loginId,
             };
             rollback.AddTaskCreate(inviteId, inviteDocument, onAlreadyExists, this.repository);
 
@@ -56,6 +57,12 @@ namespace EastFive.Security.SessionServer.Persistence
                 InviteId = inviteId,
             };
             rollback.AddTaskCreate(token, inviteTokenDocument, onAlreadyExists, this.repository);
+
+            var loginActorDocument = new Documents.LoginActorLookupDocument()
+            {
+                ActorId = actorId,
+            };
+            rollback.AddTaskCreate(loginId, loginActorDocument, onAlreadyExists, this.repository);
 
             rollback.AddTaskCreateOrUpdate(actorId,
                 (Documents.ActorMappingsDocument authDoc) => authDoc.AddInviteId(inviteId),
@@ -141,7 +148,7 @@ namespace EastFive.Security.SessionServer.Persistence
                     repository.FindByIdAsync(document.InviteId,
                         (Documents.InviteDocument inviteDoc) =>
                         {
-                            if (inviteDoc.IsToken)
+                            if (!inviteDoc.IsToken)
                                 return onNotFound();
                             return onSuccess(document.InviteId, inviteDoc.ActorId, inviteDoc.LoginId);
                         },

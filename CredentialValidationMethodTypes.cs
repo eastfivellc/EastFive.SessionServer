@@ -5,5 +5,6 @@
         Voucher,
         Password,
         SAML,
+        Token,
     }
 }

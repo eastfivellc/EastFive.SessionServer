@@ -61,10 +61,11 @@ namespace EastFive.Security.SessionServer
                                     var claimResult = await this.context.Claims.FindByAccountIdAsync(actorId,
                                         (customClaims) =>
                                         {
-                                            var jwtToken = GenerateToken(sessionId, actorId, customClaims
+                                            return GenerateToken(sessionId, actorId, customClaims
                                                 .Select(claim => new KeyValuePair<string, string>(claim.Type, claim.Value))
-                                                .ToDictionary());
-                                            return onSuccess(default(Uri), actorId, jwtToken, refreshToken);
+                                                .ToDictionary(),
+                                                (jwtToken) => onSuccess(default(Uri), actorId, jwtToken, refreshToken),
+                                                (why) => systemOffline(why));
                                         },
                                         () => onSuccess(default(Uri), actorId, string.Empty, refreshToken));
                                     return claimResult;
