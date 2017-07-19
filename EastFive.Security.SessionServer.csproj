@@ -92,6 +92,10 @@
       <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="SAML2.Core, Version=0.9.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\SAML2.Core.0.9.0.0\lib\net45\SAML2.Core.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
@@ -162,6 +166,7 @@
     <Compile Include="Api\Controllers\ActAsUserViewController.cs" />
     <Compile Include="Api\Controllers\BaseController.cs" />
     <Compile Include="Api\Controllers\ActAsUserController.cs" />
+    <Compile Include="Api\Controllers\SAMLRedirectController.cs" />
     <Compile Include="Api\Controllers\TokenController.cs" />
     <Compile Include="Api\Controllers\RoleController.cs" />
     <Compile Include="Api\Controllers\TokenCredentialController.cs" />
@@ -184,6 +189,7 @@
     <Compile Include="Configuration\AppSettings.cs" />
     <Compile Include="Configuration\ClaimsDefinitions.cs" />
     <Compile Include="Configuration\EmailTemplateDefinitions.cs" />
+    <Compile Include="CredentialProviders\SAMLProvider.cs" />
     <Compile Include="IConfigureIdentityServer.cs" />
     <Compile Include="PasswordCredentials.cs" />
     <Compile Include="Credentials.cs" />

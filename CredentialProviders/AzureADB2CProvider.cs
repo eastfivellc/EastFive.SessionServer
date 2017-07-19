@@ -20,32 +20,13 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
             this.context = context;
         }
 
-        public Task<TResult> RedeemTokenAsync<TResult>(string token, 
+        public async Task<TResult> RedeemTokenAsync<TResult>(string token, 
             Func<Guid, TResult> success,
             Func<string, TResult> invalidCredentials,
             Func<TResult> onAuthIdNotFound, 
             Func<string, TResult> couldNotConnect)
         {
-            return RedeemTokenInternalAsync(token, success,
-                invalidCredentials,
-                couldNotConnect);
-        }
-        
-        public async Task<TResult> RedeemTokenInternalAsync<TResult>(string id_token,
-            Func<Guid, TResult> success,
-            Func<string, TResult> invalidToken,
-            Func<string, TResult> couldNotConnect)
-        {
-            //TODO - Validate the token with AAD B2C here
-            //Surely there is a library for this.  Actually, the OWIN library does this.  Look in OO API's Startup.Auth.cs.
-            //If that cannot be leveraged, to get the public key:
-            //https://login.microsoftonline.com/humagelorderowladb2cdev.onmicrosoft.com/v2.0/.well-known/openid-configuration?p=b2c_1_sign_up_sign_in
-            //from there, follow the jwks_uri to here:
-            //https://login.microsoftonline.com/humagelorderowladb2cdev.onmicrosoft.com/discovery/v2.0/keys?p=b2c_1_sign_up_sign_in
-            //This will return the rolling keys to validate the jwt signature
-            //We will want to cache the key here and only go fetch again if the signature look up fails.  The keys rotate about every 24 hours.
-
-            return await loginProvider.ValidateToken(id_token,
+            return await loginProvider.ValidateToken(token,
                 (claims) =>
                 {
                     var claimType = Web.Configuration.Settings.Get(
@@ -54,14 +35,14 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
                         .Where(claim => claim.Type.CompareTo(claimType) == 0)
                         .ToArray();
                     if (authClaims.Length == 0)
-                        return invalidToken($"Token does not contain claim for [{claimType}] which is necessary to operate with this system");
+                        return invalidCredentials($"Token does not contain claim for [{claimType}] which is necessary to operate with this system");
                     Guid authId;
                     if(!Guid.TryParse(authClaims[0].Value, out authId))
-                        return invalidToken("User has invalid auth claim for this system");
+                        return invalidCredentials("User has invalid auth claim for this system");
 
                     return success(authId);
                 },
-                invalidToken);
+                invalidCredentials);
         }
     }
 }

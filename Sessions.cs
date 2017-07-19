@@ -121,6 +121,36 @@ namespace EastFive.Security.SessionServer
             return parseResult;
         }
 
+        public async Task<T> CreateAsync<T>(Guid sessionId,
+            CredentialValidationMethodTypes method, string token,
+            CreateSessionSuccessDelegate<T> onSuccess,
+            CreateSessionAlreadyExistsDelegate<T> alreadyExists,
+            Func<string, T> invalidToken,
+            Func<T> authIdNotFound,
+            Func<T> lookupCredentialNotFound,
+            Func<string, T> systemOffline,
+            Func<string, T> onNotConfigured)
+        {
+            return await EastFive.Web.Configuration.Settings.GetUri(
+                EastFive.Security.SessionServer.Configuration.AppSettings.LandingPage,
+                async (redirectUri) =>
+                {
+                    var loginProvider = await this.context.LoginProvider;
+                    var result = await await AuthenticateCredentialsAsync(method, token,
+                        async (loginId) =>
+                        {
+                            return await LookupCredentialMappingAsync(loginId, sessionId,
+                                redirectUri,
+                                onSuccess, alreadyExists, lookupCredentialNotFound, onNotConfigured);
+                        },
+                        (why) => invalidToken(why).ToTask(),
+                        () => authIdNotFound().ToTask(),
+                        (why) => systemOffline(why).ToTask());
+                    return result;
+                },
+                (why) => onNotConfigured(why).ToTask());
+        }
+
         private async Task<TResult> CreateWithNewNewAccountAsync<TResult>(Guid loginId, Guid sessionId,
             byte [] data, Uri redirectUri,
             CreateSessionSuccessDelegate<TResult> onSuccess,
