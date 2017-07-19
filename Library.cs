@@ -32,6 +32,10 @@ namespace EastFive.Security.SessionServer
             //config.AddExternalControllers<SessionServer.Api.Controllers.OpenIdResponseController>();
             AddExternalControllersX<SessionServer.Api.Controllers.OpenIdResponseController>(config);
             //return InitializeAsync(audience, configurationEndpoint, onSuccess, onFailed);
+            config.Routes.MapHttpRoute(name: "apple-app-links",
+                routeTemplate: "apple-app-site-association",
+                defaults: new { controller = "AppleAppSiteAssociation", id = RouteParameter.Optional });
+
             return onSuccess();
         }
         

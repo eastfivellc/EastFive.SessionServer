@@ -3,7 +3,6 @@ using System.Runtime.Serialization;
 
 namespace EastFive.Security.SessionServer.Api.Resources
 {
-
     [DataContract]
     public class CredentialToken
     {

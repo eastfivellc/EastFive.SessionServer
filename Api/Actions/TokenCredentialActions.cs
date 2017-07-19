@@ -93,26 +93,29 @@ namespace EastFive.Security.SessionServer.Api
         public static async Task<HttpResponseMessage> CreateAsync(this Resources.TokenCredential credential,
             HttpRequestMessage request, UrlHelper url)
         {
-            var actorId = credential.Actor.ToGuid();
-            //return await request.GetClaims(
-            //    async (claims) =>
-            //    {
-            var claims = new System.Security.Claims.Claim[] { };
-            var context = request.GetSessionServerContext();
-            var creationResults = await context.CredentialMappings.CreateTokenCredentialAsync(
-                credential.Id.UUID, actorId.Value, credential.Email,
-                claims.ToArray(),
-                (inviteId, token) => url.GetLocation<Controllers.TokenCredentialController>().SetQueryParam("token", token.ToString("N")),
-                () => request.CreateResponse(HttpStatusCode.Created),
-                () => request.CreateResponse(HttpStatusCode.Conflict)
-                    .AddReason($"Invite already exists"),
-                () => request.CreateResponse(HttpStatusCode.ServiceUnavailable),
-                (why) => request.CreateResponse(HttpStatusCode.Conflict)
-                    .AddReason(why));
-            return creationResults;
-            //},
-            //() => request.CreateResponse(HttpStatusCode.Unauthorized).ToTask(),
-            //(why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why).ToTask());
+            return await request.GetActorIdClaimsAsync(
+                async (loggedInActorId, claims) =>
+                {
+                    var credentialId = credential.Id.ToGuid();
+                    if (!credentialId.HasValue)
+                        return request.CreateResponse(HttpStatusCode.BadRequest).AddReason("Credential property (an ID) must be specified");
+                    var actorId = credential.Actor.ToGuid();
+                    if (!actorId.HasValue)
+                        return request.CreateResponse(HttpStatusCode.BadRequest).AddReason("Actor property (an ID) must be specified");
+                    var context = request.GetSessionServerContext();
+                    var creationResults = await context.CredentialMappings.CreateTokenCredentialAsync(
+                            credentialId.Value, actorId.Value, credential.Email,
+                            loggedInActorId, claims,
+                            (inviteId, token) => url.GetLocation<Controllers.TokenCredentialController>().SetQueryParam("token", token.ToString("N")),
+                        () => request.CreateResponse(HttpStatusCode.Created),
+                        () => request.CreateResponse(HttpStatusCode.Conflict)
+                            .AddReason($"TokenCredential resource with ID [{credentialId.Value}] already exists"),
+                        (why) => request.CreateResponse(HttpStatusCode.ServiceUnavailable)
+                            .AddReason(why),
+                        (why) => request.CreateResponse(HttpStatusCode.Conflict)
+                            .AddReason(why));
+                    return creationResults;
+                });
         }
         
         public static async Task<HttpResponseMessage> UpdateAsync(this Resources.TokenCredential credential,

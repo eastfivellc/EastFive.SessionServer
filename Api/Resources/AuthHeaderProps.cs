@@ -6,11 +6,13 @@ namespace EastFive.Security.SessionServer.Api.Resources
     public class AuthHeaderProps
     {
         #region Properties
+
         [DataMember]
         public string Name { get; set; }
 
         [DataMember]
         public string Value { get; set; }
+
         #endregion
     }
 }

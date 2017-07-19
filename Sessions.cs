@@ -88,7 +88,7 @@ namespace EastFive.Security.SessionServer
             Func<string, T> invalidToken,
             Func<string, T> invalidState,
             Func<T> authIdNotFound,
-            Func<T> credentialNotInSystem,
+            Func<Guid, T> credentialNotInSystem,
             Func<T> lookupCredentialNotFound,
             Func<T> alreadyRedeemed,
             Func<T> onAlreadyInUse,
@@ -110,7 +110,7 @@ namespace EastFive.Security.SessionServer
 
                             return await LookupCredentialMappingAsync(loginId, sessionId,
                                 redirectUri,
-                                onSuccess, alreadyExists, credentialNotInSystem, onNotConfigured);
+                                onSuccess, alreadyExists, () => credentialNotInSystem(loginId), onNotConfigured);
                         },
                         (why) => invalidToken(why).ToTask(),
                         () => authIdNotFound().ToTask(),
