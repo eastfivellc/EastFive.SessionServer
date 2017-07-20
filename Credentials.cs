@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using BlackBarLabs.Extensions;
 using BlackBarLabs.Api;
 using BlackBarLabs.Linq.Async;
+using System.Security.Claims;
+using System.Security.Cryptography;
 
 namespace EastFive.Security.SessionServer
 {
@@ -48,7 +50,7 @@ namespace EastFive.Security.SessionServer
 
             var token = SecureGuid.Generate();
             var loginId = Guid.NewGuid(); // This creates a "user" in the invite system
-            var result = await await this.dataContext.CredentialMappings.CreateInviteAsync(inviteId,
+            var result = await await this.dataContext.CredentialMappings.CreateCredentialMappingAsync(inviteId,
                 loginId, actorId, email, token, DateTime.UtcNow, false,
                 async () =>
                 {
@@ -74,7 +76,7 @@ namespace EastFive.Security.SessionServer
                 () => inviteAlreadyExists().ToTask());
             return result;
         }
-
+        
         internal Task<TResult> GetInviteAsync<TResult>(Guid inviteId,
             Func<Invite, TResult> success,
             Func<TResult> notFound)
@@ -132,6 +134,49 @@ namespace EastFive.Security.SessionServer
             return this.dataContext.CredentialMappings.LookupCredentialMappingAsync(loginId, onSuccess, onNotFound);
         }
 
+
+        public async Task<TResult> CreateSamlCredentialAsync<TResult>(Guid samlCredentialId,
+            Guid actorId, string nameId,
+            Guid performingActorId, System.Security.Claims.Claim[] claims,
+            Func<TResult> onSuccess,
+            Func<TResult> onCredentialAlreadyExist,
+            Func<Guid, TResult> onActorAlreadyUsingUserId,
+            Func<TResult> onRelationshipAlreadyExist,
+            Func<TResult> onUnauthorized,
+            Func<string, TResult> onFailure)
+        {
+            // TODO: Verify that the logged in user is the admin
+            var tokenBytes = SHA512.Create().ComputeHash(System.Text.Encoding.UTF8.GetBytes(nameId));
+            var token = new Guid(tokenBytes.Take(16).ToArray());
+            var loginId = Guid.NewGuid(); // This creates a "user" in the "Token system"
+
+            // TODO: Check other error conditions
+            var result = await this.CreateSamlCredentialAsync(samlCredentialId, actorId, nameId,
+                onSuccess, onCredentialAlreadyExist, onActorAlreadyUsingUserId, onRelationshipAlreadyExist, onFailure);
+            return result;
+        }
+
+        public async Task<TResult> CreateSamlCredentialAsync<TResult>(Guid samlCredentialId,
+            Guid actorId, string nameId,
+            Func<TResult> onSuccess,
+            Func<TResult> onCredentialAlreadyExist,
+            Func<Guid, TResult> onActorAlreadyUsingUserId,
+            Func<TResult> onRelationshipAlreadyExist,
+            Func<string, TResult> onFailure)
+        {
+            // TODO: Verify that the logged in user is the admin
+            var tokenBytes = SHA512.Create().ComputeHash(System.Text.Encoding.UTF8.GetBytes(nameId));
+            var token = new Guid(tokenBytes.Take(16).ToArray());
+            var loginId = Guid.NewGuid(); // This creates a "user" in the "Token system"
+
+            // TODO: Check other error conditions
+            var result = await this.dataContext.CredentialMappings.CreateCredentialMappingAsync(samlCredentialId,
+                loginId, actorId, nameId, token, DateTime.UtcNow, true,
+                () => onSuccess(),
+                () => onCredentialAlreadyExist());
+            return result;
+        }
+
         #region Tokens
 
         public async Task<TResult> CreateTokenCredentialAsync<TResult>(Guid inviteId, Guid actorId, string email,
@@ -145,7 +190,7 @@ namespace EastFive.Security.SessionServer
             // TODO: Verify that the logged in user is the admin
             var token = EastFive.Security.SecureGuid.Generate();
             var loginId = Guid.NewGuid(); // This creates a "user" in the "Token system"
-            var result = await await this.dataContext.CredentialMappings.CreateInviteAsync(inviteId,
+            var result = await await this.dataContext.CredentialMappings.CreateCredentialMappingAsync(inviteId,
                 loginId, actorId, email, token, DateTime.UtcNow, true,
                 async () =>
                 {
@@ -285,7 +330,7 @@ namespace EastFive.Security.SessionServer
             Func<TResult> notFound)
         {
             return await await this.dataContext.CredentialMappings.FindTokenCredentialByTokenAsync(token,
-                async (inviteId, actorId) =>
+                async (inviteId, actorId, loginId) =>
                 {
                     var sessionId = Guid.NewGuid();
                     var result = await this.context.Sessions.CreateAsync(sessionId, actorId,

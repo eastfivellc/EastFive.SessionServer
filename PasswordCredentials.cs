@@ -259,7 +259,7 @@ namespace EastFive.Security.SessionServer
                                 var credInfo = await await loginProvider.GetLoginAsync(passwordCredentialInfo.LoginId,
                                     (userId, isEmail, forceChangePassword) =>
                                     {
-                                        return this.context.CredentialMappings.LookupAccountIdAsync(passwordCredentialInfo.LoginId,
+                                        return this.context.Credentials.LookupAccountIdAsync(passwordCredentialInfo.LoginId,
                                             (actorId) => new LoginInfo
                                             {
                                                 LoginId = passwordCredentialInfo.LoginId,

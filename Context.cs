@@ -62,7 +62,7 @@ namespace EastFive.Security.SessionServer
                 switch (method)
                 {
                     case CredentialValidationMethodTypes.SAML:
-                        newProvider = new EastFive.Security.SessionServer.CredentialProvider.SAML.SAMLProvider();
+                        newProvider = new EastFive.Security.SessionServer.CredentialProvider.SAML.SAMLProvider(this.dataContext);
                         break;
                     case CredentialValidationMethodTypes.Password:
                         newProvider = new Security.CredentialProvider.AzureADB2C.AzureADB2CProvider(await this.LoginProvider, this);
@@ -90,7 +90,7 @@ namespace EastFive.Security.SessionServer
         #endregion
         
         private Credentials credentialMappings;
-        public Credentials CredentialMappings
+        public Credentials Credentials
         {
             get
             {

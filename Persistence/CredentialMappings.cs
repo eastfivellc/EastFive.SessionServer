@@ -33,7 +33,7 @@ namespace EastFive.Security.SessionServer.Persistence
                 () => onNotExist());
         }
         
-        internal async Task<TResult> CreateInviteAsync<TResult>(Guid inviteId,
+        internal async Task<TResult> CreateCredentialMappingAsync<TResult>(Guid inviteId,
             Guid loginId, Guid actorId, string email, Guid token, DateTime lastSent, bool isToken,
             Func<TResult> onSuccess,
             Func<TResult> onAlreadyExists)
@@ -148,7 +148,7 @@ namespace EastFive.Security.SessionServer.Persistence
                     repository.FindByIdAsync(document.InviteId,
                         (Documents.InviteDocument inviteDoc) =>
                         {
-                            if (!inviteDoc.IsToken)
+                            if (inviteDoc.IsToken)
                                 return onNotFound();
                             return onSuccess(document.InviteId, inviteDoc.ActorId, inviteDoc.LoginId);
                         },
@@ -161,7 +161,7 @@ namespace EastFive.Security.SessionServer.Persistence
         }
 
         internal async Task<TResult> FindTokenCredentialByTokenAsync<TResult>(Guid token,
-            Func<Guid, Guid, TResult> onSuccess,
+            Func<Guid, Guid, Guid?, TResult> onSuccess,
             Func<TResult> onNotFound)
         {
             return await await repository.FindByIdAsync(token,
@@ -171,7 +171,7 @@ namespace EastFive.Security.SessionServer.Persistence
                         {
                             if (!inviteDoc.IsToken)
                                 return onNotFound();
-                            return onSuccess(document.InviteId, inviteDoc.ActorId);
+                            return onSuccess(document.InviteId, inviteDoc.ActorId, inviteDoc.LoginId);
                         },
                         () =>
                         {

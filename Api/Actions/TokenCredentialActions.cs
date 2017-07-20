@@ -33,7 +33,7 @@ namespace EastFive.Security.SessionServer.Api
             HttpRequestMessage request, UrlHelper urlHelper)
         {
             var context = request.GetSessionServerContext();
-            return await context.CredentialMappings.GetTokenCredentialAsync(inviteId,
+            return await context.Credentials.GetTokenCredentialAsync(inviteId,
                 (invite) =>
                 {
                     var response = request.CreateResponse(HttpStatusCode.OK, Convert(invite, urlHelper));
@@ -46,7 +46,7 @@ namespace EastFive.Security.SessionServer.Api
             HttpRequestMessage request, UrlHelper urlHelper)
         {
             var context = request.GetSessionServerContext();
-            return await context.CredentialMappings.GetTokenCredentialByTokenAsync(token,
+            return await context.Credentials.GetTokenCredentialByTokenAsync(token,
                 (sessionId, actorId, jwtToken, refreshToken) =>
                 {
                     var landingPage = Web.Configuration.Settings.Get(SessionServer.Configuration.AppSettings.LandingPage);
@@ -65,7 +65,7 @@ namespace EastFive.Security.SessionServer.Api
         private static async Task<HttpResponseMessage[]> QueryByActorAsync(Guid actorId, HttpRequestMessage request, UrlHelper urlHelper)
         {
             var context = request.GetSessionServerContext();
-            return await context.CredentialMappings.GetTokenCredentialByActorAsync(actorId,
+            return await context.Credentials.GetTokenCredentialByActorAsync(actorId,
                 (invites) =>
                 {
                     var responses = invites
@@ -103,7 +103,7 @@ namespace EastFive.Security.SessionServer.Api
                     if (!actorId.HasValue)
                         return request.CreateResponse(HttpStatusCode.BadRequest).AddReason("Actor property (an ID) must be specified");
                     var context = request.GetSessionServerContext();
-                    var creationResults = await context.CredentialMappings.CreateTokenCredentialAsync(
+                    var creationResults = await context.Credentials.CreateTokenCredentialAsync(
                             credentialId.Value, actorId.Value, credential.Email,
                             loggedInActorId, claims,
                             (inviteId, token) => url.GetLocation<Controllers.TokenCredentialController>().SetQueryParam("token", token.ToString("N")),
@@ -127,7 +127,7 @@ namespace EastFive.Security.SessionServer.Api
             //    {
             var claims = new System.Security.Claims.Claim[] { };
             var context = request.GetSessionServerContext();
-            var creationResults = await context.CredentialMappings.UpdateTokenCredentialAsync(
+            var creationResults = await context.Credentials.UpdateTokenCredentialAsync(
                 credential.Id.UUID, credential.Email, credential.LastEmailSent,
                 claims.ToArray(),
                 (inviteId, token) => url.GetLocation<Controllers.TokenCredentialController>()
@@ -155,7 +155,7 @@ namespace EastFive.Security.SessionServer.Api
         private static async Task<HttpResponseMessage> DeleteByIdAsync(Guid inviteId, HttpRequestMessage request, UrlHelper urlHelper)
         {
             var context = request.GetSessionServerContext();
-            return await context.CredentialMappings.DeleteTokenByIdAsync(inviteId,
+            return await context.Credentials.DeleteTokenByIdAsync(inviteId,
                 () =>
                 {
                     var response = request.CreateResponse(HttpStatusCode.NoContent);

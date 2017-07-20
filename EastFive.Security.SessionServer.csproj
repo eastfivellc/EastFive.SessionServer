@@ -156,6 +156,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Api\Actions\SamlCredentialActions.cs" />
     <Compile Include="Api\Actions\TokenActions.cs" />
     <Compile Include="Api\Actions\RoleActions.cs" />
     <Compile Include="Api\Actions\ActAsUserActions.cs" />
@@ -166,6 +167,7 @@
     <Compile Include="Api\Controllers\ActAsUserViewController.cs" />
     <Compile Include="Api\Controllers\BaseController.cs" />
     <Compile Include="Api\Controllers\ActAsUserController.cs" />
+    <Compile Include="Api\Controllers\SamlCredentialController.cs" />
     <Compile Include="Api\Controllers\SAMLRedirectController.cs" />
     <Compile Include="Api\Controllers\AppleAppSiteAssociationController.cs" />
     <Compile Include="Api\Controllers\TokenController.cs" />
@@ -178,6 +180,8 @@
     <Compile Include="Api\Resources\AuthHeaderProps.cs" />
     <Compile Include="Api\Controllers\AccountLinksController.cs" />
     <Compile Include="Api\Resources\ActAsUser.cs" />
+    <Compile Include="Api\Resources\Queries\SamlCredentialQuery.cs" />
+    <Compile Include="Api\Resources\SamlCredential.cs" />
     <Compile Include="Api\Resources\Queries\TokenQuery.cs" />
     <Compile Include="Api\Resources\Queries\RoleQuery.cs" />
     <Compile Include="Api\Resources\Queries\ActAsUserQuery.cs" />

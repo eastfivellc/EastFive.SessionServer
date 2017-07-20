@@ -18,7 +18,7 @@ namespace EastFive.Security.CredentialProvider.Token
             Func<Guid, TResult> onSuccess,
             Func<string, TResult> invalidCredentials, Func<TResult> onAuthIdNotFound, Func<string, TResult> couldNotConnect)
         {
-            return this.dataContext.CredentialMappings.FindInviteByTokenAsync(Guid.Parse(accessToken),
+            return this.dataContext.CredentialMappings.FindTokenCredentialByTokenAsync(Guid.Parse(accessToken),
                 (inviteId, actorId, loginId) =>
                 {
                     if (!loginId.HasValue)

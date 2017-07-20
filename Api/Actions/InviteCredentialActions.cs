@@ -32,7 +32,7 @@ namespace EastFive.Security.SessionServer.Api
         private static async Task<HttpResponseMessage> QueryByIdAsync(Guid inviteId, HttpRequestMessage request, UrlHelper urlHelper)
         {
             var context = request.GetSessionServerContext();
-            return await context.CredentialMappings.GetInviteAsync(inviteId,
+            return await context.Credentials.GetInviteAsync(inviteId,
                 (invite) =>
                 {
                     var response = request.CreateResponse(HttpStatusCode.OK, Convert(invite, urlHelper));
@@ -48,7 +48,7 @@ namespace EastFive.Security.SessionServer.Api
                 request.Properties[BlackBarLabs.Api.ServicePropertyDefinitions.IdentityService];
             var loginProviderTask = loginProviderTaskGetter();
             var loginProvider = await loginProviderTask;
-            return await await context.CredentialMappings.GetInviteByTokenAsync(token,
+            return await await context.Credentials.GetInviteByTokenAsync(token,
                 (state) =>
                 {
                     var callbackUrl = urlHelper.GetLocation<Controllers.OpenIdResponseController>();
@@ -86,7 +86,7 @@ namespace EastFive.Security.SessionServer.Api
                 request.Properties[BlackBarLabs.Api.ServicePropertyDefinitions.IdentityService];
             var loginProviderTask = loginProviderTaskGetter();
             var loginProvider = await loginProviderTask;
-            return await context.CredentialMappings.GetInvitesByActorAsync(actorId,
+            return await context.Credentials.GetInvitesByActorAsync(actorId,
                 (invites) =>
                 {
                     var responses = invites
@@ -122,7 +122,7 @@ namespace EastFive.Security.SessionServer.Api
                 async (performingActorId, claims) =>
                 {
                     var context = request.GetSessionServerContext();
-                    var creationResults = await context.CredentialMappings.SendEmailInviteAsync(
+                    var creationResults = await context.Credentials.SendEmailInviteAsync(
                         credential.Id.UUID, actorId.Value, credential.Email,
                         performingActorId, claims.ToArray(),
                         (inviteId, token) => url.GetLocation<Controllers.InviteCredentialController>().SetQueryParam("token", token.ToString("N")),
@@ -152,7 +152,7 @@ namespace EastFive.Security.SessionServer.Api
             Guid performingActorId, System.Security.Claims.Claim [] claims)
         {
             var context = request.GetSessionServerContext();
-            return await context.CredentialMappings.DeleteByIdAsync(inviteId, performingActorId, claims,
+            return await context.Credentials.DeleteByIdAsync(inviteId, performingActorId, claims,
                 () =>
                 {
                     var response = request.CreateResponse(HttpStatusCode.NoContent);
