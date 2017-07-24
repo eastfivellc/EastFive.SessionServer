@@ -42,8 +42,14 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             }
             
             var parseResult = loginProvider.ParseState(result.state,
-                (redirect_uri, action, data) =>
+                (action, data, extraParams) =>
                 {
+                    if (!extraParams.ContainsKey(SessionServer.Configuration.AuthorizationParameters.RedirectUri))
+                        return Request.CreateResponse(HttpStatusCode.Conflict).AddReason("Redirect URL not in response paramters").ToActionResult();
+                    var redirectUriString = extraParams[SessionServer.Configuration.AuthorizationParameters.RedirectUri];
+                    Uri redirect_uri;
+                    if (!Uri.TryCreate(redirectUriString, UriKind.Absolute, out redirect_uri))
+                        return Request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Invalid redirect URL in response paramters: {redirectUriString}").ToActionResult();
                     var loginUrl = loginProvider.GetLoginUrl(redirect_uri.AbsoluteUri, 0, new byte[] { }, callbackUrl);
                     return Redirect(loginUrl);
                 },
@@ -59,20 +65,23 @@ namespace EastFive.Security.SessionServer.Api.Controllers
         public async Task<IHttpActionResult> Post(OpenIdConnectResult result)
         {
             if (!String.IsNullOrWhiteSpace(result.error))
-                return this.Request.CreateResponse(HttpStatusCode.Conflict, result.error_description)
+                return this.Request.CreateResponse(HttpStatusCode.Conflict).AddReason(result.error_description)
                     .AddReason(result.error_description)
                     .ToActionResult();
 
             var context = this.Request.GetSessionServerContext();
             var response = await context.Sessions.CreateAsync(Guid.NewGuid(),
                 CredentialValidationMethodTypes.Password, result.id_token, result.state,
-                (redirectUrlBase, authorizationId, token, refreshToken) =>
+                (authorizationId, token, refreshToken, extraParams) =>
                 {
-                    var redirectUrl = redirectUrlBase
-                        .SetQueryParam("authoriationId", authorizationId.ToString("N"))
-                        .SetQueryParam("token", token)
-                        .SetQueryParam("refreshToken", refreshToken);
-                    var redirectResponse = Redirect(redirectUrl);
+                    // TODO: DRY out with above
+                    if (!extraParams.ContainsKey(SessionServer.Configuration.AuthorizationParameters.RedirectUri))
+                        return Request.CreateResponse(HttpStatusCode.Conflict).AddReason("Redirect URL not in response paramters").ToActionResult();
+                    var redirectUriString = extraParams[SessionServer.Configuration.AuthorizationParameters.RedirectUri];
+                    Uri redirect_uri;
+                    if (!Uri.TryCreate(redirectUriString, UriKind.Absolute, out redirect_uri))
+                        return Request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Invalid redirect URL in response paramters: {redirectUriString}").ToActionResult();
+                    var redirectResponse = Redirect(redirect_uri);
                     return redirectResponse;
                 },
                 () => this.Request.CreateResponse(HttpStatusCode.Conflict)

@@ -192,11 +192,13 @@
     <Compile Include="Api\Resources\Queries\InviteCredentialQuery.cs" />
     <Compile Include="Api\Resources\Queries\PasswordCredentialQuery.cs" />
     <Compile Include="Configuration\AppSettings.cs" />
+    <Compile Include="Configuration\AuthorizationParameters.cs" />
     <Compile Include="Configuration\ClaimsDefinitions.cs" />
     <Compile Include="Configuration\EmailTemplateDefinitions.cs" />
     <Compile Include="CredentialProviders\SAMLProvider.cs" />
     <Compile Include="CredentialProviders\TokenCredentialProvider.cs" />
     <Compile Include="IConfigureIdentityServer.cs" />
+    <Compile Include="IdentityServerConfiguration.cs" />
     <Compile Include="PasswordCredentials.cs" />
     <Compile Include="Credentials.cs" />
     <Compile Include="CredentialProviders\AzureADB2CProvider.cs" />

@@ -59,21 +59,26 @@ namespace EastFive.Security.SessionServer.Api
                     response.Headers.Location = redirect;
                     return response.ToTask();
                 },
-                (actorId) =>
+                (actorId, extraParams) =>
                 {
-                    return context.Sessions.CreateAsync(Guid.NewGuid(), actorId,
-                        new System.Security.Claims.Claim[] { },
+                    return context.Sessions.CreateToken(actorId, Guid.NewGuid(),
                         (bearerToken, refreshToken) =>
                         {
-                            var redirectUrl = new Uri("http://orderowl.com/Login")
-                                .SetQueryParam("authoriationId", actorId.ToString("N"))
-                                .SetQueryParam("token", bearerToken)
-                                .SetQueryParam("refreshToken", refreshToken);
-                            var response = request.CreateResponse(HttpStatusCode.Redirect);
-                            response.Headers.Location = redirectUrl;
-                            return response;
+                            return Library.configurationManager.GetRedirectUri(CredentialValidationMethodTypes.Token,
+                                actorId, bearerToken, refreshToken, extraParams,
+                                (redirectUrl) =>
+                                {
+                                    var response = request.CreateResponse(HttpStatusCode.Redirect);
+                                    response.Headers.Location = redirectUrl;
+                                    return response;
+                                },
+                                (paramName, whyInvalid) => request.CreateResponse(HttpStatusCode.Conflict)
+                                    .AddReason($"{paramName} is invalid:{whyInvalid}"),
+                                (why) => request.CreateResponse(HttpStatusCode.Conflict)
+                                    .AddReason(why));
                         },
-                        () => request.CreateResponse(418).AddReason("You are more unique than a GUID"));
+                        () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("Invite does not match an account in the system"),
+                        (why) => request.CreateResponse(HttpStatusCode.Conflict).AddReason(why));
                 },
                 () => request.CreateResponse(HttpStatusCode.NotFound).AddReason("Already used").ToTask(),
                 () => request.CreateResponse(HttpStatusCode.NotFound).ToTask());

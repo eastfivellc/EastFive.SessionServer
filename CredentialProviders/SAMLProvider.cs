@@ -25,7 +25,7 @@ namespace EastFive.Security.SessionServer.CredentialProvider.SAML
         }
 
         public async Task<TResult> RedeemTokenAsync<TResult>(string token, 
-            Func<Guid, TResult> onSuccess,
+            Func<Guid, IDictionary<string, string>, TResult> onSuccess,
             Func<string, TResult> invalidCredentials,
             Func<TResult> onAuthIdNotFound,
             Func<string, TResult> couldNotConnect)
@@ -84,7 +84,7 @@ namespace EastFive.Security.SessionServer.CredentialProvider.SAML
                                     {
                                         if (!loginId.HasValue)
                                             return invalidCredentials("Token is not connected to an account");
-                                        return onSuccess(loginId.Value);
+                                        return onSuccess(loginId.Value, new Dictionary<string, string>()); // TODO: Build this from params above
                                     },
                                     () => invalidCredentials("Token does not exist"));
                             },

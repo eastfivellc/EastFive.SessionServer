@@ -93,22 +93,26 @@ namespace EastFive.Security.SessionServer.Api
             Func<string, RedirectResult> redirect)
         {
             var context = request.GetSessionServerContext();
-            var result = await context.Sessions.LookupCredentialMappingAsync(loginId, Guid.NewGuid(), new Uri(redirectBase),
-                (redirectUrlBase, authorizationId, tken, refreshToken) =>
+            var result = await context.Sessions.LookupCredentialMappingAsync(loginId, Guid.NewGuid(),
+                (authorizationId, tken, refreshToken, extraParams) =>
                 {
-                    var redirectUrl = (new Uri(redirectBase))
-                        .SetQueryParam("authoriationId", authorizationId.ToString("N"))
-                        .SetQueryParam("token", tken)
-                        .SetQueryParam("refreshToken", refreshToken);
-                    //var redirectResponse = redirect(redirectUrl.AbsoluteUri);
-                    //return request.CreateResponse(HttpStatusCode.OK);
-                    var response = request.CreateHtmlResponse($"<script>window.location=\"{redirectUrl}\"</script>");
-                    var cookie = new System.Net.Http.Headers.CookieHeaderValue(Api.Constants.Cookies.FakingId, token);
-                    cookie.Expires = DateTimeOffset.Now.AddDays(1);
-                    cookie.Domain = request.RequestUri.Host;
-                    cookie.Path = "/";
-                    response.Headers.AddCookies(new System.Net.Http.Headers.CookieHeaderValue[] { cookie });
-                    return response;
+                    return Library.configurationManager.GetRedirectUri(CredentialValidationMethodTypes.Password,
+                        authorizationId, tken, refreshToken, extraParams,
+                        (redirectUrl) =>
+                        {
+                            //var redirectResponse = redirect(redirectUrl.AbsoluteUri);
+                            //return request.CreateResponse(HttpStatusCode.OK);
+                            var response = request.CreateHtmlResponse($"<script>window.location=\"{redirectUrl}\"</script>");
+                            var cookie = new System.Net.Http.Headers.CookieHeaderValue(Api.Constants.Cookies.FakingId, token);
+                            cookie.Expires = DateTimeOffset.Now.AddDays(1);
+                            cookie.Domain = request.RequestUri.Host;
+                            cookie.Path = "/";
+                            response.Headers.AddCookies(new System.Net.Http.Headers.CookieHeaderValue[] { cookie });
+                            return response;
+                        },
+                        // TODO: Add reasons
+                        (param, why) => request.CreateResponse(HttpStatusCode.Conflict),
+                        (why) => request.CreateResponse(HttpStatusCode.Conflict));
                 },
                 () =>
                 {

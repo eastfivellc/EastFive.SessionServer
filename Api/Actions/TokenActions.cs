@@ -27,7 +27,7 @@ namespace EastFive.Security.SessionServer.Api
                 {
                     var context = request.GetSessionServerContext();
                     return await context.Sessions.CreateToken(actorId, Guid.NewGuid(), actingAsActorId,
-                        (token) =>
+                        (token, refreshToken) =>
                         {
                             return request.CreateResponse(HttpStatusCode.OK, token);
                         },

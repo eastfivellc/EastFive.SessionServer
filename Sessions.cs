@@ -21,7 +21,7 @@ namespace EastFive.Security.SessionServer
             this.context = context;
         }
 
-        public delegate T CreateSessionSuccessDelegate<T>(Uri redirectUrl, Guid authorizationId, string token, string refreshToken);
+        public delegate T CreateSessionSuccessDelegate<T>(Guid? authorizationId, string token, string refreshToken, IDictionary<string, string> extraParams);
         public delegate T CreateSessionAlreadyExistsDelegate<T>();
         public async Task<T> CreateAsync<T>(Guid sessionId,
             CreateSessionSuccessDelegate<T> onSuccess,
@@ -32,7 +32,7 @@ namespace EastFive.Security.SessionServer
                 () =>
                 {
                     var jwtToken = this.GenerateToken(sessionId, default(Guid), new Dictionary<string, string>());
-                    return onSuccess.Invoke(default(Uri), default(Guid), jwtToken, refreshToken);
+                    return onSuccess.Invoke(default(Guid), jwtToken, refreshToken, new Dictionary<string, string>());
                 },
                 () => alreadyExists());
         }
@@ -47,7 +47,7 @@ namespace EastFive.Security.SessionServer
             Func<string, T> systemOffline)
         {
             var result = await await AuthenticateCredentialsAsync(method, token,
-                async (authorizationId) =>
+                async (authorizationId, extraParams) =>
                 {
                     // Convert authentication unique ID to Actor ID
                     var inner = await await dataContext.CredentialMappings.LookupCredentialMappingAsync<Task<T>>(authorizationId,
@@ -64,10 +64,10 @@ namespace EastFive.Security.SessionServer
                                             return GenerateToken(sessionId, actorId, customClaims
                                                 .Select(claim => new KeyValuePair<string, string>(claim.Type, claim.Value))
                                                 .ToDictionary(),
-                                                (jwtToken) => onSuccess(default(Uri), actorId, jwtToken, refreshToken),
+                                                (jwtToken) => onSuccess(actorId, jwtToken, refreshToken, extraParams),
                                                 (why) => systemOffline(why));
                                         },
-                                        () => onSuccess(default(Uri), actorId, string.Empty, refreshToken));
+                                        () => credentialNotInSystem());
                                     return claimResult;
                                 },
                                 () => alreadyExists().ToTask());
@@ -98,19 +98,19 @@ namespace EastFive.Security.SessionServer
         {
             var loginProvider = await this.context.LoginProvider;
             var parseResult = await loginProvider.ParseState(state,
-                async (redirectUri, action, data) =>
+                async (action, data, extraParamsFromState) =>
                 {
                     var result = await await AuthenticateCredentialsAsync(method, token,
-                        async (loginId) =>
+                        async (loginId, extraParamsFromCredetial) =>
                         {
+                            var extraParams = extraParamsFromState.Concat(extraParamsFromCredetial).ToDictionary();
+
                             if (action == 1)
-                                return await CreateWithNewNewAccountAsync(loginId, sessionId, data,
-                                    redirectUri,
+                                return await CreateWithNewNewAccountAsync(loginId, sessionId, data, extraParams,
                                     onSuccess, alreadyExists, lookupCredentialNotFound, alreadyRedeemed,
                                     onAlreadyInUse, onAlreadyInUse);
 
                             return await LookupCredentialMappingAsync(loginId, sessionId,
-                                redirectUri,
                                 onSuccess, alreadyExists, () => credentialNotInSystem(loginId), onNotConfigured);
                         },
                         (why) => invalidToken(why).ToTask(),
@@ -132,28 +132,22 @@ namespace EastFive.Security.SessionServer
             Func<string, T> systemOffline,
             Func<string, T> onNotConfigured)
         {
-            return await EastFive.Web.Configuration.Settings.GetUri(
-                EastFive.Security.SessionServer.Configuration.AppSettings.LandingPage,
-                async (redirectUri) =>
-                {
                     var loginProvider = await this.context.LoginProvider;
                     var result = await await AuthenticateCredentialsAsync(method, token,
-                        async (loginId) =>
+                        async (loginId, extraParams) =>
                         {
+                            var refreshToken = SecureGuid.Generate().ToString("N"); // TODO: Store this
                             return await LookupCredentialMappingAsync(loginId, sessionId,
-                                redirectUri,
-                                onSuccess, alreadyExists, lookupCredentialNotFound, onNotConfigured);
+                                    onSuccess, alreadyExists, lookupCredentialNotFound, onNotConfigured);
                         },
                         (why) => invalidToken(why).ToTask(),
                         () => authIdNotFound().ToTask(),
                         (why) => systemOffline(why).ToTask());
                     return result;
-                },
-                (why) => onNotConfigured(why).ToTask());
         }
 
         private async Task<TResult> CreateWithNewNewAccountAsync<TResult>(Guid loginId, Guid sessionId,
-            byte [] data, Uri redirectUri,
+            byte [] data, IDictionary<string, string> extraParamsFromCall,
             CreateSessionSuccessDelegate<TResult> onSuccess,
             CreateSessionAlreadyExistsDelegate<TResult> alreadyExists,
             Func<TResult> lookupCredentialNotFound,
@@ -167,23 +161,26 @@ namespace EastFive.Security.SessionServer
                 async (actorId) =>
                 {
                     var refreshToken = EastFive.Security.SecureGuid.Generate().ToString("N");
+                    var extraParamsFromInvite = new Dictionary<string, string>(); // TODO: Get this from the invite redemptions
+
 
                     var resultCreated = await await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, actorId,
                         async () =>
                         {
+                            var extraParams = extraParamsFromCall.Concat(extraParamsFromInvite).ToDictionary();
                             var resultFound = await this.context.Claims.FindByAccountIdAsync(actorId,
                                 (claims) =>
                                 {
                                     var jwtToken = GenerateToken(sessionId, actorId, claims
                                             .Select(claim => new KeyValuePair<string, string>(claim.Type, claim.Value))
                                             .ToDictionary());
-                                    return onSuccess(redirectUri, actorId, jwtToken, refreshToken);
+                                    return onSuccess(actorId, jwtToken, refreshToken, extraParams);
                                 },
                                 () =>
                                 {
                                     var claims = new Dictionary<string, string>();
                                     var jwtToken = GenerateToken(sessionId, actorId, claims);
-                                    return onSuccess(redirectUri, actorId, jwtToken, refreshToken);
+                                    return onSuccess(actorId, jwtToken, refreshToken, extraParams);
                                 });
                             return resultFound;
                         },
@@ -198,7 +195,7 @@ namespace EastFive.Security.SessionServer
         }
 
         public async Task<TResult> CreateToken<TResult>(Guid actorId, Guid sessionId, Guid actingAsActorId,
-            Func<string, TResult> onSuccess,
+            Func<string, string, TResult> onSuccess,
             Func<TResult> onNotAllowed,
             Func<TResult> onAccountNotFound,
             Func<string, TResult> onConfigurationFailure)
@@ -208,24 +205,33 @@ namespace EastFive.Security.SessionServer
                 {
                     if (actingAsActorId != superAdminActorId)
                         return onNotAllowed();
-                    var resultFindByAccount = await this.context.Claims.FindByAccountIdAsync(actorId,
-                        (claims) =>
-                        {
-                            var result = GenerateToken(sessionId, actorId, claims
-                                    .Select(claim => claim.Type.PairWithValue(claim.Value))
-                                    .ToDictionary(),
-                                (jwtToken) => onSuccess(jwtToken),
-                                (why) => onConfigurationFailure(why));
-                            return result;
-                        },
-                        onAccountNotFound);
-                    return resultFindByAccount;
+                    return await CreateToken(actorId, sessionId,
+                        onSuccess, onAccountNotFound, onConfigurationFailure);
                 },
                 (why) => onConfigurationFailure(why).ToTask());
         }
 
+        public async Task<TResult> CreateToken<TResult>(Guid actorId, Guid sessionId,
+            Func<string, string, TResult> onSuccess,
+            Func<TResult> onAccountNotFound,
+            Func<string, TResult> onConfigurationFailure)
+        {
+            var resultFindByAccount = await this.context.Claims.FindByAccountIdAsync(actorId,
+                        (claims) =>
+                        {
+                            var refreshToken = SecureGuid.Generate().ToString("N");
+                            var result = GenerateToken(sessionId, actorId, claims
+                                    .Select(claim => claim.Type.PairWithValue(claim.Value))
+                                    .ToDictionary(),
+                                (jwtToken) => onSuccess(jwtToken, refreshToken),
+                                (why) => onConfigurationFailure(why));
+                            return result;
+                        },
+                        onAccountNotFound);
+            return resultFindByAccount;
+        }
+
         public async Task<TResult> LookupCredentialMappingAsync<TResult>(Guid loginId, Guid sessionId,
-            Uri redirectUri,
             CreateSessionSuccessDelegate<TResult> onSuccess,
             CreateSessionAlreadyExistsDelegate<TResult> alreadyExists,
             Func<TResult> credentialNotInSystem,
@@ -235,6 +241,7 @@ namespace EastFive.Security.SessionServer
             var resultLookup = await await dataContext.CredentialMappings.LookupCredentialMappingAsync(loginId,
                 async (actorId) =>
                 {
+                    var extraParams = new Dictionary<string, string>();
                     var resultFindByAccount = await await this.context.Claims.FindByAccountIdAsync(actorId,
                         async (claims) =>
                         {
@@ -245,7 +252,7 @@ namespace EastFive.Security.SessionServer
                                     var result = GenerateToken(sessionId, actorId, claims
                                             .Select(claim => new KeyValuePair<string, string>(claim.Type, claim.Value))
                                             .ToDictionary(),
-                                            (jwtToken) => onSuccess(redirectUri, actorId, jwtToken, refreshToken),
+                                            (jwtToken) => onSuccess(actorId, jwtToken, refreshToken, extraParams),
                                             (why) => onConfigurationFailure(why));
                                     return result;
                                 },
@@ -260,7 +267,7 @@ namespace EastFive.Security.SessionServer
                                 {
                                     return GenerateToken(sessionId, actorId,
                                         new Dictionary<string, string>(),
-                                        (jwtToken) => onSuccess(redirectUri, actorId, jwtToken, refreshToken),
+                                        (jwtToken) => onSuccess(actorId, jwtToken, refreshToken, extraParams),
                                         (why) => onConfigurationFailure(why));
                                 },
                                 () => alreadyExists());
@@ -289,7 +296,7 @@ namespace EastFive.Security.SessionServer
             return resultFound;
         }
 
-        public delegate T AuthenticateSuccessDelegate<T>(Guid authorizationId, string token, string refreshToken);
+        public delegate T AuthenticateSuccessDelegate<T>(Guid authorizationId, string token, string refreshToken, IDictionary<string, string> extraParams);
         public delegate T AuthenticateAlreadyAuthenticatedDelegate<T>();
         public delegate T AuthenticateNotFoundDelegate<T>(string message);
         public async Task<T> AuthenticateAsync<T>(Guid sessionId,
@@ -302,7 +309,7 @@ namespace EastFive.Security.SessionServer
             Func<string, T> systemOffline)
         {
             var result = await await AuthenticateCredentialsAsync(credentialValidationMethod, token,
-                async (authorizationId) =>
+                async (authorizationId, extraParams) =>
                 {
                     var updateAuthResult = await this.dataContext.Sessions.UpdateAuthentication<T>(sessionId,
                         async (authId, saveAuthId) =>
@@ -314,7 +321,7 @@ namespace EastFive.Security.SessionServer
 
                             var claims = new Dictionary<string, string>(); // TODO: load these
                             return GenerateToken(sessionId, authorizationId, claims,
-                                jwtToken => onSuccess.Invoke(authorizationId, jwtToken, string.Empty),
+                                jwtToken => onSuccess.Invoke(authorizationId, jwtToken, string.Empty, extraParams),
                                 (why) => systemOffline(why));
                         },
                         () => onNotFound("Error updating authentication"));
@@ -328,16 +335,16 @@ namespace EastFive.Security.SessionServer
 
         private async Task<T> AuthenticateCredentialsAsync<T>(
             CredentialValidationMethodTypes method, string token,
-            Func<Guid, T> onSuccess, 
+            Func<Guid, IDictionary<string, string>, T> onSuccess, 
             Func<string, T> onInvalidCredential,
             Func<T> onAuthIdNotFound,
             Func<string, T> systemUnavailable)
         {
             var provider = await this.context.GetCredentialProvider(method);
             return await provider.RedeemTokenAsync(token,
-                (authorizationId) =>
+                (authorizationId, extraParams) =>
                 {
-                    return onSuccess(authorizationId);
+                    return onSuccess(authorizationId, extraParams);
                 },
                 (why) => onInvalidCredential(why),
                 () => onAuthIdNotFound(),

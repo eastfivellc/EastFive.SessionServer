@@ -1,5 +1,6 @@
 ﻿using BlackBarLabs.Extensions;
 using System;
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -15,7 +16,7 @@ namespace EastFive.Security.CredentialProvider.Token
         }
 
         public Task<TResult> RedeemTokenAsync<TResult>(string accessToken,
-            Func<Guid, TResult> onSuccess,
+            Func<Guid, IDictionary<string, string>, TResult> onSuccess,
             Func<string, TResult> invalidCredentials, Func<TResult> onAuthIdNotFound, Func<string, TResult> couldNotConnect)
         {
             return this.dataContext.CredentialMappings.FindTokenCredentialByTokenAsync(Guid.Parse(accessToken),
@@ -24,7 +25,7 @@ namespace EastFive.Security.CredentialProvider.Token
                     if (!loginId.HasValue)
                         return invalidCredentials("Token is not connected to an account");
 
-                    return onSuccess(loginId.Value);
+                    return onSuccess(loginId.Value, null);
                 },
                 () => invalidCredentials("Token does not exist"));
         }

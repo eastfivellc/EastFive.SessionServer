@@ -24,9 +24,9 @@ namespace EastFive.Security.SessionServer.Api
             
             //Get the session and Extrude it's information
             SessionServer.Sessions.CreateSessionSuccessDelegate<HttpResponseMessage> createSessionCallback =
-                (addr, authorizationId, token, refreshToken) =>
+                (authorizationId, token, refreshToken, extraParams) =>
                 {
-                    responseSession.AuthorizationId = authorizationId;
+                    responseSession.AuthorizationId = authorizationId.Value;
                     responseSession.SessionHeader = new Resources.AuthHeaderProps { Name = "Authorization", Value = "Bearer " + token };
                     responseSession.RefreshToken = refreshToken;
                     return request.CreateResponse(HttpStatusCode.Created, responseSession);
@@ -70,7 +70,7 @@ namespace EastFive.Security.SessionServer.Api
             // Can't update a session that does not exist
             var session = await context.Sessions.AuthenticateAsync(resource.Id,
                 resource.CredentialToken.Method, resource.CredentialToken.Token,
-                (authId, token, refreshToken) =>
+                (authId, token, refreshToken, extraParams) =>
                 {
                     resource.AuthorizationId = authId;
                     resource.SessionHeader = new Resources.AuthHeaderProps { Name = "Authorization", Value = token };

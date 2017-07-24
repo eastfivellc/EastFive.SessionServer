@@ -2,13 +2,14 @@
 using System.Threading.Tasks;
 using Facebook;
 using System.Security.Claims;
+using System.Collections.Generic;
 
 namespace EastFive.Security.CredentialProvider.Facebook
 {
     public class FacebookCredentialProvider : IProvideCredentials
     {
         public async Task<TResult> RedeemTokenAsync<TResult>(string accessToken, 
-            Func<Guid, TResult> success,
+            Func<Guid, IDictionary<string, string>, TResult> success,
             Func<string, TResult> invalidCredentials,
             Func<TResult> onAuthIdNotFound,
             Func<string, TResult> couldNotConnect)

@@ -12,6 +12,7 @@ using BlackBarLabs.Api;
 using EastFive.Api.Services;
 using System.Xml;
 using BlackBarLabs.Extensions;
+using EastFive.IdentityServer;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
@@ -52,13 +53,14 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             var response = await context.Sessions.CreateAsync(Guid.NewGuid(),
                 CredentialValidationMethodTypes.SAML,
                 samlResponse,
-                (redirectUrlBase, authorizationId, token, refreshToken) =>
+                (authorizationId, token, refreshToken, extraParams) =>
                 {
-                    var redirectUrl = redirectUrlBase
-                                .SetQueryParam("authoriationId", authorizationId.ToString("N"))
-                                .SetQueryParam("token", token)
-                                .SetQueryParam("refreshToken", refreshToken);
-                    var redirectResponse = Redirect(redirectUrl);
+                    var config = Library.configurationManager;
+                    var redirectResponse = config.GetRedirectUri<IHttpActionResult>(CredentialValidationMethodTypes.SAML,
+                        authorizationId, token, refreshToken, extraParams,
+                        (redirectUrl) => Redirect(redirectUrl),
+                        (paramName, why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult(),
+                        (why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult());
                     return redirectResponse;
                 },
                 () => this.Request.CreateResponse(HttpStatusCode.Conflict)

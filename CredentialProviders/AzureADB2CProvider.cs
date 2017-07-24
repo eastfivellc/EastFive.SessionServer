@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -21,7 +22,7 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
         }
 
         public async Task<TResult> RedeemTokenAsync<TResult>(string token, 
-            Func<Guid, TResult> success,
+            Func<Guid, IDictionary<string, string>, TResult> success,
             Func<string, TResult> invalidCredentials,
             Func<TResult> onAuthIdNotFound, 
             Func<string, TResult> couldNotConnect)
@@ -40,7 +41,8 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
                     if(!Guid.TryParse(authClaims[0].Value, out authId))
                         return invalidCredentials("User has invalid auth claim for this system");
 
-                    return success(authId);
+                    // TODO: Load extra params from token claims
+                    return success(authId, new Dictionary<string, string>());
                 },
                 invalidCredentials);
         }

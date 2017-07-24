@@ -1,5 +1,6 @@
 ﻿using BlackBarLabs.Extensions;
 using System;
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -8,7 +9,7 @@ namespace EastFive.Security.CredentialProvider.Voucher
     public class VoucherCredentialProvider : IProvideCredentials
     {
         public Task<TResult> RedeemTokenAsync<TResult>(string accessToken,
-            Func<Guid, TResult> success,
+            Func<Guid, IDictionary<string, string>, TResult> success,
             Func<string, TResult> invalidCredentials, Func<TResult> onAuthIdNotFound, Func<string, TResult> couldNotConnect)
         {
             //var trustedProvider = Utilities.GetTrustedProviderId();
@@ -19,7 +20,7 @@ namespace EastFive.Security.CredentialProvider.Voucher
             return Utilities.ValidateToken(accessToken,
                 (authId) =>
                 {
-                    return success(authId);
+                    return success(authId, null);
                 },
                 (errorMessage) => invalidCredentials(errorMessage),
                 (errorMessage) => invalidCredentials(errorMessage),

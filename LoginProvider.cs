@@ -16,6 +16,7 @@ using System.Web.Http;
 using BlackBarLabs;
 using BlackBarLabs.Linq;
 using EastFive.Api.Services;
+using System.Collections.Generic;
 
 namespace EastFive.Security.LoginProvider.AzureADB2C
 {
@@ -99,7 +100,7 @@ namespace EastFive.Security.LoginProvider.AzureADB2C
         }
 
         public TResult ParseState<TResult>(string state,
-            Func<Uri, byte, byte[], TResult> onSuccess,
+            Func<byte, byte[], IDictionary<string, string>, TResult> onSuccess,
             Func<string, TResult> invalidState)
         {
             var bytes = Convert.FromBase64String(state);
@@ -112,7 +113,10 @@ namespace EastFive.Security.LoginProvider.AzureADB2C
                 return invalidState($"Invalid value for redirect url:[{addr}]");
             var mode = bytes.Skip(urlLength + 2).First();
             var data = bytes.Skip(urlLength + 3).ToArray();
-            return onSuccess(url, mode, data);
+            return onSuccess(mode, data, new Dictionary<string, string>()
+            {
+                {  SessionServer.Configuration.AuthorizationParameters.RedirectUri, url.AbsoluteUri }
+            });
         }
 
         public async Task<TResult> ValidateToken<TResult>(string idToken, 
