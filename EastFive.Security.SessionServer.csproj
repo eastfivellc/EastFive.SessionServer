@@ -168,6 +168,7 @@
     <Compile Include="Api\Controllers\BaseController.cs" />
     <Compile Include="Api\Controllers\ActAsUserController.cs" />
     <Compile Include="Api\Controllers\SamlCredentialController.cs" />
+    <Compile Include="Api\Controllers\PingResponseController.cs" />
     <Compile Include="Api\Controllers\SAMLRedirectController.cs" />
     <Compile Include="Api\Controllers\AppleAppSiteAssociationController.cs" />
     <Compile Include="Api\Controllers\TokenController.cs" />
@@ -195,6 +196,7 @@
     <Compile Include="Configuration\AuthorizationParameters.cs" />
     <Compile Include="Configuration\ClaimsDefinitions.cs" />
     <Compile Include="Configuration\EmailTemplateDefinitions.cs" />
+    <Compile Include="CredentialProviders\PingProvider.cs" />
     <Compile Include="CredentialProviders\SAMLProvider.cs" />
     <Compile Include="CredentialProviders\TokenCredentialProvider.cs" />
     <Compile Include="IConfigureIdentityServer.cs" />

@@ -146,10 +146,7 @@ namespace EastFive.Security.SessionServer
             Func<string, TResult> onFailure)
         {
             // TODO: Verify that the logged in user is the admin
-            var tokenBytes = SHA512.Create().ComputeHash(System.Text.Encoding.UTF8.GetBytes(nameId));
-            var token = new Guid(tokenBytes.Take(16).ToArray());
-            var loginId = Guid.NewGuid(); // This creates a "user" in the "Token system"
-
+            
             // TODO: Check other error conditions
             var result = await this.CreateSamlCredentialAsync(samlCredentialId, actorId, nameId,
                 onSuccess, onCredentialAlreadyExist, onActorAlreadyUsingUserId, onRelationshipAlreadyExist, onFailure);
@@ -166,8 +163,8 @@ namespace EastFive.Security.SessionServer
         {
             // TODO: Verify that the logged in user is the admin
             var tokenBytes = SHA512.Create().ComputeHash(System.Text.Encoding.UTF8.GetBytes(nameId));
-            var token = new Guid(tokenBytes.Take(16).ToArray());
-            var loginId = Guid.NewGuid(); // This creates a "user" in the "Token system"
+            var loginId = new Guid(tokenBytes.Take(16).ToArray());
+            var token = Guid.NewGuid(); // This creates a "user" in the "Token system"
 
             // TODO: Check other error conditions
             var result = await this.dataContext.CredentialMappings.CreateCredentialMappingAsync(samlCredentialId,

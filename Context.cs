@@ -61,6 +61,9 @@ namespace EastFive.Security.SessionServer
                 var newProvider = default(IProvideCredentials);
                 switch (method)
                 {
+                    case CredentialValidationMethodTypes.Ping:
+                        newProvider = new EastFive.Security.SessionServer.CredentialProvider.Ping.PingProvider(this.dataContext);
+                        break;
                     case CredentialValidationMethodTypes.SAML:
                         newProvider = new EastFive.Security.SessionServer.CredentialProvider.SAML.SAMLProvider(this.dataContext);
                         break;

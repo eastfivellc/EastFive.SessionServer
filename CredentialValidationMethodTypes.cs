@@ -6,5 +6,6 @@
         Password,
         SAML,
         Token,
+        Ping,
     }
 }

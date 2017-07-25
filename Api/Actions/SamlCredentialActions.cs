@@ -19,7 +19,7 @@ namespace EastFive.Security.SessionServer.Api
         public static async Task<HttpResponseMessage> CreateAsync(this Resources.SamlCredential credential,
             HttpRequestMessage request, UrlHelper url)
         {
-            return await request.GetActorIdClaimsAsync(ClaimsDefinitions.AccountIdClaimType,
+            return await request.GetActorIdClaimsAsync(
                 async (performingActorId, claims) =>
                 {
                     var response = await CreateSamlCredentialAsync(credential, request, url, performingActorId, claims);
