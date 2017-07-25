@@ -45,11 +45,11 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 (action, data, extraParams) =>
                 {
                     if (!extraParams.ContainsKey(SessionServer.Configuration.AuthorizationParameters.RedirectUri))
-                        return Request.CreateResponse(HttpStatusCode.Conflict).AddReason("Redirect URL not in response paramters").ToActionResult();
+                        return Request.CreateResponse(HttpStatusCode.Conflict).AddReason("Redirect URL not in response parameters").ToActionResult();
                     var redirectUriString = extraParams[SessionServer.Configuration.AuthorizationParameters.RedirectUri];
                     Uri redirect_uri;
                     if (!Uri.TryCreate(redirectUriString, UriKind.Absolute, out redirect_uri))
-                        return Request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Invalid redirect URL in response paramters: {redirectUriString}").ToActionResult();
+                        return Request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Invalid redirect URL in response parameters: {redirectUriString}").ToActionResult();
                     var loginUrl = loginProvider.GetLoginUrl(redirect_uri.AbsoluteUri, 0, new byte[] { }, callbackUrl);
                     return Redirect(loginUrl);
                 },

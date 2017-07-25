@@ -111,7 +111,9 @@ namespace EastFive.Security.SessionServer
                                     onAlreadyInUse, onAlreadyInUse);
 
                             return await LookupCredentialMappingAsync(loginId, sessionId,
-                                onSuccess, alreadyExists, () => credentialNotInSystem(loginId), onNotConfigured);
+                                (authId, jwtToken, refreshToken, extraParamsPlus) => onSuccess(authId, jwtToken, refreshToken,
+                                    extraParams.Concat(extraParamsPlus).ToDictionary()),
+                                alreadyExists, () => credentialNotInSystem(loginId), onNotConfigured);
                         },
                         (why) => invalidToken(why).ToTask(),
                         () => authIdNotFound().ToTask(),
