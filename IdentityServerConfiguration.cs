@@ -60,9 +60,10 @@ namespace EastFive.Security.SessionServer
                     return onInvalidParameter("REDIRECT", $"BAD URL in redirect call:{redirectUriString}");
                 var redirectUrl = redirectUri
                         .SetQueryParam("authoriationId", authorizationId.Value.ToString("N"))
+                        .SetQueryParam("authorizationId", authorizationId.Value.ToString("N"))
                         .SetQueryParam("token", token)
                         .SetQueryParam("refreshToken", refreshToken);
-                return onSuccess(redirectUri);
+                return onSuccess(redirectUrl);
             }
 
             return EastFive.Web.Configuration.Settings.GetUri(
@@ -71,6 +72,7 @@ namespace EastFive.Security.SessionServer
                 {
                     var redirectUrl = redirectUri
                         .SetQueryParam("authoriationId", authorizationId.Value.ToString("N"))
+                        .SetQueryParam("authorizationId", authorizationId.Value.ToString("N"))
                         .SetQueryParam("token", token)
                         .SetQueryParam("refreshToken", refreshToken);
                     return onSuccess(redirectUri);
