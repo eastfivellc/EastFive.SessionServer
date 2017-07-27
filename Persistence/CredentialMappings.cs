@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using BlackBarLabs.Collections.Async;
 using BlackBarLabs.Persistence.Azure;
 using BlackBarLabs.Persistence.Azure.StorageTables;
 using BlackBarLabs.Extensions;

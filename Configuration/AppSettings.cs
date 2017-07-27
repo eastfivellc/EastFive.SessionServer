@@ -17,7 +17,8 @@ namespace EastFive.Security.SessionServer.Configuration
         public const string AADB2CSignupConfiguration = "EastFive.Security.LoginProvider.AzureADB2C.SignupEndpoint";
 
         public const string LandingPage = "EastFive.Security.SessionServer.RouteDefinitions.LandingPage";
-
+        public const string AppleAppSiteAssociationId = "EastFive.Security.SessionServer.AppleAppSiteAssociation.AppId";
+        
         public static class TokenCredential
         {
             /// <summary>

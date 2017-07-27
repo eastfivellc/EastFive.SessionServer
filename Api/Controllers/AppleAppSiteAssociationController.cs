@@ -12,22 +12,32 @@ namespace EastFive.Security.SessionServer.Api.Controllers
     {
         public IHttpActionResult Get()
         {
-            var content = new
-            {
-                applinks = new
+            var response = EastFive.Web.Configuration.Settings.GetString(
+                EastFive.Security.SessionServer.Configuration.AppSettings.AppleAppSiteAssociationId,
+                (appId) =>
                 {
-                    apps = new string[] { },
-                    details = new object[]
+                    var content = new
                     {
-                        new
+                        applinks = new
                         {
-                            appID = "W6R55DKE7X.com.eastfive.orderowl",
-                            paths = new string [] { "*" },
+                            apps = new string[] { },
+                            details = new object[]
+                            {
+                                new
+                                {
+                                    appID = appId,
+                                    paths = new string [] { "*" },
+                                }
+                            }
                         }
-                    }
-                }
-            };
-            return this.ActionResult(() => this.Request.CreateResponse(HttpStatusCode.OK, content, Configuration.Formatters.JsonFormatter).ToTask());
+                    };
+                    return this.Request.CreateResponse(HttpStatusCode.OK, 
+                        content, Configuration.Formatters.JsonFormatter);
+                },
+                (why) => this.Request.CreateResponse(HttpStatusCode.NotFound)
+                    .AddReason(why));
+            
+            return this.ActionResult(() => response.ToTask());
         }
     }
 }
