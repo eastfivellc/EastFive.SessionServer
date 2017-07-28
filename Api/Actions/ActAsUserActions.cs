@@ -94,6 +94,7 @@ namespace EastFive.Security.SessionServer.Api
         {
             var context = request.GetSessionServerContext();
             var result = await context.Sessions.LookupCredentialMappingAsync(loginId, Guid.NewGuid(),
+                new Dictionary<string, string>(),
                 (authorizationId, tken, refreshToken, extraParams) =>
                 {
                     return Library.configurationManager.GetRedirectUri(CredentialValidationMethodTypes.Password,

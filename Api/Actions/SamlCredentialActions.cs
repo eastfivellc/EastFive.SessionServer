@@ -10,7 +10,7 @@ using BlackBarLabs;
 using BlackBarLabs.Api;
 using BlackBarLabs.Extensions;
 using EastFive.Api.Services;
-using EastFive.IdentityServer.Configuration;
+using EastFive.Security.SessionServer.Configuration;
 
 namespace EastFive.Security.SessionServer.Api
 {

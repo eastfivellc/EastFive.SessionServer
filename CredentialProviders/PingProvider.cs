@@ -33,7 +33,7 @@ namespace EastFive.Security.SessionServer.CredentialProvider.Ping
             return $"https://sso.connect.pingidentity.com/sso/TXS/2.0/1/{pingConnectToken}";
             //return "https://sso.connect.pingidentity.com/sso/TXS/2.0/2/" + pingConnectToken;
         }
-        
+
         public async Task<TResult> RedeemTokenAsync<TResult>(string token,
             Func<Guid, IDictionary<string, string>, TResult> onSuccess,
             Func<string, TResult> invalidCredentials,
@@ -49,25 +49,27 @@ namespace EastFive.Security.SessionServer.CredentialProvider.Ping
                 var restAuthUsername = "c0b42256-3d73-43a9-9a3b-d5b1d47aa08a";
                 var credentials = Encoding.ASCII.GetBytes($"{restAuthUsername}:{restApiKey}");
                 httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(credentials));
-
                 var tokenUrl = GetTokenServiceUrl(tokenId);
                 var request = new HttpRequestMessage(
                     new HttpMethod("GET"), tokenUrl);
-
                 request.Headers.Add("Cookie", "agentid=" + agentId);
                 //request.Content.Headers.ContentType = new MediaTypeHeaderValue("text/plain;charset=utf-8");
-
-                var response =
-                    await httpClient.SendAsync(request);
+                var response = await httpClient.SendAsync(request);
                 var content = await response.Content.ReadAsStringAsync();
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
-                    dynamic stuff = Newtonsoft.Json.JsonConvert.DeserializeObject(content);
-                    string subject = stuff.subject;
+                    dynamic stuff = null;
+                    stuff = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(content);
+                    string subject = (string)stuff["pingone.subject"];
+                    //string subject = stuff.pingone.subject;
                     var hash = SHA512.Create().ComputeHash(System.Text.Encoding.UTF8.GetBytes(subject));
                     var id = new Guid(hash.Take(16).ToArray());
-
-                    return onSuccess(id, new Dictionary<string, string>()); // TODO: Read extra params
+                    var extraParams = new Dictionary<string, string>();
+                    foreach (var item in stuff)
+                    {
+                        extraParams.Add(item.Key.ToString(), item.Value.ToString());
+                    }
+                    return onSuccess(id, extraParams);
                 }
                 else
                 {

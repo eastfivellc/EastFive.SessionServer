@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EastFive.IdentityServer.Configuration
+namespace EastFive.Security.SessionServer.Configuration
 {
     public static class ClaimsDefinitions
     {

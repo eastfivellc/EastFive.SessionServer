@@ -13,7 +13,6 @@ using BlackBarLabs.Api;
 using EastFive.Api.Services;
 using System.Xml;
 using BlackBarLabs.Extensions;
-using EastFive.IdentityServer;
 using System.Text;
 using System.IO;
 using System.Net.Http.Headers;

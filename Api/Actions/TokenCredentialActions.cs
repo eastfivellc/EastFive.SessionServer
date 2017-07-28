@@ -13,6 +13,7 @@ using System.Web.Http.Routing;
 using BlackBarLabs;
 using EastFive.Api.Services;
 using System.Configuration;
+using System.Collections.Generic;
 
 namespace EastFive.Security.SessionServer.Api
 {
@@ -49,15 +50,23 @@ namespace EastFive.Security.SessionServer.Api
             return await context.Credentials.GetTokenCredentialByTokenAsync(token,
                 (sessionId, actorId, jwtToken, refreshToken) =>
                 {
-                    var landingPage = Web.Configuration.Settings.Get(SessionServer.Configuration.AppSettings.LandingPage);
-                    var redirectUrl = new Uri(landingPage)
-                        .SetQueryParam("sessionId", sessionId.ToString("N"))
-                        .SetQueryParam("actorId", actorId.ToString("N"))
-                        .SetQueryParam("token", jwtToken)
-                        .SetQueryParam("refreshToken", refreshToken);
-                    var response = request.CreateResponse(HttpStatusCode.Redirect);
-                    response.Headers.Location = redirectUrl;
-                    return response;
+                    var redirectResponseMessage = Library.configurationManager.GetRedirectUri(CredentialValidationMethodTypes.Token,
+                        actorId, jwtToken, refreshToken, new Dictionary<string, string>(),
+                        (redirectUrl) =>
+                        {
+                            var response = request.CreateResponse(HttpStatusCode.Redirect);
+                            response.Headers.Location = redirectUrl;
+                            return response;
+                        },
+                        (paramName, reason) => request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Parameter[{paramName}]:{reason}"),
+                        (why) => request.CreateResponse(HttpStatusCode.Conflict).AddReason(why));
+                    return redirectResponseMessage;
+                    //var landingPage = Web.Configuration.Settings.Get(SessionServer.Configuration.AppSettings.LandingPage);
+                    //var redirectUrl = new Uri(landingPage)
+                    //    .SetQueryParam("sessionId", sessionId.ToString("N"))
+                    //    .SetQueryParam("actorId", actorId.ToString("N"))
+                    //    .SetQueryParam("token", jwtToken)
+                    //    .SetQueryParam("refreshToken", refreshToken);
                 },
                 () => request.CreateResponse(HttpStatusCode.NotFound));
         }

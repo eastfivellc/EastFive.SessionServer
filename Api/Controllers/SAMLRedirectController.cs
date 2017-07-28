@@ -12,7 +12,6 @@ using BlackBarLabs.Api;
 using EastFive.Api.Services;
 using System.Xml;
 using BlackBarLabs.Extensions;
-using EastFive.IdentityServer;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {

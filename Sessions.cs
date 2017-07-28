@@ -110,7 +110,7 @@ namespace EastFive.Security.SessionServer
                                     onSuccess, alreadyExists, lookupCredentialNotFound, alreadyRedeemed,
                                     onAlreadyInUse, onAlreadyInUse);
 
-                            return await LookupCredentialMappingAsync(loginId, sessionId,
+                            return await LookupCredentialMappingAsync(loginId, sessionId, new Dictionary<string, string>(),
                                 (authId, jwtToken, refreshToken, extraParamsPlus) => onSuccess(authId, jwtToken, refreshToken,
                                     extraParams.Concat(extraParamsPlus).ToDictionary()),
                                 alreadyExists, () => credentialNotInSystem(loginId), onNotConfigured);
@@ -134,18 +134,18 @@ namespace EastFive.Security.SessionServer
             Func<string, T> systemOffline,
             Func<string, T> onNotConfigured)
         {
-                    var loginProvider = await this.context.LoginProvider;
-                    var result = await await AuthenticateCredentialsAsync(method, token,
-                        async (loginId, extraParams) =>
-                        {
-                            var refreshToken = SecureGuid.Generate().ToString("N"); // TODO: Store this
-                            return await LookupCredentialMappingAsync(loginId, sessionId,
-                                    onSuccess, alreadyExists, lookupCredentialNotFound, onNotConfigured);
-                        },
-                        (why) => invalidToken(why).ToTask(),
-                        () => authIdNotFound().ToTask(),
-                        (why) => systemOffline(why).ToTask());
-                    return result;
+            var loginProvider = await this.context.LoginProvider;
+            var result = await await AuthenticateCredentialsAsync(method, token,
+                async (loginId, extraParams) =>
+                {
+                    var refreshToken = SecureGuid.Generate().ToString("N"); // TODO: Store this
+                    return await LookupCredentialMappingAsync(loginId, sessionId, extraParams,
+                        onSuccess, alreadyExists, lookupCredentialNotFound, onNotConfigured);
+                },
+                (why) => invalidToken(why).ToTask(),
+                () => authIdNotFound().ToTask(),
+                (why) => systemOffline(why).ToTask());
+            return result;
         }
 
         private async Task<TResult> CreateWithNewNewAccountAsync<TResult>(Guid loginId, Guid sessionId,
@@ -233,7 +233,8 @@ namespace EastFive.Security.SessionServer
             return resultFindByAccount;
         }
 
-        public async Task<TResult> LookupCredentialMappingAsync<TResult>(Guid loginId, Guid sessionId,
+        public async Task<TResult> LookupCredentialMappingAsync<TResult>(Guid loginId, Guid sessionId, 
+            IDictionary<string, string> extraParams,
             CreateSessionSuccessDelegate<TResult> onSuccess,
             CreateSessionAlreadyExistsDelegate<TResult> alreadyExists,
             Func<TResult> credentialNotInSystem,
@@ -243,7 +244,6 @@ namespace EastFive.Security.SessionServer
             var resultLookup = await await dataContext.CredentialMappings.LookupCredentialMappingAsync(loginId,
                 async (actorId) =>
                 {
-                    var extraParams = new Dictionary<string, string>();
                     var resultFindByAccount = await await this.context.Claims.FindByAccountIdAsync(actorId,
                         async (claims) =>
                         {

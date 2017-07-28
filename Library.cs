@@ -13,7 +13,6 @@ using BlackBarLabs;
 using EastFive.Api.Services;
 using BlackBarLabs.Api.Resources;
 using System.Web.Http.Routing;
-using EastFive.IdentityServer;
 
 namespace EastFive.Security.SessionServer
 {
