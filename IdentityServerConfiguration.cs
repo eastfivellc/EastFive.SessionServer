@@ -44,7 +44,7 @@ namespace EastFive.Security.SessionServer
             return urlHelper.GetWebId<TActorController>(actorId);
         }
 
-        public virtual TResult GetRedirectUri<TResult>(CredentialValidationMethodTypes validationType,
+        public virtual Task<TResult> GetRedirectUriAsync<TResult>(CredentialValidationMethodTypes validationType,
                 Guid? authorizationId,
                 string token, string refreshToken,
                 IDictionary<string, string> authParams,
@@ -57,13 +57,13 @@ namespace EastFive.Security.SessionServer
                 Uri redirectUri;
                 var redirectUriString = authParams[Configuration.AuthorizationParameters.RedirectUri];
                 if (!Uri.TryCreate(redirectUriString, UriKind.Absolute, out redirectUri))
-                    return onInvalidParameter("REDIRECT", $"BAD URL in redirect call:{redirectUriString}");
+                    return onInvalidParameter("REDIRECT", $"BAD URL in redirect call:{redirectUriString}").ToTask();
                 var redirectUrl = redirectUri
                         .SetQueryParam("authoriationId", authorizationId.Value.ToString("N"))
                         .SetQueryParam("authorizationId", authorizationId.Value.ToString("N"))
                         .SetQueryParam("token", token)
                         .SetQueryParam("refreshToken", refreshToken);
-                return onSuccess(redirectUrl);
+                return onSuccess(redirectUrl).ToTask();
             }
 
             return EastFive.Web.Configuration.Settings.GetUri(
@@ -77,7 +77,7 @@ namespace EastFive.Security.SessionServer
                         .SetQueryParam("refreshToken", refreshToken);
                     return onSuccess(redirectUri);
                 },
-                (why) => onFailure(why));
+                (why) => onFailure(why)).ToTask();
         }
         
     }

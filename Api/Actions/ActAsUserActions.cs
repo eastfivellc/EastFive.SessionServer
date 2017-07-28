@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Net;
 using System.Threading.Tasks;
 using System.Net.Http;
@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Web.Http.Results;
 using BlackBarLabs;
+using BlackBarLabs.Extensions;
 
 namespace EastFive.Security.SessionServer.Api
 {
@@ -93,11 +94,11 @@ namespace EastFive.Security.SessionServer.Api
             Func<string, RedirectResult> redirect)
         {
             var context = request.GetSessionServerContext();
-            var result = await context.Sessions.LookupCredentialMappingAsync(loginId, Guid.NewGuid(),
+            var result = await await context.Sessions.LookupCredentialMappingAsync(loginId, Guid.NewGuid(),
                 new Dictionary<string, string>(),
-                (authorizationId, tken, refreshToken, extraParams) =>
+                async (authorizationId, tken, refreshToken, extraParams) =>
                 {
-                    return Library.configurationManager.GetRedirectUri(CredentialValidationMethodTypes.Password,
+                    return await Library.configurationManager.GetRedirectUriAsync(CredentialValidationMethodTypes.Password,
                         authorizationId, tken, refreshToken, extraParams,
                         (redirectUrl) =>
                         {
@@ -119,17 +120,18 @@ namespace EastFive.Security.SessionServer.Api
                 {
                     // Can't happen
                     var response = request.CreateResponse(HttpStatusCode.Conflict);
-                    return response;
+                    return response.ToTask();
                 },
                 () =>
                 {
                     return request.CreateResponse(HttpStatusCode.NotFound)
-                        .AddReason($"The provided loginId [{loginId}] was not found");
+                        .AddReason($"The provided loginId [{loginId}] was not found")
+                        .ToTask();
                 },
                 (why) =>
                 {
                     return request.CreateResponse(HttpStatusCode.ServiceUnavailable)
-                        .AddReason(why);
+                        .AddReason(why).ToTask();
                 });
             return result;
         }

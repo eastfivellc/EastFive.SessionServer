@@ -49,13 +49,13 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                             .AddReason("SAML Response not provided in form POST")
                             .ToActionResult();
             var context = Request.GetSessionServerContext();
-            var response = await context.Sessions.CreateAsync(Guid.NewGuid(),
+            var response = await await context.Sessions.CreateAsync<Task<IHttpActionResult>>(Guid.NewGuid(),
                 CredentialValidationMethodTypes.SAML,
                 samlResponse,
                 (authorizationId, token, refreshToken, extraParams) =>
                 {
                     var config = Library.configurationManager;
-                    var redirectResponse = config.GetRedirectUri<IHttpActionResult>(CredentialValidationMethodTypes.SAML,
+                    var redirectResponse = config.GetRedirectUriAsync<IHttpActionResult>(CredentialValidationMethodTypes.SAML,
                         authorizationId, token, refreshToken, extraParams,
                         (redirectUrl) => Redirect(redirectUrl),
                         (paramName, why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult(),
@@ -64,22 +64,28 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 },
                 () => this.Request.CreateResponse(HttpStatusCode.Conflict)
                             .AddReason("Already exists")
-                            .ToActionResult(),
+                            .ToActionResult()
+                            .ToTask(),
                 (why) => this.Request.CreateResponse(HttpStatusCode.BadRequest)
                             .AddReason($"Invalid token:{why}")
-                            .ToActionResult(),
+                            .ToActionResult()
+                            .ToTask(),
                 () => this.Request.CreateResponse(HttpStatusCode.Conflict)
                             .AddReason("Token does not work in this system")
-                            .ToActionResult(),
+                            .ToActionResult()
+                            .ToTask(),
                 () => this.Request.CreateResponse(HttpStatusCode.Conflict)
                             .AddReason("Token is not connected to a user in this system")
-                            .ToActionResult(),
+                            .ToActionResult()
+                            .ToTask(),
                 (why) => this.Request.CreateResponse(HttpStatusCode.BadGateway)
                             .AddReason(why)
-                            .ToActionResult(),
+                            .ToActionResult()
+                            .ToTask(),
                 (why) => this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
                             .AddReason(why)
-                            .ToActionResult());
+                            .ToActionResult()
+                            .ToTask());
 
             return response;
         }

@@ -59,12 +59,12 @@ namespace EastFive.Security.SessionServer.Api
                     response.Headers.Location = redirect;
                     return response.ToTask();
                 },
-                (actorId, extraParams) =>
+                async (actorId, extraParams) =>
                 {
-                    return context.Sessions.CreateToken(actorId, Guid.NewGuid(),
+                    return await await context.Sessions.CreateToken(actorId, Guid.NewGuid(),
                         (bearerToken, refreshToken) =>
                         {
-                            return Library.configurationManager.GetRedirectUri(CredentialValidationMethodTypes.Token,
+                            return Library.configurationManager.GetRedirectUriAsync(CredentialValidationMethodTypes.Token,
                                 actorId, bearerToken, refreshToken, extraParams,
                                 (redirectUrl) =>
                                 {
@@ -77,8 +77,11 @@ namespace EastFive.Security.SessionServer.Api
                                 (why) => request.CreateResponse(HttpStatusCode.Conflict)
                                     .AddReason(why));
                         },
-                        () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("Invite does not match an account in the system"),
-                        (why) => request.CreateResponse(HttpStatusCode.Conflict).AddReason(why));
+                        () => request.CreateResponse(HttpStatusCode.Conflict)
+                            .AddReason("Invite does not match an account in the system")
+                            .ToTask(),
+                        (why) => request.CreateResponse(HttpStatusCode.Conflict).AddReason(why)
+                            .ToTask());
                 },
                 () => request.CreateResponse(HttpStatusCode.NotFound).AddReason("Already used").ToTask(),
                 () => request.CreateResponse(HttpStatusCode.NotFound).ToTask());

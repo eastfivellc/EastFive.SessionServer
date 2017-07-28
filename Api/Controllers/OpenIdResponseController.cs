@@ -10,6 +10,7 @@ using System.Web.Http;
 using BlackBarLabs;
 using BlackBarLabs.Api;
 using EastFive.Api.Services;
+using BlackBarLabs.Extensions;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
@@ -76,7 +77,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             return onSuccess(loginUrl);
         }
 
-        private IHttpActionResult CreateResponse(Guid sessionId, Guid? authorizationId, string jwtToken, string refreshToken, IDictionary<string, string> extraParams)
+        private async Task<IHttpActionResult> CreateResponse(Guid sessionId, Guid? authorizationId, string jwtToken, string refreshToken, IDictionary<string, string> extraParams)
         {
             // Enforce a redirect parameter here since OpenIDCreates on in the state data.
             if (!extraParams.ContainsKey(SessionServer.Configuration.AuthorizationParameters.RedirectUri))
@@ -93,7 +94,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             //    .SetQueryParam("refreshToken", refreshToken);
 
             var config = Library.configurationManager;
-            var redirectResponse = config.GetRedirectUri<IHttpActionResult>(CredentialValidationMethodTypes.Password,
+            var redirectResponse = await config.GetRedirectUriAsync<IHttpActionResult>(CredentialValidationMethodTypes.Password,
                 authorizationId, jwtToken, refreshToken, extraParams,
                 (redirectUrl) => Redirect(redirectUrl),
                 (paramName, why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult(),
@@ -110,7 +111,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
 
             var context = this.Request.GetSessionServerContext();
             var sessionId = Guid.NewGuid();
-            var response = await context.Sessions.CreateAsync(sessionId,
+            var response = await await context.Sessions.CreateAsync<Task<IHttpActionResult>>(sessionId,
                 CredentialValidationMethodTypes.Password, result.id_token, result.state,
                 (authorizationId, jwtToken, refreshToken, extraParams) =>
                 {
@@ -118,34 +119,44 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 },
                 () => this.Request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason("Already exists")
-                    .ToActionResult(),
+                    .ToActionResult()
+                    .ToTask(),
                 (why) => this.Request.CreateResponse(HttpStatusCode.BadRequest)
                     .AddReason($"Invalid token:{why}")
-                    .ToActionResult(),
+                    .ToActionResult()
+                    .ToTask(),
                 (why) => this.Request.CreateResponse(HttpStatusCode.BadRequest)
                     .AddReason($"Invalid state:{why}")
-                    .ToActionResult(),
+                    .ToActionResult()
+                    .ToTask(),
                 () => this.Request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason("Token does not work in this system")
-                    .ToActionResult(),
+                    .ToActionResult()
+                    .ToTask(),
                 (loginId) => this.Request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason($"Token is for user [{loginId}] which is not connected to a user in this system")
-                    .ToActionResult(),
+                    .ToActionResult()
+                    .ToTask(),
                 () => this.Request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason("Invalid account creation link")
-                    .ToActionResult(),
+                    .ToActionResult()
+                    .ToTask(),
                 () => this.Request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason("Token has already been redeemed")
-                    .ToActionResult(),
+                    .ToActionResult()
+                    .ToTask(),
                 () => this.Request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason("The provided login credentials are already in use for another account")
-                    .ToActionResult(),
+                    .ToActionResult()
+                    .ToTask(),
                 (why) => this.Request.CreateResponse(HttpStatusCode.BadGateway)
                     .AddReason(why)
-                    .ToActionResult(),
+                    .ToActionResult()
+                    .ToTask(),
                 (why) => this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
                     .AddReason(why)
-                    .ToActionResult());
+                    .ToActionResult()
+                    .ToTask());
 
             return response;
         }

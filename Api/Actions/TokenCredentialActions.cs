@@ -47,10 +47,10 @@ namespace EastFive.Security.SessionServer.Api
             HttpRequestMessage request, UrlHelper urlHelper)
         {
             var context = request.GetSessionServerContext();
-            return await context.Credentials.GetTokenCredentialByTokenAsync(token,
+            return await await context.Credentials.GetTokenCredentialByTokenAsync(token,
                 (sessionId, actorId, jwtToken, refreshToken) =>
                 {
-                    var redirectResponseMessage = Library.configurationManager.GetRedirectUri(CredentialValidationMethodTypes.Token,
+                    var redirectResponseMessage = Library.configurationManager.GetRedirectUriAsync(CredentialValidationMethodTypes.Token,
                         actorId, jwtToken, refreshToken, new Dictionary<string, string>(),
                         (redirectUrl) =>
                         {
@@ -68,7 +68,7 @@ namespace EastFive.Security.SessionServer.Api
                     //    .SetQueryParam("token", jwtToken)
                     //    .SetQueryParam("refreshToken", refreshToken);
                 },
-                () => request.CreateResponse(HttpStatusCode.NotFound));
+                () => request.CreateResponse(HttpStatusCode.NotFound).ToTask());
         }
 
         private static async Task<HttpResponseMessage[]> QueryByActorAsync(Guid actorId, HttpRequestMessage request, UrlHelper urlHelper)
