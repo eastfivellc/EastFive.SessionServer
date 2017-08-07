@@ -324,7 +324,8 @@ namespace EastFive.Security.SessionServer
 
         internal async Task<TResult> GetTokenCredentialByTokenAsync<TResult>(Guid token,
             Func<Guid, Guid, string, string, TResult> success,
-            Func<TResult> notFound)
+            Func<TResult> notFound,
+            Func<string, TResult> onConfFailure)
         {
             return await await this.dataContext.CredentialMappings.FindTokenCredentialByTokenAsync(token,
                 async (inviteId, actorId, loginId) =>
@@ -336,7 +337,8 @@ namespace EastFive.Security.SessionServer
                         {
                             return success(sessionId, actorId, jwtToken, refreshToken);
                         },
-                        () => default(TResult)); // Should only happen if generated Guid is not unique ;-O
+                        () => default(TResult),
+                        (why) => onConfFailure(why)); // Should only happen if generated Guid is not unique ;-O
                     return result;
                 },
                 () => notFound().ToTask());

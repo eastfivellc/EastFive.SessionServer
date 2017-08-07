@@ -68,7 +68,8 @@ namespace EastFive.Security.SessionServer.Api
                     //    .SetQueryParam("token", jwtToken)
                     //    .SetQueryParam("refreshToken", refreshToken);
                 },
-                () => request.CreateResponse(HttpStatusCode.NotFound).ToTask());
+                () => request.CreateResponse(HttpStatusCode.NotFound).ToTask(),
+                (why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why).ToTask());
         }
 
         private static async Task<HttpResponseMessage[]> QueryByActorAsync(Guid actorId, HttpRequestMessage request, UrlHelper urlHelper)
