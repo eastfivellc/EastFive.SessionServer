@@ -174,13 +174,18 @@ namespace EastFive.Security.SessionServer
         }
 
         internal async Task<TResult> GetPasswordCredentialAsync<TResult>(Guid passwordCredentialId,
+                Guid actorPerformingId, System.Security.Claims.Claim[] claims,
             Func<PasswordCredential, TResult> success,
             Func<TResult> notFound,
+            Func<TResult> onUnauthorized,
             Func<string, TResult> onServiceNotAvailable)
         {
             return await await this.dataContext.PasswordCredentials.FindPasswordCredentialAsync(passwordCredentialId,
                 async (actorId, loginId, lastSent) =>
                 {
+                    if (!await Library.configurationManager.CanAdministerCredentialAsync(actorId, actorPerformingId, claims))
+                        return onUnauthorized();
+
                     var loginProvider = await this.context.LoginProvider;
                     return await loginProvider.GetLoginAsync(loginId,
                         (userId, isEmail, forceChangePassword) =>

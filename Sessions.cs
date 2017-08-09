@@ -283,16 +283,18 @@ namespace EastFive.Security.SessionServer
 
         internal async Task<TResult> CreateAsync<TResult>(Guid sessionId, Guid actorId, System.Security.Claims.Claim[] claims,
             Func<string, string, TResult> onSuccess,
-            Func<TResult> alreadyExists)
+            Func<TResult> alreadyExists,
+            Func<string, TResult> onConfigurationFailure)
         {
             var refreshToken = EastFive.Security.SecureGuid.Generate().ToString("N");
             var resultFound = await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, actorId,
                 () =>
                 {
-                    var jwtToken = GenerateToken(sessionId, actorId, claims
+                    return GenerateToken(sessionId, actorId, claims
                         .Select(claim => new KeyValuePair<string, string>(claim.Type, claim.Value))
-                        .ToDictionary());
-                    return onSuccess(jwtToken, refreshToken);
+                        .ToDictionary(),
+                        (jwtToken) => onSuccess(jwtToken, refreshToken),
+                        (why) => onConfigurationFailure(why));
                 },
                 () => alreadyExists());
             return resultFound;
