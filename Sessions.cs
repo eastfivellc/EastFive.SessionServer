@@ -229,7 +229,14 @@ namespace EastFive.Security.SessionServer
                                 (why) => onConfigurationFailure(why));
                             return result;
                         },
-                        onAccountNotFound);
+                        () =>
+                        {
+                            var refreshToken = SecureGuid.Generate().ToString("N");
+                            var result = GenerateToken(sessionId, actorId, new Dictionary<string, string>(),
+                                (jwtToken) => onSuccess(jwtToken, refreshToken),
+                                (why) => onConfigurationFailure(why));
+                            return result;
+                        });
             return resultFindByAccount;
         }
 
