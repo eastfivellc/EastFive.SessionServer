@@ -51,7 +51,7 @@ namespace EastFive.Security.SessionServer
             var token = SecureGuid.Generate();
             var loginId = Guid.NewGuid(); // This creates a "user" in the invite system
             var result = await await this.dataContext.CredentialMappings.CreateCredentialMappingAsync(inviteId,
-                loginId, actorId, email, token, DateTime.UtcNow, false,
+                loginId, actorId, email, token, DateTime.UtcNow, false, false,
                 async () =>
                 {
                     var templateName = ConfigurationManager.AppSettings[Configuration.EmailTemplateDefinitions.InviteNewAccount];
@@ -73,7 +73,9 @@ namespace EastFive.Security.SessionServer
                         (why) => onFailed(why));
                     return resultMail;
                 },
-                () => inviteAlreadyExists().ToTask());
+                () => inviteAlreadyExists().ToTask(),
+                () => { throw new Exception("Token generated was not unique"); },
+                () => { throw new Exception("Login Id generated was not unique"); });
             return result;
         }
         
@@ -140,7 +142,7 @@ namespace EastFive.Security.SessionServer
             Guid performingActorId, System.Security.Claims.Claim[] claims,
             Func<TResult> onSuccess,
             Func<TResult> onCredentialAlreadyExist,
-            Func<Guid, TResult> onActorAlreadyUsingUserId,
+            Func<TResult> onNameIdAlreadyInUse,
             Func<TResult> onRelationshipAlreadyExist,
             Func<TResult> onUnauthorized,
             Func<string, TResult> onFailure)
@@ -149,15 +151,32 @@ namespace EastFive.Security.SessionServer
             
             // TODO: Check other error conditions
             var result = await this.CreateSamlCredentialAsync(samlCredentialId, actorId, nameId,
-                onSuccess, onCredentialAlreadyExist, onActorAlreadyUsingUserId, onRelationshipAlreadyExist, onFailure);
+                onSuccess, onCredentialAlreadyExist, (fetchActorIdAsync) => onNameIdAlreadyInUse(), onRelationshipAlreadyExist, onFailure);
             return result;
         }
 
-        public async Task<TResult> CreateSamlCredentialAsync<TResult>(Guid samlCredentialId,
+        public Task<TResult> CreateSamlCredentialAsync<TResult>(Guid samlCredentialId,
             Guid actorId, string nameId,
             Func<TResult> onSuccess,
             Func<TResult> onCredentialAlreadyExist,
-            Func<Guid, TResult> onActorAlreadyUsingUserId,
+            Func<Func<Task<TResult>>, TResult> onLoginIdAlreadyInUse,
+            Func<TResult> onRelationshipAlreadyExist,
+            Func<string, TResult> onFailure)
+        {
+            return CreateSamlCredentialInnerAsync(samlCredentialId, actorId, nameId, false, onSuccess, onCredentialAlreadyExist, onLoginIdAlreadyInUse, onRelationshipAlreadyExist, onFailure);
+        }
+
+        private struct CSCIResult<TResult>
+        {
+            internal TResult result;
+            internal bool rerun;
+        }
+
+        public async Task<TResult> CreateSamlCredentialInnerAsync<TResult>(Guid samlCredentialId,
+            Guid actorId, string nameId, bool overrideLogin,
+            Func<TResult> onSuccess,
+            Func<TResult> onCredentialAlreadyExist,
+            Func<Func<Task<TResult>>, TResult> onLoginIdAlreadyInUse,
             Func<TResult> onRelationshipAlreadyExist,
             Func<string, TResult> onFailure)
         {
@@ -168,10 +187,20 @@ namespace EastFive.Security.SessionServer
 
             // TODO: Check other error conditions
             var result = await this.dataContext.CredentialMappings.CreateCredentialMappingAsync(samlCredentialId,
-                loginId, actorId, nameId, token, DateTime.UtcNow, true,
-                () => onSuccess(),
-                () => onCredentialAlreadyExist());
-            return result;
+                loginId, actorId, nameId, token, DateTime.UtcNow, true, overrideLogin,
+                () => new CSCIResult<TResult> { result = onSuccess(), rerun = false },
+                () => new CSCIResult<TResult> { result = onCredentialAlreadyExist(), rerun = false },
+                () => { throw new Exception("Token generated was not unique"); },
+                () => new CSCIResult<TResult> { rerun = true });
+            if(result.rerun)
+                return onLoginIdAlreadyInUse(
+                        () => CreateSamlCredentialInnerAsync(samlCredentialId, actorId, nameId, true,
+                            onSuccess,
+                            onCredentialAlreadyExist,
+                            (callback) => onFailure("Override of loginID failed"),
+                            onRelationshipAlreadyExist,
+                            onFailure));
+            return result.result;
         }
 
         #region Tokens
@@ -188,7 +217,7 @@ namespace EastFive.Security.SessionServer
             var token = EastFive.Security.SecureGuid.Generate();
             var loginId = Guid.NewGuid(); // This creates a "user" in the "Token system"
             var result = await await this.dataContext.CredentialMappings.CreateCredentialMappingAsync(inviteId,
-                loginId, actorId, email, token, DateTime.UtcNow, true,
+                loginId, actorId, email, token, DateTime.UtcNow, true, false,
                 async () =>
                 {
                     return await LoadConfiguration(
@@ -211,7 +240,9 @@ namespace EastFive.Security.SessionServer
                         },
                         (why) => onFailed(why).ToTask());
                 },
-                () => onInviteAlreadyExists().ToTask());
+                () => onInviteAlreadyExists().ToTask(),
+                () => { throw new Exception("Token generated was not unique"); },
+                () => { throw new Exception("Login generated was not unique"); });
             return result;
         }
 

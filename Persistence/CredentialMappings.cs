@@ -31,10 +31,12 @@ namespace EastFive.Security.SessionServer.Persistence
                 () => onNotExist());
         }
         
-        internal async Task<TResult> CreateCredentialMappingAsync<TResult>(Guid inviteId,
-            Guid loginId, Guid actorId, string email, Guid token, DateTime lastSent, bool isToken,
+        internal async Task<TResult> CreateCredentialMappingAsync<TResult>(Guid credentialMappingId,
+            Guid loginId, Guid actorId, string email, Guid token, DateTime lastSent, bool isToken, bool overrideLoginId,
             Func<TResult> onSuccess,
-            Func<TResult> onAlreadyExists)
+            Func<TResult> onAlreadyExists,
+            Func<TResult> onTokenAlreadyInUse,
+            Func<TResult> onLoginAlreadyInUse)
         {
             var rollback = new RollbackAsync<TResult>();
 
@@ -47,24 +49,45 @@ namespace EastFive.Security.SessionServer.Persistence
                 Token = token,
                 LoginId = loginId,
             };
-            rollback.AddTaskCreate(inviteId, inviteDocument, onAlreadyExists, this.repository);
+            rollback.AddTaskCreate(credentialMappingId, inviteDocument, onAlreadyExists, this.repository);
 
             var inviteTokenDocument = new Documents.InviteTokenDocument()
             {
                 ActorId = actorId,
-                InviteId = inviteId,
+                InviteId = credentialMappingId,
             };
-            rollback.AddTaskCreate(token, inviteTokenDocument, onAlreadyExists, this.repository);
+            rollback.AddTaskCreate(token, inviteTokenDocument, onTokenAlreadyInUse, this.repository);
 
-            var loginActorDocument = new Documents.LoginActorLookupDocument()
+            if (overrideLoginId)
             {
-                ActorId = actorId,
-            };
-            rollback.AddTaskCreate(loginId, loginActorDocument, onAlreadyExists, this.repository);
-
+                var oldActorId = default(Guid);
+                rollback.AddTaskCreateOrUpdate(loginId,
+                    (Documents.LoginActorLookupDocument loginActorDocument) =>
+                    {
+                        oldActorId = loginActorDocument.ActorId;
+                        loginActorDocument.ActorId = actorId;
+                        return true;
+                    },
+                    (loginActorDocument) =>
+                    {
+                        loginActorDocument.ActorId = oldActorId;
+                        return true;
+                    },
+                    () => { throw new Exception("Login override failed"); }, // Should never happend because always return true on mutate
+                    this.repository);
+            }
+            else
+            {
+                var loginActorDocument = new Documents.LoginActorLookupDocument()
+                {
+                    ActorId = actorId,
+                };
+                rollback.AddTaskCreate(loginId, loginActorDocument, onLoginAlreadyInUse, this.repository);
+            }
+            
             rollback.AddTaskCreateOrUpdate(actorId,
-                (Documents.ActorMappingsDocument authDoc) => authDoc.AddInviteId(inviteId),
-                (authDoc) => authDoc.RemoveInviteId(inviteId),
+                (Documents.ActorMappingsDocument authDoc) => authDoc.AddInviteId(credentialMappingId),
+                (authDoc) => authDoc.RemoveInviteId(credentialMappingId),
                 onAlreadyExists, // This should fail on the action above as well
                 this.repository);
 

@@ -48,8 +48,8 @@ namespace EastFive.Security.SessionServer.Api
                 () => request.CreateResponse(HttpStatusCode.Created),
                 () => request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason($"Credential already exists"),
-                (actorUsingId) => request.CreateResponse(HttpStatusCode.Conflict)
-                    .AddReason($"Username already in use with Actor:{actorUsingId}"),
+                () => request.CreateResponse(HttpStatusCode.Conflict)
+                    .AddReason($"Username already in use"),
                 () => request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason($"Relationship already exists"),
                 () => request.CreateResponse(HttpStatusCode.Unauthorized),
