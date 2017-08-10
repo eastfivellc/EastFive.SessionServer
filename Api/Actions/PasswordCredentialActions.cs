@@ -119,8 +119,8 @@ namespace EastFive.Security.SessionServer.Api
                     return response;
                 },
                 () => request.CreateResponse(HttpStatusCode.NotFound),
-                () => request.CreateResponse(HttpStatusCode.NotFound),
-                (why) => request.CreateResponse(HttpStatusCode.NotFound));
+                () => request.CreateResponse(HttpStatusCode.Unauthorized),
+                (why) => request.CreateResponse(HttpStatusCode.ServiceUnavailable));
         }
 
         private async static Task<HttpResponseMessage[]> QueryByActorId(Guid actorId,
