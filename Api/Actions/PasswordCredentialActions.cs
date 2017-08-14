@@ -107,27 +107,17 @@ namespace EastFive.Security.SessionServer.Api
             Guid actorPerformingId, System.Security.Claims.Claim [] claims)
         {
             var context = request.GetSessionServerContext();
-<<<<<<< HEAD
-            return await await context.PasswordCredentials.GetPasswordCredentialAsync(passwordCredentialId,
-                async (passwordCredential) =>
-=======
             return await context.PasswordCredentials.GetPasswordCredentialAsync(passwordCredentialId,
                     actorPerformingId, claims,
                 (passwordCredential) =>
->>>>>>> 452a2717142dc66334e938f6c6b515d0f383e9fc
                 {
                     var response = request.CreateResponse(HttpStatusCode.OK,
                         Convert(passwordCredential, urlHelper));
                     return response;
                 },
-<<<<<<< HEAD
-                () => request.CreateResponse(HttpStatusCode.NotFound).ToTask(),
-                (why) => request.CreateResponse(HttpStatusCode.NotFound).ToTask());
-=======
                 () => request.CreateResponse(HttpStatusCode.NotFound),
                 () => request.CreateResponse(HttpStatusCode.Unauthorized),
                 (why) => request.CreateResponse(HttpStatusCode.ServiceUnavailable));
->>>>>>> 452a2717142dc66334e938f6c6b515d0f383e9fc
         }
 
         private async static Task<HttpResponseMessage[]> QueryByActorId(Guid actorId,
