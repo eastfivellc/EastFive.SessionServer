@@ -14,6 +14,10 @@ namespace EastFive.Security.SessionServer
 {
     public class IdentityServerConfiguration<TActorController> : IConfigureIdentityServer
     {
+        public const string parameterAuthorizationId = "authorizationId";
+        public const string parameterToken = "token";
+        public const string parameterRefreshToken = "refreshToken";
+
         public virtual Task<bool> CanAdministerCredentialAsync(Guid actorInQuestion, Guid actorTakingAction, System.Security.Claims.Claim[] claims)
         {
             if (actorInQuestion == actorTakingAction)
@@ -58,7 +62,7 @@ namespace EastFive.Security.SessionServer
                 var redirectUriString = authParams[Configuration.AuthorizationParameters.RedirectUri];
                 if (!Uri.TryCreate(redirectUriString, UriKind.Absolute, out redirectUri))
                     return onInvalidParameter("REDIRECT", $"BAD URL in redirect call:{redirectUriString}").ToTask();
-                var redirectUrl = SetRedirectParamters(redirectUri, authorizationId, token, refreshToken);
+                var redirectUrl = SetRedirectParameters(redirectUri, authorizationId, token, refreshToken);
                 return onSuccess(redirectUrl).ToTask();
             }
 
@@ -66,19 +70,19 @@ namespace EastFive.Security.SessionServer
                 EastFive.Security.SessionServer.Configuration.AppSettings.LandingPage,
                 (redirectUri) =>
                 {
-                    var redirectUrl = SetRedirectParamters(redirectUri, authorizationId, token, refreshToken);
+                    var redirectUrl = SetRedirectParameters(redirectUri, authorizationId, token, refreshToken);
                     return onSuccess(redirectUrl);
                 },
                 (why) => onFailure(why)).ToTask();
         }
 
-        protected Uri SetRedirectParamters(Uri redirectUri, Guid? authorizationId, string token, string refreshToken)
+        protected Uri SetRedirectParameters(Uri redirectUri, Guid? authorizationId, string token, string refreshToken)
         {
             var redirectUrl = redirectUri
                 .SetQueryParam("authoriationId", authorizationId.Value.ToString("N"))
-                .SetQueryParam("authorizationId", authorizationId.Value.ToString("N"))
-                .SetQueryParam("token", token)
-                .SetQueryParam("refreshToken", refreshToken);
+                .SetQueryParam(parameterAuthorizationId, authorizationId.Value.ToString("N"))
+                .SetQueryParam(parameterToken, token)
+                .SetQueryParam(parameterRefreshToken, refreshToken);
             return redirectUrl;
         }
         

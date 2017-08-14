@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace EastFive.Security.SessionServer.Configuration
+﻿namespace EastFive.Security.SessionServer.Configuration
 {
     public static class AppSettings
     {
         public const string Storage = "Azure.Authorization.Storage";
+        //public const string Storage = "EastFive.Security.SessionServer.Storage";
         public const string TokenExpirationInMinutes = "EastFive.Security.SessionServer.tokenExpirationInMinutes";
         public const string LoginIdClaimType = "EastFive.Security.SessionServer.LoginProvider.LoginIdClaimType";
 

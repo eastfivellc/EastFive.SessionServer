@@ -48,8 +48,8 @@ namespace EastFive.Security.SessionServer.Api
                 () => request.CreateResponse(HttpStatusCode.Created),
                 () => request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason($"Credential already exists"),
-                (actorUsingId) => request.CreateResponse(HttpStatusCode.Conflict)
-                    .AddReason($"Username already in use with Actor:{actorUsingId}"),
+                () => request.CreateResponse(HttpStatusCode.Conflict)
+                    .AddReason($"Username already in use"),
                 () => request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason($"Relationship already exists"),
                 () => request.CreateResponse(HttpStatusCode.Unauthorized),
@@ -102,17 +102,17 @@ namespace EastFive.Security.SessionServer.Api
             Guid actorPerformingId, System.Security.Claims.Claim [] claims)
         {
             var context = request.GetSessionServerContext();
-            return await await context.PasswordCredentials.GetPasswordCredentialAsync(passwordCredentialId,
-                async (passwordCredential) =>
+            return await context.PasswordCredentials.GetPasswordCredentialAsync(passwordCredentialId,
+                    actorPerformingId, claims,
+                (passwordCredential) =>
                 {
-                    if (!await Library.configurationManager.CanAdministerCredentialAsync(passwordCredential.actorId, actorPerformingId, claims))
-                        return request.CreateResponse(HttpStatusCode.NotFound);
                     var response = request.CreateResponse(HttpStatusCode.OK,
                         Convert(passwordCredential, urlHelper));
                     return response;
                 },
-                () => request.CreateResponse(HttpStatusCode.NotFound).ToTask(),
-                (why) => request.CreateResponse(HttpStatusCode.NotFound).ToTask());
+                () => request.CreateResponse(HttpStatusCode.NotFound),
+                () => request.CreateResponse(HttpStatusCode.NotFound),
+                (why) => request.CreateResponse(HttpStatusCode.NotFound));
         }
 
         private async static Task<HttpResponseMessage[]> QueryByActorId(Guid actorId,
