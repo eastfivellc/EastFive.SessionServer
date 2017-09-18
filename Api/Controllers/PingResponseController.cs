@@ -32,6 +32,9 @@ namespace EastFive.Security.SessionServer.Api.Controllers
     {
         public Task<IHttpActionResult> Get([FromUri]PingRequest query)
         {
+            // When debugging, use this commented line and comment the call to ParsePingResponseAsync so that the request won't get used.
+            // This will allow the response to be sent via Postman to see any errors that might come back from ping.
+            //return ((IHttpActionResult)(new HttpActionResult(() => Request.CreateResponse(HttpStatusCode.OK).ToTask()))).ToTask();
             return ParsePingResponseAsync(query.tokenid, query.agentid);
         }
 
