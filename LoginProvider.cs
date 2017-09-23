@@ -162,6 +162,17 @@ namespace EastFive.Security.LoginProvider.AzureADB2C
                 (why) => onServiceNotAvailable(why));
         }
 
+        public async Task<TResult> GetAllLoginAsync<TResult>(
+            Func<Tuple<Guid, string,bool,bool>[], TResult> onSuccess,
+            Func<string, TResult> onFailure)
+        {
+            var list = new List<Tuple<Guid, string, bool, bool>>(); // loginId, userName, isEmail, forceChange
+            return await client.GetAllUsersAsync(
+                tuples => list.AddRange(tuples),
+                () => onSuccess(list.ToArray()),
+                (why) => onFailure(why));
+        }
+
         public async Task DeleteLoginAsync(Guid loginId)
         {
             var result = await client.DeleteUser(loginId.ToString());
