@@ -22,5 +22,8 @@ namespace EastFive.Security.SessionServer
             Func<Uri, TResult> onSuccess,
             Func<string, string, TResult> onInvalidParameter,
             Func<string, TResult> onFailure);
+
+        Task<TResult> CanActAsUsersAsync<TResult>(Guid actorTakingAction, System.Security.Claims.Claim[] claims, Func<TResult> canActAsUsers, Func<TResult> deny);
+
     }
 }

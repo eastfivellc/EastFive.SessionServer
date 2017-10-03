@@ -85,6 +85,13 @@ namespace EastFive.Security.SessionServer
                 .SetQueryParam(parameterRefreshToken, refreshToken);
             return redirectUrl;
         }
-        
+
+        public virtual Task<TResult> CanActAsUsersAsync<TResult>(Guid actorTakingAction, System.Security.Claims.Claim[] claims, Func<TResult> canActAsUsers, Func<TResult> deny)
+        {
+            if (IsSuperAdmin(actorTakingAction))
+                return canActAsUsers().ToTask();
+
+            return deny().ToTask();
+        }
     }
 }
