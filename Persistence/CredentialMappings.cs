@@ -30,6 +30,15 @@ namespace EastFive.Security.SessionServer.Persistence
                 (Documents.LoginActorLookupDocument document) => onSuccess(document.ActorId),
                 () => onNotExist());
         }
+
+        public async Task<TResult> FindAllCredentialMappingAsync<TResult>(
+            Func<Tuple<Guid, Guid>[], TResult> onSuccess)
+        {
+            return await repository.FindAllAsync(
+                (Documents.LoginActorLookupDocument[] docs) =>
+                    onSuccess(docs.Select(x => new Tuple<Guid,Guid>(x.Id, x.ActorId)).ToArray())
+                );
+        }
         
         internal async Task<TResult> CreateCredentialMappingAsync<TResult>(Guid credentialMappingId,
             Guid loginId, Guid actorId, string email, Guid token, DateTime lastSent, bool isToken, bool overrideLoginId,

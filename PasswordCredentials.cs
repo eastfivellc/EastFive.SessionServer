@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using BlackBarLabs.Extensions;
 using System.Security.Claims;
 using BlackBarLabs;
+using BlackBarLabs.Linq;
 using BlackBarLabs.Linq.Async;
 
 namespace EastFive.Security.SessionServer
@@ -244,49 +245,47 @@ namespace EastFive.Security.SessionServer
 
         public struct LoginInfo
         {
+            public LoginInfo(string userId, Guid loginId, Guid actorId)
+            {
+                UserId = userId;
+                LoginId = loginId;
+                ActorId = actorId;
+            }
+
             public string UserId;
             public Guid LoginId;
             public Guid ActorId;
         }
-
+       
         internal async Task<TResult> GetAllLoginInfoAsync<TResult>(
             Func<LoginInfo[], TResult> success)
         {
-            var finalResult = await await this.dataContext.PasswordCredentials.FindAllAsync<Task<TResult>>(
+            var finalResult = await await this.dataContext.PasswordCredentials.FindAllAsync(
                 async (passwordCredentialInfos) =>
                 {
                     var loginProvider = await context.LoginProvider;
-                    var result = await passwordCredentialInfos.Select(
-                        async passwordCredentialInfo =>
+                    return await await loginProvider.GetAllLoginAsync(
+                        async tuples => // loginId, userName, isEmail, forceChange
                         {
-                            try
-                            {
-                                var credInfo = await await loginProvider.GetLoginAsync(passwordCredentialInfo.LoginId,
-                                    (userId, isEmail, forceChangePassword) =>
-                                    {
-                                        return this.context.Credentials.LookupAccountIdAsync(passwordCredentialInfo.LoginId,
-                                            (actorId) => new LoginInfo
-                                            {
-                                                LoginId = passwordCredentialInfo.LoginId,
-                                                UserId = userId,
-                                                ActorId = actorId,
-                                            },
-                                            () => default(LoginInfo?));
-                                    },
-                                    () => { return default(LoginInfo?).ToTask(); }, 
-                                    (why) => { return default(LoginInfo?).ToTask(); });
-                                    return credInfo;
-                            }
-                            catch (Exception ex)
-                            {
-                                return default(LoginInfo?); 
-                            }
-                        }).WhenAllAsync()
-                        .SelectWhereHasValueAsync()
-                        .ToArrayAsync();
-                    return success(result);
+                            return await this.context.Credentials.GetAllAccountIdAsync(
+                                map => // loginId, actorId
+                                {
+                                    return passwordCredentialInfos.Select(
+                                        p =>
+                                        {
+                                            var actorId = map.Where(m => m.Item1 == p.LoginId).Select(m => m.Item2).FirstOrDefault();
+                                            var userName = tuples.Where(t => t.Item1 == p.LoginId).Select(t => t.Item2).FirstOrDefault();
+                                            return (default(Guid) == actorId || String.IsNullOrEmpty(userName)) 
+                                            ? default(LoginInfo?) : new LoginInfo?(new LoginInfo(userName, p.LoginId, actorId));
+                                        })
+                                        .Where(x => x.HasValue)
+                                        .Select(x => x.Value)
+                                        .ToArray();
+                                });
+                        },
+                        (why) => (new LoginInfo[] {}).ToTask());
                 });
-            return finalResult;
+            return success(finalResult);
         }
 
         internal async Task<TResult> UpdatePasswordCredentialAsync<TResult>(Guid passwordCredentialId,

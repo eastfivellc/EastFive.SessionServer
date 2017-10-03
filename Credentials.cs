@@ -136,6 +136,11 @@ namespace EastFive.Security.SessionServer
             return this.dataContext.CredentialMappings.LookupCredentialMappingAsync(loginId, onSuccess, onNotFound);
         }
 
+        public Task<TResult> GetAllAccountIdAsync<TResult>(
+            Func<Tuple<Guid, Guid>[], TResult> onSuccess)
+        {
+            return this.dataContext.CredentialMappings.FindAllCredentialMappingAsync(onSuccess);
+        }
 
         public async Task<TResult> CreateSamlCredentialAsync<TResult>(Guid samlCredentialId,
             Guid actorId, string nameId,
