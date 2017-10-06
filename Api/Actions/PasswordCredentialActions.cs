@@ -43,7 +43,7 @@ namespace EastFive.Security.SessionServer.Api
             var context = request.GetSessionServerContext();
             var creationResults = await context.PasswordCredentials.CreatePasswordCredentialsAsync(
                 credential.Id.UUID, actorId.Value,
-                credential.UserId, credential.IsEmail, credential.Token, credential.ForceChange,
+                credential.DisplayName, credential.UserId, credential.IsEmail, credential.Token, credential.ForceChange,
                 credential.LastEmailSent, loginUrl,
                 performingActorId, claims,
                 () => request.CreateResponse(HttpStatusCode.Created),

@@ -37,7 +37,7 @@ namespace EastFive.Security.SessionServer
         #region Password Credential
 
         public async Task<TResult> CreatePasswordCredentialsAsync<TResult>(Guid passwordCredentialId, Guid actorId,
-            string username, bool isEmail, string token, bool forceChange,
+            string displayName, string username, bool isEmail, string token, bool forceChange,
             DateTime? emailLastSent, Uri loginUrl,
             Guid performingActorId, System.Security.Claims.Claim[] claims,
             Func<TResult> onSuccess,
@@ -56,7 +56,10 @@ namespace EastFive.Security.SessionServer
 
             var loginProvider = await this.context.LoginProvider;
 
-            var createLoginResult = await await loginProvider.CreateLoginAsync("User",
+            if (string.IsNullOrWhiteSpace(displayName))
+                displayName = "User";
+
+            var createLoginResult = await await loginProvider.CreateLoginAsync(displayName,
                 username, isEmail, token, forceChange,
                 async loginId =>
                 {
