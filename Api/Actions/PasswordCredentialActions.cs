@@ -152,6 +152,7 @@ namespace EastFive.Security.SessionServer.Api
                 ForceChange = passwordCredential.forceChangePassword,
                 Token = String.Empty,
                 LastEmailSent = passwordCredential.lastSent,
+                DisplayName = passwordCredential.displayName
             };
         }
 

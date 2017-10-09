@@ -17,6 +17,7 @@ namespace EastFive.Security.SessionServer
     {
         public Guid id;
         public Guid actorId;
+        public string displayName;
         public string userId;
         public bool isEmail;
         internal bool forceChangePassword;
@@ -192,11 +193,12 @@ namespace EastFive.Security.SessionServer
 
                     var loginProvider = await this.context.LoginProvider;
                     return await loginProvider.GetLoginAsync(loginId,
-                        (userId, isEmail, forceChangePassword) =>
+                        (dispName, userId, isEmail, forceChangePassword) =>
                         {
                             return success(new PasswordCredential
                             {
                                 id = passwordCredentialId,
+                                displayName = dispName,
                                 actorId = actorId,
                                 userId = userId,
                                 isEmail = isEmail,
@@ -223,12 +225,13 @@ namespace EastFive.Security.SessionServer
                         async credential =>
                         {
                             return await loginProvider.GetLoginAsync(credential.loginId,
-                                (userId, isEmail, forceChangePassword) =>
+                                (dispName, userId, isEmail, forceChangePassword) =>
                                 {
                                     return new PasswordCredential
                                     {
                                         id = credential.id,
                                         actorId = actorId,
+                                        displayName = dispName,
                                         userId = userId,
                                         isEmail = isEmail,
                                         forceChangePassword = forceChangePassword,
@@ -319,7 +322,7 @@ namespace EastFive.Security.SessionServer
                     {
                         var loginProvider = await this.context.LoginProvider;
                         var resultGetLogin = await await loginProvider.GetLoginAsync(loginId,
-                            async (username, isEmail, forceChangePassword) =>
+                            async (dispName, username, isEmail, forceChangePassword) =>
                             {
                                 if (!isEmail)
                                 {

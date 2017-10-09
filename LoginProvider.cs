@@ -153,7 +153,7 @@ namespace EastFive.Security.LoginProvider.AzureADB2C
         }
 
         public async Task<TResult> GetLoginAsync<TResult>(Guid loginId, 
-            Func<string, bool, bool, TResult> onSuccess,
+            Func<string, string, bool, bool, TResult> onSuccess,
             Func<TResult> onNotFound,
             Func<string, TResult> onServiceNotAvailable)
         {
