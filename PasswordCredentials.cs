@@ -51,9 +51,9 @@ namespace EastFive.Security.SessionServer
             Func<TResult> onServiceNotAvailable,
             Func<string, TResult> onFailure)
         {
-            //if (!await Library.configurationManager.CanAdministerCredentialAsync(
-            //    actorId, performingActorId, claims))
-            //    return onUnathorized();
+            if (!await Library.configurationManager.CanAdministerCredentialAsync(
+                actorId, performingActorId, claims))
+                return onUnathorized();
 
             var loginProvider = await this.context.LoginProvider;
 
