@@ -153,7 +153,7 @@ namespace EastFive.Security.LoginProvider.AzureADB2C
         }
 
         public async Task<TResult> GetLoginAsync<TResult>(Guid loginId, 
-            Func<string, string, bool, bool, TResult> onSuccess,
+            Func<string, string, bool, bool, bool, TResult> onSuccess,
             Func<TResult> onNotFound,
             Func<string, TResult> onServiceNotAvailable)
         {
@@ -163,10 +163,10 @@ namespace EastFive.Security.LoginProvider.AzureADB2C
         }
 
         public async Task<TResult> GetAllLoginAsync<TResult>(
-            Func<Tuple<Guid, string,bool,bool>[], TResult> onSuccess,
+            Func<Tuple<Guid, string,bool,bool,bool>[], TResult> onSuccess,
             Func<string, TResult> onFailure)
         {
-            var list = new List<Tuple<Guid, string, bool, bool>>(); // loginId, userName, isEmail, forceChange
+            var list = new List<Tuple<Guid, string, bool, bool, bool>>(); // loginId, userName, isEmail, forceChange, accountEnabled
             return await client.GetAllUsersAsync(
                 tuples => list.AddRange(tuples),
                 () => onSuccess(list.ToArray()),
