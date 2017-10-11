@@ -193,7 +193,7 @@ namespace EastFive.Security.SessionServer
 
                     var loginProvider = await this.context.LoginProvider;
                     return await loginProvider.GetLoginAsync(loginId,
-                        (dispName, userId, isEmail, forceChangePassword) =>
+                        (dispName, userId, isEmail, forceChangePassword, accountEnabled) =>
                         {
                             return success(new PasswordCredential
                             {
@@ -225,7 +225,7 @@ namespace EastFive.Security.SessionServer
                         async credential =>
                         {
                             return await loginProvider.GetLoginAsync(credential.loginId,
-                                (dispName, userId, isEmail, forceChangePassword) =>
+                                (dispName, userId, isEmail, forceChangePassword, accountEnabled) =>
                                 {
                                     return new PasswordCredential
                                     {
@@ -251,16 +251,18 @@ namespace EastFive.Security.SessionServer
 
         public struct LoginInfo
         {
-            public LoginInfo(string userId, Guid loginId, Guid actorId)
+            public LoginInfo(string userId, Guid loginId, Guid actorId, bool accountEnabled)
             {
                 UserId = userId;
                 LoginId = loginId;
                 ActorId = actorId;
+                AccountEnabled = accountEnabled;
             }
 
             public string UserId;
             public Guid LoginId;
             public Guid ActorId;
+            public bool AccountEnabled;
         }
        
         internal async Task<TResult> GetAllLoginInfoAsync<TResult>(
@@ -271,7 +273,7 @@ namespace EastFive.Security.SessionServer
                 {
                     var loginProvider = await context.LoginProvider;
                     return await await loginProvider.GetAllLoginAsync(
-                        async tuples => // loginId, userName, isEmail, forceChange
+                        async tuples => // loginId, userName, isEmail, forceChange, accountEnabled
                         {
                             return await this.context.Credentials.GetAllAccountIdAsync(
                                 map => // loginId, actorId
@@ -280,9 +282,11 @@ namespace EastFive.Security.SessionServer
                                         p =>
                                         {
                                             var actorId = map.Where(m => m.Item1 == p.LoginId).Select(m => m.Item2).FirstOrDefault();
-                                            var userName = tuples.Where(t => t.Item1 == p.LoginId).Select(t => t.Item2).FirstOrDefault();
+                                            var tuple = tuples.FirstOrDefault(t => t.Item1 == p.LoginId);
+                                            var userName = tuple?.Item2;
+                                            var accountEnabled = tuple?.Item5 ?? false;
                                             return (default(Guid) == actorId || String.IsNullOrEmpty(userName)) 
-                                            ? default(LoginInfo?) : new LoginInfo?(new LoginInfo(userName, p.LoginId, actorId));
+                                            ? default(LoginInfo?) : new LoginInfo(userName, p.LoginId, actorId, accountEnabled);
                                         })
                                         .Where(x => x.HasValue)
                                         .Select(x => x.Value)
@@ -322,7 +326,7 @@ namespace EastFive.Security.SessionServer
                     {
                         var loginProvider = await this.context.LoginProvider;
                         var resultGetLogin = await await loginProvider.GetLoginAsync(loginId,
-                            async (dispName, username, isEmail, forceChangePassword) =>
+                            async (dispName, username, isEmail, forceChangePassword, accountEnabled) =>
                             {
                                 if (!isEmail)
                                 {

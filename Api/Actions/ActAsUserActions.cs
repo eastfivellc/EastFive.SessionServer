@@ -30,6 +30,7 @@ namespace EastFive.Security.SessionServer.Api
             public string UserId;
             public string Link;
             public Guid ActorId;
+            public bool AccountEnabled;
         }
 
         private static async Task<HttpResponseMessage> QueryAllActorsAsync(string redirectUri, string token,
@@ -65,6 +66,7 @@ namespace EastFive.Security.SessionServer.Api
                                         UserId = info.UserId,
                                         Link = baseUrl.AddParameter("ActorId", info.LoginId.ToString()).ToString(),
                                         ActorId = info.ActorId,
+                                        AccountEnabled = info.AccountEnabled
                                     };
                                 }).ToArray();
                             return userInfo;
@@ -102,8 +104,6 @@ namespace EastFive.Security.SessionServer.Api
                         authorizationId, tken, refreshToken, extraParams,
                         (redirectUrl) =>
                         {
-                            //var redirectResponse = redirect(redirectUrl.AbsoluteUri);
-                            //return request.CreateResponse(HttpStatusCode.OK);
                             var response = request.CreateHtmlResponse($"<script>window.location=\"{redirectUrl}\"</script>");
                             var cookie = new System.Net.Http.Headers.CookieHeaderValue(Api.Constants.Cookies.FakingId, token);
                             cookie.Expires = DateTimeOffset.Now.AddDays(1);
