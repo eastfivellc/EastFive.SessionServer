@@ -58,10 +58,10 @@ namespace EastFive.Security.SessionServer.Api
             return creationResults;
         }
 
-        public static async Task<HttpResponseMessage> PutAsync(this Resources.SamlCredential credential,
+        public static Task<HttpResponseMessage> PutAsync(this Resources.SamlCredential credential,
             HttpRequestMessage request, UrlHelper url)
         {
-            throw new NotFiniteNumberException();
+            throw new NotImplementedException();
             //return await request.GetActorIdClaimsAsync(ClaimsDefinitions.AccountIdClaimType,
             //    async (performingActorId, claims) =>
             //    {
