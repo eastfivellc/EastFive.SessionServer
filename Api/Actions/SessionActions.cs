@@ -39,7 +39,8 @@ namespace EastFive.Security.SessionServer.Api
                 {
                     return await context.Sessions.CreateAsync(resource.Id,
                         createSessionCallback,
-                        () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("This session has already been created."));
+                        () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("This session has already been created."),
+                        (why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why));
                 }
 
                 return await context.Sessions.CreateAsync(resource.Id,

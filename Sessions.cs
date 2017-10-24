@@ -25,14 +25,17 @@ namespace EastFive.Security.SessionServer
         public delegate T CreateSessionAlreadyExistsDelegate<T>();
         public async Task<T> CreateAsync<T>(Guid sessionId,
             CreateSessionSuccessDelegate<T> onSuccess,
-            CreateSessionAlreadyExistsDelegate<T> alreadyExists)
+            CreateSessionAlreadyExistsDelegate<T> alreadyExists,
+            Func<string, T> onFailure)
         {
             var refreshToken = EastFive.Security.SecureGuid.Generate().ToString("N");
             return await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, default(Guid),
                 () =>
                 {
-                    var jwtToken = this.GenerateToken(sessionId, default(Guid), new Dictionary<string, string>());
-                    return onSuccess.Invoke(default(Guid), jwtToken, refreshToken, new Dictionary<string, string>());
+                    var result = this.GenerateToken(sessionId, default(Guid), new Dictionary<string, string>(),
+                        (jwtToken) => onSuccess(default(Guid), jwtToken, refreshToken, new Dictionary<string, string>()),
+                        (why) => onFailure(why));
+                    return result;
                 },
                 () => alreadyExists());
         }
