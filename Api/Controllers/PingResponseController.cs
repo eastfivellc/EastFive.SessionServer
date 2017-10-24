@@ -32,8 +32,19 @@ namespace EastFive.Security.SessionServer.Api.Controllers
     {
         public Task<IHttpActionResult> Get([FromUri]PingRequest query)
         {
-            // When debugging, use this commented line and comment the call to ParsePingResponseAsync so that the request won't get used.
-            // This will allow the response to be sent via Postman to see any errors that might come back from ping.
+            //The way this works...
+            //1.  User clicks Third Party Applications\AffirmHealth over in Athena.
+            //2.  Athena calls Ping
+            //3.  Ping redirects to /PingResponseController with a token.
+            //4.  This code validates the token, parses it out, and redirects to the interactive report matching the patient id.
+
+            //To debug, you have to grab the token from Ping that comes in here.  If you don't, the token will get used and it won't work again
+            //To do this, uncomment the commented line and comment out the call to ParsePingResponseAsync.  That way the token won't be used.
+            //After the uncomment/comment, publish to dev and then click third party apps\Affirm Health in Athena.
+            //Grab the token from the browser.
+            //Then, switch the uncommented/commented lines back and run the server in debug.
+            //Send the token via Postman to debug and see any errors that might come back from Ping.
+
             //return ((IHttpActionResult)(new HttpActionResult(() => Request.CreateResponse(HttpStatusCode.OK).ToTask()))).ToTask();
             return ParsePingResponseAsync(query.tokenid, query.agentid);
         }
