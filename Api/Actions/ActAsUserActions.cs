@@ -112,6 +112,7 @@ namespace EastFive.Security.SessionServer.Api
                             {
                                 var builder = new UriBuilder(redirectUrl)
                                 {
+                                    Scheme = userUrl.Scheme,
                                     Host = userUrl.Host,
                                     Port = userUrl.Port
                                 };
