@@ -51,8 +51,7 @@ namespace EastFive.Security.SessionServer.Api
                         request.CreateResponse(HttpStatusCode.Unauthorized, $"Actor [{actorId}] is not site admin");
                     }
 
-                    var urlQuery = request.RequestUri.Query;
-                    var baseUrl = url.GetLocationWithQuery(typeof(Controllers.ActAsUserController), urlQuery);
+                    var baseUrl = url.GetLocation(typeof(Controllers.ActAsUserController));
 
                     var context = request.GetSessionServerContext();
                     var userInfos = await context.PasswordCredentials.GetAllLoginInfoAsync(
@@ -64,7 +63,10 @@ namespace EastFive.Security.SessionServer.Api
                                     return new UserInfo
                                     {
                                         UserId = info.UserId,
-                                        Link = baseUrl.AddParameter("ActorId", info.LoginId.ToString()).ToString(),
+                                        Link = baseUrl.AddParameter("ActorId", info.LoginId.ToString())
+                                            .AddParameter("redirectUri",redirectUri)
+                                            .AddParameter("token",token)
+                                            .ToString(),
                                         ActorId = info.ActorId,
                                         AccountEnabled = info.AccountEnabled
                                     };
@@ -100,15 +102,30 @@ namespace EastFive.Security.SessionServer.Api
                 new Dictionary<string, string>(),
                 async (authorizationId, tken, refreshToken, extraParams) =>
                 {
+                    
                     return await Library.configurationManager.GetRedirectUriAsync(CredentialValidationMethodTypes.Password,
                         authorizationId, tken, refreshToken, extraParams,
                         (redirectUrl) =>
                         {
+                            var host = request.RequestUri.Host;
+                            if (Uri.TryCreate(redirectBase, UriKind.Absolute, out Uri userUrl) && userUrl.Host == "localhost")
+                            {
+                                var builder = new UriBuilder(redirectUrl)
+                                {
+                                    Scheme = userUrl.Scheme,
+                                    Host = userUrl.Host,
+                                    Port = userUrl.Port
+                                };
+                                redirectUrl = builder.Uri;
+                                host = redirectUrl.Host;
+                            }
                             var response = request.CreateHtmlResponse($"<script>window.location=\"{redirectUrl}\"</script>");
-                            var cookie = new System.Net.Http.Headers.CookieHeaderValue(Api.Constants.Cookies.FakingId, token);
-                            cookie.Expires = DateTimeOffset.Now.AddDays(1);
-                            cookie.Domain = request.RequestUri.Host;
-                            cookie.Path = "/";
+                            var cookie = new System.Net.Http.Headers.CookieHeaderValue(Api.Constants.Cookies.FakingId, token)
+                            {
+                                Expires = DateTimeOffset.Now.AddDays(1),
+                                Domain = host,
+                                Path = "/"
+                            };
                             response.Headers.AddCookies(new System.Net.Http.Headers.CookieHeaderValue[] { cookie });
                             return response;
                         },
