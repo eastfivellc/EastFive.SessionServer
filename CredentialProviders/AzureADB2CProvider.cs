@@ -12,6 +12,7 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
 {
     public class AzureADB2CProvider : IProvideCredentials
     {
+        internal const string StateKey = "State";
         IIdentityService loginProvider;
         SessionServer.Context context;
 
@@ -21,35 +22,40 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
             this.context = context;
         }
 
-        public async Task<TResult> RedeemTokenAsync<TResult>(string token, 
-            Func<Guid, IDictionary<string, string>, TResult> success,
-            Func<string, TResult> invalidCredentials,
-            Func<TResult> onAuthIdNotFound, 
-            Func<string, TResult> couldNotConnect,
-            Func<string, TResult> unspecifiedConfiguration)
+        public async Task<TResult> RedeemTokenAsync<TResult>(string token, Dictionary<string, string> extraParams,
+            Func<Guid, IDictionary<string, string>, TResult> onSuccess,
+            Func<string, TResult> onInvalidCredentials,
+            Func<TResult> onAuthIdNotFound,
+            Func<string, TResult> onCouldNotConnect,
+            Func<string, TResult> onUnspecifiedConfiguration,
+            Func<string, TResult> onFailure)
         {
             return await loginProvider.ValidateToken(token,
                 (claims) =>
                 {
                     return Web.Configuration.Settings.GetString(
-                        EastFive.Security.SessionServer.Configuration.AppSettings.LoginIdClaimType,
+                            EastFive.Security.SessionServer.Configuration.AppSettings.LoginIdClaimType,
                         (claimType) =>
                         {
-                            var authClaims = claims.Claims
-                                .Where(claim => claim.Type.CompareTo(claimType) == 0)
-                                .ToArray();
-                            if (authClaims.Length == 0)
-                                return invalidCredentials($"Token does not contain claim for [{claimType}] which is necessary to operate with this system");
-                            Guid authId;
-                            if (!Guid.TryParse(authClaims[0].Value, out authId))
-                                return invalidCredentials("User has invalid auth claim for this system");
+                            return loginProvider.ParseState(extraParams[StateKey],
+                                (action, data, extraParamsFromState) =>
+                                {
+                                    var authClaims = claims.Claims
+                                                 .Where(claim => claim.Type.CompareTo(claimType) == 0)
+                                                 .ToArray();
+                                    if (authClaims.Length == 0)
+                                        return onFailure($"Token does not contain claim for [{claimType}] which is necessary to operate with this system");
+                                    Guid authId;
+                                    if (!Guid.TryParse(authClaims[0].Value, out authId))
+                                        return onAuthIdNotFound("User has invalid auth claim for this system");
 
-                            // TODO: Load extra params from token claims
-                            return success(authId, new Dictionary<string, string>());
+                                    return onSuccess(authId, extraParamsFromState);
+                                },
+                                (why) => onFailure(why));
                         },
-                        unspecifiedConfiguration);
+                        onUnspecifiedConfiguration);
                 },
-                invalidCredentials);
+                onInvalidCredentials);
         }
     }
 }

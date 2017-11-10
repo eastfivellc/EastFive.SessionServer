@@ -15,12 +15,13 @@ namespace EastFive.Security.CredentialProvider.Token
             this.dataContext = dataContext;
         }
 
-        public Task<TResult> RedeemTokenAsync<TResult>(string accessToken,
+        public Task<TResult> RedeemTokenAsync<TResult>(string token, Dictionary<string, string> extraParams,
             Func<Guid, IDictionary<string, string>, TResult> onSuccess,
-            Func<string, TResult> invalidCredentials,
+            Func<string, TResult> onInvalidCredentials,
             Func<TResult> onAuthIdNotFound,
-            Func<string, TResult> couldNotConnect,
-            Func<string, TResult> unspecifiedConfiguration)
+            Func<string, TResult> onCouldNotConnect,
+            Func<string, TResult> onUnspecifiedConfiguration,
+            Func<string, TResult> onFailure)
         {
             return this.dataContext.CredentialMappings.FindTokenCredentialByTokenAsync(Guid.Parse(accessToken),
                 (inviteId, actorId, loginId) =>

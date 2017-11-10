@@ -8,27 +8,28 @@ namespace EastFive.Security.CredentialProvider.Voucher
 {
     public class VoucherCredentialProvider : IProvideCredentials
     {
-        public Task<TResult> RedeemTokenAsync<TResult>(string accessToken,
-                Func<Guid, IDictionary<string, string>, TResult> success,
-            Func<string, TResult> invalidCredentials,
+        public Task<TResult> RedeemTokenAsync<TResult>(string token, Dictionary<string, string> extraParams,
+            Func<Guid, IDictionary<string, string>, TResult> onSuccess,
+            Func<string, TResult> onInvalidCredentials,
             Func<TResult> onAuthIdNotFound,
-            Func<string, TResult> couldNotConnect,
-            Func<string, TResult> unspecifiedConfiguration)
+            Func<string, TResult> onCouldNotConnect,
+            Func<string, TResult> onUnspecifiedConfiguration,
+            Func<string, TResult> onFailure)
         {
             //var trustedProvider = Utilities.GetTrustedProviderId();
             //var trimChars = new char[] { '/' };
             //if (String.Compare(providerId.AbsoluteUri.TrimEnd(trimChars), trustedProvider.AbsoluteUri.TrimEnd(trimChars)) != 0)
             //    return invalidCredentials("ProviderId given does not match trustred ProviderId");
             
-            return Utilities.ValidateToken(accessToken,
+            return Utilities.ValidateToken(token,
                 (authId) =>
                 {
-                    return success(authId, null);
+                    return onSuccess(authId, null);
                 },
-                (errorMessage) => invalidCredentials(errorMessage),
-                (errorMessage) => invalidCredentials(errorMessage),
-                (errorMessage) => invalidCredentials(errorMessage),
-                unspecifiedConfiguration).ToTask();
+                (errorMessage) => onInvalidCredentials(errorMessage),
+                (errorMessage) => onInvalidCredentials(errorMessage),
+                (errorMessage) => onInvalidCredentials(errorMessage),
+                onUnspecifiedConfiguration).ToTask();
         }
     }
 }

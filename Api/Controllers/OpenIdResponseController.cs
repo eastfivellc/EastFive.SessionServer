@@ -11,6 +11,7 @@ using BlackBarLabs;
 using BlackBarLabs.Api;
 using EastFive.Api.Services;
 using BlackBarLabs.Extensions;
+using EastFive.Security.CredentialProvider.AzureADB2C;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
@@ -112,7 +113,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             var context = this.Request.GetSessionServerContext();
             var sessionId = Guid.NewGuid();
             var response = await await context.Sessions.CreateAsync<Task<IHttpActionResult>>(sessionId,
-                CredentialValidationMethodTypes.Password, result.id_token, result.state,
+                CredentialValidationMethodTypes.Password, result.id_token, new Dictionary<string, string>() { { AzureADB2CProvider.StateKey, result.state } },
                 (authorizationId, jwtToken, refreshToken, extraParams) =>
                 {
                     return CreateResponse(sessionId, authorizationId, jwtToken, refreshToken, extraParams);

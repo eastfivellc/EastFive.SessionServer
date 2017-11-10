@@ -18,11 +18,12 @@ namespace EastFive.Security.CredentialProvider
         /// <param name="couldNotConnect"></param>
         /// <returns>Value which will be stored for future access to this system. The return value must
         /// not be a default or empty string if the token was valid.</returns>
-        Task<TResult> RedeemTokenAsync<TResult>(string token,
-            Func<Guid, IDictionary<string, string>, TResult> success,
-            Func<string, TResult> invalidCredentials,
+        Task<TResult> RedeemTokenAsync<TResult>(string token, Dictionary<string, string> extraParams,
+            Func<Guid, IDictionary<string, string>, TResult> onSuccess,
+            Func<string, TResult> onInvalidCredentials,
             Func<TResult> onAuthIdNotFound,
-            Func<string, TResult> couldNotConnect,
-            Func<string, TResult> unspecifiedConfiguration);
+            Func<string, TResult> onCouldNotConnect,
+            Func<string, TResult> onUnspecifiedConfiguration,
+            Func<string, TResult> onFailure);
     }
 }

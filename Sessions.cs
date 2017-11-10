@@ -88,7 +88,7 @@ namespace EastFive.Security.SessionServer
         //}
         
         public async Task<T> CreateAsync<T>(Guid sessionId,
-            CredentialValidationMethodTypes method, string token,
+            CredentialValidationMethodTypes method, string token, Dictionary<string, string> extraParams,
             CreateSessionSuccessDelegate<T> onSuccess,
             CreateSessionAlreadyExistsDelegate<T> alreadyExists,
             Func<string, T> invalidToken,
@@ -97,11 +97,11 @@ namespace EastFive.Security.SessionServer
             Func<string, T> systemOffline,
             Func<string, T> onNotConfigured)
         {
-            var result = await await AuthenticateCredentialsAsync(method, token,
-                async (loginId, extraParams) =>
+            var result = await await AuthenticateCredentialsAsync(method, token, extraParams,
+                async (loginId, extraParamsWithAuthentication) =>
                 {
                     var refreshToken = SecureGuid.Generate().ToString("N"); // TODO: Store this
-                    return await LookupCredentialMappingAsync(loginId, sessionId, extraParams,
+                    return await LookupCredentialMappingAsync(loginId, sessionId, extraParamsWithAuthentication,
                         onSuccess, alreadyExists, lookupCredentialNotFound, onNotConfigured);
                 },
                 (why) => invalidToken(why).ToTask(),
@@ -111,48 +111,48 @@ namespace EastFive.Security.SessionServer
             return result;
         }
 
-        public async Task<T> CreateAsync<T>(Guid sessionId,
-            CredentialValidationMethodTypes method, string token, string state,
-            CreateSessionSuccessDelegate<T> onSuccess,
-            CreateSessionAlreadyExistsDelegate<T> alreadyExists,
-            Func<string, T> invalidToken,
-            Func<string, T> invalidState,
-            Func<T> authIdNotFound,
-            Func<Guid, T> credentialNotInSystem,
-            Func<T> lookupCredentialNotFound,
-            Func<T> alreadyRedeemed,
-            Func<T> onAlreadyInUse,
-            Func<string, T> systemOffline,
-            Func<string, T> onNotConfigured)
-        {
-            var loginProvider = await this.context.LoginProvider;
-            var parseResult = await loginProvider.ParseState(state,
-                async (action, data, extraParamsFromState) =>
-                {
-                    var result = await await AuthenticateCredentialsAsync(method, token,
-                        async (loginId, extraParamsFromCredetial) =>
-                        {
-                            var extraParams = extraParamsFromState.Concat(extraParamsFromCredetial).ToDictionary();
+        //public async Task<T> CreateAsync<T>(Guid sessionId,
+        //    CredentialValidationMethodTypes method, string token, string state,
+        //    CreateSessionSuccessDelegate<T> onSuccess,
+        //    CreateSessionAlreadyExistsDelegate<T> alreadyExists,
+        //    Func<string, T> invalidToken,
+        //    Func<string, T> invalidState,
+        //    Func<T> authIdNotFound,
+        //    Func<Guid, T> credentialNotInSystem,
+        //    Func<T> lookupCredentialNotFound,
+        //    Func<T> alreadyRedeemed,
+        //    Func<T> onAlreadyInUse,
+        //    Func<string, T> systemOffline,
+        //    Func<string, T> onNotConfigured)
+        //{
+        //    var loginProvider = await this.context.LoginProvider;
+        //    var parseResult = await loginProvider.ParseState(state,
+        //        async (action, data, extraParamsFromState) =>
+        //        {
+        //            var result = await await AuthenticateCredentialsAsync(method, token,
+        //                async (loginId, extraParamsFromCredetial) =>
+        //                {
+        //                    var extraParams = extraParamsFromState.Concat(extraParamsFromCredetial).ToDictionary();
 
-                            if (action == 1)
-                                return await CreateWithNewNewAccountAsync(loginId, sessionId, data, extraParams,
-                                    onSuccess, alreadyExists, lookupCredentialNotFound, alreadyRedeemed,
-                                    onAlreadyInUse, onAlreadyInUse);
+        //                    if (action == 1)
+        //                        return await CreateWithNewNewAccountAsync(loginId, sessionId, data, extraParams,
+        //                            onSuccess, alreadyExists, lookupCredentialNotFound, alreadyRedeemed,
+        //                            onAlreadyInUse, onAlreadyInUse);
 
-                            return await LookupCredentialMappingAsync(loginId, sessionId, new Dictionary<string, string>(),
-                                (authId, jwtToken, refreshToken, extraParamsPlus) => onSuccess(authId, jwtToken, refreshToken,
-                                    extraParams.Concat(extraParamsPlus).ToDictionary()),
-                                alreadyExists, () => credentialNotInSystem(loginId), onNotConfigured);
-                        },
-                        (why) => invalidToken(why).ToTask(),
-                        () => authIdNotFound().ToTask(),
-                        (why) => systemOffline(why).ToTask(),
-                        (why) => onNotConfigured(why).ToTask());
-                    return result;
-                },
-                (why) => invalidState(why).ToTask());
-            return parseResult;
-        }
+        //                    return await LookupCredentialMappingAsync(loginId, sessionId, new Dictionary<string, string>(),
+        //                        (authId, jwtToken, refreshToken, extraParamsPlus) => onSuccess(authId, jwtToken, refreshToken,
+        //                            extraParams.Concat(extraParamsPlus).ToDictionary()),
+        //                        alreadyExists, () => credentialNotInSystem(loginId), onNotConfigured);
+        //                },
+        //                (why) => invalidToken(why).ToTask(),
+        //                () => authIdNotFound().ToTask(),
+        //                (why) => systemOffline(why).ToTask(),
+        //                (why) => onNotConfigured(why).ToTask());
+        //            return result;
+        //        },
+        //        (why) => invalidState(why).ToTask());
+        //    return parseResult;
+        //}
         
         private async Task<TResult> CreateWithNewNewAccountAsync<TResult>(Guid loginId, Guid sessionId,
             byte [] data, IDictionary<string, string> extraParamsFromCall,
@@ -353,7 +353,7 @@ namespace EastFive.Security.SessionServer
         }
 
         private async Task<T> AuthenticateCredentialsAsync<T>(
-            CredentialValidationMethodTypes method, string token,
+            CredentialValidationMethodTypes method, string token, Dictionary<string, string> extraParams,
             Func<Guid, IDictionary<string, string>, T> onSuccess, 
             Func<string, T> onInvalidCredential,
             Func<T> onAuthIdNotFound,
@@ -361,10 +361,10 @@ namespace EastFive.Security.SessionServer
             Func<string, T> onUnspecifiedConfiguration)
         {
             var provider = await this.context.GetCredentialProvider(method);
-            return await provider.RedeemTokenAsync(token,
-                (authorizationId, extraParams) =>
+            return await provider.RedeemTokenAsync(token, extraParams,
+                (authorizationId, extraParamsWithRedemptionParams) =>
                 {
-                    return onSuccess(authorizationId, extraParams);
+                    return onSuccess(authorizationId, extraParamsWithRedemptionParams);
                 },
                 (why) => onInvalidCredential(why),
                 () => onAuthIdNotFound(),

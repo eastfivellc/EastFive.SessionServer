@@ -34,17 +34,18 @@ namespace EastFive.Security.SessionServer.CredentialProvider.Ping
             //return "https://sso.connect.pingidentity.com/sso/TXS/2.0/2/" + pingConnectToken;
         }
 
-        public async Task<TResult> RedeemTokenAsync<TResult>(string token,
+        public async Task<TResult> RedeemTokenAsync<TResult>(string token, Dictionary<string, string> extraParams,
             Func<Guid, IDictionary<string, string>, TResult> onSuccess,
-            Func<string, TResult> invalidCredentials,
+            Func<string, TResult> onInvalidCredentials,
             Func<TResult> onAuthIdNotFound,
-            Func<string, TResult> couldNotConnect,
-            Func<string, TResult> unspecifiedCredential)
+            Func<string, TResult> onCouldNotConnect,
+            Func<string, TResult> onUnspecifiedConfiguration,
+            Func<string, TResult> onFailure)
         {
             var tokenSplit = token.Split(new char[] { ':' });
             var tokenId = tokenSplit[0];
             var agentId = tokenSplit[1];
-            return await Web.Configuration.Settings.GetString(Configuration.AppSettings.PingIdentityAthenaRestApiKey,
+            return await Web.Configuration.Settings.GetString<Task<TResult>>(Configuration.AppSettings.PingIdentityAthenaRestApiKey,
                 async (restApiKey) =>
                 {
                     restApiKey = "tJsb,j1m"; // TODO: Read this and next from config
@@ -71,23 +72,22 @@ namespace EastFive.Security.SessionServer.CredentialProvider.Ping
                                     //string subject = stuff.pingone.subject;
                                     var hash = SHA512.Create().ComputeHash(System.Text.Encoding.UTF8.GetBytes(subject));
                                     var id = new Guid(hash.Take(16).ToArray());
-                                    var extraParams = new Dictionary<string, string>();
+                                    var extraParamsWithTokenValues = new Dictionary<string, string>(extraParams);
                                     foreach (var item in stuff)
                                     {
-                                        extraParams.Add(item.Key.ToString(), item.Value.ToString());
+                                        extraParamsWithTokenValues.Add(item.Key.ToString(), item.Value.ToString());
                                     }
-                                    return onSuccess(id, extraParams);
+                                    return onSuccess(id, extraParamsWithTokenValues);
                                 }
                                 else
                                 {
-                                    content.GetType();
-                                    return invalidCredentials(content);
+                                    return onFailure(content);
                                 }
                             }
                         },
-                        (why) => unspecifiedCredential(why).ToTask());
+                        (why) => onUnspecifiedConfiguration(why).ToTask());
                 },
-                (why) => unspecifiedCredential(why).ToTask());
+                (why) => onUnspecifiedConfiguration(why).ToTask());
         }
     }
 }

@@ -24,12 +24,13 @@ namespace EastFive.Security.SessionServer.CredentialProvider.SAML
             this.dataContext = context;
         }
 
-        public async Task<TResult> RedeemTokenAsync<TResult>(string token, 
+        public async Task<TResult> RedeemTokenAsync<TResult>(string token, Dictionary<string, string> extraParams,
             Func<Guid, IDictionary<string, string>, TResult> onSuccess,
-            Func<string, TResult> invalidCredentials,
+            Func<string, TResult> onInvalidCredentials,
             Func<TResult> onAuthIdNotFound,
-            Func<string, TResult> couldNotConnect,
-            Func<string, TResult> unspecifiedConfiguration)
+            Func<string, TResult> onCouldNotConnect,
+            Func<string, TResult> onUnspecifiedConfiguration,
+            Func<string, TResult> onFailure)
         {
             return await EastFive.Web.Configuration.Settings.GetBase64Bytes(AppSettings.SAMLCertificate,
                 async (certBuffer) =>

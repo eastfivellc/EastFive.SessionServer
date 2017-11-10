@@ -8,30 +8,31 @@ namespace EastFive.Security.CredentialProvider.Facebook
 {
     public class FacebookCredentialProvider : IProvideCredentials
     {
-        public async Task<TResult> RedeemTokenAsync<TResult>(string accessToken, 
-            Func<Guid, IDictionary<string, string>, TResult> success,
-            Func<string, TResult> invalidCredentials,
+        public async Task<TResult> RedeemTokenAsync<TResult>(string token, Dictionary<string, string> extraParams,
+            Func<Guid, IDictionary<string, string>, TResult> onSuccess,
+            Func<string, TResult> onInvalidCredentials,
             Func<TResult> onAuthIdNotFound,
-            Func<string, TResult> couldNotConnect,
-            Func<string, TResult> unspecifiedConfiguration)
+            Func<string, TResult> onCouldNotConnect,
+            Func<string, TResult> onUnspecifiedConfiguration,
+            Func<string, TResult> onFailure)
         {
-            if (String.IsNullOrWhiteSpace(accessToken))
-                return invalidCredentials("accessToken is null");
-            var client = new FacebookClient(accessToken);
+            if (String.IsNullOrWhiteSpace(token))
+                return onInvalidCredentials("accessToken is null");
+            var client = new FacebookClient(token);
             try
             {
                 dynamic result = await client.GetTaskAsync("me", new { fields = "name,id" });
                 if (null == result)
-                    return invalidCredentials("Cannot get token from Facebook");
+                    return onInvalidCredentials("Cannot get token from Facebook");
                 var username = ""; // TODO: Lookup from database
                 if (username != result.id)
-                    return invalidCredentials("username and result.Id from Facebook do not match");
+                    return onInvalidCredentials("username and result.Id from Facebook do not match");
                 throw new NotImplementedException();
             }
             catch (Exception ex)
             {
                 if (ex.Message.Contains("OAuthException"))
-                    return invalidCredentials("OAuthException occurred");
+                    return onInvalidCredentials("OAuthException occurred");
                 throw ex;
             }
         }
