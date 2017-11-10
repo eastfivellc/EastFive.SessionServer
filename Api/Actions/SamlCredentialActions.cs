@@ -120,7 +120,7 @@ namespace EastFive.Security.SessionServer.Api
             Guid actorPerformingId, System.Security.Claims.Claim[] claims)
         {
             if (!await Library.configurationManager.CanAdministerCredentialAsync(actorId, actorPerformingId, claims))
-                return request.CreateResponse(HttpStatusCode.NotFound).ToEnumerable().ToArray();
+                return request.CreateResponse(HttpStatusCode.NotFound).AsEnumerable().ToArray();
 
             var context = request.GetSessionServerContext();
             return await context.PasswordCredentials.GetPasswordCredentialByActorAsync(
@@ -132,8 +132,8 @@ namespace EastFive.Security.SessionServer.Api
                             Convert(passwordCredential, urlHelper));
                         return response;
                     }).ToArray(),
-                () => request.CreateResponse(HttpStatusCode.NotFound).ToEnumerable().ToArray(),
-                (why) => request.CreateResponse(HttpStatusCode.ServiceUnavailable).AddReason(why).ToEnumerable().ToArray());
+                () => request.CreateResponse(HttpStatusCode.NotFound).AsEnumerable().ToArray(),
+                (why) => request.CreateResponse(HttpStatusCode.ServiceUnavailable).AddReason(why).AsEnumerable().ToArray());
         }
 
         private static Resources.SamlCredential Convert(PasswordCredential passwordCredential, UrlHelper urlHelper)

@@ -43,6 +43,7 @@ namespace EastFive.Security.SessionServer.Api
                         (why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why));
                 }
 
+                // NOTE: Was calling create without the lookup!!!
                 return await context.Sessions.CreateAsync(resource.Id,
                     resource.CredentialToken.Method, resource.CredentialToken.Token,
                     createSessionCallback,
@@ -50,7 +51,8 @@ namespace EastFive.Security.SessionServer.Api
                     (why) => request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Invalid credential in token:{why}"),
                     () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("Account associated with that token is not associated with this system"),
                     () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("Account associated with that token is not associated with a user in this system"),
-                    (why) => request.CreateResponse(HttpStatusCode.BadGateway).AddReason(why));
+                    (why) => request.CreateResponse(HttpStatusCode.BadGateway).AddReason(why),
+                    (why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why));
 
             } catch(Exception ex)
             {
@@ -83,7 +85,8 @@ namespace EastFive.Security.SessionServer.Api
                     "Session is already authenticated. Please create a new session to repeat authorization."),
                 () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("User in token is not connected to this system"),
                 (errorMessage) => request.CreateErrorResponse(HttpStatusCode.NotFound, errorMessage),
-                (why) =>request.CreateResponse(HttpStatusCode.BadGateway));
+                (why) =>request.CreateResponse(HttpStatusCode.BadGateway),
+                (why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why));
             return session;
         }
     }

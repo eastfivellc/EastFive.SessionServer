@@ -82,7 +82,7 @@ namespace EastFive.Security.SessionServer.Api
                     }).ToArray();
                     return resources;
                 },
-                () => request.CreateResponse(HttpStatusCode.NotFound).ToEnumerable().ToArray());
+                () => request.CreateResponse(HttpStatusCode.NotFound).AsEnumerable().ToArray());
         }
 
         public static async Task<HttpResponseMessage> UpdateAsync(this Resources.Role contact,

@@ -62,20 +62,20 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 (authorizationId, token, refreshToken, extraParams) =>
                 {
                     var config = Library.configurationManager;
-                    var redirectResponse = config.GetRedirectUriAsync<IHttpActionResult>(CredentialValidationMethodTypes.SAML,
+                    var redirectResponse = config.GetRedirectUriAsync(CredentialValidationMethodTypes.SAML,
                         authorizationId, token, refreshToken, extraParams,
                         (redirectUrl) => Redirect(redirectUrl),
                         (paramName, why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult(),
                         (why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult());
                     return redirectResponse;
                 },
-                () => this.Request.CreateResponse(HttpStatusCode.Conflict)
-                            .AddReason("Already exists")
-                            .ToActionResult()
+                () => this.Request.CreateResponse(HttpStatusCode.InternalServerError)
+                    .AddReason("GUID NOT UNIQUE")
+                    .ToActionResult()
                     .ToTask(),
                 (why) => this.Request.CreateResponse(HttpStatusCode.BadRequest)
-                            .AddReason($"Invalid token:{why}")
-                            .ToActionResult()
+                    .AddReason($"Invalid token:{why}")
+                    .ToActionResult()
                     .ToTask(),
                 () => this.Request.CreateResponse(HttpStatusCode.Conflict)
                             .AddReason("Token does not work in this system")
@@ -85,9 +85,9 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                             .AddReason("Token is not connected to a user in this system")
                             .ToActionResult()
                     .ToTask(),
-                (why) => this.Request.CreateResponse(HttpStatusCode.BadGateway)
-                            .AddReason(why)
-                            .ToActionResult()
+                (why) => this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
+                    .AddReason(why)
+                    .ToActionResult()
                     .ToTask(),
                 (why) => this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
                     .AddReason(why)

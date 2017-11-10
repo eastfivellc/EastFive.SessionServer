@@ -78,11 +78,11 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                             .AddReason("Token is not connected to a user in this system")
                             .ToActionResult()
                             .ToTask(),
-                (why) => this.Request.CreateResponse(HttpStatusCode.BadGateway)
+                (why) => this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
                             .AddReason(why)
                             .ToActionResult()
                             .ToTask(),
-                (why) => this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
+                (why) => this.Request.CreateResponse(HttpStatusCode.InternalServerError)
                             .AddReason(why)
                             .ToActionResult()
                             .ToTask());

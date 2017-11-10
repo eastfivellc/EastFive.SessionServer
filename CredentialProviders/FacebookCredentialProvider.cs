@@ -12,7 +12,8 @@ namespace EastFive.Security.CredentialProvider.Facebook
             Func<Guid, IDictionary<string, string>, TResult> success,
             Func<string, TResult> invalidCredentials,
             Func<TResult> onAuthIdNotFound,
-            Func<string, TResult> couldNotConnect)
+            Func<string, TResult> couldNotConnect,
+            Func<string, TResult> unspecifiedConfiguration)
         {
             if (String.IsNullOrWhiteSpace(accessToken))
                 return invalidCredentials("accessToken is null");

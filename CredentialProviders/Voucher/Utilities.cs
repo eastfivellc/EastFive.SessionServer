@@ -31,7 +31,11 @@ namespace EastFive.Security.CredentialProvider.Voucher
         }
 
         public static T ValidateToken<T>(string accessToken,
-            Func<Guid, T> success, Func<string, T> tokenExpired, Func<string, T> invalidToken, Func<string, T> invalidSignature)
+            Func<Guid, T> success,
+            Func<string, T> tokenExpired,
+            Func<string, T> invalidToken,
+            Func<string, T> invalidSignature,
+            Func<string, T> unspecifiedConfiguration)
         {
             #region Parse token
 
@@ -78,8 +82,8 @@ namespace EastFive.Security.CredentialProvider.Voucher
 
                     return success(authId);
                 },
-                (missing) => { throw new Exception(); },
-                (missing, issue) => { throw new Exception(); });
+                (missing) => unspecifiedConfiguration(missing),
+                (missing, issue) => unspecifiedConfiguration(missing + ":" + issue));
             return result;
         }
 

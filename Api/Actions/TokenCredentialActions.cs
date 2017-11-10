@@ -84,7 +84,7 @@ namespace EastFive.Security.SessionServer.Api
                         .ToArray();
                     return responses;
                 },
-                () => request.CreateResponse(HttpStatusCode.NotFound).ToEnumerable().ToArray());
+                () => request.CreateResponse(HttpStatusCode.NotFound).AsEnumerable().ToArray());
         }
 
         private static Resources.TokenCredential Convert(Invite invite, UrlHelper urlHelper)

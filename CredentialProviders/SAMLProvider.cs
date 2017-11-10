@@ -28,7 +28,8 @@ namespace EastFive.Security.SessionServer.CredentialProvider.SAML
             Func<Guid, IDictionary<string, string>, TResult> onSuccess,
             Func<string, TResult> invalidCredentials,
             Func<TResult> onAuthIdNotFound,
-            Func<string, TResult> couldNotConnect)
+            Func<string, TResult> couldNotConnect,
+            Func<string, TResult> unspecifiedConfiguration)
         {
             return await EastFive.Web.Configuration.Settings.GetBase64Bytes(AppSettings.SAMLCertificate,
                 async (certBuffer) =>
@@ -36,7 +37,7 @@ namespace EastFive.Security.SessionServer.CredentialProvider.SAML
                     var certificate = new X509Certificate2(certBuffer);
                     var m = ((RSACryptoServiceProvider)certificate.PrivateKey);
                     AsymmetricAlgorithm trustedSigner = m; // AsymmetricAlgorithm.Create(certificate.GetKeyAlgorithm()
-                    var trustedSigners = default(AsymmetricAlgorithm) == trustedSigner ? null : trustedSigner.ToEnumerable();
+                    var trustedSigners = default(AsymmetricAlgorithm) == trustedSigner ? null : trustedSigner.AsEnumerable();
 
                     //var doc = new XmlDocument();
                     try
@@ -88,13 +89,13 @@ namespace EastFive.Security.SessionServer.CredentialProvider.SAML
                                     },
                                     () => invalidCredentials("Token does not exist"));
                             },
-                            (why) => couldNotConnect(why).ToTask());
+                            (why) => unspecifiedConfiguration(why).ToTask());
                     } catch(Exception ex)
                     {
                         return invalidCredentials("SAML Assertion parse and validate failed");
                     }
                 },
-                (why) => couldNotConnect(why).ToTask());
+                (why) => unspecifiedConfiguration(why).ToTask());
         }
     }
 }
