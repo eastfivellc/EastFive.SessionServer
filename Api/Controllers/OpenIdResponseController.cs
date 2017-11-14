@@ -126,35 +126,19 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                     .AddReason($"Invalid token:{why}")
                     .ToActionResult()
                     .ToTask(),
-                (why) => this.Request.CreateResponse(HttpStatusCode.BadRequest)
-                    .AddReason($"Invalid state:{why}")
-                    .ToActionResult()
-                    .ToTask(),
                 () => this.Request.CreateResponse(HttpStatusCode.Conflict)
-                    .AddReason("Token does not work in this system")
-                    .ToActionResult()
-                    .ToTask(),
-                (loginId) => this.Request.CreateResponse(HttpStatusCode.Conflict)
-                    .AddReason($"Token is for user [{loginId}] which is not connected to a user in this system")
+                    .AddReason($"Token is for user is not connected to a user in this system")
                     .ToActionResult()
                     .ToTask(),
                 () => this.Request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason("Invalid account creation link")
                     .ToActionResult()
                     .ToTask(),
-                () => this.Request.CreateResponse(HttpStatusCode.Conflict)
-                    .AddReason("Token has already been redeemed")
-                    .ToActionResult()
-                    .ToTask(),
-                () => this.Request.CreateResponse(HttpStatusCode.Conflict)
-                    .AddReason("The provided login credentials are already in use for another account")
-                    .ToActionResult()
-                    .ToTask(),
-                (why) => this.Request.CreateResponse(HttpStatusCode.BadGateway)
+                (why) => this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
                     .AddReason(why)
                     .ToActionResult()
                     .ToTask(),
-                (why) => this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
+                (why) => this.Request.CreateResponse(HttpStatusCode.InternalServerError)
                     .AddReason(why)
                     .ToActionResult()
                     .ToTask());

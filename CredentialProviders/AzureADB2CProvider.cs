@@ -47,7 +47,7 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
                                         return onFailure($"Token does not contain claim for [{claimType}] which is necessary to operate with this system");
                                     Guid authId;
                                     if (!Guid.TryParse(authClaims[0].Value, out authId))
-                                        return onAuthIdNotFound("User has invalid auth claim for this system");
+                                        return onAuthIdNotFound(); //  ("User has invalid auth claim for this system");
 
                                     return onSuccess(authId, extraParamsFromState);
                                 },

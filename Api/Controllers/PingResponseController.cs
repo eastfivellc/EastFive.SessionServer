@@ -58,7 +58,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             var context = Request.GetSessionServerContext();
             var response = await await context.Sessions.CreateAsync(Guid.NewGuid(),
                 CredentialValidationMethodTypes.Ping,
-                tokenId + ":" + agentId,
+                tokenId + ":" + agentId, new Dictionary<string, string>(), // JFIX!!!
                 (authorizationId, token, refreshToken, extraParams) =>
                 {
                     var config = Library.configurationManager;

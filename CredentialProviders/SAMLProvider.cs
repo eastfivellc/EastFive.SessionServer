@@ -85,18 +85,18 @@ namespace EastFive.Security.SessionServer.CredentialProvider.SAML
                                     (inviteId, actorId, loginId) =>
                                     {
                                         if (!loginId.HasValue)
-                                            return invalidCredentials("Token is not connected to an account");
+                                            return onAuthIdNotFound(); // "Token is not connected to an account");
                                         return onSuccess(loginId.Value, new Dictionary<string, string>()); // TODO: Build this from params above
                                     },
-                                    () => invalidCredentials("Token does not exist"));
+                                    () => onAuthIdNotFound()); //"Token does not exist"));
                             },
-                            (why) => unspecifiedConfiguration(why).ToTask());
+                            (why) => onUnspecifiedConfiguration(why).ToTask());
                     } catch(Exception ex)
                     {
-                        return invalidCredentials("SAML Assertion parse and validate failed");
+                        return onInvalidCredentials("SAML Assertion parse and validate failed");
                     }
                 },
-                (why) => unspecifiedConfiguration(why).ToTask());
+                (why) => onUnspecifiedConfiguration(why).ToTask());
         }
     }
 }

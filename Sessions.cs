@@ -107,7 +107,8 @@ namespace EastFive.Security.SessionServer
                 (why) => invalidToken(why).ToTask(),
                 () => authIdNotFound().ToTask(),
                 (why) => systemOffline(why).ToTask(),
-                (why) => onNotConfigured(why).ToTask());
+                (why) => onNotConfigured(why).ToTask(),
+                (why) => invalidToken(why).ToTask()); // JFIX!!!
             return result;
         }
 
@@ -324,9 +325,10 @@ namespace EastFive.Security.SessionServer
             Func<T> onAuthIdNotFound,
             AuthenticateNotFoundDelegate<T> onNotFound,
             Func<string, T> systemOffline,
-            Func<string, T> onUnspecifiedConfiguration)
+            Func<string, T> onUnspecifiedConfiguration,
+            Func<string, T> onFailure)
         {
-            var result = await await AuthenticateCredentialsAsync(credentialValidationMethod, token,
+            var result = await await AuthenticateCredentialsAsync(credentialValidationMethod, token, new Dictionary<string, string>(), // JFIX!!!
                 async (authorizationId, extraParams) =>
                 {
                     var updateAuthResult = await this.dataContext.Sessions.UpdateAuthentication<T>(sessionId,
@@ -348,7 +350,8 @@ namespace EastFive.Security.SessionServer
                 (why) => onInvalidCredentials(why).ToTask(),
                 () => onAuthIdNotFound().ToTask(),
                 (why) => systemOffline(why).ToTask(),
-                (why) => onUnspecifiedConfiguration(why).ToTask());
+                (why) => onUnspecifiedConfiguration(why).ToTask(),
+                (why) => onFailure(why).ToTask());
             return result;
         }
 
@@ -358,7 +361,8 @@ namespace EastFive.Security.SessionServer
             Func<string, T> onInvalidCredential,
             Func<T> onAuthIdNotFound,
             Func<string, T> systemUnavailable,
-            Func<string, T> onUnspecifiedConfiguration)
+            Func<string, T> onUnspecifiedConfiguration,
+            Func<string, T> onFailure)
         {
             var provider = await this.context.GetCredentialProvider(method);
             return await provider.RedeemTokenAsync(token, extraParams,
@@ -369,7 +373,8 @@ namespace EastFive.Security.SessionServer
                 (why) => onInvalidCredential(why),
                 () => onAuthIdNotFound(),
                 systemUnavailable,
-                onUnspecifiedConfiguration);
+                onUnspecifiedConfiguration,
+                onFailure);
         }
 
         //private string GenerateToken(Guid sessionId, Guid authorizationId, SessionServer.Persistence.Claim [] claims)

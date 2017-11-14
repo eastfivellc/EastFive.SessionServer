@@ -23,15 +23,15 @@ namespace EastFive.Security.CredentialProvider.Token
             Func<string, TResult> onUnspecifiedConfiguration,
             Func<string, TResult> onFailure)
         {
-            return this.dataContext.CredentialMappings.FindTokenCredentialByTokenAsync(Guid.Parse(accessToken),
+            return this.dataContext.CredentialMappings.FindTokenCredentialByTokenAsync(Guid.Parse(token),
                 (inviteId, actorId, loginId) =>
                 {
                     if (!loginId.HasValue)
-                        return invalidCredentials("Token is not connected to an account");
+                        return onInvalidCredentials("Token is not connected to an account");
 
                     return onSuccess(loginId.Value, null);
                 },
-                () => invalidCredentials("Token does not exist"));
+                () => onAuthIdNotFound());
         }
     }
 }

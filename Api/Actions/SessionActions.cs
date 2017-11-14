@@ -44,8 +44,9 @@ namespace EastFive.Security.SessionServer.Api
                 }
 
                 // NOTE: Was calling create without the lookup!!!
+                // JFIX!!!
                 return await context.Sessions.CreateAsync(resource.Id,
-                    resource.CredentialToken.Method, resource.CredentialToken.Token,
+                    resource.CredentialToken.Method, resource.CredentialToken.Token, new Dictionary<string, string>() { },
                     createSessionCallback,
                     () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("This session has already been created."),
                     (why) => request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Invalid credential in token:{why}"),
@@ -86,6 +87,7 @@ namespace EastFive.Security.SessionServer.Api
                 () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("User in token is not connected to this system"),
                 (errorMessage) => request.CreateErrorResponse(HttpStatusCode.NotFound, errorMessage),
                 (why) =>request.CreateResponse(HttpStatusCode.BadGateway),
+                (why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why),
                 (why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why));
             return session;
         }
