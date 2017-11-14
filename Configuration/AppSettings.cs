@@ -13,6 +13,8 @@
 
         public const string PingIdentityAthenaRestApiKey = "EastFive.Security.LoginProvider.PingIdentity.Athena.RestApiKey";
         public const string PingIdentityAthenaRestAuthUsername = "EastFive.Security.LoginProvider.PingIdentity.Athena.RestAuthUsername";
+
+        public const string ApplicationInsightsKey = "EastFive.Security.SessionServer.ApplicationInsightsKey";
         
 
         public const string LandingPage = "EastFive.Security.SessionServer.RouteDefinitions.LandingPage";

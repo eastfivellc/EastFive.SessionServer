@@ -16,6 +16,9 @@ using BlackBarLabs.Extensions;
 using System.Text;
 using System.IO;
 using System.Net.Http.Headers;
+using Microsoft.ApplicationInsights;
+using EastFive.Security.SessionServer.Configuration;
+using EastFive.Security.SessionServer.Exceptions;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
@@ -51,16 +54,40 @@ namespace EastFive.Security.SessionServer.Api.Controllers
 
         private async Task<IHttpActionResult> ParsePingResponseAsync(string tokenId, string agentId)
         {
-            if (String.IsNullOrWhiteSpace(tokenId))
+            var telemetry = Web.Configuration.Settings.GetString(SessionServer.Configuration.AppSettings.ApplicationInsightsKey,
+                (applicationInsightsKey) =>
+                {
+                    return new TelemetryClient { InstrumentationKey = applicationInsightsKey };
+                },
+                (why) =>
+                {
+                    return new TelemetryClient();
+                });
+
+            if (String.IsNullOrWhiteSpace(agentId))
+            {
+                telemetry.TrackException(new PingResponseException("PING Response did not include agentId"));
                 return this.Request.CreateResponse(HttpStatusCode.Conflict)
-                            .AddReason("SAML Response not provided in form POST")
+                            .AddReason("PING Response did not include agentId")
                             .ToActionResult();
+            }
+
+            if (String.IsNullOrWhiteSpace(tokenId))
+            {
+                telemetry.TrackException(new PingResponseException("PING Response did not include tokenId"));
+                return this.Request.CreateResponse(HttpStatusCode.Conflict)
+                            .AddReason("PING Response did not include tokenId")
+                            .ToActionResult();
+            }
+
             var context = Request.GetSessionServerContext();
             var response = await await context.Sessions.CreateAsync(Guid.NewGuid(),
                 CredentialValidationMethodTypes.Ping,
                 tokenId + ":" + agentId, new Dictionary<string, string>(), // JFIX!!!
                 (authorizationId, token, refreshToken, extraParams) =>
                 {
+                    telemetry.TrackEvent("PingSessionCreated", new Dictionary<string, string> { {"authorizationId", authorizationId.ToString() } });
+                    telemetry.TrackEvent("PingSessionCreated - ExtraParams", extraParams);
                     var config = Library.configurationManager;
                     var redirectResponse = config.GetRedirectUriAsync(CredentialValidationMethodTypes.SAML,
                         authorizationId, token, refreshToken, extraParams,
@@ -69,30 +96,54 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                         (why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult());
                     return redirectResponse;
                 },
-                () => this.Request.CreateResponse(HttpStatusCode.InternalServerError)
-                    .AddReason("GUID NOT UNIQUE")
-                    .ToActionResult()
-                    .ToTask(),
-                (why) => this.Request.CreateResponse(HttpStatusCode.BadRequest)
-                    .AddReason($"Invalid token:{why}")
-                    .ToActionResult()
-                    .ToTask(),
-                () => this.Request.CreateResponse(HttpStatusCode.Conflict)
-                            .AddReason("Token does not work in this system")
-                            .ToActionResult()
-                    .ToTask(),
-                () => this.Request.CreateResponse(HttpStatusCode.Conflict)
-                            .AddReason("Token is not connected to a user in this system")
-                            .ToActionResult()
-                    .ToTask(),
-                (why) => this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
-                    .AddReason(why)
-                    .ToActionResult()
-                    .ToTask(),
-                (why) => this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
-                    .AddReason(why)
-                    .ToActionResult()
-                    .ToTask());
+                () =>
+                {
+                    telemetry.TrackException(new PingResponseException($"Could not create session because the GUID is not unique (session already exists)"));
+                    return this.Request.CreateResponse(HttpStatusCode.InternalServerError)
+                        .AddReason("GUID NOT UNIQUE")
+                        .ToActionResult()
+                        .ToTask();
+                },
+                (why) =>
+                {
+                    telemetry.TrackException(new PingResponseException($"Invalid token:{why}"));
+                    return this.Request.CreateResponse(HttpStatusCode.BadRequest)
+                        .AddReason($"Invalid token:{why}")
+                        .ToActionResult()
+                        .ToTask();
+                },
+                () =>
+                {
+                    telemetry.TrackException(new PingResponseException("Token does not work in this system"));
+                    return this.Request.CreateResponse(HttpStatusCode.Conflict)
+                        .AddReason("Token does not work in this system")
+                        .ToActionResult()
+                        .ToTask();
+                },
+                () =>
+                {
+                    telemetry.TrackException(new PingResponseException("Token is not connected to a user in this system"));
+                    return this.Request.CreateResponse(HttpStatusCode.Conflict)
+                        .AddReason("Token is not connected to a user in this system")
+                        .ToActionResult()
+                        .ToTask();
+                },
+                (why) =>
+                {
+                    telemetry.TrackException(new PingResponseException($"Cannot create session because service is unavailable: {why}"));
+                    return this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
+                        .AddReason(why)
+                        .ToActionResult()
+                        .ToTask();
+                },
+                (why) =>
+                {
+                    telemetry.TrackException(new PingResponseException($"Cannot create session because service is unavailable: {why}"));
+                    return this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
+                        .AddReason(why)
+                        .ToActionResult()
+                        .ToTask();
+                });
 
             return response;
         }
