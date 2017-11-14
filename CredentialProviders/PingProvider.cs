@@ -48,11 +48,11 @@ namespace EastFive.Security.SessionServer.CredentialProvider.Ping
             return await Web.Configuration.Settings.GetString<Task<TResult>>(Configuration.AppSettings.PingIdentityAthenaRestApiKey,
                 async (restApiKey) =>
                 {
-                    restApiKey = "tJsb,j1m"; // TODO: Read this and next from config
+                    //restApiKey = "tJsb,j1m"; // TODO: Read this and next from config
                     return await Web.Configuration.Settings.GetString(Configuration.AppSettings.PingIdentityAthenaRestAuthUsername,
                         async (restAuthUsername) =>
                         {
-                            restAuthUsername = "c0b42256-3d73-43a9-9a3b-d5b1d47aa08a";
+                            //restAuthUsername = "c0b42256-3d73-43a9-9a3b-d5b1d47aa08a";
                             using (var httpClient = new HttpClient())
                             {
                                 var credentials = Encoding.ASCII.GetBytes($"{restAuthUsername}:{restApiKey}");
