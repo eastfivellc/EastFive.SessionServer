@@ -186,6 +186,7 @@
     <Compile Include="Api\Resources\InviteCredential.cs" />
     <Compile Include="Api\Resources\Queries\InviteCredentialQuery.cs" />
     <Compile Include="Api\Resources\Queries\PasswordCredentialQuery.cs" />
+    <Compile Include="Health.cs" />
     <Compile Include="Configuration\AppSettings.cs" />
     <Compile Include="Configuration\AuthorizationParameters.cs" />
     <Compile Include="Configuration\ClaimsDefinitions.cs" />

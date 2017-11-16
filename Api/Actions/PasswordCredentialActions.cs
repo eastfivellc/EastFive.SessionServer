@@ -32,6 +32,9 @@ namespace EastFive.Security.SessionServer.Api
             Guid performingActorId, System.Security.Claims.Claim[]claims)
         {
             var actorId = credential.Actor.ToGuid();
+            if (!actorId.HasValue)
+                return request.CreateResponse(HttpStatusCode.Conflict).AddReason("Actor is null");
+
             var loginProviderTaskGetter = (Func<Task<IIdentityService>>)
                 request.Properties[ServicePropertyDefinitions.IdentityService];
             var loginProviderTask = loginProviderTaskGetter();

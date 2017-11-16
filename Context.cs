@@ -159,14 +159,23 @@ namespace EastFive.Security.SessionServer
             }
         }
 
+        private Health health;
+        public Health Health
+        {
+
+            get
+            {
+                if (default(Health) == health)
+                    health = new Health(this, DataContext);
+                return health;
+            }
+        }
 
         #region Authorizations
 
         public delegate bool GetCredentialDelegate(CredentialValidationMethodTypes validationMethod, Uri provider, string userId, string userToken);
         
         #endregion
-
-
 
     }
 }

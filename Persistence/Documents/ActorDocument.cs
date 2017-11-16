@@ -8,6 +8,8 @@ using BlackBarLabs.Persistence.Azure;
 using BlackBarLabs.Persistence.Azure.StorageTables;
 using BlackBarLabs.Linq;
 using System.Collections.Generic;
+using Microsoft.WindowsAzure.Storage.Table;
+using System.Runtime.Serialization;
 
 namespace EastFive.Security.SessionServer.Persistence.Documents
 {
@@ -16,6 +18,10 @@ namespace EastFive.Security.SessionServer.Persistence.Documents
         #region Constructors
 
         public ActorMappingsDocument() { }
+
+        [IgnoreDataMember]
+        [IgnoreProperty]
+        public Guid Id { get { return Guid.Parse(this.RowKey); } }
 
         //internal async Task<Claim[]> GetClaims(AzureStorageRepository repository)
         //{
