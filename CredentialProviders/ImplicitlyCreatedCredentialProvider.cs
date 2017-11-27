@@ -6,11 +6,66 @@ using System.Configuration;
 using BlackBarLabs.Extensions;
 using System.Security.Claims;
 using EastFive.Security.CredentialProvider.ImplicitCreation;
+using System.Collections.Generic;
 
 namespace EastFive.Security.SessionServer.CredentialProvider.ImplicitCreation
 {
-    public class ImplicitlyCreatedCredentialProvider
+    public class ImplicitlyCreatedCredentialProvider : IProvideLoginManagement, IProvideAuthorization
     {
+        public static Task<TResult> InitializeAsync<TResult>(
+            Func<IProvideLogin, TResult> onProvideLogin,
+            Func<IProvideAuthorization, TResult> onProvideAuthorization,
+            Func<TResult> onProvideNothing,
+            Func<string, TResult> onFailure)
+        {
+            return onProvideNothing().ToTask();
+        }
+
+        public CredentialValidationMethodTypes Method => CredentialValidationMethodTypes.Implicit;
+        public Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> extraParams,
+            Func<string, Guid?, Guid?, IDictionary<string, string>, TResult> onSuccess,
+            Func<string, TResult> onInvalidCredentials,
+            Func<string, TResult> onCouldNotConnect,
+            Func<string, TResult> onUnspecifiedConfiguration,
+            Func<string, TResult> onFailure)
+        {
+            throw new NotImplementedException();
+        }
+
+        #region IProvideLoginManagement
+
+        public Task<TResult> CreateAuthorizationAsync<TResult>(string displayName, string userId, bool isEmail, string secret, bool forceChange, Func<Guid, TResult> onSuccess, Func<Guid, TResult> usernameAlreadyInUse, Func<TResult> onPasswordInsufficent, Func<string, TResult> onServiceNotAvailable, Func<TResult> onServiceNotSupported, Func<string, TResult> onFailure)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<TResult> GetAllAuthorizationsAsync<TResult>(Func<LoginInfo[], TResult> onFound, Func<string, TResult> onServiceNotAvailable, Func<TResult> onServiceNotSupported, Func<string, TResult> onFailure)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<TResult> GetAuthorizationAsync<TResult>(Guid loginId,
+            Func<LoginInfo, TResult> onSuccess,
+            Func<TResult> onNotFound,
+            Func<string, TResult> onServiceNotAvailable,
+            Func<TResult> onServiceNotSupported,
+            Func<string, TResult> onFailure)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<TResult> UpdateAuthorizationAsync<TResult>(Guid loginId, string password, bool forceChange, Func<TResult> onSuccess, Func<string, TResult> onServiceNotAvailable, Func<TResult> onServiceNotSupported, Func<string, TResult> onFailure)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<TResult> DeleteAuthorizationAsync<TResult>(Guid loginId, Func<TResult> onSuccess, Func<string, TResult> onServiceNotAvailable, Func<TResult> onServiceNotSupported, Func<string, TResult> onFailure)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
+        
         public async Task<TResult> LookupAndDeleteUser<TResult>(string username, string token,
             Func<Guid, TResult> success,
             Func<TResult> invalidCredentials,
@@ -53,5 +108,7 @@ namespace EastFive.Security.SessionServer.CredentialProvider.ImplicitCreation
                 () => onNotFound());
             return result;
         }
+        
+
     }
 }

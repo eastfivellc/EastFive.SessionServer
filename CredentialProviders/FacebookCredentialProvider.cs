@@ -3,19 +3,32 @@ using System.Threading.Tasks;
 using Facebook;
 using System.Security.Claims;
 using System.Collections.Generic;
+using EastFive.Security.SessionServer;
+using BlackBarLabs.Extensions;
 
 namespace EastFive.Security.CredentialProvider.Facebook
 {
-    public class FacebookCredentialProvider : IProvideCredentials
+    public class FacebookCredentialProvider : IProvideLogin
     {
-        public async Task<TResult> RedeemTokenAsync<TResult>(string token, Dictionary<string, string> extraParams,
-            Func<Guid, IDictionary<string, string>, TResult> onSuccess,
+        public static Task<TResult> InitializeAsync<TResult>(
+            Func<IProvideLogin, TResult> onProvideLogin,
+            Func<IProvideAuthorization, TResult> onProvideAuthorization,
+            Func<TResult> onProvideNothing,
+            Func<string, TResult> onFailure)
+        {
+            return onProvideNothing().ToTask();
+        }
+
+        public CredentialValidationMethodTypes Method => CredentialValidationMethodTypes.Facebook;
+
+        public async Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> extraParams,
+            Func<string, Guid?, Guid?, IDictionary<string, string>, TResult> onSuccess,
             Func<string, TResult> onInvalidCredentials,
-            Func<TResult> onAuthIdNotFound,
             Func<string, TResult> onCouldNotConnect,
             Func<string, TResult> onUnspecifiedConfiguration,
             Func<string, TResult> onFailure)
         {
+            var token = extraParams["fb_response"]; // TODO: Lookup real value
             if (String.IsNullOrWhiteSpace(token))
                 return onInvalidCredentials("accessToken is null");
             var client = new FacebookClient(token);
@@ -36,5 +49,34 @@ namespace EastFive.Security.CredentialProvider.Facebook
                 throw ex;
             }
         }
+
+        #region IProvideLogin
+        
+        public Uri GetLoginUrl(Guid state, Uri responseControllerLocation)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Uri GetLoginUrl(string redirect_uri, byte mode, byte[] state, Uri responseControllerLocation)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Uri GetLogoutUrl(string redirect_uri, byte mode, byte[] state, Uri responseControllerLocation)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Uri GetSignupUrl(string redirect_uri, byte mode, byte[] state, Uri responseControllerLocation)
+        {
+            throw new NotImplementedException();
+        }
+
+        public TResult ParseState<TResult>(string state, Func<byte, byte[], IDictionary<string, string>, TResult> onSuccess, Func<string, TResult> invalidState)
+        {
+            throw new NotImplementedException();
+        }
+        
+        #endregion
     }
 }

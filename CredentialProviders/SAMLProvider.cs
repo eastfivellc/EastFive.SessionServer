@@ -12,22 +12,40 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using EastFive.Security.SessionServer.Persistence;
+using EastFive.Api.Services;
+using System.Security.Claims;
+using EastFive.Security.SessionServer;
 
-namespace EastFive.Security.SessionServer.CredentialProvider.SAML
+namespace EastFive.Security.CredentialProvider.SAML
 {
-    public class SAMLProvider : IProvideCredentials
+    public class SAMLProvider : IProvideLogin
     {
         private DataContext dataContext;
+        
+        internal const string SamlpResponseKey = "samlp:Response";
+        internal const string SamlAssertionKey = "saml:Assertion";
+        internal const string SamlSubjectKey = "saml:Subject";
+        internal const string SamlNameIDKey = "saml:NameID";
 
-        public SAMLProvider(Persistence.DataContext context)
+        public SAMLProvider()
         {
-            this.dataContext = context;
+            this.dataContext = new DataContext(SessionServer.Configuration.AppSettings.Storage);
         }
 
-        public async Task<TResult> RedeemTokenAsync<TResult>(string token, Dictionary<string, string> extraParams,
-            Func<Guid, IDictionary<string, string>, TResult> onSuccess,
+        public static Task<TResult> InitializeAsync<TResult>(
+            Func<IProvideLogin, TResult> onProvideLogin,
+            Func<IProvideAuthorization, TResult> onProvideAuthorization,
+            Func<TResult> onProvideNothing,
+            Func<string, TResult> onFailure)
+        {
+            return onProvideAuthorization(new SAMLProvider()).ToTask();
+        }
+
+        public CredentialValidationMethodTypes Method => CredentialValidationMethodTypes.SAML;
+
+        public async Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> tokens,
+            Func<string, Guid?, Guid?, IDictionary<string, string>, TResult> onSuccess,
             Func<string, TResult> onInvalidCredentials,
-            Func<TResult> onAuthIdNotFound,
             Func<string, TResult> onCouldNotConnect,
             Func<string, TResult> onUnspecifiedConfiguration,
             Func<string, TResult> onFailure)
@@ -39,34 +57,12 @@ namespace EastFive.Security.SessionServer.CredentialProvider.SAML
                     var m = ((RSACryptoServiceProvider)certificate.PrivateKey);
                     AsymmetricAlgorithm trustedSigner = m; // AsymmetricAlgorithm.Create(certificate.GetKeyAlgorithm()
                     var trustedSigners = default(AsymmetricAlgorithm) == trustedSigner ? null : trustedSigner.AsEnumerable();
-
-                    //var doc = new XmlDocument();
+                    
                     try
                     {
-                        var doc = XDocument.Parse(token); //or XDocument.Load(path)
-                        string jsonText = JsonConvert.SerializeXNode(doc);
-                        var dyn = JsonConvert.DeserializeObject<ExpandoObject>(jsonText);
+                        var nameId = tokens[SAMLProvider.SamlNameIDKey];
 
-                        var response = ((IDictionary<string, object>)dyn)["samlp:Response"];
-                        var assertion = ((IDictionary<string, object>)response)["saml:Assertion"];
-                        var subject = ((IDictionary<string, object>)assertion)["saml:Subject"];
-                        var nameIdNode = ((IDictionary<string, object>)subject)["saml:NameID"];
-                        var nameId = (string)((IDictionary<string, object>)nameIdNode)["#text"];
-                        //var docXml = "<?xml version=\"1.0\" encoding=\"utf-8\"?>" + token;
-                        //doc.LoadXml(token);
-
-                        //var samlXml = doc.DocumentElement;
-                        //var events = new System.Xml.Serialization.XmlDeserializationEvents();
-                        //var serializer = new System.Xml.Serialization.XmlSerializer(typeof(Guid));
-                        //serializer.Deserialize(new System.Xml.XmlNodeReader(samlXml), "utf-8", events);
-                        //var assertionNode = (XmlElement)samlXml.SelectSingleNode("/*[local-name() ='Response']/*[local-name() ='Assertion']");
-                        //var assertion = new SAML2.Saml20Assertion(assertionNode, trustedSigners, false,
-                        //    new SAML2.Config.Saml2Configuration
-                        //    {
-                        //        AllowedAudienceUris = 
-                        //    });
-
-                        return await EastFive.Web.Configuration.Settings.GetString(AppSettings.SAMLLoginIdAttributeName,
+                        return EastFive.Web.Configuration.Settings.GetString(AppSettings.SAMLLoginIdAttributeName,
                             (attributeName) =>
                             {
                                 //var attributes = assertion.Attributes
@@ -79,24 +75,46 @@ namespace EastFive.Security.SessionServer.CredentialProvider.SAML
                                 //    return invalidCredentials("User's auth identifier is not a guid.");
 
                                 var hash = SHA512.Create().ComputeHash(System.Text.Encoding.UTF8.GetBytes(nameId));
-                                var id = new Guid(hash.Take(16).ToArray());
+                                var loginId = new Guid(hash.Take(16).ToArray());
 
-                                return this.dataContext.CredentialMappings.FindTokenCredentialByTokenAsync(id,
-                                    (inviteId, actorId, loginId) =>
-                                    {
-                                        if (!loginId.HasValue)
-                                            return onAuthIdNotFound(); // "Token is not connected to an account");
-                                        return onSuccess(loginId.Value, new Dictionary<string, string>()); // TODO: Build this from params above
-                                    },
-                                    () => onAuthIdNotFound()); //"Token does not exist"));
+                                return onSuccess(nameId, default(Guid?), loginId, new Dictionary<string, string>()); // TODO: Build this from params above
                             },
-                            (why) => onUnspecifiedConfiguration(why).ToTask());
+                            (why) => onUnspecifiedConfiguration(why));
                     } catch(Exception ex)
                     {
-                        return onInvalidCredentials("SAML Assertion parse and validate failed");
+                        return await onInvalidCredentials("SAML Assertion parse and validate failed").ToTask();
                     }
                 },
                 (why) => onUnspecifiedConfiguration(why).ToTask());
         }
+
+        #region IProvideLogin
+
+        public Uri GetLoginUrl(string redirect_uri, byte mode, byte[] state, Uri responseControllerLocation)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Uri GetSignupUrl(string redirect_uri, byte mode, byte[] state, Uri responseControllerLocation)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Uri GetLogoutUrl(string redirect_uri, byte mode, byte[] state, Uri responseControllerLocation)
+        {
+            throw new NotImplementedException();
+        }
+
+        public TResult ParseState<TResult>(string state, Func<byte, byte[], IDictionary<string, string>, TResult> onSuccess, Func<string, TResult> invalidState)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Uri GetLoginUrl(Guid state, Uri responseControllerLocation)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion 
     }
 }

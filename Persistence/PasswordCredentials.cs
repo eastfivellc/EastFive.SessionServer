@@ -123,7 +123,8 @@ namespace EastFive.Security.SessionServer.Persistence
         {
             return await await repository.FindByIdAsync(passwordCredentialId,
                 (Documents.PasswordCredentialDocument document) =>
-                    context.CredentialMappings.LookupCredentialMappingAsync(document.LoginId,
+                    context.CredentialMappings.LookupCredentialMappingByIdAsync(
+                            document.LoginId,
                         (actorId) => onSuccess(actorId, document.LoginId, document.EmailLastSent),
                         () => onNotFound()),
                 () => onNotFound().ToTask());

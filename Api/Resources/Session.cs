@@ -1,4 +1,6 @@
-﻿using System;
+﻿using BlackBarLabs.Extensions;
+using System;
+using System.Collections.Generic;
 using System.Runtime.Serialization;
 
 namespace EastFive.Security.SessionServer.Api.Resources
@@ -10,7 +12,7 @@ namespace EastFive.Security.SessionServer.Api.Resources
         public CredentialValidationMethodTypes Method { get; set; }
 
         [DataMember]
-        public string Token { get; set; }
+        public Dictionary<string, string> Token { get; set; }
     }
 
     [DataContract]
@@ -40,8 +42,8 @@ namespace EastFive.Security.SessionServer.Api.Resources
             if (default(CredentialToken) == this.CredentialToken)
                 return false;
 
-            return 
-                !(String.IsNullOrWhiteSpace(CredentialToken.Token));
+            return
+                !CredentialToken.Token.IsDefault();
         }
     }
 }

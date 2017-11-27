@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
-namespace EastFive.Security.CredentialProvider
+namespace EastFive.Security.SessionServer
 {
-    public interface IProvideCredentials
+    public interface IProvideAuthorization
     {
+        CredentialValidationMethodTypes Method { get; }
+
         /// <summary>
         /// This method validates that the provided token is valid for
         /// the specified username and provider.
@@ -18,10 +21,9 @@ namespace EastFive.Security.CredentialProvider
         /// <param name="couldNotConnect"></param>
         /// <returns>Value which will be stored for future access to this system. The return value must
         /// not be a default or empty string if the token was valid.</returns>
-        Task<TResult> RedeemTokenAsync<TResult>(string token, Dictionary<string, string> extraParams,
-            Func<Guid, IDictionary<string, string>, TResult> onSuccess,
-            Func<string, TResult> onInvalidCredentials,
-            Func<TResult> onAuthIdNotFound,
+        Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> responseParams,
+            Func<string, Guid?, Guid?, IDictionary<string, string>, TResult> onSuccess,
+            Func<string, TResult> onInvalidToken,
             Func<string, TResult> onCouldNotConnect,
             Func<string, TResult> onUnspecifiedConfiguration,
             Func<string, TResult> onFailure);

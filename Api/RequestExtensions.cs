@@ -10,20 +10,10 @@ namespace EastFive.Security.SessionServer
 {
     public static class RequestExtensions
     {
-        public static SessionServer.Context GetSessionServerContext(this HttpRequestMessage request)
+        public static Context GetSessionServerContext(this HttpRequestMessage request)
         {
-            object identityServiceCreateObject;
-            request.Properties.TryGetValue(
-                BlackBarLabs.Api.ServicePropertyDefinitions.IdentityService, out identityServiceCreateObject);
-            var identityServiceCreate = (Func<Task<IIdentityService>>)identityServiceCreateObject;
-
-            object mailServiceObject;
-            request.Properties.TryGetValue(
-                BlackBarLabs.Api.ServicePropertyDefinitions.MailService, out mailServiceObject);
-            var mailService = (Func<ISendMessageService>)mailServiceObject;
-
-            var context = new SessionServer.Context(() => new DataContext(Configuration.AppSettings.Storage),
-                identityServiceCreate, mailService);
+            var context = new EastFive.Security.SessionServer.Context(
+                () => new EastFive.Security.SessionServer.Persistence.DataContext(Configuration.AppSettings.Storage));
             return context;
         }
     }

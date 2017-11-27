@@ -149,6 +149,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Api\Actions\AuthenticationRequestLinkActions..cs" />
+    <Compile Include="Api\Actions\AuthenticationRequestActions.cs" />
+    <Compile Include="Api\Actions\CredentialActions.cs" />
     <Compile Include="Api\Actions\SamlCredentialActions.cs" />
     <Compile Include="Api\Actions\TokenActions.cs" />
     <Compile Include="Api\Actions\RoleActions.cs" />
@@ -161,6 +164,11 @@
     <Compile Include="Api\Controllers\ActAsUserViewController.cs" />
     <Compile Include="Api\Controllers\BaseController.cs" />
     <Compile Include="Api\Controllers\ActAsUserController.cs" />
+    <Compile Include="Api\Controllers\AuthenticationRequestController.cs" />
+    <Compile Include="Api\Controllers\LightspeedResponseController.cs" />
+    <Compile Include="Api\Controllers\AuthenticationRequestLinkController.cs" />
+    <Compile Include="Api\Controllers\CredentialController.cs" />
+    <Compile Include="Api\Controllers\ResponseController.cs" />
     <Compile Include="Api\Controllers\SamlCredentialController.cs" />
     <Compile Include="Api\Controllers\PingResponseController.cs" />
     <Compile Include="Api\Controllers\SAMLRedirectController.cs" />
@@ -172,9 +180,16 @@
     <Compile Include="Api\Controllers\PasswordCredentialController.cs" />
     <Compile Include="Api\Controllers\SessionController.cs" />
     <Compile Include="Api\RequestExtensions.cs" />
+    <Compile Include="Api\Resources\AccountLink.cs" />
     <Compile Include="Api\Resources\AuthHeaderProps.cs" />
     <Compile Include="Api\Controllers\AccountLinksController.cs" />
     <Compile Include="Api\Resources\ActAsUser.cs" />
+    <Compile Include="Api\Resources\AuthenticationRequest.cs" />
+    <Compile Include="Api\Resources\AuthenticationRequestLink.cs" />
+    <Compile Include="Api\Resources\LightspeedCredential.cs" />
+    <Compile Include="Api\Resources\Credential.cs" />
+    <Compile Include="Api\Resources\Queries\AuthenticationRequestLinkQuery.cs" />
+    <Compile Include="Api\Resources\Queries\AuthenticationRequestQuery.cs" />
     <Compile Include="Api\Resources\Queries\SamlCredentialQuery.cs" />
     <Compile Include="Api\Resources\SamlCredential.cs" />
     <Compile Include="Api\Resources\Queries\TokenQuery.cs" />
@@ -186,28 +201,36 @@
     <Compile Include="Api\Resources\InviteCredential.cs" />
     <Compile Include="Api\Resources\Queries\InviteCredentialQuery.cs" />
     <Compile Include="Api\Resources\Queries\PasswordCredentialQuery.cs" />
+    <Compile Include="AuthenticationActions.cs" />
     <Compile Include="Configuration\AppSettings.cs" />
     <Compile Include="Configuration\AuthorizationParameters.cs" />
     <Compile Include="Configuration\ClaimsDefinitions.cs" />
     <Compile Include="Configuration\EmailTemplateDefinitions.cs" />
+    <Compile Include="CredentialProviders\OAuthProvider.cs" />
     <Compile Include="CredentialProviders\PingProvider.cs" />
     <Compile Include="CredentialProviders\SAMLProvider.cs" />
     <Compile Include="CredentialProviders\TokenCredentialProvider.cs" />
+    <Compile Include="IProvideLoginManagement.cs" />
+    <Compile Include="AuthenticationRequests.cs" />
+    <Compile Include="IProvideLogin.cs" />
+    <Compile Include="IProvideAuthorization.cs" />
+    <Compile Include="LoginProviders.cs" />
     <Compile Include="Exceptions\PingResponseException.cs" />
     <Compile Include="IConfigureIdentityServer.cs" />
     <Compile Include="IdentityServerConfiguration.cs" />
     <Compile Include="PasswordCredentials.cs" />
     <Compile Include="Credentials.cs" />
     <Compile Include="CredentialProviders\AzureADB2CProvider.cs" />
-    <Compile Include="LoginProvider.cs" />
     <Compile Include="Library.cs" />
     <Compile Include="Api\Controllers\OpenIdResponseController.cs" />
     <Compile Include="CredentialProviders\FacebookCredentialProvider.cs" />
-    <Compile Include="CredentialProviders\IProvideCredentials.cs" />
     <Compile Include="CredentialProviders\Voucher\Utilities.cs" />
     <Compile Include="CredentialValidationMethodTypes.cs" />
+    <Compile Include="Persistence\Documents\AuthenticationRequestDocument.cs" />
+    <Compile Include="Persistence\Documents\CredentialMappingLookupDocument.cs" />
     <Compile Include="Persistence\Documents\RoleDocument.cs" />
     <Compile Include="Persistence\Claims.cs" />
+    <Compile Include="Persistence\AuthenticationRequests.cs" />
     <Compile Include="Persistence\PasswordCredentials.cs" />
     <Compile Include="Persistence\CredentialMappings.cs" />
     <Compile Include="Persistence\Documents\LoginActorLookupDocument.cs" />
@@ -240,6 +263,7 @@
     <Compile Include="Context.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Authorizations.cs" />
+    <Compile Include="ServiceConfiguration.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Api\Views\ActAsUser\Index.cshtml" />

@@ -98,13 +98,13 @@ namespace EastFive.Security.SessionServer.Api
             Func<string, RedirectResult> redirect)
         {
             var context = request.GetSessionServerContext();
-            var result = await await context.Sessions.LookupCredentialMappingAsync(loginId, Guid.NewGuid(),
+            var result = await await context.Sessions.LookupCredentialMappingAsync(
+                CredentialValidationMethodTypes.Password, "", loginId, Guid.NewGuid(),
                 new Dictionary<string, string>(),
                 async (authorizationId, tken, refreshToken, extraParams) =>
                 {
-                    
                     return await Library.configurationManager.GetRedirectUriAsync(CredentialValidationMethodTypes.Password,
-                        authorizationId, tken, refreshToken, extraParams,
+                        authorizationId, tken, refreshToken, extraParams, default(Uri),
                         (redirectUrl) =>
                         {
                             var host = request.RequestUri.Host;

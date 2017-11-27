@@ -19,6 +19,7 @@ namespace EastFive.Security.SessionServer
                 Guid? authorizationId,
                 string token, string refreshToken,
                 IDictionary<string, string> authParams,
+                Uri redirectUrl,
             Func<Uri, TResult> onSuccess,
             Func<string, string, TResult> onInvalidParameter,
             Func<string, TResult> onFailure);

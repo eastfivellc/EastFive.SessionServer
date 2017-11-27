@@ -28,8 +28,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
 
         public string agentid { get; set; }
     }
-
-    // aadb2c/SAMLRedirect?tokenid=ID7ee36a406286079a7237b23dd7647d95b8d42ddbcde4fbe8030000015d5790a407&agentid=e924bba8
+    
     [RoutePrefix("aadb2c")]
     public class PingResponseController : BaseController
     {
@@ -81,22 +80,32 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             }
 
             var context = Request.GetSessionServerContext();
-            var response = await await context.Sessions.CreateAsync(Guid.NewGuid(),
+            var response = await await context.AuthenticationRequests.UpdateAsync(Guid.NewGuid(),
                 CredentialValidationMethodTypes.Ping,
-                tokenId + ":" + agentId, new Dictionary<string, string>(), // JFIX!!!
-                (authorizationId, token, refreshToken, extraParams) =>
+                new Dictionary<string, string>()
+                {
+                    {
+                        Security.CredentialProvider.Ping.PingProvider.AgentId,
+                        agentId
+                    },
+                    {
+                        Security.CredentialProvider.Ping.PingProvider.TokenId,
+                        tokenId
+                    }
+                },
+                (sessionId, authorizationId, token, refreshToken, extraParams, redirectUri) =>
                 {
                     telemetry.TrackEvent("PingSessionCreated", new Dictionary<string, string> { {"authorizationId", authorizationId.ToString() } });
                     telemetry.TrackEvent("PingSessionCreated - ExtraParams", extraParams);
                     var config = Library.configurationManager;
                     var redirectResponse = config.GetRedirectUriAsync(CredentialValidationMethodTypes.SAML,
-                        authorizationId, token, refreshToken, extraParams,
+                        authorizationId, token, refreshToken, extraParams, redirectUri,
                         (redirectUrl) => Redirect(redirectUrl),
                         (paramName, why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult(),
                         (why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult());
                     return redirectResponse;
                 },
-                () =>
+                (existingId) =>
                 {
                     telemetry.TrackException(new PingResponseException($"Could not create session because the GUID is not unique (session already exists)"));
                     return this.Request.CreateResponse(HttpStatusCode.InternalServerError)
@@ -109,14 +118,6 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                     telemetry.TrackException(new PingResponseException($"Invalid token:{why}"));
                     return this.Request.CreateResponse(HttpStatusCode.BadRequest)
                         .AddReason($"Invalid token:{why}")
-                        .ToActionResult()
-                        .ToTask();
-                },
-                () =>
-                {
-                    telemetry.TrackException(new PingResponseException("Token does not work in this system"));
-                    return this.Request.CreateResponse(HttpStatusCode.Conflict)
-                        .AddReason("Token does not work in this system")
                         .ToActionResult()
                         .ToTask();
                 },
@@ -140,6 +141,14 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 {
                     telemetry.TrackException(new PingResponseException($"Cannot create session because service is unavailable: {why}"));
                     return this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
+                        .AddReason(why)
+                        .ToActionResult()
+                        .ToTask();
+                },
+                (why) =>
+                {
+                    telemetry.TrackException(new PingResponseException($"General failure: {why}"));
+                    return this.Request.CreateResponse(HttpStatusCode.Conflict)
                         .AddReason(why)
                         .ToActionResult()
                         .ToTask();

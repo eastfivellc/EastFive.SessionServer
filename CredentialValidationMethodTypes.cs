@@ -7,5 +7,8 @@
         SAML,
         Token,
         Ping,
+        OAuth,
+        Facebook,
+        Implicit,
     }
 }

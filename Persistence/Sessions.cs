@@ -30,6 +30,20 @@ namespace EastFive.Security.SessionServer.Persistence
                 () => alreadyExists());
         }
 
+        public async Task<TResult> CreateAsync<TResult>(Guid sessionId, string refreshToken,
+            Func<TResult> success,
+            Func<TResult> alreadyExists)
+        {
+            var document = new Documents.SessionDocument()
+            {
+                SessionId = sessionId,
+                RefreshToken = refreshToken,
+            };
+            return await this.repository.CreateAsync(sessionId, document,
+                () => success(),
+                () => alreadyExists());
+        }
+
         public async Task<bool> DoesExistsAsync(Guid sessionId)
         {
             var sessionDocument = await repository.FindById<Documents.SessionDocument>(sessionId);
@@ -71,7 +85,7 @@ namespace EastFive.Security.SessionServer.Persistence
         /// <param name="found"></param>
         /// <param name="notFound"></param>
         /// <returns></returns>
-        public async Task<TResult> UpdateAuthentication<TResult>(Guid sessionId,
+        public async Task<TResult> UpdateRefreshTokenAsync<TResult>(Guid sessionId,
             Func<Guid, Func<Guid, Task>, Task<TResult>> found,
             Func<TResult> notFound)
         {

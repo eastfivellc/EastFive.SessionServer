@@ -21,9 +21,9 @@ namespace EastFive.Security.SessionServer.Api
             {
                 Id = resource.Id,
             };
-            
+
             //Get the session and Extrude it's information
-            SessionServer.Sessions.CreateSessionSuccessDelegate<HttpResponseMessage> createSessionCallback =
+            Security.SessionServer.Sessions.CreateSessionSuccessDelegate<HttpResponseMessage> createSessionCallback =
                 (authorizationId, token, refreshToken, extraParams) =>
                 {
                     responseSession.AuthorizationId = authorizationId.Value;
@@ -43,17 +43,16 @@ namespace EastFive.Security.SessionServer.Api
                         (why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why));
                 }
 
-                // NOTE: Was calling create without the lookup!!!
-                // JFIX!!!
-                return await context.Sessions.CreateAsync(resource.Id,
-                    resource.CredentialToken.Method, resource.CredentialToken.Token, new Dictionary<string, string>() { },
-                    createSessionCallback,
-                    () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("This session has already been created."),
-                    (why) => request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Invalid credential in token:{why}"),
-                    () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("Account associated with that token is not associated with this system"),
-                    () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("Account associated with that token is not associated with a user in this system"),
-                    (why) => request.CreateResponse(HttpStatusCode.BadGateway).AddReason(why),
-                    (why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why));
+                throw new NotImplementedException();
+                //return await context.Sessions.CreateAsync(resource.Id,
+                //    resource.CredentialToken.Method, resource.CredentialToken.Token,
+                //    createSessionCallback,
+                //    () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("This session has already been created."),
+                //    (why) => request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Invalid credential in token:{why}"),
+                //    () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("Account associated with that token is not associated with this system"),
+                //    () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("Account associated with that token is not associated with a user in this system"),
+                //    (why) => request.CreateResponse(HttpStatusCode.BadGateway).AddReason(why),
+                //    (why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why));
 
             } catch(Exception ex)
             {

@@ -4,15 +4,11 @@ using System.Runtime.Serialization;
 
 namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
 {
-    internal class CredentialMappingDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
+    internal class CredentialMappingLookupDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
     {
         #region Properties
         
-        [IgnoreDataMember]
-        [IgnoreProperty]
-        public Guid Id { get { return Guid.Parse(this.RowKey); } }
-
-        public Guid ActorId { get; set; }
+        public Guid CredentialMappingId { get; set; }
 
         public string Method { get; set; }
 

@@ -1,48 +1,39 @@
-﻿using EastFive.Api.Services;
-using EastFive.Security.LoginProvider;
-using System;
+﻿using System;
+using System.Linq;
+using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
+
 using BlackBarLabs.Persistence.Azure;
 using EastFive.Security.CredentialProvider;
+using EastFive.Api.Services;
+using BlackBarLabs;
+using BlackBarLabs.Extensions;
+using BlackBarLabs.Linq;
+using BlackBarLabs.Collections.Generic;
+using BlackBarLabs.Api;
+using EastFive.Collections.Generic;
 
 namespace EastFive.Security.SessionServer
 {
     public class Context
     {
-        private SessionServer.Persistence.DataContext dataContext;
-        private readonly Func<SessionServer.Persistence.DataContext> dataContextCreateFunc;
-
-        private ConcurrentDictionary<CredentialValidationMethodTypes, IProvideCredentials> credentialProviders = 
-            new ConcurrentDictionary<CredentialValidationMethodTypes, IProvideCredentials>();
-
-        public Context(Func<SessionServer.Persistence.DataContext> dataContextCreateFunc,
-            Func<Task<IIdentityService>> getLoginProvider,
-            Func<ISendMessageService> getMailService)
+        private Security.SessionServer.Persistence.DataContext dataContext;
+        private readonly Func<Security.SessionServer.Persistence.DataContext> dataContextCreateFunc;
+        
+        public Context(Func<Security.SessionServer.Persistence.DataContext> dataContextCreateFunc)
         {
             dataContextCreateFunc.ValidateArgumentIsNotNull("dataContextCreateFunc");
             this.dataContextCreateFunc = dataContextCreateFunc;
-            
-            //getLoginProvider.ValidateArgumentIsNotNull("getLoginProvider");
-            this.loginProviderFunc = getLoginProvider;
-
-            this.mailServiceFunc = getMailService;
         }
 
-        internal SessionServer.Persistence.DataContext DataContext
+        internal Security.SessionServer.Persistence.DataContext DataContext
         {
             get { return dataContext ?? (dataContext = dataContextCreateFunc.Invoke()); }
         }
 
         #region Services
-
-        private Func<Task<IIdentityService>> loginProviderFunc;
-        private Task<IIdentityService> loginProvider;
-        internal Task<IIdentityService> LoginProvider
-        {
-            get { return loginProvider ?? (loginProvider = loginProviderFunc.Invoke()); }
-        }
-
+        
         public async Task<TResult> CreateOrUpdateClaim<TResult>(Guid accountId, string claimType, string claimValue,
             Func<TResult> onSuccess,
             Func<string, TResult> onFailure)
@@ -54,44 +45,63 @@ namespace EastFive.Security.SessionServer
                 () => onFailure("Claim is already in use"));
         }
 
-        internal async Task<IProvideCredentials> GetCredentialProvider(CredentialValidationMethodTypes method)
+        internal TResult GetCredentialProvider<TResult>(CredentialValidationMethodTypes method,
+            Func<IProvideAuthorization, TResult> onSuccess,
+            Func<TResult> onCredintialSystemNotAvailable,
+            Func<string, TResult> onFailure)
         {
-            if (!this.credentialProviders.ContainsKey(method))
-            {
-                var newProvider = default(IProvideCredentials);
-                switch (method)
-                {
-                    case CredentialValidationMethodTypes.Ping:
-                        newProvider = new EastFive.Security.SessionServer.CredentialProvider.Ping.PingProvider(this.dataContext);
-                        break;
-                    case CredentialValidationMethodTypes.SAML:
-                        newProvider = new EastFive.Security.SessionServer.CredentialProvider.SAML.SAMLProvider(this.dataContext);
-                        break;
-                    case CredentialValidationMethodTypes.Password:
-                        newProvider = new Security.CredentialProvider.AzureADB2C.AzureADB2CProvider(await this.LoginProvider, this);
-                        break;
-                    case CredentialValidationMethodTypes.Voucher:
-                        newProvider = new Security.CredentialProvider.Voucher.VoucherCredentialProvider();
-                        break;
-                    case CredentialValidationMethodTypes.Token:
-                        newProvider = new Security.CredentialProvider.Token.TokenCredentialProvider(this.dataContext);
-                        break;
-                }
-                this.credentialProviders.AddOrUpdate(method, newProvider, (m, p) => newProvider);
-            }
-            var provider = this.credentialProviders[method];
-            return provider;
+            if (ServiceConfiguration.credentialProviders.IsDefault())
+                return onFailure("Authentication system not initialized.");
+
+            if (!ServiceConfiguration.credentialProviders.ContainsKey(method))
+                return GetLoginProvider(method, onSuccess, onCredintialSystemNotAvailable, onFailure);
+
+            var provider = ServiceConfiguration.credentialProviders[method];
+            return onSuccess(provider);
         }
 
-        private Func<ISendMessageService> mailServiceFunc;
-        private ISendMessageService mailService;
-        internal ISendMessageService MailService
+        internal TResult GetLoginProvider<TResult>(CredentialValidationMethodTypes method,
+            Func<IProvideLogin, TResult> onSuccess,
+            Func<TResult> onCredintialSystemNotAvailable,
+            Func<string, TResult> onFailure)
         {
-            get { return mailService ?? (mailService = mailServiceFunc.Invoke()); }
+            if (ServiceConfiguration.loginProviders.IsDefault())
+                return onFailure("Authentication system not initialized.");
+
+            if (!ServiceConfiguration.loginProviders.ContainsKey(method))
+                return onCredintialSystemNotAvailable();
+
+            var provider = ServiceConfiguration.loginProviders[method];
+            return onSuccess(provider);
         }
 
-        #endregion
+        internal TResult GetLoginProviders<TResult>(
+            Func<IProvideLogin[], TResult> onSuccess,
+            Func<string, TResult> onFailure)
+        {
+            if (ServiceConfiguration.loginProviders.IsDefault())
+                return onFailure("Authentication system not initialized.");
+            
+            return onSuccess(ServiceConfiguration.loginProviders.SelectValues().ToArray());
+        }
+
+        internal TResult GetManagementProvider<TResult>(CredentialValidationMethodTypes method,
+            Func<IProvideLoginManagement, TResult> onSuccess,
+            Func<TResult> onCredintialSystemNotAvailable,
+            Func<string, TResult> onFailure)
+        {
+            if (ServiceConfiguration.managementProviders.IsDefault())
+                return onFailure("Authentication system not initialized.");
+
+            if (!ServiceConfiguration.managementProviders.ContainsKey(method))
+                return onCredintialSystemNotAvailable();
+
+            var provider = ServiceConfiguration.managementProviders[method];
+            return onSuccess(provider);
+        }
         
+        #endregion
+
         private Credentials credentialMappings;
         public Credentials Credentials
         {
@@ -136,6 +146,17 @@ namespace EastFive.Security.SessionServer
             }
         }
 
+        private AuthenticationRequests authenticationRequests;
+        public AuthenticationRequests AuthenticationRequests
+        {
+            get
+            {
+                if (default(AuthenticationRequests) == authenticationRequests)
+                    authenticationRequests = new AuthenticationRequests(this, this.DataContext);
+                return authenticationRequests;
+            }
+        }
+        
         private Claims claims;
         public Claims Claims
         {
@@ -159,14 +180,23 @@ namespace EastFive.Security.SessionServer
             }
         }
 
+        private LoginProviders loginProviders;
+        public LoginProviders LoginProviders
+        {
+
+            get
+            {
+                if (loginProviders.IsDefault())
+                    loginProviders = new LoginProviders(this, DataContext);
+                return loginProviders;
+            }
+        }
+
 
         #region Authorizations
 
         public delegate bool GetCredentialDelegate(CredentialValidationMethodTypes validationMethod, Uri provider, string userId, string userToken);
         
         #endregion
-
-
-
     }
 }

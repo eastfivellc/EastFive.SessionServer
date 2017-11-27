@@ -7,11 +7,6 @@ namespace EastFive.Security.SessionServer.Api
 {
     public static class Constants
     {
-        public static class SystemConfiguration
-        {
-            public const string ConfigurationService = "BlackBarLabs.Common.Services.Configuration.ConfigurationService";
-        }
-
         public static class Cookies
         {
             public const string FakingId = "faking-id";

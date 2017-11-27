@@ -1,6 +1,7 @@
-﻿using Microsoft.WindowsAzure.Storage.Table;
-using System;
+﻿using System;
 using System.Runtime.Serialization;
+
+using Microsoft.WindowsAzure.Storage.Table;
 
 namespace EastFive.Security.SessionServer.Persistence.Documents
 {

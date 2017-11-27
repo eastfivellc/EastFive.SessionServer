@@ -32,19 +32,13 @@ namespace EastFive.Security.SessionServer.Api
             Guid performingActorId, System.Security.Claims.Claim[]claims)
         {
             var actorId = credential.Actor.ToGuid();
-            var loginProviderTaskGetter = (Func<Task<IIdentityService>>)
-                request.Properties[ServicePropertyDefinitions.IdentityService];
-            var loginProviderTask = loginProviderTaskGetter();
-            var loginProvider = await loginProviderTask;
             var callbackUrl = url.GetLocation<Controllers.OpenIdResponseController>();
-            var landingPage = Web.Configuration.Settings.Get(SessionServer.Configuration.AppSettings.LandingPage);
-            var loginUrl = loginProvider.GetLoginUrl(landingPage, 0, new byte[] { }, callbackUrl);
             
             var context = request.GetSessionServerContext();
             var creationResults = await context.PasswordCredentials.CreatePasswordCredentialsAsync(
                 credential.Id.UUID, actorId.Value,
                 credential.DisplayName, credential.UserId, credential.IsEmail, credential.Token, credential.ForceChange,
-                credential.LastEmailSent, loginUrl,
+                credential.LastEmailSent, callbackUrl,
                 performingActorId, claims,
                 () => request.CreateResponse(HttpStatusCode.Created),
                 () => request.CreateResponse(HttpStatusCode.Conflict)
@@ -70,17 +64,11 @@ namespace EastFive.Security.SessionServer.Api
             return await request.GetActorIdClaimsAsync(ClaimsDefinitions.AccountIdClaimType,
                 async (performingActorId, claims) =>
                 {
-                    var loginProviderTaskGetter = (Func<Task<IIdentityService>>)
-                    request.Properties[ServicePropertyDefinitions.IdentityService];
-                    var loginProviderTask = loginProviderTaskGetter();
-                    var loginProvider = await loginProviderTask;
                     var callbackUrl = url.GetLocation<Controllers.OpenIdResponseController>();
-                    var landingPage = Web.Configuration.Settings.Get(SessionServer.Configuration.AppSettings.LandingPage);
-                    var loginUrl = loginProvider.GetLoginUrl(landingPage, 0, new byte[] { }, callbackUrl);
 
                     var context = request.GetSessionServerContext();
                     var creationResults = await context.PasswordCredentials.UpdatePasswordCredentialAsync(credential.Id.UUID,
-                        credential.Token, credential.ForceChange, credential.LastEmailSent, loginUrl,
+                        credential.Token, credential.ForceChange, credential.LastEmailSent, callbackUrl,
                         performingActorId, claims,
                         () => request.CreateResponse(HttpStatusCode.NoContent),
                         () => request.CreateResponse(HttpStatusCode.NotFound),

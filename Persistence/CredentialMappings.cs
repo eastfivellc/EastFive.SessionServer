@@ -22,7 +22,27 @@ namespace EastFive.Security.SessionServer.Persistence
             this.repository = repository;
         }
         
-        public async Task<TResult> LookupCredentialMappingAsync<TResult>(Guid loginId,
+        public async Task<TResult> LookupCredentialMappingAsync<TResult>(
+                CredentialValidationMethodTypes method, string subject, Guid? loginId,
+            Func<Guid, TResult> onSuccess,
+            Func<TResult> onNotExist)
+        {
+            var partitionKey = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
+            return await await repository.FindLinkedDocumentAsync(subject, partitionKey,
+                (Azure.Documents.CredentialMappingLookupDocument document) => document.CredentialMappingId,
+                (Azure.Documents.CredentialMappingLookupDocument lookupDoc, Azure.Documents.CredentialMappingDocument mappingDoc) =>
+                    onSuccess(mappingDoc.ActorId).ToTask(),
+                () => loginId.HasValue?
+                    repository.FindByIdAsync(loginId.Value,
+                        (Documents.LoginActorLookupDocument document) => onSuccess(document.ActorId), // TODO: Migrate this
+                        () => onNotExist())
+                    :
+                    onNotExist().ToTask(),
+                () => onNotExist().ToTask());
+        }
+
+        public async Task<TResult> LookupCredentialMappingByIdAsync<TResult>(
+                Guid loginId,
             Func<Guid, TResult> onSuccess,
             Func<TResult> onNotExist)
         {
@@ -39,7 +59,42 @@ namespace EastFive.Security.SessionServer.Persistence
                     onSuccess(docs.Select(x => new Tuple<Guid,Guid>(x.Id, x.ActorId)).ToArray())
                 );
         }
-        
+
+        internal async Task<TResult> CreateCredentialMappingAsync<TResult>(Guid credentialMappingId,
+                CredentialValidationMethodTypes method, string subjectId, Guid actorId,
+            Func<TResult> onSuccess,
+            Func<TResult> onAlreadyExists,
+            Func<TResult> onTokenAlreadyInUse)
+        {
+            var rollback = new RollbackAsync<TResult>();
+
+            var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
+            var credentialMappingDoc = new Azure.Documents.CredentialMappingDocument()
+            {
+                Method = methodName,
+                Subject = subjectId,
+                ActorId = actorId,
+            };
+            rollback.AddTaskCreate(credentialMappingId, credentialMappingDoc, onAlreadyExists, this.repository);
+            
+            var lookupDocument = new Azure.Documents.CredentialMappingLookupDocument()
+            {
+                CredentialMappingId = credentialMappingId,
+                Method = methodName,
+                Subject = subjectId,
+            };
+            rollback.AddTaskCreate(subjectId, methodName, lookupDocument, onTokenAlreadyInUse, this.repository);
+            
+            rollback.AddTaskCreateOrUpdate(actorId,
+                (Documents.ActorMappingsDocument authDoc) => authDoc.AddInviteId(credentialMappingId),
+                (authDoc) => authDoc.RemoveInviteId(credentialMappingId),
+                onAlreadyExists, // This should fail on the action above as well
+                this.repository);
+
+            return await rollback.ExecuteAsync(onSuccess);
+        }
+
+        [Obsolete("Credential Mappings are now mapped by method and subject")]
         internal async Task<TResult> CreateCredentialMappingAsync<TResult>(Guid credentialMappingId,
             Guid loginId, Guid actorId, string email, Guid token, DateTime lastSent, bool isToken, bool overrideLoginId,
             Func<TResult> onSuccess,

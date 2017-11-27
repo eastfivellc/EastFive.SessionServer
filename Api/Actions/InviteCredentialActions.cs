@@ -25,7 +25,7 @@ namespace EastFive.Security.SessionServer.Api
         {
             return await query.ParseAsync(request,
                 q => QueryByIdAsync(q.Id.ParamSingle(), request, urlHelper),
-                q => QueryByTokenAsync(q.Token.ParamSingle(), request, urlHelper),
+                q => QueryByTokenAsync(q.Token.ParamSingle(), CredentialValidationMethodTypes.Voucher, request, urlHelper),
                 q => QueryByActorAsync(q.Actor.ParamSingle(), request, urlHelper));
         }
 
@@ -41,59 +41,61 @@ namespace EastFive.Security.SessionServer.Api
                 () => request.CreateResponse(HttpStatusCode.NotFound));
         }
 
-        private static async Task<HttpResponseMessage> QueryByTokenAsync(Guid token, HttpRequestMessage request, UrlHelper urlHelper)
+        private static async Task<HttpResponseMessage> QueryByTokenAsync(Guid token, CredentialValidationMethodTypes method, HttpRequestMessage request, UrlHelper urlHelper)
         {
             var context = request.GetSessionServerContext();
-            var loginProviderTaskGetter = (Func<Task<IIdentityService>>)
-                request.Properties[BlackBarLabs.Api.ServicePropertyDefinitions.IdentityService];
-            var loginProviderTask = loginProviderTaskGetter();
-            var loginProvider = await loginProviderTask;
-            return await await context.Credentials.GetInviteByTokenAsync(token,
-                (state) =>
+            return await context.GetLoginProvider(method,
+                async loginProvider =>
                 {
-                    var callbackUrl = urlHelper.GetLocation<Controllers.OpenIdResponseController>();
-                    var redirect = loginProvider.GetSignupUrl(
-                        "http://orderowl.com/Login", 1, state,
-                        callbackUrl);
-                    var response = request.CreateResponse(HttpStatusCode.Redirect);
-                    response.Headers.Location = redirect;
-                    return response.ToTask();
-                },
-                async (actorId, extraParams) =>
-                {
-                    return await await context.Sessions.CreateToken(actorId, Guid.NewGuid(),
-                        (bearerToken, refreshToken) =>
+                    return await await context.Credentials.GetInviteByTokenAsync(token,
+                        (state) =>
                         {
-                            return Library.configurationManager.GetRedirectUriAsync(CredentialValidationMethodTypes.Token,
-                                actorId, bearerToken, refreshToken, extraParams,
-                                (redirectUrl) =>
-                                {
-                                    var response = request.CreateResponse(HttpStatusCode.Redirect);
-                                    response.Headers.Location = redirectUrl;
-                                    return response;
-                                },
-                                (paramName, whyInvalid) => request.CreateResponse(HttpStatusCode.Conflict)
-                                    .AddReason($"{paramName} is invalid:{whyInvalid}"),
-                                (why) => request.CreateResponse(HttpStatusCode.Conflict)
-                                    .AddReason(why));
+                            var callbackUrl = urlHelper.GetLocation<Controllers.OpenIdResponseController>();
+                            var redirect = loginProvider.GetSignupUrl(
+                                "http://orderowl.com/Login", 1, state,
+                                callbackUrl);
+                            var response = request.CreateResponse(HttpStatusCode.Redirect);
+                            response.Headers.Location = redirect;
+                            return response.ToTask();
                         },
-                        () => request.CreateResponse(HttpStatusCode.Conflict)
-                            .AddReason("Invite does not match an account in the system")
-                            .ToTask(),
-                        (why) => request.CreateResponse(HttpStatusCode.Conflict).AddReason(why)
-                            .ToTask());
+                        async (actorId, extraParams) =>
+                        {
+                            return await await context.Sessions.CreateToken(actorId, Guid.NewGuid(),
+                                (bearerToken, refreshToken) =>
+                                {
+                                    return Library.configurationManager.GetRedirectUriAsync(CredentialValidationMethodTypes.Token,
+                                        actorId, bearerToken, refreshToken, extraParams, default(Uri),
+                                        (redirectUrl) =>
+                                        {
+                                            var response = request.CreateResponse(HttpStatusCode.Redirect);
+                                            response.Headers.Location = redirectUrl;
+                                            return response;
+                                        },
+                                        (paramName, whyInvalid) => request.CreateResponse(HttpStatusCode.Conflict)
+                                            .AddReason($"{paramName} is invalid:{whyInvalid}"),
+                                        (why) => request.CreateResponse(HttpStatusCode.Conflict)
+                                            .AddReason(why));
+                                },
+                                () => request.CreateResponse(HttpStatusCode.Conflict)
+                                    .AddReason("Invite does not match an account in the system")
+                                    .ToTask(),
+                                (why) => request.CreateResponse(HttpStatusCode.Conflict).AddReason(why)
+                                    .ToTask());
+                        },
+                        () => request.CreateResponse(HttpStatusCode.NotFound).AddReason("Already used").ToTask(),
+                        () => request.CreateResponse(HttpStatusCode.NotFound).ToTask());
                 },
-                () => request.CreateResponse(HttpStatusCode.NotFound).AddReason("Already used").ToTask(),
-                () => request.CreateResponse(HttpStatusCode.NotFound).ToTask());
+                () => request.CreateResponse(HttpStatusCode.ServiceUnavailable)
+                    .AddReason("Login service for provided method is not enabled")
+                    .ToTask(),
+                (why) => request.CreateResponse(HttpStatusCode.InternalServerError)
+                    .AddReason(why)
+                    .ToTask());
         }
 
         private static async Task<HttpResponseMessage[]> QueryByActorAsync(Guid actorId, HttpRequestMessage request, UrlHelper urlHelper)
         {
             var context = request.GetSessionServerContext();
-            var loginProviderTaskGetter = (Func<Task<IIdentityService>>)
-                request.Properties[BlackBarLabs.Api.ServicePropertyDefinitions.IdentityService];
-            var loginProviderTask = loginProviderTaskGetter();
-            var loginProvider = await loginProviderTask;
             return await context.Credentials.GetInvitesByActorAsync(actorId,
                 (invites) =>
                 {

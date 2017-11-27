@@ -28,18 +28,37 @@ namespace EastFive.Security.SessionServer
     {
         private Context context;
         private Persistence.DataContext dataContext;
+        private IProvideLoginManagement managmentProvider;
+        private IProvideLogin loginProvider;
 
         internal PasswordCredentials(Context context, Persistence.DataContext dataContext)
         {
             this.dataContext = dataContext;
             this.context = context;
+            // TODO: Refactor this class so it works with any Login Provider
+            context.GetLoginProvider(CredentialValidationMethodTypes.Password,
+                (identityService) =>
+                {
+                    this.loginProvider = identityService;
+                    return true;
+                },
+                () => false,
+                (why) => false);
+            context.GetManagementProvider(CredentialValidationMethodTypes.Password,
+                (identityService) =>
+                {
+                    this.managmentProvider = identityService;
+                    return true;
+                },
+                () => false,
+                (why) => false);
         }
 
         #region Password Credential
 
         public async Task<TResult> CreatePasswordCredentialsAsync<TResult>(Guid passwordCredentialId, Guid actorId,
             string displayName, string username, bool isEmail, string token, bool forceChange,
-            DateTime? emailLastSent, Uri loginUrl,
+            DateTime? emailLastSent, Uri callbackUrl,
             Guid performingActorId, System.Security.Claims.Claim[] claims,
             Func<TResult> onSuccess,
             Func<TResult> credentialAlreadyExists,
@@ -54,13 +73,11 @@ namespace EastFive.Security.SessionServer
             if (!await Library.configurationManager.CanAdministerCredentialAsync(
                 actorId, performingActorId, claims))
                 return onUnathorized();
-
-            var loginProvider = await this.context.LoginProvider;
-
+            
             if (string.IsNullOrWhiteSpace(displayName))
                 displayName = "User";
 
-            var createLoginResult = await await loginProvider.CreateLoginAsync(displayName,
+            var createLoginResult = await await managmentProvider.CreateAuthorizationAsync(displayName,
                 username, isEmail, token, forceChange,
                 async loginId =>
                 {
@@ -70,110 +87,41 @@ namespace EastFive.Security.SessionServer
                         {
                             if (!isEmail || !emailLastSent.HasValue)
                                 return onSuccess();
-                            var resultMail = await SendInvitePasswordAsync(username, token, loginUrl,
-                                onSuccess, onServiceNotAvailable, onFailure);
 
-                            return resultMail;
+                            return await Web.Configuration.Settings.GetString(Configuration.AppSettings.LandingPage,
+                                async (landingPage) =>
+                                {
+                                    var loginUrl = loginProvider.GetLoginUrl(landingPage, 0, new byte[] { }, callbackUrl);
+                                    var resultMail = await SendInvitePasswordAsync(username, token, loginUrl,
+                                        onSuccess, onServiceNotAvailable, onFailure);
+                                    return resultMail;
+                                },
+                                onFailure.AsAsyncFunc());
                         },
                         async () =>
-                        {
-                            await loginProvider.DeleteLoginAsync(loginId);
-                            return credentialAlreadyExists();
-                        },
+                            await managmentProvider.DeleteAuthorizationAsync(loginId,
+                                () => credentialAlreadyExists(),
+                                (why) => onFailure(why),
+                                () => onFailure("Service became unsupported after credentialAlreadyExists"),
+                                (why) => onFailure(why)),
                         async () =>
-                        {
-                            await loginProvider.DeleteLoginAsync(loginId);
-                            return onRelationshipAlreadyExists();
-                        },
+                            await managmentProvider.DeleteAuthorizationAsync(loginId,
+                                () => onRelationshipAlreadyExists(),
+                                (why) => onFailure(why),
+                                () => onFailure("Service became unsupported after onRelationshipAlreadyExists"),
+                                (why) => onFailure(why)),
                         async () =>
-                        {
-                            await loginProvider.DeleteLoginAsync(loginId);
-                            return onLoginAlreadyUsed();
-                        });
-
+                            await managmentProvider.DeleteAuthorizationAsync(loginId,
+                                () => onRelationshipAlreadyExists(),
+                                (why) => onFailure(why),
+                                () => onFailure("Service became unsupported after onLoginAlreadyUsed"),
+                                (why) => onFailure(why)));
                     return result;
                 },
                 (loginId) => onUsernameAlreadyInUse(loginId).ToTask(),
                 () => onPasswordInsufficent().ToTask(),
-                (why) => onFailure(why).ToTask());
-            return createLoginResult;
-        }
-
-        public async Task<TResult> CreatePasswordCredentialsAsync<TResult>(Guid passwordCredentialId, Guid actorId,
-            string displayName, string username, bool isEmail, string token, bool forceChange,
-            DateTime? emailLastSent, Uri loginUrl,
-            Func<TResult> onSuccess,
-            Func<TResult> credentialAlreadyExists,
-            Func<
-                Guid,
-                Func<
-                    Func<PasswordCredential, TResult>,
-                    Func<TResult>,
-                    Task<TResult>>,
-                Task<TResult>> onUsernameAlreadyInUse,
-            Func<TResult> onPasswordInsufficent,
-            Func<TResult> onRelationshipAlreadyExists,
-            Func<TResult> onLoginAlreadyUsed,
-            Func<TResult> onServiceNotAvailable,
-            Func<string, TResult> onFailure)
-        {
-            var loginProvider = await this.context.LoginProvider;
-
-            var createLoginResult = await await loginProvider.CreateLoginAsync(displayName,
-                username, isEmail, token, forceChange,
-                async loginId =>
-                {
-                    var result = await await dataContext.PasswordCredentials.CreatePasswordCredentialAsync(
-                        passwordCredentialId, actorId, loginId, emailLastSent,
-                        async () =>
-                        {
-                            if (!isEmail || !emailLastSent.HasValue)
-                                return onSuccess();
-                            var resultMail = await SendInvitePasswordAsync(username, token, loginUrl,
-                                onSuccess, onServiceNotAvailable, onFailure);
-
-                            return resultMail;
-                        },
-                        async () =>
-                        {
-                            await loginProvider.DeleteLoginAsync(loginId);
-                            return credentialAlreadyExists();
-                        },
-                        async () =>
-                        {
-                            await loginProvider.DeleteLoginAsync(loginId);
-                            return onRelationshipAlreadyExists();
-                        },
-                        async () =>
-                        {
-                            await loginProvider.DeleteLoginAsync(loginId);
-                            return onLoginAlreadyUsed();
-                        });
-
-                    return result;
-                },
-                (loginId) =>
-                {
-                    return onUsernameAlreadyInUse(loginId,
-                        async (found, notInSystem) =>
-                        {
-                            return await dataContext.PasswordCredentials.FindPasswordCredentialByLoginIdAsync(loginId,
-                                (match) =>
-                                {
-                                    return found(new PasswordCredential
-                                    {
-                                        id = match.id,
-                                        actorId = match.actorId,
-                                        userId = username,
-                                        isEmail = isEmail,
-                                        forceChangePassword = forceChange,
-                                        lastSent = emailLastSent,
-                                    });
-                                },
-                                () => notInSystem());
-                        });
-                },
-                () => onPasswordInsufficent().ToTask(),
+                (why) => onFailure(why).ToTask(),
+                () => onFailure("Service not supported").ToTask(),
                 (why) => onFailure(why).ToTask());
             return createLoginResult;
         }
@@ -190,23 +138,24 @@ namespace EastFive.Security.SessionServer
                 {
                     if (!await Library.configurationManager.CanAdministerCredentialAsync(actorId, actorPerformingId, claims))
                         return onUnauthorized();
-
-                    var loginProvider = await this.context.LoginProvider;
-                    return await loginProvider.GetLoginAsync(loginId,
-                        (dispName, userId, isEmail, forceChangePassword, accountEnabled) =>
+                    
+                    return await this.managmentProvider.GetAuthorizationAsync(loginId,
+                        (loginInfo) =>
                         {
                             return success(new PasswordCredential
                             {
                                 id = passwordCredentialId,
-                                displayName = dispName,
+                                displayName = loginInfo.displayName,
                                 actorId = actorId,
-                                userId = userId,
-                                isEmail = isEmail,
-                                forceChangePassword = forceChangePassword,
+                                userId = loginInfo.userName,
+                                isEmail = loginInfo.isEmail,
+                                forceChangePassword = loginInfo.forceChangePassword,
                                 lastSent = lastSent,
                             });
                         },
                         () => notFound(), // TODO: Log this
+                        (why) => onServiceNotAvailable(why),
+                        () => onServiceNotAvailable("not supported"),
                         (why) => onServiceNotAvailable(why));
                 },
                 () => notFound().ToTask());
@@ -220,25 +169,26 @@ namespace EastFive.Security.SessionServer
             return await await this.dataContext.PasswordCredentials.FindPasswordCredentialByActorAsync(actorId,
                 async (credentials) =>
                 {
-                    var loginProvider = await this.context.LoginProvider;
                     var pwCreds = await credentials.Select(
                         async credential =>
                         {
-                            return await loginProvider.GetLoginAsync(credential.loginId,
-                                (dispName, userId, isEmail, forceChangePassword, accountEnabled) =>
+                            return await managmentProvider.GetAuthorizationAsync(credential.loginId,
+                                (loginInfo) =>
                                 {
                                     return new PasswordCredential
                                     {
                                         id = credential.id,
+                                        displayName = loginInfo.displayName,
                                         actorId = actorId,
-                                        displayName = dispName,
-                                        userId = userId,
-                                        isEmail = isEmail,
-                                        forceChangePassword = forceChangePassword,
+                                        userId = loginInfo.userName,
+                                        isEmail = loginInfo.isEmail,
+                                        forceChangePassword = loginInfo.forceChangePassword,
                                         lastSent = credential.lastSent,
                                     };
                                 },
                                 () => default(PasswordCredential?), // TODO: Log this
+                                (why) => default(PasswordCredential?),
+                                () => default(PasswordCredential?),
                                 (why) => default(PasswordCredential?));
                         })
                         .WhenAllAsync()
@@ -271,35 +221,37 @@ namespace EastFive.Security.SessionServer
             var finalResult = await await this.dataContext.PasswordCredentials.FindAllAsync(
                 async (passwordCredentialInfos) =>
                 {
-                    var loginProvider = await context.LoginProvider;
-                    return await await loginProvider.GetAllLoginAsync(
-                        async tuples => // loginId, userName, isEmail, forceChange, accountEnabled
+                    return await await managmentProvider.GetAllAuthorizationsAsync(
+                        async loginInfos => 
                         {
                             return await this.context.Credentials.GetAllAccountIdAsync(
                                 map => // loginId, actorId
                                 {
-                                    return passwordCredentialInfos.Select(
-                                        p =>
-                                        {
-                                            var actorId = map.Where(m => m.Item1 == p.LoginId).Select(m => m.Item2).FirstOrDefault();
-                                            var tuple = tuples.FirstOrDefault(t => t.Item1 == p.LoginId);
-                                            var userName = tuple?.Item2;
-                                            var accountEnabled = tuple?.Item5 ?? false;
-                                            return (default(Guid) == actorId || String.IsNullOrEmpty(userName)) 
-                                            ? default(LoginInfo?) : new LoginInfo(userName, p.LoginId, actorId, accountEnabled);
-                                        })
+                                    return passwordCredentialInfos
+                                        .Select(
+                                            p =>
+                                            {
+                                                var actorId = map.Where(m => m.Item1 == p.LoginId).Select(m => m.Item2).FirstOrDefault();
+                                                var loginInfo = loginInfos.FirstOrDefault(t => t.loginId == p.LoginId);
+                                                var userName = loginInfo.userName;
+                                                var accountEnabled = loginInfo.accountEnabled;
+                                                return (default(Guid) == actorId || String.IsNullOrEmpty(userName)) 
+                                                ? default(LoginInfo?) : new LoginInfo(userName, p.LoginId, actorId, accountEnabled);
+                                            })
                                         .Where(x => x.HasValue)
                                         .Select(x => x.Value)
                                         .ToArray();
                                 });
                         },
-                        (why) => (new LoginInfo[] {}).ToTask());
+                        (why) => (new LoginInfo[] {}).ToTask(),
+                        () => (new LoginInfo[] { }).ToTask(),
+                        (why) => (new LoginInfo[] { }).ToTask());
                 });
             return success(finalResult);
         }
 
         internal async Task<TResult> UpdatePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
-            string password, bool forceChange, DateTime? emailLastSent, Uri loginUrl,
+            string password, bool forceChange, DateTime? emailLastSent, Uri callbackUrl,
             Guid performingActorId, System.Security.Claims.Claim[] claims,
             Func<TResult> onSuccess,
             Func<TResult> onNotFound,
@@ -324,16 +276,21 @@ namespace EastFive.Security.SessionServer
                         (!emailLastSentCurrent.HasValue ||
                           emailLastSent.Value > emailLastSentCurrent.Value))
                     {
-                        var loginProvider = await this.context.LoginProvider;
-                        var resultGetLogin = await await loginProvider.GetLoginAsync(loginId,
-                            async (dispName, username, isEmail, forceChangePassword, accountEnabled) =>
+                        var resultGetLogin = await await managmentProvider.GetAuthorizationAsync(loginId,
+                            async (loginInfo) =>
                             {
-                                if (!isEmail)
+                                if (!loginInfo.isEmail)
                                 {
                                     failureMessage = "UserID is not an email address";
                                     return resultFailure;
                                 }
-                                return await await SendInvitePasswordAsync(username, "*********", loginUrl,
+
+                                var landingPage = Web.Configuration.Settings.Get(Security.SessionServer.Configuration.AppSettings.LandingPage);
+                                var loginUrl = loginProvider.GetLoginUrl(landingPage, 0, new byte[] { }, callbackUrl);
+
+                                // TODO: the purpose of the next line is to send the password. 
+                                // If we don't want it sent, don't update the last sent value!!!
+                                return await await SendInvitePasswordAsync(loginInfo.userName, "*********", loginUrl,
                                     async () =>
                                     {
                                         await updateEmailLastSentAsync(emailLastSent.Value);
@@ -352,6 +309,8 @@ namespace EastFive.Security.SessionServer
                                     });
                             },
                             () => resultFailure.ToTask(),
+                            (why) => resultFailure.ToTask(),
+                            () => resultFailure.ToTask(),
                             (why) => resultFailure.ToTask());
                         return resultGetLogin;
                     }
@@ -368,11 +327,11 @@ namespace EastFive.Security.SessionServer
                 {
                     if (string.IsNullOrWhiteSpace(password))
                         return onSuccess();
-
-                    var loginProvider = await this.context.LoginProvider;
-                    return await loginProvider.UpdateLoginPasswordAsync(loginId, password, forceChange,
+                    
+                    return await managmentProvider.UpdateAuthorizationAsync(loginId, password, forceChange,
                         () => onSuccess(),
                         (why) => onFailure(why),
+                        () => onFailure("service unavailable"),
                         (why) => onFailure(why));
                 },
                 (r) => r.ToTask());
@@ -387,7 +346,7 @@ namespace EastFive.Security.SessionServer
             if (string.IsNullOrEmpty(templateName))
                 return onFailure($"Email template setting not found.  Expected template value for key {Configuration.EmailTemplateDefinitions.InvitePassword}");
             
-            var mailService = this.context.MailService;
+            var mailService = Web.Services.ServiceConfiguration.SendMessageService();
             var resultMail = await mailService.SendEmailMessageAsync(
                 templateName, 
                 emailAddress, string.Empty,
@@ -414,9 +373,11 @@ namespace EastFive.Security.SessionServer
             return await await this.dataContext.PasswordCredentials.DeletePasswordCredentialAsync(passwordCredentialId,
                 async (loginId) =>
                 {
-                    var loginProvider = await this.context.LoginProvider;
-                    await loginProvider.DeleteLoginAsync(loginId);
-                    return success();
+                    return await managmentProvider.DeleteAuthorizationAsync(loginId,
+                        success,
+                        onServiceNotAvailable,
+                        () => onServiceNotAvailable("Not supported"), 
+                        onServiceNotAvailable);
                 },
                 () => notFound().ToTask());
         }

@@ -31,40 +31,46 @@ namespace EastFive.Security.SessionServer.Api.Controllers
     {
         public async Task<IHttpActionResult> Get([FromUri]OpenIdConnectResult result)
         {
-            var loginProviderTaskGetter = (Func<Task<IIdentityService>>)
-                this.Request.Properties[ServicePropertyDefinitions.IdentityService];
-            var loginProviderTask = loginProviderTaskGetter();
-            var loginProvider = await loginProviderTask;
-            var callbackUrl = this.Url.GetLocation<OpenIdResponseController>();
-            if(null == result)
-            {
-                var redirect_uri = "http://orderowl.com/";
-                var loginUrl = loginProvider.GetLoginUrl(redirect_uri, 0, new byte[] { }, callbackUrl);
-                return Redirect(loginUrl);
-            }
-            
-            var parseResult = loginProvider.ParseState(result.state,
-                (action, data, extraParams) =>
+            return Request.GetSessionServerContext().GetLoginProvider(CredentialValidationMethodTypes.Password,
+                (loginProvider) =>
                 {
-                    if (!extraParams.ContainsKey(SessionServer.Configuration.AuthorizationParameters.RedirectUri))
-                        return Request.CreateResponse(HttpStatusCode.Conflict).AddReason("Redirect URL not in response parameters").ToActionResult();
-                    var redirectUriString = extraParams[SessionServer.Configuration.AuthorizationParameters.RedirectUri];
-                    Uri redirect_uri;
-                    if (!Uri.TryCreate(redirectUriString, UriKind.Absolute, out redirect_uri))
-                        return Request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Invalid redirect URL in response parameters: {redirectUriString}").ToActionResult();
-                    var loginUrl = loginProvider.GetLoginUrl(redirect_uri.AbsoluteUri, 0, new byte[] { }, callbackUrl);
-                    return Redirect(loginUrl);
+                    var callbackUrl = this.Url.GetLocation<OpenIdResponseController>();
+                    if (null == result)
+                    {
+                        var redirect_uri = "http://orderowl.com/";
+                        var loginUrl = loginProvider.GetLoginUrl(redirect_uri, 0, new byte[] { }, callbackUrl);
+                        return Redirect(loginUrl);
+                    }
+
+                    var parseResult = loginProvider.ParseState(result.state,
+                        (action, data, extraParams) =>
+                        {
+                            if (!extraParams.ContainsKey(SessionServer.Configuration.AuthorizationParameters.RedirectUri))
+                                return Request.CreateResponse(HttpStatusCode.Conflict).AddReason("Redirect URL not in response parameters").ToActionResult();
+                            var redirectUriString = extraParams[SessionServer.Configuration.AuthorizationParameters.RedirectUri];
+                            Uri redirect_uri;
+                            if (!Uri.TryCreate(redirectUriString, UriKind.Absolute, out redirect_uri))
+                                return Request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Invalid redirect URL in response parameters: {redirectUriString}").ToActionResult();
+                            var loginUrl = loginProvider.GetLoginUrl(redirect_uri.AbsoluteUri, 0, new byte[] { }, callbackUrl);
+                            return Redirect(loginUrl);
+                        },
+                        (why) =>
+                        {
+                            var redirect_uri = "http://orderowl.com/";
+                            var loginUrl = loginProvider.GetLoginUrl(redirect_uri, 0, new byte[] { }, callbackUrl);
+                            return Redirect(loginUrl);
+                        });
+                    return parseResult;
                 },
-                (why) =>
-                {
-                    var redirect_uri = "http://orderowl.com/";
-                    var loginUrl = loginProvider.GetLoginUrl(redirect_uri, 0, new byte[] { }, callbackUrl);
-                    return Redirect(loginUrl);
-                });
-            return parseResult;
+                () => Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
+                    .AddReason("AADB2C is not enabled right now")
+                    .ToActionResult(),
+                (why) => Request.CreateResponse(HttpStatusCode.InternalServerError)
+                    .AddReason(why)
+                    .ToActionResult());
         }
 
-        private TResult GetLoginUrl<TResult>(IDictionary<string, string> extraParams, IIdentityService identityService, Uri callbackUrl,
+        private TResult GetLoginUrl<TResult>(IDictionary<string, string> extraParams, IProvideLogin identityService, Uri callbackUrl,
             Func<Uri, TResult> onSuccess,
             Func<string, TResult> onFailure)
         {
@@ -78,25 +84,16 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             return onSuccess(loginUrl);
         }
 
-        private async Task<IHttpActionResult> CreateResponse(Guid sessionId, Guid? authorizationId, string jwtToken, string refreshToken, IDictionary<string, string> extraParams)
+        private async Task<IHttpActionResult> CreateResponse(Guid sessionId, Guid? authorizationId, string jwtToken, string refreshToken,
+            IDictionary<string, string> extraParams, Uri redirectUri)
         {
             // Enforce a redirect parameter here since OpenIDCreates on in the state data.
             if (!extraParams.ContainsKey(SessionServer.Configuration.AuthorizationParameters.RedirectUri))
                 return Request.CreateResponse(HttpStatusCode.Conflict).AddReason("Redirect URL not in response parameters").ToActionResult();
-            //var redirectUriString = extraParams[SessionServer.Configuration.AuthorizationParameters.RedirectUri];
-            //Uri redirect_uri;
-            //if (!Uri.TryCreate(redirectUriString, UriKind.Absolute, out redirect_uri))
-            //    return Request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Invalid redirect URL in response parameters: {redirectUriString}").ToActionResult();
-            //var redirectUrl = redirect_uri
-            //    .SetQueryParam("sessionId", sessionId.ToString("N"))
-            //    .SetQueryParam("authoriationId", authorizationId.Value.ToString("N"))
-            //    .SetQueryParam("authorizationId", authorizationId.Value.ToString("N"))
-            //    .SetQueryParam("token", jwtToken)
-            //    .SetQueryParam("refreshToken", refreshToken);
 
             var config = Library.configurationManager;
-            var redirectResponse = await config.GetRedirectUriAsync<IHttpActionResult>(CredentialValidationMethodTypes.Password,
-                authorizationId, jwtToken, refreshToken, extraParams,
+            var redirectResponse = await config.GetRedirectUriAsync(CredentialValidationMethodTypes.Password,
+                authorizationId, jwtToken, refreshToken, extraParams, redirectUri,
                 (redirectUrl) => Redirect(redirectUrl),
                 (paramName, why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult(),
                 (why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult());
@@ -111,15 +108,18 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                     .ToActionResult();
 
             var context = this.Request.GetSessionServerContext();
-            var sessionId = Guid.NewGuid();
-            var response = await await context.Sessions.CreateAsync<Task<IHttpActionResult>>(sessionId,
-                CredentialValidationMethodTypes.Password, result.id_token, new Dictionary<string, string>() { { AzureADB2CProvider.StateKey, result.state } },
-                (authorizationId, jwtToken, refreshToken, extraParams) =>
+            var response = await await context.AuthenticationRequests.UpdateAsync<Task<IHttpActionResult>>(Guid.NewGuid(),
+                CredentialValidationMethodTypes.Password,
+                new Dictionary<string, string>()
                 {
-                    return CreateResponse(sessionId, authorizationId, jwtToken, refreshToken, extraParams);
+                    { AzureADB2CProvider.StateKey, result.state },
+                    { AzureADB2CProvider.IdTokenKey, result.id_token }
                 },
-                () => this.Request.CreateResponse(HttpStatusCode.Conflict)
-                    .AddReason("Already exists")
+                (sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUri) =>
+                {
+                    return CreateResponse(sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUri);
+                },
+                (existingId) => this.Request.CreateAlreadyExistsResponse<Controllers.SessionController>(existingId, Url)
                     .ToActionResult()
                     .ToTask(),
                 (why) => this.Request.CreateResponse(HttpStatusCode.BadRequest)
@@ -130,15 +130,15 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                     .AddReason($"Token is for user is not connected to a user in this system")
                     .ToActionResult()
                     .ToTask(),
-                () => this.Request.CreateResponse(HttpStatusCode.Conflict)
-                    .AddReason("Invalid account creation link")
-                    .ToActionResult()
-                    .ToTask(),
                 (why) => this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
                     .AddReason(why)
                     .ToActionResult()
                     .ToTask(),
                 (why) => this.Request.CreateResponse(HttpStatusCode.InternalServerError)
+                    .AddReason(why)
+                    .ToActionResult()
+                    .ToTask(),
+                (why) => this.Request.CreateResponse(HttpStatusCode.Conflict)
                     .AddReason(why)
                     .ToActionResult()
                     .ToTask());

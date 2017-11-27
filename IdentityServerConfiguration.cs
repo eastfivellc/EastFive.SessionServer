@@ -48,25 +48,29 @@ namespace EastFive.Security.SessionServer
             return urlHelper.GetWebId<TActorController>(actorId);
         }
 
-        public virtual Task<TResult> GetRedirectUriAsync<TResult>(CredentialValidationMethodTypes validationType,
+        public virtual async Task<TResult> GetRedirectUriAsync<TResult>(CredentialValidationMethodTypes validationType,
                 Guid? authorizationId,
                 string token, string refreshToken,
                 IDictionary<string, string> authParams,
+                Uri redirectUriFromPost,
             Func<Uri, TResult> onSuccess,
             Func<string, string, TResult> onInvalidParameter,
             Func<string, TResult> onFailure)
         {
+            if (!redirectUriFromPost.IsDefault())
+                return onSuccess(redirectUriFromPost);
+
             if(authParams.ContainsKey(Configuration.AuthorizationParameters.RedirectUri))
             {
                 Uri redirectUri;
                 var redirectUriString = authParams[Configuration.AuthorizationParameters.RedirectUri];
                 if (!Uri.TryCreate(redirectUriString, UriKind.Absolute, out redirectUri))
-                    return onInvalidParameter("REDIRECT", $"BAD URL in redirect call:{redirectUriString}").ToTask();
+                    return onInvalidParameter("REDIRECT", $"BAD URL in redirect call:{redirectUriString}");
                 var redirectUrl = SetRedirectParameters(redirectUri, authorizationId, token, refreshToken);
-                return onSuccess(redirectUrl).ToTask();
+                return onSuccess(redirectUrl);
             }
 
-            return EastFive.Web.Configuration.Settings.GetUri(
+            return await EastFive.Web.Configuration.Settings.GetUri(
                 EastFive.Security.SessionServer.Configuration.AppSettings.LandingPage,
                 (redirectUri) =>
                 {

@@ -32,7 +32,25 @@ namespace EastFive.Security.SessionServer
             this.dataContext = dataContext;
             this.context = context;
         }
-        
+
+        internal async Task<TResult> CreateAsync<TResult>(Guid credentialId, Guid authenticationId,
+            CredentialValidationMethodTypes method, string subject,
+            Guid performingActorId, System.Security.Claims.Claim[] claims,
+            Func<TResult> onSuccess,
+            Func<Guid, TResult> onAlreadyExists,
+            Func<TResult> onSubjectAlreadyInUse,
+            Func<TResult> onUnauthorized,
+            Func<string, TResult> onFailure)
+        {
+            if (!await Library.configurationManager.CanAdministerCredentialAsync(authenticationId, performingActorId, claims))
+                return onUnauthorized();
+
+            return await this.dataContext.CredentialMappings.CreateCredentialMappingAsync(credentialId, method, subject, authenticationId,
+                onSuccess,
+                () => onAlreadyExists(credentialId),
+                onSubjectAlreadyInUse);
+        }
+
         #region InviteCredential
 
         public async Task<TResult> SendEmailInviteAsync<TResult>(Guid inviteId, Guid actorId, string email,
@@ -58,7 +76,7 @@ namespace EastFive.Security.SessionServer
                     if (string.IsNullOrEmpty(templateName))
                         return onFailed($"Email template setting not found.  Expected template value for key {Configuration.EmailTemplateDefinitions.InviteNewAccount}");
 
-                    var mailService = this.context.MailService;
+                    var mailService = Web.Services.ServiceConfiguration.SendMessageService();
                     var resultMail = await mailService.SendEmailMessageAsync(templateName, 
                         email, string.Empty,
                         "newaccounts@orderowl.com", "New Account Services",
@@ -129,13 +147,6 @@ namespace EastFive.Security.SessionServer
 
         #endregion
         
-        public Task<TResult> LookupAccountIdAsync<TResult>(Guid loginId,
-            Func<Guid, TResult> onSuccess,
-            Func<TResult> onNotFound)
-        {
-            return this.dataContext.CredentialMappings.LookupCredentialMappingAsync(loginId, onSuccess, onNotFound);
-        }
-
         public Task<TResult> GetAllAccountIdAsync<TResult>(
             Func<Tuple<Guid, Guid>[], TResult> onSuccess)
         {
@@ -228,7 +239,7 @@ namespace EastFive.Security.SessionServer
                     return await LoadConfiguration(
                         async (templateName, fromEmail, fromName, subject) =>
                         {
-                            var mailService = this.context.MailService;
+                            var mailService = Web.Services.ServiceConfiguration.SendMessageService();
                             var resultMail = await mailService.SendEmailMessageAsync(templateName,
                                 email, string.Empty,
                                 fromEmail, fromName,
@@ -293,7 +304,7 @@ namespace EastFive.Security.SessionServer
 
                         if (String.IsNullOrWhiteSpace(email))
                             email = emailCurrent;
-                        var mailService = this.context.MailService;
+                        var mailService = Web.Services.ServiceConfiguration.SendMessageService();
                         var resultMail = await await mailService.SendEmailMessageAsync(templateName,
                             email, string.Empty,
                             "newaccounts@orderowl.com", "New Account Services",

@@ -14,17 +14,6 @@ using EastFive.Api.Services;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
-    public class AccountLinks
-    {
-        [JsonProperty(PropertyName ="login")]
-        public Uri Login { get; set; }
-
-        [JsonProperty(PropertyName = "signup")]
-        public Uri Signup { get; set; }
-
-        [JsonProperty(PropertyName = "logout")]
-        public Uri Logout { get; set; }
-    }
 
     public class AccountLinksQuery
     {
@@ -44,29 +33,36 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             var response_mode = q.response_mode;
             var redirect_uri = q.redirect_uri;
 
+            var context = this.Request.GetSessionServerContext();
             if (String.IsNullOrWhiteSpace(redirect_uri))
-                return new HttpActionResult(() => this.Request
-                    .CreateResponse(System.Net.HttpStatusCode.BadRequest)
-                    .AddReason("Missing redirect_uri parameter")
-                    .ToTask());
-
-            var loginProviderTaskGetter = (Func<Task<IIdentityService>>)
-                this.Request.Properties[ServicePropertyDefinitions.IdentityService];
-            var loginProviderTask = loginProviderTaskGetter();
-            var loginProvider = await loginProviderTask;
-            var callbackUrl = this.Url.GetLocation<OpenIdResponseController>(
+            {
+                return this.Request.CreateRedirectResponse<Controllers.AuthenticationRequestLinkController>(Url).ToActionResult();
+            }
+            //return new HttpActionResult(() => this.Request
+            //    .CreateResponse(System.Net.HttpStatusCode.BadRequest)
+            //    .AddReason("Missing redirect_uri parameter")
+            //    .ToTask());
+            
+            return context.GetLoginProvider(CredentialValidationMethodTypes.Password,
+                (loginProvider) =>
+                {
+                    var callbackUrl = this.Url.GetLocation<OpenIdResponseController>(
                         typeof(OpenIdResponseController)
                             .GetCustomAttributes<RoutePrefixAttribute>()
                             .Select(routePrefix => routePrefix.Prefix)
                             .First());
-            var response = this.Request.CreateResponse(System.Net.HttpStatusCode.OK,
-                new AccountLinks
-                {
-                    Login = loginProvider.GetLoginUrl(redirect_uri, 0, new byte[] { }, callbackUrl),
-                    Signup = loginProvider.GetSignupUrl(redirect_uri, 0, new byte[] { }, callbackUrl),
-                    Logout = loginProvider.GetLogoutUrl(redirect_uri, 0, new byte[] { }, callbackUrl),
-                }).ToActionResult();
-            return response;
+                    var response = this.Request.CreateResponse(System.Net.HttpStatusCode.OK,
+                        new Resources.AccountLink
+                        {
+                            Login = loginProvider.GetLoginUrl(redirect_uri, 0, new byte[] { }, callbackUrl),
+                            Signup = loginProvider.GetSignupUrl(redirect_uri, 0, new byte[] { }, callbackUrl),
+                            Logout = loginProvider.GetLogoutUrl(redirect_uri, 0, new byte[] { }, callbackUrl),
+                        });
+                    return response;
+                },
+                () => Request.CreateResponse(System.Net.HttpStatusCode.InternalServerError).AddReason("AADB2C login is not enabled"),
+                (why) => Request.CreateResponse(System.Net.HttpStatusCode.InternalServerError).AddReason(why))
+                .ToActionResult();
         }
     }
 }
