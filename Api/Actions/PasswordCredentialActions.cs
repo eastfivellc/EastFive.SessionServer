@@ -32,9 +32,17 @@ namespace EastFive.Security.SessionServer.Api
             Guid performingActorId, System.Security.Claims.Claim[]claims)
         {
             var actorId = credential.Actor.ToGuid();
+            if (!actorId.HasValue)
+                return request.CreateResponse(HttpStatusCode.Conflict).AddReason("Actor is null");
+
+            var context = request.GetSessionServerContext();
+            var loginProvider = context.GetLoginProvider(CredentialValidationMethodTypes.Password,
+                (lp) => lp,
+                () => default(IProvideLogin),
+                (why) => default(IProvideLogin));
+
             var callbackUrl = url.GetLocation<Controllers.OpenIdResponseController>();
             
-            var context = request.GetSessionServerContext();
             var creationResults = await context.PasswordCredentials.CreatePasswordCredentialsAsync(
                 credential.Id.UUID, actorId.Value,
                 credential.DisplayName, credential.UserId, credential.IsEmail, credential.Token, credential.ForceChange,
@@ -113,7 +121,8 @@ namespace EastFive.Security.SessionServer.Api
             Guid actorPerformingId, System.Security.Claims.Claim[] claims)
         {
             if (!await Library.configurationManager.CanAdministerCredentialAsync(actorId, actorPerformingId, claims))
-                return request.CreateResponse(HttpStatusCode.NotFound).AsEnumerable().ToArray();
+                return request.CreateResponse(HttpStatusCode.NotFound)
+                    .AddReason($"Actor {actorPerformingId} cannot administer credentials for {actorId}").AsEnumerable().ToArray();
 
             var context = request.GetSessionServerContext();
             return await context.PasswordCredentials.GetPasswordCredentialByActorAsync(
@@ -125,8 +134,10 @@ namespace EastFive.Security.SessionServer.Api
                             Convert(passwordCredential, urlHelper));
                         return response;
                     }).ToArray(),
-                () => request.CreateResponse(HttpStatusCode.NotFound).AsEnumerable().ToArray(),
-                (why) => request.CreateResponse(HttpStatusCode.ServiceUnavailable).AddReason(why).AsEnumerable().ToArray());
+                () => request.CreateResponse(HttpStatusCode.NotFound)
+                    .AddReason($"ActorId {actorId} not found").AsEnumerable().ToArray(),
+                (why) => request.CreateResponse(HttpStatusCode.ServiceUnavailable)
+                    .AddReason(why).AsEnumerable().ToArray());
         }
 
         private static Resources.PasswordCredential Convert(PasswordCredential passwordCredential, UrlHelper urlHelper)

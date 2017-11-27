@@ -179,7 +179,7 @@ namespace EastFive.Security.SessionServer
                 return roles;
             }
         }
-
+        
         private LoginProviders loginProviders;
         public LoginProviders LoginProviders
         {
@@ -192,6 +192,17 @@ namespace EastFive.Security.SessionServer
             }
         }
 
+        private Health health;
+        public Health Health
+        {
+
+            get
+            {
+                if (default(Health) == health)
+                    health = new Health(this, DataContext);
+                return health;
+            }
+        }
 
         #region Authorizations
 
