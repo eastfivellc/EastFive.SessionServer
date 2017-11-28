@@ -38,30 +38,45 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             {
                 return this.Request.CreateRedirectResponse<Controllers.AuthenticationRequestLinkController>(Url).ToActionResult();
             }
-            //return new HttpActionResult(() => this.Request
-            //    .CreateResponse(System.Net.HttpStatusCode.BadRequest)
-            //    .AddReason("Missing redirect_uri parameter")
-            //    .ToTask());
+
+            if (!Uri.TryCreate(redirect_uri, UriKind.Absolute, out Uri redirectUrl))
+                return this.Request
+                    .CreateResponseValidationFailure(q, qry => qry.redirect_uri)
+                    .ToActionResult();
             
-            return context.GetLoginProvider(CredentialValidationMethodTypes.Password,
-                (loginProvider) =>
+            var response = await context.GetLoginProvider(CredentialValidationMethodTypes.Password,
+                async (loginProvider) =>
                 {
                     var callbackUrl = this.Url.GetLocation<OpenIdResponseController>(
                         typeof(OpenIdResponseController)
                             .GetCustomAttributes<RoutePrefixAttribute>()
                             .Select(routePrefix => routePrefix.Prefix)
                             .First());
-                    var response = this.Request.CreateResponse(System.Net.HttpStatusCode.OK,
-                        new Resources.AccountLink
+                    var authReqId = Guid.NewGuid();
+                    return await context.AuthenticationRequests.CreateLoginAsync(authReqId,
+                        callbackUrl, CredentialValidationMethodTypes.Password, redirectUrl,
+                        (authRequest) =>
                         {
-                            Login = loginProvider.GetLoginUrl(redirect_uri, 0, new byte[] { }, callbackUrl),
-                            Signup = loginProvider.GetSignupUrl(redirect_uri, 0, new byte[] { }, callbackUrl),
-                            Logout = loginProvider.GetLogoutUrl(redirect_uri, 0, new byte[] { }, callbackUrl),
-                        });
-                    return response;
+                            return this.Request.CreateResponse(System.Net.HttpStatusCode.OK,
+                                new Resources.AccountLink
+                                {
+                                    Login = authRequest.loginUrl, //redirect_uri, 0, new byte[] { }, callbackUrl),
+                                    Signup = loginProvider.GetSignupUrl(redirect_uri, 0, new byte[] { }, callbackUrl),
+                                    Logout = authRequest.logoutUrl,
+                                });
+                        },
+                        () => Request.CreateResponse(System.Net.HttpStatusCode.InternalServerError).AddReason("GUID NOT UNIQUE"),
+                        () => Request.CreateResponse(System.Net.HttpStatusCode.InternalServerError).AddReason("AADB2C login is not enabled"),
+                        (why) => Request.CreateResponse(System.Net.HttpStatusCode.InternalServerError).AddReason(why),
+                        (why) => Request.CreateResponse(System.Net.HttpStatusCode.InternalServerError).AddReason(why));
                 },
-                () => Request.CreateResponse(System.Net.HttpStatusCode.InternalServerError).AddReason("AADB2C login is not enabled"),
-                (why) => Request.CreateResponse(System.Net.HttpStatusCode.InternalServerError).AddReason(why))
+                () => Request.CreateResponse(System.Net.HttpStatusCode.InternalServerError)
+                    .AddReason("AADB2C login is not enabled")
+                    .ToTask(),
+                (why) => Request.CreateResponse(System.Net.HttpStatusCode.InternalServerError)
+                    .AddReason(why)
+                    .ToTask());
+            return response
                 .ToActionResult();
         }
     }

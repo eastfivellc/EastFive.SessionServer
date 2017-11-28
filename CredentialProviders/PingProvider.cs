@@ -111,12 +111,14 @@ namespace EastFive.Security.CredentialProvider.Ping
             throw new NotImplementedException();
         }
 
-        public Uri GetLogoutUrl(string redirect_uri, byte mode, byte[] state, Uri responseControllerLocation)
+        public Uri GetLogoutUrl(Guid state, Uri responseControllerLocation)
         {
             throw new NotImplementedException();
         }
 
-        public TResult ParseState<TResult>(string state, Func<byte, byte[], IDictionary<string, string>, TResult> onSuccess, Func<string, TResult> invalidState)
+        public TResult ParseState<TResult>(string state,
+           Func<Guid, TResult> onSuccess,
+           Func<string, TResult> onInvalidState)
         {
             throw new NotImplementedException();
         }

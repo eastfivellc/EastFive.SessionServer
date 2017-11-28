@@ -93,8 +93,11 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
         {
             if (!extraParams.ContainsKey(AzureADB2CProvider.IdTokenKey))
                 return onFailure($"{AzureADB2CProvider.IdTokenKey} not in auth response");
+            if (!extraParams.ContainsKey(AzureADB2CProvider.StateKey))
+                return onFailure($"{AzureADB2CProvider.StateKey} not in auth response");
 
             var token = extraParams[AzureADB2CProvider.IdTokenKey];
+            var stateParam = extraParams[AzureADB2CProvider.StateKey];
             return await this.ValidateToken(token,
                 (claims) =>
                 {
@@ -102,12 +105,13 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
                             EastFive.Security.SessionServer.Configuration.AppSettings.LoginIdClaimType,
                         (claimType) =>
                         {
-                            return this.ParseState(extraParams[StateKey],
-                                (action, data, extraParamsFromState) =>
+
+                            return this.ParseState(stateParam,
+                                (stateId, data, extraParamsFromState) =>
                                 {
                                     var authClaims = claims.Claims
-                                                 .Where(claim => claim.Type.CompareTo(claimType) == 0)
-                                                 .ToArray();
+                                        .Where(claim => claim.Type.CompareTo(claimType) == 0)
+                                        .ToArray();
                                     if (authClaims.Length == 0)
                                         return onFailure($"Token does not contain claim for [{claimType}] which is necessary to operate with this system");
                                     string subject = authClaims[0].Value;
@@ -115,13 +119,12 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
                                     var authId = default(Guid?);
                                     if (Guid.TryParse(subject, out Guid authIdGuid))
                                         authId = authIdGuid;
-
-                                    var state = default(Guid?);
-                                    if (extraParams.ContainsKey(StateKey))
-                                        if (Guid.TryParse(extraParams[StateKey], out Guid guidState))
-                                            state = guidState;
+                                    
+                                    //if (extraParams.ContainsKey(StateKey))
+                                    //    if (Guid.TryParse(extraParams[StateKey], out Guid guidState))
+                                    //        state = guidState;
                                         
-                                    return onSuccess(subject, state, authId, extraParamsFromState);
+                                    return onSuccess(subject, stateId, authId, extraParamsFromState);
                                 },
                                 (why) => onFailure(why));
                         },
@@ -132,7 +135,12 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
 
         public Uri GetLoginUrl(Guid state, Uri responseLocation)
         {
-            return GetUrl(this.loginEndpoint, string.Empty, 0, state.ToByteArray(), responseLocation);
+            return GetUrl(this.loginEndpoint, state.ToByteArray(), responseLocation);
+        }
+
+        public Uri GetLogoutUrl(Guid state, Uri responseLocation)
+        {
+            return GetUrl(this.logoutEndpoint, state.ToByteArray(), responseLocation);
         }
 
         public Uri GetLoginUrl(string redirect_uri, byte mode, byte[] state, Uri callbackLocation)
@@ -145,9 +153,25 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
             return GetUrl(this.signupEndpoint, redirect_uri, mode, state, callbackLocation);
         }
 
-        public Uri GetLogoutUrl(string redirect_uri, byte mode, byte[] state, Uri callbackLocation)
+        private Uri GetUrl(string longurl, byte[] state,
+            Uri callbackLocation)
         {
-            return GetUrl(this.logoutEndpoint, redirect_uri, mode, state, callbackLocation);
+            var uriBuilder = new UriBuilder(longurl);
+            var query = HttpUtility.ParseQueryString(uriBuilder.Query);
+            query["client_id"] = this.audience;
+            query["response_type"] = AzureADB2CProvider.IdTokenKey;
+            query["redirect_uri"] = callbackLocation.AbsoluteUri;
+            query["response_mode"] = "form_post";
+            query["scope"] = "openid";
+            
+            var base64 = Convert.ToBase64String(state);
+            query[StateKey] = base64; //  redirect_uri.Base64(System.Text.Encoding.ASCII);
+
+            query["nonce"] = Guid.NewGuid().ToString("N");
+            // query["p"] = "B2C_1_signin1";
+            uriBuilder.Query = query.ToString();
+            var redirect = uriBuilder.Uri; // .ToString();
+            return redirect;
         }
 
         private Uri GetUrl(string longurl, string redirect_uri, byte mode, byte[] state,
@@ -169,7 +193,7 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
                 new byte [] {mode},
                 state,
             }).SelectMany().ToArray();
-            var base64 = Convert.ToBase64String(stateBytes);
+            var base64 = Convert.ToBase64String(state);
             query[StateKey] = base64; //  redirect_uri.Base64(System.Text.Encoding.ASCII);
 
             query["nonce"] = Guid.NewGuid().ToString("N");
@@ -180,24 +204,50 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
         }
 
         public TResult ParseState<TResult>(string state,
-            Func<byte, byte[], IDictionary<string, string>, TResult> onSuccess,
+            Func<Guid, TResult> onSuccess,
+            Func<string, TResult> onInvalidState)
+        {
+            var bytes = Convert.FromBase64String(state);
+            if (bytes.Length != 16)
+                return onInvalidState("Encoded Guid length is invalid");
+            var stateId = new Guid(bytes);
+
+            return onSuccess(stateId);
+        }
+
+        public TResult ParseState<TResult>(string state,
+            Func<Guid, byte[], IDictionary<string, string>, TResult> onSuccess,
             Func<string, TResult> invalidState)
         {
             var bytes = Convert.FromBase64String(state);
-            var urlLength = BitConverter.ToInt16(bytes, 0);
-            if (bytes.Length < urlLength + 3)
-                return invalidState("Encoded redirect length is invalid");
-            var addr = System.Text.Encoding.ASCII.GetString(bytes, 2, urlLength);
-            Uri url;
-            if (!Uri.TryCreate(addr, UriKind.RelativeOrAbsolute, out url))
-                return invalidState($"Invalid value for redirect url:[{addr}]");
-            var mode = bytes.Skip(urlLength + 2).First();
-            var data = bytes.Skip(urlLength + 3).ToArray();
-            return onSuccess(mode, data, new Dictionary<string, string>()
+            if (bytes.Length != 16)
+                return invalidState("Encoded Guid length is invalid");
+            var stateId = new Guid(bytes);
+
+            return onSuccess(stateId, new byte[] { }, new Dictionary<string, string>()
             {
-                {  SessionServer.Configuration.AuthorizationParameters.RedirectUri, url.AbsoluteUri }
             });
         }
+
+        //public TResult ParseState<TResult>(string state,
+        //    Func<byte, byte[], IDictionary<string, string>, TResult> onSuccess,
+        //    Func<string, TResult> invalidState)
+        //{
+        //    var bytes = Convert.FromBase64String(state);
+        //    var urlLength = BitConverter.ToInt16(bytes, 0);
+        //    if (bytes.Length < urlLength + 3)
+        //        return invalidState("Encoded redirect length is invalid");
+        //    var addr = System.Text.Encoding.ASCII.GetString(bytes, 2, urlLength);
+        //    Uri url;
+        //    if (!Uri.TryCreate(addr, UriKind.RelativeOrAbsolute, out url))
+        //        return invalidState($"Invalid value for redirect url:[{addr}]");
+        //    var mode = bytes.Skip(urlLength + 2).First();
+        //    var data = bytes.Skip(urlLength + 3).ToArray();
+        //    return onSuccess(mode, data, new Dictionary<string, string>()
+        //    {
+        //        {  SessionServer.Configuration.AuthorizationParameters.RedirectUri, url.AbsoluteUri }
+        //    });
+        //}
 
         private TResult ValidateToken<TResult>(string idToken,
             Func<ClaimsPrincipal, TResult> onSuccess,
@@ -209,6 +259,7 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
             try
             {
                 var claims = handler.ValidateToken(idToken, validationParameters, out SecurityToken validatedToken);
+                //var claims = new ClaimsPrincipal();
                 return onSuccess(claims);
             }
             catch (Microsoft.IdentityModel.Tokens.SecurityTokenException ex)

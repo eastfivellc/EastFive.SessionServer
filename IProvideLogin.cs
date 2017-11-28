@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using System.Web.Http.Results;
 
 namespace EastFive.Security.SessionServer
 {
@@ -9,13 +10,20 @@ namespace EastFive.Security.SessionServer
     {
         Uri GetLoginUrl(Guid state, Uri responseControllerLocation);
 
+        Uri GetLogoutUrl(Guid state, Uri responseControllerLocation);
+
         Uri GetLoginUrl(string redirect_uri, byte mode, byte[] state, Uri responseControllerLocation);
+
         Uri GetSignupUrl(string redirect_uri, byte mode, byte[] state, Uri responseControllerLocation);
-        Uri GetLogoutUrl(string redirect_uri, byte mode, byte[] state, Uri responseControllerLocation);
+
 
         TResult ParseState<TResult>(string state,
-            Func<byte, byte[], IDictionary<string, string>, TResult> onSuccess,
-            Func<string, TResult> invalidState);
-        
+            Func<Guid, TResult> onSuccess, 
+            Func<string, TResult> onInvalidState);
+
+        //TResult ParseState<TResult>(string state,
+        //    Func<byte, byte[], IDictionary<string, string>, TResult> onSuccess,
+        //    Func<string, TResult> invalidState);
+
     }
 }

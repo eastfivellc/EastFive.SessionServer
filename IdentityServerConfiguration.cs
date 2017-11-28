@@ -58,7 +58,10 @@ namespace EastFive.Security.SessionServer
             Func<string, TResult> onFailure)
         {
             if (!redirectUriFromPost.IsDefault())
-                return onSuccess(redirectUriFromPost);
+            {
+                var redirectUrl = SetRedirectParameters(redirectUriFromPost, authorizationId, token, refreshToken);
+                return onSuccess(redirectUrl);
+            }
 
             if(authParams.ContainsKey(Configuration.AuthorizationParameters.RedirectUri))
             {

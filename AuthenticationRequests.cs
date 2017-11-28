@@ -20,6 +20,7 @@ namespace EastFive.Security.SessionServer
         public CredentialValidationMethodTypes method;
         public string token;
         public Uri loginUrl;
+        public Uri logoutUrl;
         public Uri redirectUrl;
         public Guid? sessionId;
         public Guid? authorizationId;
@@ -61,6 +62,7 @@ namespace EastFive.Security.SessionServer
                                     method = method,
                                     action = AuthenticationActions.signin,
                                     loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackLocation),
+                                    logoutUrl = provider.GetLogoutUrl(authenticationRequestId, callbackLocation),
                                     redirectUrl = redirectUrl,
                                     sessionId = sessionId,
                                     token = token,
@@ -101,6 +103,7 @@ namespace EastFive.Security.SessionServer
                                     method = method,
                                     action = AuthenticationActions.signin,
                                     loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackLocation),
+                                    logoutUrl = provider.GetLogoutUrl(authenticationRequestId, callbackLocation),
                                     redirectUrl = redirectUrl,
                                     sessionId = sessionId,
                                     authorizationId = authenticationId,
@@ -128,6 +131,27 @@ namespace EastFive.Security.SessionServer
                     if (sessionId != authenticationRequestStorage.sessionId)
                         return onUnauthorized();
 
+                    return context.GetLoginProvider(authenticationRequestStorage.method,
+                        (provider) =>
+                        {
+                            var authenticationRequest = Convert(authenticationRequestStorage);
+                            authenticationRequest.loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackUrl);
+                            return onSuccess(authenticationRequest);
+                        },
+                        () => onFailure("The credential provider for this request is no longer enabled in this system"),
+                        (why) => onFailure(why));
+                },
+                onNotFound);
+        }
+
+        internal async Task<TResult> GetAsync<TResult>(Guid authenticationRequestId, Uri callbackUrl,
+            Func<AuthenticationRequest, TResult> onSuccess,
+            Func<TResult> onNotFound,
+            Func<string, TResult> onFailure)
+        {
+            return await this.dataContext.AuthenticationRequests.FindByIdAsync(authenticationRequestId,
+                (authenticationRequestStorage) =>
+                {
                     return context.GetLoginProvider(authenticationRequestStorage.method,
                         (provider) =>
                         {
