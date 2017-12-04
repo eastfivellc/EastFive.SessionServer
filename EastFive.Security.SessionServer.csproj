@@ -302,10 +302,6 @@
       <Project>{5bb52391-2704-44c0-bc8a-dbbe31498814}</Project>
       <Name>BlackBarLabs.Web</Name>
     </ProjectReference>
-    <ProjectReference Include="..\EastFive.Api.Services\EastFive.Api.Services.csproj">
-      <Project>{662cd006-c03a-47ca-83e3-f327e595db0f}</Project>
-      <Name>EastFive.Api.Services</Name>
-    </ProjectReference>
     <ProjectReference Include="..\EastFive.AzureADB2C\EastFive.AzureADB2C.csproj">
       <Project>{08e8c50b-e8b6-43e6-ae5e-9511a3d04d2c}</Project>
       <Name>EastFive.AzureADB2C</Name>
