@@ -87,7 +87,7 @@ namespace EastFive.Security.SessionServer
             Func<string, TResult> onCredentialSystemNotInitialized,
             Func<string, TResult> onFailure)
         {
-            if (authenticationId != actorId)
+            if (!await Library.configurationManager.CanAdministerCredentialAsync(authenticationId, actorId, claims))
                 return onUnauthorized($"Provided token does not permit access to link {authenticationId} to a login");
             return await context.GetLoginProvider(method,
                 async (provider) =>
@@ -169,7 +169,7 @@ namespace EastFive.Security.SessionServer
                 Guid sessionId,
                 CredentialValidationMethodTypes method,
                 IDictionary<string, string> extraParams,
-            Func<Guid, Guid, string, string, IDictionary<string, string>, Uri, TResult> onSuccess,
+            Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onSuccess,
             Func<Guid, TResult> onAlreadyExists,
             Func<string, TResult> onInvalidToken,
             Func<TResult> lookupCredentialNotFound,
@@ -196,19 +196,47 @@ namespace EastFive.Security.SessionServer
                                                 return onFailure("The credential is corrupt");
 
                                             var authenticationId = authenticationRequest.authorizationId.Value;
+
+                                            if (typeof(IProvideAccess).IsAssignableFrom(provider.GetType()))
+                                                await context.Accesses.CreateAsync(authenticationId, method,
+                                                    extraParamsWithRedemptionParams,
+                                                    () => true,
+                                                    () => false);
+
                                             return await await dataContext.CredentialMappings.CreateCredentialMappingAsync(Guid.NewGuid(), method, subject,
                                                     authenticationRequest.authorizationId.Value,
                                                 async () => await await context.Sessions.CreateSessionAsync(sessionId, authenticationId,
                                                     async (token, refreshToken) =>
                                                     {
                                                         await saveAuthRequest(authenticationId, token, extraParams);
-                                                        return onSuccess(sessionId, authenticationId, token, refreshToken, extraParams,
+                                                        return onSuccess(sessionId, authenticationId, token, refreshToken, AuthenticationActions.link, extraParams,
                                                             authenticationRequest.redirect);
                                                     },
                                                     "GUID not unique".AsFunctionException<Task<TResult>>(),
                                                     onNotConfigured.AsAsyncFunc()),
                                                 "GUID not unique".AsFunctionException<Task<TResult>>(),
                                                 () => onInvalidToken("Login is already mapped.").ToTask());
+                                        }
+                                        
+                                        if (AuthenticationActions.access == authenticationRequest.action)
+                                        {
+                                            if (!authenticationRequest.authorizationId.HasValue)
+                                                return onFailure("The credential is corrupt");
+
+                                            var authenticationId = authenticationRequest.authorizationId.Value;
+                                            return await await context.Accesses.CreateAsync(authenticationId, method,
+                                                    extraParamsWithRedemptionParams,
+                                                    async () => await await context.Sessions.CreateSessionAsync(sessionId, authenticationId,
+                                                        async (token, refreshToken) =>
+                                                        {
+                                                            await saveAuthRequest(authenticationId, token, extraParams);
+                                                            return onSuccess(sessionId, authenticationId, token, refreshToken,
+                                                                AuthenticationActions.access, extraParams,
+                                                                authenticationRequest.redirect);
+                                                        },
+                                                        "GUID not unique".AsFunctionException<Task<TResult>>(),
+                                                        onNotConfigured.AsAsyncFunc()),
+                                                    () => onInvalidToken("Login is already mapped to an access.").ToTask());
                                         }
 
                                         if (authenticationRequest.authorizationId.HasValue)
@@ -222,7 +250,7 @@ namespace EastFive.Security.SessionServer
                                                     {
                                                         await saveAuthRequest(authenticationId, token, extraParams);
                                                         return onSuccess(sessionId, authenticationId, 
-                                                            token, refreshToken, extraParams, authenticationRequest.redirect);
+                                                            token, refreshToken, AuthenticationActions.signin, extraParams, authenticationRequest.redirect);
                                                     },
                                                     () => onAlreadyExists(sessionId).ToTask(),
                                                     onNotConfigured.AsAsyncFunc());
@@ -235,7 +263,7 @@ namespace EastFive.Security.SessionServer
                                 {
                                     return context.Sessions.CreateSessionAsync(sessionId, authenticationId,
                                         (token, refreshToken) => onSuccess(sessionId, authenticationId,
-                                            token, refreshToken, extraParams, default(Uri)),
+                                            token, refreshToken, AuthenticationActions.signin, extraParams, default(Uri)),
                                         () => onAlreadyExists(sessionId),
                                         onNotConfigured);
                                 },

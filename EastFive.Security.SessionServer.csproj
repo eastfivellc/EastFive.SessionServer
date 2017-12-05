@@ -202,6 +202,7 @@
     <Compile Include="Api\Resources\Queries\InviteCredentialQuery.cs" />
     <Compile Include="Api\Resources\Queries\PasswordCredentialQuery.cs" />
     <Compile Include="AuthenticationActions.cs" />
+    <Compile Include="Accesses.cs" />
     <Compile Include="Health.cs" />
     <Compile Include="Configuration\AppSettings.cs" />
     <Compile Include="Configuration\AuthorizationParameters.cs" />
@@ -211,6 +212,7 @@
     <Compile Include="CredentialProviders\PingProvider.cs" />
     <Compile Include="CredentialProviders\SAMLProvider.cs" />
     <Compile Include="CredentialProviders\TokenCredentialProvider.cs" />
+    <Compile Include="IProvideAccess.cs" />
     <Compile Include="IProvideLoginManagement.cs" />
     <Compile Include="AuthenticationRequests.cs" />
     <Compile Include="IProvideLogin.cs" />
@@ -227,7 +229,9 @@
     <Compile Include="CredentialProviders\FacebookCredentialProvider.cs" />
     <Compile Include="CredentialProviders\Voucher\Utilities.cs" />
     <Compile Include="CredentialValidationMethodTypes.cs" />
+    <Compile Include="Persistence\Accesses.cs" />
     <Compile Include="Persistence\Documents\AuthenticationRequestDocument.cs" />
+    <Compile Include="Persistence\Documents\AccessDocument.cs" />
     <Compile Include="Persistence\Documents\CredentialMappingLookupDocument.cs" />
     <Compile Include="Persistence\Documents\RoleDocument.cs" />
     <Compile Include="Persistence\Claims.cs" />

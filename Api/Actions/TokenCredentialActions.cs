@@ -50,7 +50,8 @@ namespace EastFive.Security.SessionServer.Api
             return await await context.Credentials.GetTokenCredentialByTokenAsync(token,
                 (sessionId, actorId, jwtToken, refreshToken) =>
                 {
-                    var redirectResponseMessage = Library.configurationManager.GetRedirectUriAsync(CredentialValidationMethodTypes.Token,
+                    var redirectResponseMessage = Library.configurationManager.GetRedirectUriAsync(context,
+                        CredentialValidationMethodTypes.Token, AuthenticationActions.signin,
                         actorId, jwtToken, refreshToken, new Dictionary<string, string>(), default(Uri),
                         (redirectUrl) =>
                         {

@@ -103,7 +103,8 @@ namespace EastFive.Security.SessionServer.Api
                 new Dictionary<string, string>(),
                 async (authorizationId, tken, refreshToken, extraParams) =>
                 {
-                    return await Library.configurationManager.GetRedirectUriAsync(CredentialValidationMethodTypes.Password,
+                    return await Library.configurationManager.GetRedirectUriAsync(context, CredentialValidationMethodTypes.Password,
+                        AuthenticationActions.signin,
                         authorizationId, tken, refreshToken, extraParams, default(Uri),
                         (redirectUrl) =>
                         {

@@ -116,7 +116,7 @@ namespace EastFive.Security.SessionServer
         }
 
         internal Task<TResult> GetInviteByTokenAsync<TResult>(Guid token,
-            Func<byte[], TResult> redirect,
+            Func<Guid, TResult> redirect,
             Func<Guid, IDictionary<string, string>, TResult> success,
             Func<TResult> onAlreadyUsed,
             Func<TResult> notFound)
@@ -126,9 +126,8 @@ namespace EastFive.Security.SessionServer
                 {
                     if (loginId.HasValue)
                         return success(actorId, new Dictionary<string, string>());
-
-                    var state = token.ToByteArray();
-                    return redirect(state);
+                    
+                    return redirect(token);
                 },
                 () => notFound());
         }

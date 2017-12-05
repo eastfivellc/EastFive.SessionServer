@@ -75,6 +75,21 @@ namespace EastFive.Security.SessionServer
             return onSuccess(provider);
         }
 
+        internal TResult GetAccessProvider<TResult>(CredentialValidationMethodTypes method,
+            Func<IProvideAccess, TResult> onSuccess,
+            Func<TResult> onCredintialSystemNotAvailable,
+            Func<string, TResult> onFailure)
+        {
+            if (ServiceConfiguration.accessProviders.IsDefault())
+                return onFailure("Authentication system not initialized.");
+
+            if (!ServiceConfiguration.accessProviders.ContainsKey(method))
+                return onCredintialSystemNotAvailable();
+
+            var provider = ServiceConfiguration.accessProviders[method];
+            return onSuccess(provider);
+        }
+
         internal TResult GetLoginProviders<TResult>(
             Func<IProvideLogin[], TResult> onSuccess,
             Func<string, TResult> onFailure)
@@ -146,6 +161,17 @@ namespace EastFive.Security.SessionServer
             }
         }
 
+        private Accesses accesses;
+        public Accesses Accesses
+        {
+            get
+            {
+                if (default(Accesses) == accesses)
+                    accesses = new Accesses(this, this.DataContext);
+                return accesses;
+            }
+        }
+        
         private AuthenticationRequests authenticationRequests;
         public AuthenticationRequests AuthenticationRequests
         {

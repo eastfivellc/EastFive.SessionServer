@@ -43,27 +43,32 @@ namespace EastFive.Security.SessionServer.Api
 
         private static async Task<HttpResponseMessage> QueryByTokenAsync(Guid token, CredentialValidationMethodTypes method, HttpRequestMessage request, UrlHelper urlHelper)
         {
-            var context = request.GetSessionServerContext();
-            return await context.GetLoginProvider(method,
-                async loginProvider =>
+            return await request.GetActorIdClaimsAsync(
+                async (actingAs, claims) =>
                 {
+                    var context = request.GetSessionServerContext();
                     return await await context.Credentials.GetInviteByTokenAsync(token,
-                        (state) =>
+                        async (state) =>
                         {
-                            var callbackUrl = urlHelper.GetLocation<Controllers.OpenIdResponseController>();
-                            var redirect = loginProvider.GetSignupUrl(
-                                "http://orderowl.com/Login", 1, state,
-                                callbackUrl);
-                            var response = request.CreateResponse(HttpStatusCode.Redirect);
-                            response.Headers.Location = redirect;
-                            return response.ToTask();
+                            var callbackUrl = urlHelper.GetLocation<Controllers.ResponseController>();
+                            return await context.AuthenticationRequests.GetAsync(state, callbackUrl,
+                                (authenticationRequest) =>
+                                {
+                                    var loginUrl = authenticationRequest.loginUrl;
+                                    var response = request.CreateResponse(HttpStatusCode.Redirect);
+                                    response.Headers.Location = loginUrl;
+                                    return response;
+                                },
+                                () => request.CreateResponseNotFound(state),
+                                (why) => request.CreateResponseUnexpectedFailure(why));
                         },
                         async (actorId, extraParams) =>
                         {
                             return await await context.Sessions.CreateToken(actorId, Guid.NewGuid(),
                                 (bearerToken, refreshToken) =>
                                 {
-                                    return Library.configurationManager.GetRedirectUriAsync(CredentialValidationMethodTypes.Token,
+                                    return Library.configurationManager.GetRedirectUriAsync(context, CredentialValidationMethodTypes.Token,
+                                        AuthenticationActions.access,
                                         actorId, bearerToken, refreshToken, extraParams, default(Uri),
                                         (redirectUrl) =>
                                         {
@@ -84,13 +89,7 @@ namespace EastFive.Security.SessionServer.Api
                         },
                         () => request.CreateResponse(HttpStatusCode.NotFound).AddReason("Already used").ToTask(),
                         () => request.CreateResponse(HttpStatusCode.NotFound).ToTask());
-                },
-                () => request.CreateResponse(HttpStatusCode.ServiceUnavailable)
-                    .AddReason("Login service for provided method is not enabled")
-                    .ToTask(),
-                (why) => request.CreateResponse(HttpStatusCode.InternalServerError)
-                    .AddReason(why)
-                    .ToTask());
+                });
         }
 
         private static async Task<HttpResponseMessage[]> QueryByActorAsync(Guid actorId, HttpRequestMessage request, UrlHelper urlHelper)

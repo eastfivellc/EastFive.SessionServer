@@ -60,8 +60,8 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                             return this.Request.CreateResponse(System.Net.HttpStatusCode.OK,
                                 new Resources.AccountLink
                                 {
-                                    Login = authRequest.loginUrl, //redirect_uri, 0, new byte[] { }, callbackUrl),
-                                    Signup = loginProvider.GetSignupUrl(redirect_uri, 0, new byte[] { }, callbackUrl),
+                                    Login = authRequest.loginUrl,
+                                    Signup = loginProvider.GetSignupUrl(authReqId, callbackUrl),
                                     Logout = authRequest.logoutUrl,
                                 });
                         },

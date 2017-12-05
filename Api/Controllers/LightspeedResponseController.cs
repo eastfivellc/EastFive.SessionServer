@@ -21,7 +21,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
     {
         public override async Task<IHttpActionResult> Get([FromUri]ResponseResult result)
         {
-            result.method = CredentialValidationMethodTypes.OAuth;
+            result.method = CredentialValidationMethodTypes.Lightspeed;
             return await base.Get(result);
         }
 

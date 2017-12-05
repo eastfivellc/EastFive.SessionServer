@@ -48,7 +48,9 @@ namespace EastFive.Security.SessionServer
             return urlHelper.GetWebId<TActorController>(actorId);
         }
 
-        public virtual async Task<TResult> GetRedirectUriAsync<TResult>(CredentialValidationMethodTypes validationType,
+        public virtual async Task<TResult> GetRedirectUriAsync<TResult>(Context context,
+                CredentialValidationMethodTypes validationType,
+                 AuthenticationActions action,
                 Guid? authorizationId,
                 string token, string refreshToken,
                 IDictionary<string, string> authParams,

@@ -52,6 +52,17 @@ namespace EastFive.Security.SessionServer.Persistence
             }
         }
 
+        private Accesses accesses = null;
+        public Accesses Accesses
+        {
+            get
+            {
+                if (default(Accesses) == accesses)
+                    accesses = new Accesses(this.AzureStorageRepository);
+                return accesses;
+            }
+        }
+
         private Roles roles = default(Roles);
         public Roles Roles
         {

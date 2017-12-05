@@ -15,7 +15,8 @@ namespace EastFive.Security.SessionServer
 
         Task<bool> CanAdministerCredentialAsync(Guid actorInQuestion, Guid actorTakingAction, System.Security.Claims.Claim[] claims);
 
-        Task<TResult> GetRedirectUriAsync<TResult>(CredentialValidationMethodTypes validationType,
+        Task<TResult> GetRedirectUriAsync<TResult>(Context context, CredentialValidationMethodTypes validationType,
+                AuthenticationActions action,
                 Guid? authorizationId,
                 string token, string refreshToken,
                 IDictionary<string, string> authParams,

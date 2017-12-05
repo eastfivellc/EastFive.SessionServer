@@ -13,10 +13,14 @@ using System.Threading.Tasks;
 
 namespace EastFive.Security.CredentialProvider
 {
-    public class OAuthProvider : IProvideLogin
+    public class OAuthProvider : IProvideLogin, IProvideAccess
     {
+        #region Initialization
+
         private const string tokenKey = "code";
         private const string stateKey = "state";
+        private const string accessTokenKey = "access_token";
+        public const string accountIdKey = "account_id";
 
         private readonly string clientId;
         private readonly string clientSecret;
@@ -55,7 +59,11 @@ namespace EastFive.Security.CredentialProvider
                 (why) => onFailure(why)).ToTask();
         }
 
-        public CredentialValidationMethodTypes Method => CredentialValidationMethodTypes.OAuth;
+        #endregion
+
+        #region IProvideAuthorization
+
+        public CredentialValidationMethodTypes Method => CredentialValidationMethodTypes.Lightspeed;
 
         public async Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> tokenParameters, 
             Func<string, Guid?, Guid?, IDictionary<string, string>, TResult> onSuccess,
@@ -123,16 +131,7 @@ namespace EastFive.Security.CredentialProvider
                 var scope = (string)stuff.scope;
                 // refresh_token The refresh token that can be used when this access token expires to get new one.
                 var refreshToken = (string)stuff.refresh_token;
-
-                var extraParams = new Dictionary<string, string>
-                {
-                    {  "access_token", accessToken },
-                    {  "expires_in", expiresIn },
-                    {  "token_type", tokenType },
-                    {  "refresh_token", refreshToken },
-                    {  "scope", scope },
-                };
-
+                
                 var match = System.Text.RegularExpressions.Regex.Match(scope, ".*systemuserid\\:\\([0-9]+\\)");
                 var subject = (match.Success && match.Groups.Count > 1) ?
                     match.Groups[2].Value
@@ -140,7 +139,16 @@ namespace EastFive.Security.CredentialProvider
                     await GetSessionUserIdAsync(client, accessToken);
                 if (subject.IsNullOrWhiteSpace())
                     return onInvalidCredentials("systemuserid not provided in scope list");
-                
+
+                var extraParams = new Dictionary<string, string>
+                {
+                    {  OAuthProvider.accessTokenKey, accessToken },
+                    {  "expires_in", expiresIn },
+                    {  "token_type", tokenType },
+                    {  "refresh_token", refreshToken },
+                    {  "scope", scope },
+                    {  OAuthProvider.accountIdKey, subject },
+                };
                 return onSuccess(subject, state, default(Guid?), extraParams);
             }
         }
@@ -156,6 +164,10 @@ namespace EastFive.Security.CredentialProvider
             return systemUserID;
         }
 
+        #endregion
+
+        #region IProvideLogin
+
         public Uri GetLoginUrl(Guid state, Uri responseControllerLocation)
         {
             // response_type -- Ask for ‘code’ which will give you a temporary token that you can then use to get an access token.
@@ -166,11 +178,6 @@ namespace EastFive.Security.CredentialProvider
             return new Uri(url);
         }
 
-        public Uri GetLoginUrl(string redirect_uri, byte mode, byte[] state, Uri responseControllerLocation)
-        {
-            throw new NotImplementedException();
-        }
-
         public Uri GetLogoutUrl(Guid state, Uri responseControllerLocation)
         {
             var loginScopes = "employee:register_read+employee:inventory+employee:admin_inventory";
@@ -179,16 +186,31 @@ namespace EastFive.Security.CredentialProvider
             return new Uri(url);
         }
 
-        public TResult ParseState<TResult>(string state,
-           Func<Guid, TResult> onSuccess,
-           Func<string, TResult> onInvalidState)
+        public Uri GetSignupUrl(Guid state, Uri responseControllerLocation)
         {
-            throw new NotImplementedException();
+            return default(Uri);
         }
+        
+        #endregion
 
-        public Uri GetSignupUrl(string redirect_uri, byte mode, byte[] state, Uri responseControllerLocation)
+        #region IProvideAccess
+
+        public async Task<TResult> CreateSessionAsync<TResult>(IDictionary<string, string> parameters, 
+            Func<HttpClient, IDictionary<string, string>, TResult> onCreatedSession, 
+            Func<string, TResult> onFailedToCreateSession)
         {
-            throw new NotImplementedException();
+            if (!parameters.ContainsKey(OAuthProvider.accessTokenKey))
+                return onFailedToCreateSession($"Could not create connection because [{OAuthProvider.accessTokenKey}] was not included in parameters");
+
+            using (var client = new HttpClient())
+            {
+                var accessToken = parameters[OAuthProvider.accessTokenKey];
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+                return await onCreatedSession(client, parameters).ToTask();
+            }
         }
+        
+        #endregion
     }
 }

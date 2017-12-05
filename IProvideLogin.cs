@@ -11,19 +11,8 @@ namespace EastFive.Security.SessionServer
         Uri GetLoginUrl(Guid state, Uri responseControllerLocation);
 
         Uri GetLogoutUrl(Guid state, Uri responseControllerLocation);
-
-        Uri GetLoginUrl(string redirect_uri, byte mode, byte[] state, Uri responseControllerLocation);
-
-        Uri GetSignupUrl(string redirect_uri, byte mode, byte[] state, Uri responseControllerLocation);
-
-
-        TResult ParseState<TResult>(string state,
-            Func<Guid, TResult> onSuccess, 
-            Func<string, TResult> onInvalidState);
-
-        //TResult ParseState<TResult>(string state,
-        //    Func<byte, byte[], IDictionary<string, string>, TResult> onSuccess,
-        //    Func<string, TResult> invalidState);
-
+        
+        Uri GetSignupUrl(Guid state, Uri responseControllerLocation);
+        
     }
 }

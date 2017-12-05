@@ -93,12 +93,12 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                         tokenId
                     }
                 },
-                (sessionId, authorizationId, token, refreshToken, extraParams, redirectUri) =>
+                (sessionId, authorizationId, token, refreshToken, action, extraParams, redirectUri) =>
                 {
                     telemetry.TrackEvent("PingSessionCreated", new Dictionary<string, string> { {"authorizationId", authorizationId.ToString() } });
                     telemetry.TrackEvent("PingSessionCreated - ExtraParams", extraParams);
                     var config = Library.configurationManager;
-                    var redirectResponse = config.GetRedirectUriAsync(CredentialValidationMethodTypes.SAML,
+                    var redirectResponse = config.GetRedirectUriAsync(context, CredentialValidationMethodTypes.Ping, action,
                         authorizationId, token, refreshToken, extraParams, redirectUri,
                         (redirectUrl) => Redirect(redirectUrl),
                         (paramName, why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult(),

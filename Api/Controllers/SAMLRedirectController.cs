@@ -78,10 +78,11 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                     var context = Request.GetSessionServerContext();
                     return await await context.AuthenticationRequests.UpdateAsync<Task<IHttpActionResult>>(Guid.NewGuid(),
                         CredentialValidationMethodTypes.SAML, tokens,
-                        (sessionId, authorizationId, token, refreshToken, extraParams, redirectUri) =>
+                        (sessionId, authorizationId, token, refreshToken, action, extraParams, redirectUri) =>
                         {
                             var config = Library.configurationManager;
-                            var redirectResponse = config.GetRedirectUriAsync<IHttpActionResult>(CredentialValidationMethodTypes.SAML,
+                            var redirectResponse = config.GetRedirectUriAsync<IHttpActionResult>(context,
+                                CredentialValidationMethodTypes.SAML, action,
                                 authorizationId, token, refreshToken, extraParams, redirectUri,
                                 (redirectUrl) => Redirect(redirectUrl),
                                 (paramName, why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult(),

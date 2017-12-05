@@ -10,5 +10,6 @@ namespace EastFive.Security.SessionServer
     {
         signin,
         link,
+        access,
     }
 }

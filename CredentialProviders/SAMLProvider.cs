@@ -89,25 +89,13 @@ namespace EastFive.Security.CredentialProvider.SAML
         }
 
         #region IProvideLogin
-
-        public Uri GetLoginUrl(string redirect_uri, byte mode, byte[] state, Uri responseControllerLocation)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Uri GetSignupUrl(string redirect_uri, byte mode, byte[] state, Uri responseControllerLocation)
+        
+        public Uri GetSignupUrl(Guid state, Uri responseControllerLocation)
         {
             throw new NotImplementedException();
         }
 
         public Uri GetLogoutUrl(Guid state, Uri responseControllerLocation)
-        {
-            throw new NotImplementedException();
-        }
-
-        public TResult ParseState<TResult>(string state,
-           Func<Guid, TResult> onSuccess,
-           Func<string, TResult> onInvalidState)
         {
             throw new NotImplementedException();
         }

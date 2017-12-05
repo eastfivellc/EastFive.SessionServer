@@ -64,10 +64,8 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             var context = this.Request.GetSessionServerContext();
             var response = await await context.AuthenticationRequests.UpdateAsync(Guid.NewGuid(),
                     method, values,
-                (sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUrl) =>
-                {
-                    return CreateResponse(sessionId, authorizationId, jwtToken, refreshToken, redirectUrl, extraParams);
-                },
+                (sessionId, authorizationId, jwtToken, refreshToken, action, extraParams, redirectUrl) =>
+                    CreateResponse(context, method, action, sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUrl),
                 (existingId) => this.Request.CreateResponse(HttpStatusCode.InternalServerError)
                         .AddReason("GUID NOT UNIQUE")
                         .ToActionResult()
@@ -95,17 +93,22 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             return response;
         }
 
-        private async Task<IHttpActionResult> CreateResponse(Guid sessionId, Guid? authorizationId, string jwtToken, string refreshToken,
-            Uri redirectUrl,
-            IDictionary<string, string> extraParams)
+        private async Task<IHttpActionResult> CreateResponse(Context context,
+            CredentialValidationMethodTypes method, AuthenticationActions action,
+            Guid sessionId, Guid? authorizationId, string jwtToken, string refreshToken,
+            IDictionary<string, string> extraParams, Uri redirectUrl)
         {
             var config = Library.configurationManager;
-            var redirectResponse = await config.GetRedirectUriAsync(CredentialValidationMethodTypes.Password,
-                authorizationId, jwtToken, refreshToken, extraParams,
-                redirectUrl,
+            var redirectResponse = await config.GetRedirectUriAsync(context, method, action,
+                    authorizationId, jwtToken, refreshToken, extraParams,
+                    redirectUrl,
                 (redirectUrlSelected) => Redirect(redirectUrlSelected),
-                (paramName, why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult(),
-                (why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult());
+                (paramName, why) => Request.CreateResponse(HttpStatusCode.BadRequest)
+                    .AddReason(why)
+                    .ToActionResult(),
+                (why) => Request.CreateResponse(HttpStatusCode.BadRequest)
+                    .AddReason(why)
+                    .ToActionResult());
             return redirectResponse;
         }
     }

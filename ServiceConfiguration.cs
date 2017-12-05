@@ -23,7 +23,10 @@ namespace EastFive.Security.SessionServer
             default(Dictionary<CredentialValidationMethodTypes, IProvideLogin>);
 
         internal static Dictionary<CredentialValidationMethodTypes, IProvideLoginManagement> managementProviders =
-            default(Dictionary<CredentialValidationMethodTypes, IProvideLoginManagement>); 
+            default(Dictionary<CredentialValidationMethodTypes, IProvideLoginManagement>);
+
+        internal static Dictionary<CredentialValidationMethodTypes, IProvideAccess> accessProviders =
+            default(Dictionary<CredentialValidationMethodTypes, IProvideAccess>);
 
         public static async Task<TResult> InitializeAsync<TResult>(IConfigureIdentityServer configurationManager,
                 HttpConfiguration config,
@@ -68,6 +71,11 @@ namespace EastFive.Security.SessionServer
                 .ToDictionary(
                     credentialProvider => credentialProvider.Method,
                     credentialProvider => (IProvideLoginManagement)credentialProvider);
+            accessProviders = credentialProvidersWithoutMethods
+                .Where(credentialProvider => typeof(IProvideAccess).IsAssignableFrom(credentialProvider.GetType()))
+                .ToDictionary(
+                    credentialProvider => credentialProvider.Method,
+                    credentialProvider => (IProvideAccess)credentialProvider);
 
             return onSuccess();
         }

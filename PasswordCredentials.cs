@@ -88,13 +88,22 @@ namespace EastFive.Security.SessionServer
                             if (!isEmail || !emailLastSent.HasValue)
                                 return onSuccess();
 
-                            return await Web.Configuration.Settings.GetString(Configuration.AppSettings.LandingPage,
+                            return await Web.Configuration.Settings.GetUri(Configuration.AppSettings.LandingPage,
                                 async (landingPage) =>
                                 {
-                                    var loginUrl = loginProvider.GetLoginUrl(landingPage, 0, new byte[] { }, callbackUrl);
-                                    var resultMail = await SendInvitePasswordAsync(username, token, loginUrl,
-                                        onSuccess, onServiceNotAvailable, onFailure);
-                                    return resultMail;
+                                    return await await context.AuthenticationRequests.CreateLoginAsync(Guid.NewGuid(), callbackUrl,
+                                        CredentialValidationMethodTypes.Password, landingPage,
+                                        async (authenticationRequest) =>
+                                        {
+                                            var loginUrl = authenticationRequest.loginUrl;
+                                            var resultMail = await SendInvitePasswordAsync(username, token, loginUrl,
+                                                onSuccess, onServiceNotAvailable, onFailure);
+                                            return resultMail;
+                                        },
+                                        "GUID not unique".AsFunctionException<Task<TResult>>(),
+                                        "Password system said not available while in use".AsFunctionException<Task<TResult>>(),
+                                        "Password system said not initialized while in use".AsFunctionException<string, Task<TResult>>(),
+                                        onFailure.AsAsyncFunc());
                                 },
                                 onFailure.AsAsyncFunc());
                         },
@@ -285,27 +294,49 @@ namespace EastFive.Security.SessionServer
                                     return resultFailure;
                                 }
 
-                                var landingPage = Web.Configuration.Settings.Get(Security.SessionServer.Configuration.AppSettings.LandingPage);
-                                var loginUrl = loginProvider.GetLoginUrl(landingPage, 0, new byte[] { }, callbackUrl);
-
-                                // TODO: the purpose of the next line is to send the password. 
-                                // If we don't want it sent, don't update the last sent value!!!
-                                return await await SendInvitePasswordAsync(loginInfo.userName, "*********", loginUrl,
-                                    async () =>
+                                return await Web.Configuration.Settings.GetUri(Configuration.AppSettings.LandingPage,
+                                    async (landingPage) =>
                                     {
-                                        await updateEmailLastSentAsync(emailLastSent.Value);
-                                        return resultSuccess;
-                                    },
-                                    () =>
-                                    {
-                                        DiscriminatedDelegate<Guid, TResult, Task<TResult>> resultServiceUnavailable =
-                                        (success, fail) => fail(onServiceNotAvailable());
-                                        return resultServiceUnavailable.ToTask();
+                                        return await await context.AuthenticationRequests.CreateLoginAsync(Guid.NewGuid(), callbackUrl,
+                                            CredentialValidationMethodTypes.Password, landingPage,
+                                            async (authenticationRequest) =>
+                                            {
+                                                var loginUrl = authenticationRequest.loginUrl;
+                                                // TODO: the purpose of the next line is to send the password. 
+                                                // If we don't want it sent, don't update the last sent value!!!
+                                                return await await SendInvitePasswordAsync(loginInfo.userName, "*********", loginUrl,
+                                                    async () =>
+                                                    {
+                                                        await updateEmailLastSentAsync(emailLastSent.Value);
+                                                        return resultSuccess;
+                                                    },
+                                                    () =>
+                                                    {
+                                                        DiscriminatedDelegate<Guid, TResult, Task<TResult>> resultServiceUnavailable =
+                                                        (success, fail) => fail(onServiceNotAvailable());
+                                                        return resultServiceUnavailable.ToTask();
+                                                    },
+                                                    (why) =>
+                                                    {
+                                                        failureMessage = why;
+                                                        return resultFailure.ToTask();
+                                                    });
+                                            },
+                                            "GUID not unique".AsFunctionException<Task<DiscriminatedDelegate<Guid, TResult, Task<TResult>>>>(),
+                                            "Password system said not available while in use".AsFunctionException<Task<DiscriminatedDelegate<Guid, TResult, Task<TResult>>>>(),
+                                            "Password system said not initialized while in use".AsFunctionException<string, Task<DiscriminatedDelegate<Guid, TResult, Task<TResult>>>>(),
+                                            (why) =>
+                                            {
+                                                DiscriminatedDelegate<Guid, TResult, Task<TResult>> resultFailureCreateLogin =
+                                                        (success, fail) => fail(onFailure(why));
+                                                return resultFailureCreateLogin.ToTask();
+                                            });
                                     },
                                     (why) =>
                                     {
-                                        failureMessage = why;
-                                        return resultFailure.ToTask();
+                                        DiscriminatedDelegate<Guid, TResult, Task<TResult>> resultFailureConfig =
+                                                (success, fail) => fail(onFailure(why));
+                                        return resultFailureConfig.ToTask();
                                     });
                             },
                             () => resultFailure.ToTask(),
