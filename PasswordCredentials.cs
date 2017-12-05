@@ -135,6 +135,61 @@ namespace EastFive.Security.SessionServer
             return createLoginResult;
         }
 
+        public async Task<TResult> CreatePasswordCredentialsAsync<TResult>(Guid passwordCredentialId, Guid actorId,
+            string displayName, string username, bool isEmail, string token, bool forceChange,
+            Guid performingActorId, System.Security.Claims.Claim[] claims,
+            Func<TResult> onSuccess,
+            Func<TResult> credentialAlreadyExists,
+            Func<Guid, TResult> onUsernameAlreadyInUse,
+            Func<TResult> onPasswordInsufficent,
+            Func<TResult> onRelationshipAlreadyExists,
+            Func<TResult> onLoginAlreadyUsed,
+            Func<TResult> onUnathorized,
+            Func<TResult> onServiceNotAvailable,
+            Func<string, TResult> onFailure)
+        {
+            if (!await Library.configurationManager.CanAdministerCredentialAsync(
+                actorId, performingActorId, claims))
+                return onUnathorized();
+
+            if (string.IsNullOrWhiteSpace(displayName))
+                displayName = "User";
+
+            var createLoginResult = await await managmentProvider.CreateAuthorizationAsync(displayName,
+                username, isEmail, token, forceChange,
+                async loginId =>
+                {
+                    var result = await await dataContext.PasswordCredentials.CreatePasswordCredentialAsync(
+                        passwordCredentialId, actorId, loginId, default(DateTime?),
+                        onSuccess.AsAsyncFunc(),
+                        async () =>
+                            await managmentProvider.DeleteAuthorizationAsync(loginId,
+                                () => credentialAlreadyExists(),
+                                (why) => onFailure(why),
+                                () => onFailure("Service became unsupported after credentialAlreadyExists"),
+                                (why) => onFailure(why)),
+                        async () =>
+                            await managmentProvider.DeleteAuthorizationAsync(loginId,
+                                () => onRelationshipAlreadyExists(),
+                                (why) => onFailure(why),
+                                () => onFailure("Service became unsupported after onRelationshipAlreadyExists"),
+                                (why) => onFailure(why)),
+                        async () =>
+                            await managmentProvider.DeleteAuthorizationAsync(loginId,
+                                () => onRelationshipAlreadyExists(),
+                                (why) => onFailure(why),
+                                () => onFailure("Service became unsupported after onLoginAlreadyUsed"),
+                                (why) => onFailure(why)));
+                    return result;
+                },
+                (loginId) => onUsernameAlreadyInUse(loginId).ToTask(),
+                () => onPasswordInsufficent().ToTask(),
+                (why) => onFailure(why).ToTask(),
+                () => onFailure("Service not supported").ToTask(),
+                (why) => onFailure(why).ToTask());
+            return createLoginResult;
+        }
+
         internal async Task<TResult> GetPasswordCredentialAsync<TResult>(Guid passwordCredentialId,
                 Guid actorPerformingId, System.Security.Claims.Claim[] claims,
             Func<PasswordCredential, TResult> success,
