@@ -37,7 +37,6 @@ namespace EastFive.Security.CredentialProvider.Ping
         }
 
         public static Task<TResult> InitializeAsync<TResult>(
-            Func<IProvideLogin, TResult> onProvideLogin,
             Func<IProvideAuthorization, TResult> onProvideAuthorization,
             Func<TResult> onProvideNothing,
             Func<string, TResult> onFailure)
