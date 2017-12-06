@@ -31,29 +31,14 @@ namespace EastFive.Security.SessionServer
                 onFailure);
         }
 
-        public async Task<TResult> FindByActorAsync<TResult>(Guid accountId,
+        public Task<TResult> FindByActorAsync<TResult>(Guid accountId,
                 CredentialValidationMethodTypes method,
-            Func<HttpClient, IDictionary<string, string>, TResult> onSessionCreated,
-            Func<TResult> onAccessNotFound,
-            Func<string, TResult> onFailure)
+            Func<IDictionary<string, string>, TResult> onSessionCreated,
+            Func<TResult> onAccessNotFound)
         {
-            return await context.GetAccessProvider(method,
-                async (accessProvider) =>
-                {
-                    return await await dataContext.Accesses.FindAsync(accountId, method,
-                        paramSet =>
-                        {
-                            return accessProvider.CreateSessionAsync(paramSet,
-                                (client, extraParams) =>
-                                {
-                                    return onSessionCreated(client, extraParams);
-                                },
-                                onFailure);
-                        },
-                        onAccessNotFound.AsAsyncFunc());
-                },
-                () => onFailure("").ToTask(),
-                onFailure.AsAsyncFunc());
+            return dataContext.Accesses.FindAsync(accountId, method,
+                paramSet => onSessionCreated(paramSet),
+                () => onAccessNotFound());
         }
         
 

@@ -19,7 +19,7 @@ namespace EastFive.Security.CredentialProvider
 
         private const string tokenKey = "code";
         private const string stateKey = "state";
-        private const string accessTokenKey = "access_token";
+        public const string accessTokenKey = "access_token";
         public const string accountIdKey = "account_id";
 
         private readonly string clientId;
