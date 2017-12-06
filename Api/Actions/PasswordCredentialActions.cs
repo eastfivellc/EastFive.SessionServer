@@ -36,11 +36,6 @@ namespace EastFive.Security.SessionServer.Api
                 return request.CreateResponse(HttpStatusCode.Conflict).AddReason("Actor is null");
 
             var context = request.GetSessionServerContext();
-            var loginProvider = context.GetLoginProvider(CredentialValidationMethodTypes.Password,
-                (lp) => lp,
-                () => default(IProvideLogin),
-                (why) => default(IProvideLogin));
-
             var callbackUrl = url.GetLocation<Controllers.OpenIdResponseController>();
             
             var creationResults = await context.PasswordCredentials.CreatePasswordCredentialsAsync(
