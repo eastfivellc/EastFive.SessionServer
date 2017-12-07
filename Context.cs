@@ -172,14 +172,14 @@ namespace EastFive.Security.SessionServer
             }
         }
         
-        private AuthenticationRequests authenticationRequests;
-        public AuthenticationRequests AuthenticationRequests
+        private Integrations integrations;
+        public Integrations Integrations
         {
             get
             {
-                if (default(AuthenticationRequests) == authenticationRequests)
-                    authenticationRequests = new AuthenticationRequests(this, this.DataContext);
-                return authenticationRequests;
+                if (default(Integrations) == integrations)
+                    integrations = new Integrations(this, this.DataContext);
+                return integrations;
             }
         }
         

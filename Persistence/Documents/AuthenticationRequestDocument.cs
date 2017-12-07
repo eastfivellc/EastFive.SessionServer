@@ -26,7 +26,6 @@ namespace EastFive.Security.SessionServer.Persistence.Documents
         #region Properties
 
         public string Method { get; set; }
-        public Guid? SessionId { get; set; }
         public string Token { get; set; }
 
         public byte[] ExtraParams { get; set; }

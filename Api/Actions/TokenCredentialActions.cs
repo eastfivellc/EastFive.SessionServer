@@ -52,7 +52,7 @@ namespace EastFive.Security.SessionServer.Api
                 {
                     var redirectResponseMessage = Library.configurationManager.GetRedirectUriAsync(context,
                         CredentialValidationMethodTypes.Token, AuthenticationActions.signin,
-                        actorId, jwtToken, refreshToken, new Dictionary<string, string>(), default(Uri),
+                        sessionId, actorId, jwtToken, refreshToken, new Dictionary<string, string>(), default(Uri),
                         (redirectUrl) =>
                         {
                             var response = request.CreateResponse(HttpStatusCode.Redirect);

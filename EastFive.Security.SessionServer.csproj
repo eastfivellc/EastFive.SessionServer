@@ -150,9 +150,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Api\Actions\AuthenticationRequestLinkActions..cs" />
-    <Compile Include="Api\Actions\AuthenticationRequestActions.cs" />
     <Compile Include="Api\Actions\CredentialActions.cs" />
     <Compile Include="Api\Actions\SamlCredentialActions.cs" />
+    <Compile Include="Api\Actions\IntegrationActions.cs" />
     <Compile Include="Api\Actions\TokenActions.cs" />
     <Compile Include="Api\Actions\RoleActions.cs" />
     <Compile Include="Api\Actions\ActAsUserActions.cs" />
@@ -164,7 +164,6 @@
     <Compile Include="Api\Controllers\ActAsUserViewController.cs" />
     <Compile Include="Api\Controllers\BaseController.cs" />
     <Compile Include="Api\Controllers\ActAsUserController.cs" />
-    <Compile Include="Api\Controllers\AuthenticationRequestController.cs" />
     <Compile Include="Api\Controllers\LightspeedResponseController.cs" />
     <Compile Include="Api\Controllers\AuthenticationRequestLinkController.cs" />
     <Compile Include="Api\Controllers\CredentialController.cs" />
@@ -184,12 +183,12 @@
     <Compile Include="Api\Resources\AuthHeaderProps.cs" />
     <Compile Include="Api\Controllers\AccountLinksController.cs" />
     <Compile Include="Api\Resources\ActAsUser.cs" />
-    <Compile Include="Api\Resources\AuthenticationRequest.cs" />
     <Compile Include="Api\Resources\AuthenticationRequestLink.cs" />
     <Compile Include="Api\Resources\LightspeedCredential.cs" />
     <Compile Include="Api\Resources\Credential.cs" />
     <Compile Include="Api\Resources\Queries\AuthenticationRequestLinkQuery.cs" />
-    <Compile Include="Api\Resources\Queries\AuthenticationRequestQuery.cs" />
+    <Compile Include="Api\Resources\Queries\IntegrationQuery.cs" />
+    <Compile Include="Api\Resources\Queries\SessionQuery.cs" />
     <Compile Include="Api\Resources\Queries\SamlCredentialQuery.cs" />
     <Compile Include="Api\Resources\SamlCredential.cs" />
     <Compile Include="Api\Resources\Queries\TokenQuery.cs" />
@@ -197,6 +196,7 @@
     <Compile Include="Api\Resources\Queries\ActAsUserQuery.cs" />
     <Compile Include="Api\Resources\Queries\TokenCredentialQuery.cs" />
     <Compile Include="Api\Resources\Role.cs" />
+    <Compile Include="Api\Resources\Integration.cs" />
     <Compile Include="Api\Resources\TokenCredential.cs" />
     <Compile Include="Api\Resources\InviteCredential.cs" />
     <Compile Include="Api\Resources\Queries\InviteCredentialQuery.cs" />
@@ -214,7 +214,7 @@
     <Compile Include="CredentialProviders\TokenCredentialProvider.cs" />
     <Compile Include="IProvideAccess.cs" />
     <Compile Include="IProvideLoginManagement.cs" />
-    <Compile Include="AuthenticationRequests.cs" />
+    <Compile Include="Integrations.cs" />
     <Compile Include="IProvideLogin.cs" />
     <Compile Include="IProvideAuthorization.cs" />
     <Compile Include="LoginProviders.cs" />

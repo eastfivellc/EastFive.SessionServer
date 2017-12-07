@@ -17,6 +17,7 @@ namespace EastFive.Security.SessionServer
 
         Task<TResult> GetRedirectUriAsync<TResult>(Context context, CredentialValidationMethodTypes validationType,
                 AuthenticationActions action,
+                Guid requestId,
                 Guid? authorizationId,
                 string token, string refreshToken,
                 IDictionary<string, string> authParams,

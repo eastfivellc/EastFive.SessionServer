@@ -53,7 +53,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                             .Select(routePrefix => routePrefix.Prefix)
                             .First());
                     var authReqId = Guid.NewGuid();
-                    return await context.AuthenticationRequests.CreateLoginAsync(authReqId,
+                    return await context.Sessions.CreateLoginAsync(authReqId,
                         callbackUrl, CredentialValidationMethodTypes.Password, redirectUrl,
                         (authRequest) =>
                         {

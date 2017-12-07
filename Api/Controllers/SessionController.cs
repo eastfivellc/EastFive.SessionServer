@@ -10,17 +10,15 @@ using BlackBarLabs.Extensions;
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
     public class SessionController : BaseController
-    {
-        public IHttpActionResult Get()
-        {
-            return this.ActionResult(() => this.Request.CreateResponse(HttpStatusCode.Unauthorized)
-                .AddReason("Get not permitted on Session Resource")
-                .ToTask());
-        }
-        
+    {   
         public IHttpActionResult Post([FromBody]Resources.Session model)
         {
-            return this.ActionResult(() => model.CreateAsync(this.Request));
+            return new HttpActionResult(() => model.CreateAsync(this.Request, this.Url));
+        }
+
+        public IHttpActionResult Get([FromUri]Resources.Queries.SessionQuery model)
+        {
+            return new HttpActionResult(() => model.QueryAsync(this.Request, this.Url));
         }
         
         public IHttpActionResult Put([FromBody]Resources.Session model)
@@ -51,11 +49,6 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 {
                     Id = Id.Value,
                     AuthorizationId = authId,
-                    SessionHeader = new Resources.AuthHeaderProps
-                    {
-                        Name = "Authorization",
-                        Value = jwtToken,
-                    }
                 };
                 response.Put = new[] { put1 };
             }

@@ -62,7 +62,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             IDictionary<string, string> values)
         {
             var context = this.Request.GetSessionServerContext();
-            var response = await await context.AuthenticationRequests.UpdateAsync(Guid.NewGuid(),
+            var response = await await context.Sessions.UpdateResponseAsync(Guid.NewGuid(),
                     method, values,
                 (sessionId, authorizationId, jwtToken, refreshToken, action, extraParams, redirectUrl) =>
                     CreateResponse(context, method, action, sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUrl),
@@ -100,7 +100,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
         {
             var config = Library.configurationManager;
             var redirectResponse = await config.GetRedirectUriAsync(context, method, action,
-                    authorizationId, jwtToken, refreshToken, extraParams,
+                    sessionId, authorizationId, jwtToken, refreshToken, extraParams,
                     redirectUrl,
                 (redirectUrlSelected) => Redirect(redirectUrlSelected),
                 (paramName, why) => Request.CreateResponse(HttpStatusCode.BadRequest)

@@ -91,7 +91,7 @@ namespace EastFive.Security.SessionServer
                             return await Web.Configuration.Settings.GetUri(Configuration.AppSettings.LandingPage,
                                 async (landingPage) =>
                                 {
-                                    return await await context.AuthenticationRequests.CreateLoginAsync(Guid.NewGuid(), callbackUrl,
+                                    return await await context.Sessions.CreateLoginAsync(Guid.NewGuid(), callbackUrl,
                                         CredentialValidationMethodTypes.Password, landingPage,
                                         async (authenticationRequest) =>
                                         {
@@ -352,7 +352,7 @@ namespace EastFive.Security.SessionServer
                                 return await Web.Configuration.Settings.GetUri(Configuration.AppSettings.LandingPage,
                                     async (landingPage) =>
                                     {
-                                        return await await context.AuthenticationRequests.CreateLoginAsync(Guid.NewGuid(), callbackUrl,
+                                        return await await context.Sessions.CreateLoginAsync(Guid.NewGuid(), callbackUrl,
                                             CredentialValidationMethodTypes.Password, landingPage,
                                             async (authenticationRequest) =>
                                             {

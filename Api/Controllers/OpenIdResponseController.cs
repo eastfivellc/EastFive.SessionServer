@@ -44,7 +44,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
 
             var context = Request.GetSessionServerContext();
             var callbackUrl = this.Url.GetLocation<OpenIdResponseController>();
-            return await context.AuthenticationRequests.GetAsync(authenticationRequestId,
+            return await context.Sessions.GetAsync(authenticationRequestId,
                                 callbackUrl,
                                 (authenticationRequest) =>
                                 {
@@ -76,7 +76,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
 
             var config = Library.configurationManager;
             var redirectResponse = await config.GetRedirectUriAsync(context, CredentialValidationMethodTypes.Password, action,
-                authorizationId, jwtToken, refreshToken, extraParams, redirectUri,
+                sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUri,
                 (redirectUrl) => Redirect(redirectUrl),
                 (paramName, why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult(),
                 (why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult());
@@ -91,7 +91,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                     .ToActionResult();
 
             var context = this.Request.GetSessionServerContext();
-            var response = await await context.AuthenticationRequests.UpdateAsync<Task<IHttpActionResult>>(Guid.NewGuid(),
+            var response = await await context.Sessions.UpdateResponseAsync<Task<IHttpActionResult>>(Guid.NewGuid(),
                 CredentialValidationMethodTypes.Password,
                 new Dictionary<string, string>()
                 {

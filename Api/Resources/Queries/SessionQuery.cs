@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 namespace EastFive.Security.SessionServer.Api.Resources.Queries
 {
     [DataContract]
-    public class AuthenticationRequestQuery : BlackBarLabs.Api.ResourceQueryBase
+    public class SessionQuery : BlackBarLabs.Api.ResourceQueryBase
     {
     }
 }

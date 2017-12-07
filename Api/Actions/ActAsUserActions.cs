@@ -105,6 +105,7 @@ namespace EastFive.Security.SessionServer.Api
                 {
                     return await Library.configurationManager.GetRedirectUriAsync(context, CredentialValidationMethodTypes.Password,
                         AuthenticationActions.signin,
+                        loginId,
                         authorizationId, tken, refreshToken, extraParams, default(Uri),
                         (redirectUrl) =>
                         {

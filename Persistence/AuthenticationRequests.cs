@@ -20,7 +20,6 @@ namespace EastFive.Security.SessionServer.Persistence
         public Guid id;
         public CredentialValidationMethodTypes method;
         public AuthenticationActions action;
-        public Guid? sessionId;
         public Guid? authorizationId;
         public IDictionary<string, string> extraParams;
         public string token;
@@ -40,7 +39,7 @@ namespace EastFive.Security.SessionServer.Persistence
 
         public async Task<TResult> CreateAsync<TResult>(Guid authenticationRequestId,
                 CredentialValidationMethodTypes method, AuthenticationActions action,
-                Guid sessionId, Guid? actorLinkId, Uri redirectUrl,
+                Guid? actorLinkId, Uri redirectUrl,
             Func<TResult> onSuccess,
             Func<TResult> onAlreadyExists)
         {
@@ -48,7 +47,6 @@ namespace EastFive.Security.SessionServer.Persistence
             {
                 Method = Enum.GetName(typeof(CredentialValidationMethodTypes), method),
                 Action = Enum.GetName(typeof(AuthenticationActions), action),
-                SessionId = sessionId,
                 LinkedAuthenticationId = actorLinkId,
                 RedirectUrl = redirectUrl.IsDefault()?
                     default(string)
@@ -96,7 +94,6 @@ namespace EastFive.Security.SessionServer.Persistence
                 id = document.Id,
                 method = (CredentialValidationMethodTypes)Enum.Parse(typeof(CredentialValidationMethodTypes), document.Method, true),
                 action = (AuthenticationActions)Enum.Parse(typeof(AuthenticationActions), document.Action, true),
-                sessionId = document.SessionId,
                 authorizationId = document.LinkedAuthenticationId,
                 token = document.Token,
                 extraParams = document.GetExtraParams(),

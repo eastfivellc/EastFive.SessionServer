@@ -41,7 +41,8 @@ namespace EastFive.Security.SessionServer.Api
                 () => request.CreateResponse(HttpStatusCode.NotFound));
         }
 
-        private static async Task<HttpResponseMessage> QueryByTokenAsync(Guid token, CredentialValidationMethodTypes method, HttpRequestMessage request, UrlHelper urlHelper)
+        private static async Task<HttpResponseMessage> QueryByTokenAsync(Guid token, 
+            CredentialValidationMethodTypes method, HttpRequestMessage request, UrlHelper urlHelper)
         {
             return await request.GetActorIdClaimsAsync(
                 async (actingAs, claims) =>
@@ -51,7 +52,7 @@ namespace EastFive.Security.SessionServer.Api
                         async (state) =>
                         {
                             var callbackUrl = urlHelper.GetLocation<Controllers.ResponseController>();
-                            return await context.AuthenticationRequests.GetAsync(state, callbackUrl,
+                            return await context.Sessions.GetAsync(state, callbackUrl,
                                 (authenticationRequest) =>
                                 {
                                     var loginUrl = authenticationRequest.loginUrl;
@@ -69,7 +70,7 @@ namespace EastFive.Security.SessionServer.Api
                                 {
                                     return Library.configurationManager.GetRedirectUriAsync(context, CredentialValidationMethodTypes.Token,
                                         AuthenticationActions.access,
-                                        actorId, bearerToken, refreshToken, extraParams, default(Uri),
+                                        token, actorId, bearerToken, refreshToken, extraParams, default(Uri),
                                         (redirectUrl) =>
                                         {
                                             var response = request.CreateResponse(HttpStatusCode.Redirect);

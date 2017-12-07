@@ -12,6 +12,20 @@ using EastFive.Collections.Generic;
 
 namespace EastFive.Security.SessionServer
 {
+    public struct Session
+    {
+        public Guid id;
+        public CredentialValidationMethodTypes method;
+        public string token;
+        public Uri loginUrl;
+        public Uri logoutUrl;
+        public Uri redirectUrl;
+        public Guid? authorizationId;
+        public IDictionary<string, string> extraParams;
+        public string refreshToken;
+        public AuthenticationActions action;
+    }
+
     public class Sessions
     {
         private Context context;
@@ -22,43 +36,40 @@ namespace EastFive.Security.SessionServer
             this.dataContext = dataContext;
             this.context = context;
         }
-
-        public delegate T CreateSessionSuccessDelegate<T>(Guid? authorizationId, string token, string refreshToken, IDictionary<string, string> extraParams);
-        public delegate T CreateSessionAlreadyExistsDelegate<T>();
-        public async Task<T> CreateAsync<T>(Guid sessionId,
-            CreateSessionSuccessDelegate<T> onSuccess,
-            CreateSessionAlreadyExistsDelegate<T> alreadyExists,
-            Func<string, T> onFailure)
-        {
-            var refreshToken = EastFive.Security.SecureGuid.Generate().ToString("N");
-            return await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken, default(Guid),
-                () =>
-                {
-                    var result = this.GenerateToken(sessionId, default(Guid), new Dictionary<string, string>(),
-                        (jwtToken) => onSuccess(default(Guid), jwtToken, refreshToken, new Dictionary<string, string>()),
-                        (why) => onFailure(why));
-                    return result;
-                },
-                () => alreadyExists());
-        }
-
-        public async Task<TResult> CreateAsync<TResult>(Guid sessionId,
-            Func<string, string, TResult> onSuccess,
-            Func<Guid, TResult> onSessionAlreadyExists,
-            Func<string, TResult> onNotConfigured,
+        
+        public async Task<TResult> CreateLoginAsync<TResult>(Guid authenticationRequestId, Uri callbackLocation,
+                CredentialValidationMethodTypes method, Uri redirectUrl,
+            Func<Session, TResult> onSuccess,
+            Func<TResult> onAlreadyExists,
+            Func<TResult> onCredentialSystemNotAvailable,
+            Func<string, TResult> onCredentialSystemNotInitialized,
             Func<string, TResult> onFailure)
         {
-            var refreshToken = SecureGuid.Generate().ToString("N");
-            return await this.dataContext.Sessions.CreateAsync(sessionId, refreshToken,
-                () =>
+            return await context.GetLoginProvider(method,
+                async (provider) =>
                 {
-                    var result = GenerateToken(sessionId, default(Guid?),
-                        new Dictionary<string, string>(),
-                        (jwtToken) => onSuccess(jwtToken, refreshToken),
-                        onNotConfigured);
+                    var sessionId = SecureGuid.Generate();
+                    var result = await this.dataContext.AuthenticationRequests.CreateAsync(authenticationRequestId,
+                            method, AuthenticationActions.signin, default(Guid?), redirectUrl,
+                        () => BlackBarLabs.Security.Tokens.JwtTools.CreateToken(sessionId, callbackLocation, TimeSpan.FromMinutes(30),
+                            (token) => onSuccess(
+                                new Session()
+                                {
+                                    id = authenticationRequestId,
+                                    method = method,
+                                    action = AuthenticationActions.signin,
+                                    loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackLocation),
+                                    logoutUrl = provider.GetLogoutUrl(authenticationRequestId, callbackLocation),
+                                    redirectUrl = redirectUrl,
+                                    token = token,
+                                }),
+                            why => onFailure(why),
+                            (param, why) => onFailure($"Invalid configuration for {param}:{why}")),
+                        onAlreadyExists);
                     return result;
                 },
-                () => onSessionAlreadyExists(sessionId));
+                onCredentialSystemNotAvailable.AsAsyncFunc(),
+                onCredentialSystemNotInitialized.AsAsyncFunc());
         }
 
         internal async Task<TResult> CreateSessionAsync<TResult>(Guid sessionId, Guid authenticationId,
@@ -144,12 +155,33 @@ namespace EastFive.Security.SessionServer
                         });
             return resultFindByAccount;
         }
+        
+        internal async Task<TResult> GetAsync<TResult>(Guid authenticationRequestId, Uri callbackUrl,
+            Func<Session, TResult> onSuccess,
+            Func<TResult> onNotFound,
+            Func<string, TResult> onFailure)
+        {
+            return await this.dataContext.AuthenticationRequests.FindByIdAsync(authenticationRequestId,
+                (authenticationRequestStorage) =>
+                {
+                    return context.GetLoginProvider(authenticationRequestStorage.method,
+                        (provider) =>
+                        {
+                            var authenticationRequest = Convert(authenticationRequestStorage);
+                            authenticationRequest.loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackUrl);
+                            return onSuccess(authenticationRequest);
+                        },
+                        () => onFailure("The credential provider for this request is no longer enabled in this system"),
+                        (why) => onFailure(why));
+                },
+                onNotFound);
+        }
 
         public async Task<TResult> LookupCredentialMappingAsync<TResult>(
                 CredentialValidationMethodTypes method, string subject, Guid? loginId, Guid sessionId, 
             IDictionary<string, string> extraParams,
             Func<Guid, string, string, IDictionary<string, string>, TResult> onSuccess,
-            CreateSessionAlreadyExistsDelegate<TResult> alreadyExists,
+            Func<TResult> alreadyExists,
             Func<TResult> credentialNotInSystem,
             Func<string, TResult> onConfigurationFailure)
         {
@@ -212,8 +244,119 @@ namespace EastFive.Security.SessionServer
                         () => onNotFound("Error updating authentication"));
                     return updateAuthResult;
         }
-
         
+        public async Task<TResult> UpdateResponseAsync<TResult>(
+                Guid sessionId,
+                CredentialValidationMethodTypes method,
+                IDictionary<string, string> extraParams,
+            Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onSuccess,
+            Func<Guid, TResult> onAlreadyExists,
+            Func<string, TResult> onInvalidToken,
+            Func<TResult> lookupCredentialNotFound,
+            Func<string, TResult> systemOffline,
+            Func<string, TResult> onNotConfigured,
+            Func<string, TResult> onFailure)
+        {
+            return await this.context.GetCredentialProvider(method,
+                async (provider) =>
+                {
+                    return await await provider.RedeemTokenAsync(extraParams,
+                        async (subject, stateId, loginId, extraParamsWithRedemptionParams) =>
+                        {
+                            if (stateId.HasValue)
+                                return await this.dataContext.AuthenticationRequests.UpdateAsync(stateId.Value,
+                                    async (authenticationRequest, saveAuthRequest) =>
+                                    {
+                                        if (authenticationRequest.method != method)
+                                            return onInvalidToken("The credential's authentication method does not match the callback method");
+
+                                        if (AuthenticationActions.link == authenticationRequest.action)
+                                        {
+                                            if (!authenticationRequest.authorizationId.HasValue)
+                                                return onFailure("The credential is corrupt");
+
+                                            var authenticationId = authenticationRequest.authorizationId.Value;
+
+                                            if (typeof(IProvideAccess).IsAssignableFrom(provider.GetType()))
+                                                await context.Accesses.CreateAsync(authenticationId, method,
+                                                    extraParamsWithRedemptionParams,
+                                                    () => true,
+                                                    () => false);
+
+                                            return await await dataContext.CredentialMappings.CreateCredentialMappingAsync(Guid.NewGuid(), method, subject,
+                                                    authenticationRequest.authorizationId.Value,
+                                                async () => await await context.Sessions.CreateSessionAsync(sessionId, authenticationId,
+                                                    async (token, refreshToken) =>
+                                                    {
+                                                        await saveAuthRequest(authenticationId, token, extraParams);
+                                                        return onSuccess(stateId.Value, authenticationId, token, refreshToken, AuthenticationActions.link, extraParams,
+                                                            authenticationRequest.redirect);
+                                                    },
+                                                    "GUID not unique".AsFunctionException<Task<TResult>>(),
+                                                    onNotConfigured.AsAsyncFunc()),
+                                                "GUID not unique".AsFunctionException<Task<TResult>>(),
+                                                () => onInvalidToken("Login is already mapped.").ToTask());
+                                        }
+
+                                        if (AuthenticationActions.access == authenticationRequest.action)
+                                        {
+                                            if (!authenticationRequest.authorizationId.HasValue)
+                                                return onFailure("The credential is corrupt");
+
+                                            var authenticationId = authenticationRequest.authorizationId.Value;
+                                            return await await context.Accesses.CreateAsync(authenticationId, method,
+                                                    extraParamsWithRedemptionParams,
+                                                    async () => await await context.Sessions.CreateSessionAsync(sessionId, authenticationId,
+                                                        async (token, refreshToken) =>
+                                                        {
+                                                            await saveAuthRequest(authenticationId, token, extraParams);
+                                                            return onSuccess(stateId.Value, authenticationId, token, refreshToken,
+                                                                AuthenticationActions.access, extraParams,
+                                                                authenticationRequest.redirect);
+                                                        },
+                                                        "GUID not unique".AsFunctionException<Task<TResult>>(),
+                                                        onNotConfigured.AsAsyncFunc()),
+                                                    () => onInvalidToken("Login is already mapped to an access.").ToTask());
+                                        }
+
+                                        if (authenticationRequest.authorizationId.HasValue)
+                                            return onInvalidToken("AuthenticationRequest cannot be re-used.");
+
+                                        return await await dataContext.CredentialMappings.LookupCredentialMappingAsync(method, subject, loginId,
+                                            async (authenticationId) =>
+                                            {
+                                                return await await context.Sessions.CreateSessionAsync(sessionId, authenticationId,
+                                                    async (token, refreshToken) =>
+                                                    {
+                                                        await saveAuthRequest(authenticationId, token, extraParams);
+                                                        return onSuccess(stateId.Value, authenticationId,
+                                                            token, refreshToken, AuthenticationActions.signin, extraParams, authenticationRequest.redirect);
+                                                    },
+                                                    () => onAlreadyExists(sessionId).ToTask(),
+                                                    onNotConfigured.AsAsyncFunc());
+                                            },
+                                            () => onInvalidToken("The token does not match an Authentication request").ToTask());
+                                    },
+                                    () => onInvalidToken("The token does not match an Authentication request"));
+                            return await await dataContext.CredentialMappings.LookupCredentialMappingAsync(method, subject, loginId,
+                                (authenticationId) =>
+                                {
+                                    return context.Sessions.CreateSessionAsync(sessionId, authenticationId,
+                                        (token, refreshToken) => onSuccess(sessionId, authenticationId,
+                                            token, refreshToken, AuthenticationActions.signin, extraParams, default(Uri)),
+                                        () => onAlreadyExists(sessionId),
+                                        onNotConfigured);
+                                },
+                                () => onInvalidToken("The token does not match an Authentication request").ToTask());
+                        },
+                        onInvalidToken.AsAsyncFunc(),
+                        systemOffline.AsAsyncFunc(),
+                        onNotConfigured.AsAsyncFunc(),
+                        onFailure.AsAsyncFunc());
+                },
+                () => systemOffline("The requested credential system is not enabled for this deployment").ToTask(),
+                (why) => onNotConfigured(why).ToTask());
+        }
 
         private TResult GenerateToken<TResult>(Guid sessionId, Guid? actorId, IDictionary<string, string> claims,
             Func<string, TResult> onTokenGenerated,
@@ -248,6 +391,20 @@ namespace EastFive.Security.SessionServer
                 },
                 (why) => onConfigurationIssue(why));
             return resultExpiration;
+        }
+
+        private static Session Convert(Persistence.AuthenticationRequest authenticationRequestStorage)
+        {
+            return new Session
+            {
+                id = authenticationRequestStorage.id,
+                method = authenticationRequestStorage.method,
+                action = authenticationRequestStorage.action,
+                token = authenticationRequestStorage.token,
+                authorizationId = authenticationRequestStorage.authorizationId,
+                extraParams = authenticationRequestStorage.extraParams,
+                redirectUrl = authenticationRequestStorage.redirect,
+            };
         }
     }
 }

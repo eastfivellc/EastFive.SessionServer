@@ -40,11 +40,10 @@ namespace EastFive.Security.SessionServer.Api
         {
             return new Resources.AuthenticationRequestLink
             {
-                Id = urlHelper.GetWebId<Controllers.AuthenticationRequestController>(SecureGuid.Generate()),
-                Link = urlHelper.GetLocation<Controllers.AuthenticationRequestController>(),
+                Id = urlHelper.GetWebId<Controllers.SessionController>(SecureGuid.Generate()),
                 Method = method,
                 Name = method.ToString(),
-                SessionId = SecureGuid.Generate(),
+                SecureId = SecureGuid.Generate(),
             };
         }
     }

@@ -50,7 +50,8 @@ namespace EastFive.Security.SessionServer
 
         public virtual async Task<TResult> GetRedirectUriAsync<TResult>(Context context,
                 CredentialValidationMethodTypes validationType,
-                 AuthenticationActions action,
+                AuthenticationActions action,
+                Guid requestId,
                 Guid? authorizationId,
                 string token, string refreshToken,
                 IDictionary<string, string> authParams,
@@ -61,7 +62,7 @@ namespace EastFive.Security.SessionServer
         {
             if (!redirectUriFromPost.IsDefault())
             {
-                var redirectUrl = SetRedirectParameters(redirectUriFromPost, authorizationId, token, refreshToken);
+                var redirectUrl = SetRedirectParameters(redirectUriFromPost, requestId, authorizationId, token, refreshToken);
                 return onSuccess(redirectUrl);
             }
 
@@ -71,7 +72,7 @@ namespace EastFive.Security.SessionServer
                 var redirectUriString = authParams[Configuration.AuthorizationParameters.RedirectUri];
                 if (!Uri.TryCreate(redirectUriString, UriKind.Absolute, out redirectUri))
                     return onInvalidParameter("REDIRECT", $"BAD URL in redirect call:{redirectUriString}");
-                var redirectUrl = SetRedirectParameters(redirectUri, authorizationId, token, refreshToken);
+                var redirectUrl = SetRedirectParameters(redirectUri, requestId, authorizationId, token, refreshToken);
                 return onSuccess(redirectUrl);
             }
 
@@ -79,19 +80,19 @@ namespace EastFive.Security.SessionServer
                 EastFive.Security.SessionServer.Configuration.AppSettings.LandingPage,
                 (redirectUri) =>
                 {
-                    var redirectUrl = SetRedirectParameters(redirectUri, authorizationId, token, refreshToken);
+                    var redirectUrl = SetRedirectParameters(redirectUri, requestId, authorizationId, token, refreshToken);
                     return onSuccess(redirectUrl);
                 },
                 (why) => onFailure(why)).ToTask();
         }
 
-        protected Uri SetRedirectParameters(Uri redirectUri, Guid? authorizationId, string token, string refreshToken)
+        protected Uri SetRedirectParameters(Uri redirectUri, Guid requestId, Guid? authorizationId, string token, string refreshToken)
         {
             var redirectUrl = redirectUri
-                .SetQueryParam("authoriationId", authorizationId.Value.ToString("N"))
                 .SetQueryParam(parameterAuthorizationId, authorizationId.Value.ToString("N"))
                 .SetQueryParam(parameterToken, token)
-                .SetQueryParam(parameterRefreshToken, refreshToken);
+                .SetQueryParam(parameterRefreshToken, refreshToken)
+                .SetQueryParam("request_id", requestId.ToString("N"));
             return redirectUrl;
         }
 

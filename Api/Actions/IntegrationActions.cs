@@ -1,58 +1,35 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Threading.Tasks;
 using System.Net.Http;
-using System.Web.Http.Routing;
-using System.Configuration;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Web;
+using System.Web.Http;
 
-using BlackBarLabs;
 using BlackBarLabs.Api;
-using BlackBarLabs.Extensions;
-using EastFive.Api.Services;
-using EastFive.Security.SessionServer.Configuration;
+using System.Web.Http.Routing;
 
 namespace EastFive.Security.SessionServer.Api
 {
-    public static class AuthenticationRequestActions
+    public static class IntegrationActions
     {
-        public static async Task<HttpResponseMessage> CreateAsync(this Resources.AuthenticationRequest authenticationRequest,
+        public static async Task<HttpResponseMessage> CreateAsync(this Resources.Integration authenticationRequest,
             HttpRequestMessage request, UrlHelper urlHelper)
         {
             var context = request.GetSessionServerContext();
             var credentialId = authenticationRequest.Id.ToGuid();
             if (!credentialId.HasValue)
                 return request.CreateResponse(HttpStatusCode.BadRequest).AddReason("Id must have value");
-
-            if (authenticationRequest.SessionId.HasValue)
-                return request.CreateResponse(HttpStatusCode.BadRequest).AddReason("Session Id value is provided by the server");
-
-            if(AuthenticationActions.signin == authenticationRequest.Action)
-            {
-                return await context.AuthenticationRequests.CreateLoginAsync(credentialId.Value,
-                    urlHelper.GetLocation<Controllers.OpenIdResponseController>(),
-                    authenticationRequest.Method, authenticationRequest.Redirect,
-                    (authenticationRequestPopulated) =>
-                    {
-                        var resource = Convert(authenticationRequestPopulated, urlHelper);
-                        return request.CreateResponse(HttpStatusCode.Created, resource);
-                    },
-                    () => request.CreateResponseNotFound(credentialId.Value),
-                    () => request.CreateResponse(HttpStatusCode.BadRequest)
-                        .AddReason($"Method [{authenticationRequest.Method}] is not enabled for this system"),
-                    (why) => request.CreateResponse(HttpStatusCode.ServiceUnavailable)
-                        .AddReason(why),
-                    (why) => request.CreateResponse(HttpStatusCode.InternalServerError)
-                        .AddReason(why));
-            }
-
+            
             if (!authenticationRequest.AuthorizationId.HasValue)
-                return request.CreateResponse(HttpStatusCode.BadRequest)
-                    .AddReason("Authorization Id must have value for linked authentication");
+                return request.CreateResponseEmptyId(authenticationRequest, ar => ar.AuthorizationId)
+                    .AddReason("Authorization Id must have value for integration");
 
             return await request.GetActorIdClaimsAsync(
                 (actorId, claims) =>
-                    context.AuthenticationRequests.CreateLinkAsync(credentialId.Value,
+                    context.Integrations.CreateLinkAsync(credentialId.Value,
                         urlHelper.GetLocation<Controllers.OpenIdResponseController>(),
                         authenticationRequest.Method, authenticationRequest.Redirect,
                         authenticationRequest.AuthorizationId.Value, actorId, claims,
@@ -61,7 +38,7 @@ namespace EastFive.Security.SessionServer.Api
                             var resource = Convert(authenticationRequestPopulated, urlHelper);
                             return request.CreateResponse(HttpStatusCode.Created, resource);
                         },
-                        () => request.CreateAlreadyExistsResponse<Controllers.AuthenticationRequestController>(
+                        () => request.CreateAlreadyExistsResponse<Controllers.SessionController>(
                             credentialId.Value, urlHelper),
                         (why) => request.CreateResponse(HttpStatusCode.Unauthorized).AddReason(why),
                         () => request.CreateResponse(HttpStatusCode.BadRequest)
@@ -72,24 +49,22 @@ namespace EastFive.Security.SessionServer.Api
                             .AddReason(why)));
         }
 
+        
         #region Actionables
 
-        public static Task<HttpResponseMessage> QueryAsync(this Resources.Queries.AuthenticationRequestQuery query,
+        public static Task<HttpResponseMessage> QueryAsync(this Resources.Queries.IntegrationQuery query,
             HttpRequestMessage request, UrlHelper urlHelper)
         {
-            return request.GetSessionIdClaimsAsync(
-                (sessionId, claims) => query.ParseAsync(request,
-                    q => QueryByIdAsync(q.Id.ParamSingle(), request, urlHelper, sessionId, claims)));
+            return query.ParseAsync(request,
+                    q => QueryByIdAsync(q.Id.ParamSingle(), request, urlHelper));
         }
 
         private static async Task<HttpResponseMessage> QueryByIdAsync(Guid authenticationRequestId,
-            HttpRequestMessage request, UrlHelper urlHelper,
-            Guid sessionId, System.Security.Claims.Claim [] claims)
+            HttpRequestMessage request, UrlHelper urlHelper)
         {
             var context = request.GetSessionServerContext();
-            return await context.AuthenticationRequests.GetAsync(authenticationRequestId,
-                    urlHelper.GetLocation<Controllers.OpenIdResponseController>(),
-                    sessionId, claims,
+            return await context.Sessions.GetAsync(authenticationRequestId,
+                    urlHelper.GetLocation<Controllers.ResponseController>(),
                 (authenticationRequest) =>
                 {
                     var response = request.CreateResponse(HttpStatusCode.OK,
@@ -97,17 +72,15 @@ namespace EastFive.Security.SessionServer.Api
                     return response;
                 },
                 () => request.CreateResponse(HttpStatusCode.NotFound),
-                () => request.CreateResponse(HttpStatusCode.Unauthorized),
-                (why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why));
+                (why) => request.CreateResponseUnexpectedFailure(why));
         }
 
-        private static Resources.AuthenticationRequest Convert(AuthenticationRequest authenticationRequest, UrlHelper urlHelper)
+        private static Resources.Session Convert(Session authenticationRequest, UrlHelper urlHelper)
         {
-            return new Resources.AuthenticationRequest
+            return new Resources.Session
             {
-                Id = urlHelper.GetWebId<Controllers.AuthenticationRequestController>(authenticationRequest.id),
+                Id = urlHelper.GetWebId<Controllers.SessionController>(authenticationRequest.id),
                 Method = authenticationRequest.method,
-                SessionId = authenticationRequest.sessionId,
                 AuthorizationId = authenticationRequest.authorizationId,
                 JwtToken = authenticationRequest.token,
                 RefreshToken = authenticationRequest.refreshToken,
@@ -117,7 +90,38 @@ namespace EastFive.Security.SessionServer.Api
             };
         }
 
-        public static async Task<HttpResponseMessage> DeleteAsync(this Resources.Queries.AuthenticationRequestQuery credential,
+        public static async Task<HttpResponseMessage> UpdateAsync(this Api.Resources.Integration resource,
+            HttpRequestMessage request)
+        {
+            //if (!resource.IsCredentialsPopulated())
+            //{
+            //    return request.CreateResponse(HttpStatusCode.Conflict)
+            //        .AddReason("Invalid credentials");
+            //}
+
+            var context = request.GetSessionServerContext();
+            // Can't update a session that does not exist
+            var session = await context.Sessions.AuthenticateAsync(resource.Id.ToGuid().Value,
+                resource.Method, resource.ResponseToken,
+                (authId, token, refreshToken, extraParams) =>
+                {
+                    resource.AuthorizationId = authId;
+                    resource.JwtToken = token;
+                    resource.RefreshToken = refreshToken;
+                    return request.CreateResponse(HttpStatusCode.Accepted, resource);
+                },
+                (why) => request.CreateResponse(HttpStatusCode.NotFound).AddReason(why),
+                () => request.CreateResponse(HttpStatusCode.Conflict).AddReason(
+                    "Session is already authenticated. Please create a new session to repeat authorization."),
+                () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("User in token is not connected to this system"),
+                (errorMessage) => request.CreateErrorResponse(HttpStatusCode.NotFound, errorMessage),
+                (why) => request.CreateResponse(HttpStatusCode.BadGateway),
+                (why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why),
+                (why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why));
+            return session;
+        }
+
+        public static async Task<HttpResponseMessage> DeleteAsync(this Resources.Queries.IntegrationQuery credential,
             HttpRequestMessage request, UrlHelper urlHelper)
         {
             return await credential.ParseAsync(request,

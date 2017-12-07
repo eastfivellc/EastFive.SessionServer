@@ -12,17 +12,13 @@ namespace EastFive.Security.SessionServer.Api.Resources
         #region Properties
         
         [DataMember]
-        [JsonProperty(PropertyName = "session_id")]
-        public Guid SessionId { get; set; }
+        [JsonProperty(PropertyName = "secure_id")]
+        public Guid SecureId { get; set; }
 
         [DataMember]
         [JsonProperty(PropertyName = "method")]
         public CredentialValidationMethodTypes Method { get; set; }
-
-        [DataMember]
-        [JsonProperty(PropertyName = "link")]
-        public Uri Link { get; set; }
-
+        
         [DataMember]
         [JsonProperty(PropertyName = "name")]
         public string Name { get; set; }

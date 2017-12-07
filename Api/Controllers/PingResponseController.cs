@@ -80,7 +80,8 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             }
 
             var context = Request.GetSessionServerContext();
-            var response = await await context.AuthenticationRequests.UpdateAsync(Guid.NewGuid(),
+            var sessionId = Guid.NewGuid();
+            var response = await await context.Sessions.UpdateResponseAsync(sessionId,
                 CredentialValidationMethodTypes.Ping,
                 new Dictionary<string, string>()
                 {
@@ -93,13 +94,13 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                         tokenId
                     }
                 },
-                (sessionId, authorizationId, token, refreshToken, action, extraParams, redirectUri) =>
+                (requestId, authorizationId, token, refreshToken, action, extraParams, redirectUri) =>
                 {
                     telemetry.TrackEvent("PingSessionCreated", new Dictionary<string, string> { {"authorizationId", authorizationId.ToString() } });
                     telemetry.TrackEvent("PingSessionCreated - ExtraParams", extraParams);
                     var config = Library.configurationManager;
                     var redirectResponse = config.GetRedirectUriAsync(context, CredentialValidationMethodTypes.Ping, action,
-                        authorizationId, token, refreshToken, extraParams, redirectUri,
+                        requestId, authorizationId, token, refreshToken, extraParams, redirectUri,
                         (redirectUrl) => Redirect(redirectUrl),
                         (paramName, why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult(),
                         (why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult());

@@ -1,4 +1,5 @@
 ﻿using BlackBarLabs.Extensions;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
@@ -6,44 +7,43 @@ using System.Runtime.Serialization;
 namespace EastFive.Security.SessionServer.Api.Resources
 {
     [DataContract]
-    public class CredentialToken
+    public class Session : BlackBarLabs.Api.ResourceBase
     {
         [DataMember]
+        [JsonProperty(PropertyName = "method")]
         public CredentialValidationMethodTypes Method { get; set; }
-
-        [DataMember]
-        public Dictionary<string, string> Token { get; set; }
-    }
-
-    [DataContract]
-    public class Session
-    {
-        #region Properties
-
-        [DataMember]
-        public Guid Id { get; set; }
-
-        [DataMember]
-        public Guid AuthorizationId { get; set; }
-
-        [DataMember]
-        public AuthHeaderProps SessionHeader { get; set; }
         
         [DataMember]
-        public CredentialToken CredentialToken { get; set; }
-        
+        [JsonProperty(PropertyName = "redirect")]
+        public Uri Redirect { get; set; }
+
         [DataMember]
+        [JsonProperty(PropertyName = "login")]
+        public Uri Login { get; set; }
+
+        [DataMember]
+        [JsonProperty(PropertyName = "authorization_id")]
+        public Guid? AuthorizationId { get; set; }
+
+        [DataMember]
+        [JsonProperty(PropertyName = "session_header")]
+        public string SessionHeader { get; set; }
+
+        [DataMember]
+        [JsonProperty(PropertyName = "jwt_token")]
+        public string JwtToken { get; set; }
+
+        [DataMember]
+        [JsonProperty(PropertyName = "refresh_token")]
         public string RefreshToken { get; set; }
+
+        [DataMember]
+        [JsonProperty(PropertyName = "response_token")]
+        public Dictionary<string, string> ResponseToken { get; set; }
         
-        #endregion
-
-        internal bool IsCredentialsPopulated()
-        {
-            if (default(CredentialToken) == this.CredentialToken)
-                return false;
-
-            return
-                !CredentialToken.Token.IsDefault();
-        }
+        [DataMember]
+        [JsonProperty(PropertyName = "extra_params")]
+        public IDictionary<string, string> ExtraParams { get; set; }
+        
     }
 }
