@@ -33,7 +33,7 @@ namespace EastFive.Security.SessionServer.Api
             public bool AccountEnabled;
         }
 
-        private static async Task<HttpResponseMessage> QueryAllActorsAsync(string redirectUri, string token,
+        public static async Task<HttpResponseMessage> QueryAllActorsAsync(string redirectUri, string token,
             HttpRequestMessage request, UrlHelper url)
         {
             return await request.GetActorIdClaimsAsync(
