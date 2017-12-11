@@ -282,36 +282,33 @@ namespace EastFive.Security.SessionServer
         internal async Task<TResult> GetAllLoginInfoAsync<TResult>(
             Func<LoginInfo[], TResult> success)
         {
-            var finalResult = await await this.dataContext.PasswordCredentials.FindAllAsync(
-                async (passwordCredentialInfos) =>
-                {
-                    return await await managmentProvider.GetAllAuthorizationsAsync(
-                        async loginInfos => 
-                        {
-                            return await this.context.Credentials.GetAllAccountIdAsync(
-                                map => // loginId, actorId
-                                {
-                                    return passwordCredentialInfos
-                                        .Select(
-                                            p =>
-                                            {
-                                                var actorId = map.Where(m => m.Item1 == p.LoginId).Select(m => m.Item2).FirstOrDefault();
-                                                var loginInfo = loginInfos.FirstOrDefault(t => t.loginId == p.LoginId);
-                                                var userName = loginInfo.userName;
-                                                var accountEnabled = loginInfo.accountEnabled;
-                                                return (default(Guid) == actorId || String.IsNullOrEmpty(userName)) 
-                                                ? default(LoginInfo?) : new LoginInfo(userName, p.LoginId, actorId, accountEnabled);
-                                            })
-                                        .Where(x => x.HasValue)
-                                        .Select(x => x.Value)
-                                        .ToArray();
-                                });
-                        },
-                        (why) => (new LoginInfo[] {}).ToTask(),
-                        () => (new LoginInfo[] { }).ToTask(),
-                        (why) => (new LoginInfo[] { }).ToTask());
-                });
-            return success(finalResult);
+            var passwordCredentialInfosTask = this.dataContext.PasswordCredentials.FindAllAsync(results => results);
+            var loginInfosTask =  managmentProvider.GetAllAuthorizationsAsync(results => results, 
+                why => new SessionServer.LoginInfo[] {},
+                () => new SessionServer.LoginInfo[] {},
+                why => new SessionServer.LoginInfo[] {});
+            var mapTask = this.context.Credentials.GetAllAccountIdAsync(results => results);
+
+            await Task.WhenAll(passwordCredentialInfosTask, loginInfosTask, mapTask);
+
+            var passwordCredentialInfos = await passwordCredentialInfosTask;
+            var loginInfos = await loginInfosTask;
+            var map = await mapTask;
+
+            return success(passwordCredentialInfos
+                .Select(
+                    p =>
+                    {
+                        var actorId = map.Where(m => m.Item1 == p.LoginId).Select(m => m.Item2).FirstOrDefault();
+                        var loginInfo = loginInfos.FirstOrDefault(t => t.loginId == p.LoginId);
+                        var userName = loginInfo.userName;
+                        var accountEnabled = loginInfo.accountEnabled;
+                        return (default(Guid) == actorId || String.IsNullOrEmpty(userName))
+                            ? default(LoginInfo?) : new LoginInfo(userName, p.LoginId, actorId, accountEnabled);
+                    })
+                .Where(x => x.HasValue)
+                .Select(x => x.Value)
+                .ToArray());
         }
 
         internal async Task<TResult> UpdatePasswordCredentialAsync<TResult>(Guid passwordCredentialId,

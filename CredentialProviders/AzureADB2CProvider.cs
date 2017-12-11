@@ -255,7 +255,7 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
                             }))
                         .ToArray();
                 },
-                () => onFound(new LoginInfo[] { }),
+                () => onFound(total),
                 (why) => onFailure(why));
         }
 

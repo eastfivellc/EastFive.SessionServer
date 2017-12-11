@@ -39,20 +39,11 @@ namespace EastFive.Security.SessionServer.Api
             return await request.GetActorIdClaimsAsync(
                 async (actorId, claims) =>
                 {
-                    var superAdminId = default(Guid);
-                    var superAdminIdStr = EastFive.Web.Configuration.Settings.Get(
-                        EastFive.Api.Configuration.SecurityDefinitions.ActorIdSuperAdmin);
-                    if (!Guid.TryParse(superAdminIdStr, out superAdminId))
+                    if (!await Library.configurationManager.CanActAsUsersAsync(actorId, claims,() => true,() => false))
                     {
-                        request.CreateResponse(HttpStatusCode.Unauthorized, $"Configuration parameter [{EastFive.Api.Configuration.SecurityDefinitions.ActorIdSuperAdmin}] is not set");
+                        return request.CreateResponse(HttpStatusCode.Unauthorized, $"Actor [{actorId}] is not site admin");
                     }
-                    if (actorId != superAdminId)
-                    {
-                        request.CreateResponse(HttpStatusCode.Unauthorized, $"Actor [{actorId}] is not site admin");
-                    }
-
                     var baseUrl = url.GetLocation(typeof(Controllers.ActAsUserController));
-
                     var context = request.GetSessionServerContext();
                     var userInfos = await context.PasswordCredentials.GetAllLoginInfoAsync(
                         credentials =>
