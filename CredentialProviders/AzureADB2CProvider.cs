@@ -266,8 +266,9 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
             Func<TResult> onServiceNotSupported, 
             Func<string, TResult> onFailure)
         {
-            var result = await client.UpdateUserPasswordAsync(loginId.ToString(), password, forceChange);
-            return onSuccess();
+            return await client.UpdateUserPasswordAsync(loginId.ToString(), password, forceChange,
+                ok => onSuccess(),
+                onFailure);
         }
 
         public async Task<TResult> DeleteAuthorizationAsync<TResult>(Guid loginId,
