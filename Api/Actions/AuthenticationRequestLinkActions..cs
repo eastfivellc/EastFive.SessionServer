@@ -20,7 +20,8 @@ namespace EastFive.Security.SessionServer.Api
             HttpRequestMessage request, UrlHelper urlHelper)
         {
             return query.ParseAsync(request,
-                    q => QueryByIdAsync(request, urlHelper));
+                    q => QueryByIdAsync(request, urlHelper),
+                    q => QueryByIntegrationAsync(q.SupportsIntegration.ParamValue(), request, urlHelper));
         }
 
         private static async Task<HttpResponseMessage> QueryByIdAsync(
@@ -28,6 +29,19 @@ namespace EastFive.Security.SessionServer.Api
         {
             var context = request.GetSessionServerContext();
             return await context.LoginProviders.GetAllAsync(
+                (methods) =>
+                {
+                    var response = request.CreateResponse(HttpStatusCode.OK,
+                        methods.Select(method => Convert(method, urlHelper)));
+                    return response;
+                });
+        }
+        
+        private static async Task<HttpResponseMessage> QueryByIntegrationAsync(bool supportsIntegrations,
+            HttpRequestMessage request, UrlHelper urlHelper)
+        {
+            var context = request.GetSessionServerContext();
+            return await context.LoginProviders.GetAllAsync(!supportsIntegrations,
                 (methods) =>
                 {
                     var response = request.CreateResponse(HttpStatusCode.OK,

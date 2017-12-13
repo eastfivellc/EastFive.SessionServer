@@ -29,21 +29,12 @@ namespace EastFive.Security.SessionServer
         private Context context;
         private Persistence.DataContext dataContext;
         private IProvideLoginManagement managmentProvider;
-        private IProvideLogin loginProvider;
 
         internal PasswordCredentials(Context context, Persistence.DataContext dataContext)
         {
             this.dataContext = dataContext;
             this.context = context;
-            // TODO: Refactor this class so it works with any Login Provider
-            context.GetLoginProvider(CredentialValidationMethodTypes.Password,
-                (identityService) =>
-                {
-                    this.loginProvider = identityService;
-                    return true;
-                },
-                () => false,
-                (why) => false);
+            // TODO: Refactor this class so it works with any Management Provider
             context.GetManagementProvider(CredentialValidationMethodTypes.Password,
                 (identityService) =>
                 {
@@ -136,7 +127,7 @@ namespace EastFive.Security.SessionServer
         }
 
         public async Task<TResult> CreatePasswordCredentialsAsync<TResult>(Guid passwordCredentialId, Guid actorId,
-            string displayName, string username, bool isEmail, string token, bool forceChange,
+            string displayName, string username, string token, bool forceChange,
             Guid performingActorId, System.Security.Claims.Claim[] claims,
             Func<TResult> onSuccess,
             Func<TResult> credentialAlreadyExists,
@@ -156,7 +147,7 @@ namespace EastFive.Security.SessionServer
                 displayName = "User";
 
             var createLoginResult = await await managmentProvider.CreateAuthorizationAsync(displayName,
-                username, isEmail, token, forceChange,
+                username, false, token, forceChange,
                 async loginId =>
                 {
                     var result = await await dataContext.PasswordCredentials.CreatePasswordCredentialAsync(

@@ -39,7 +39,15 @@ namespace EastFive.Security.SessionServer
         {
             return onSuccess(ServiceConfiguration.loginProviders.SelectKeys().ToArray()).ToTask();
         }
-        
+
+        public Task<TResult> GetAllAsync<TResult>(bool integrationOnly,
+            Func<CredentialValidationMethodTypes[], TResult> onSuccess)
+        {
+            if (!integrationOnly)
+                return GetAllAsync(onSuccess);
+            return onSuccess(ServiceConfiguration.accessProviders.SelectKeys().ToArray()).ToTask();
+        }
+
 
     }
 }

@@ -43,14 +43,14 @@ namespace EastFive.Security.SessionServer
                 {
                     var sessionId = SecureGuid.Generate();
                     var result = await this.dataContext.AuthenticationRequests.CreateAsync(authenticationRequestId,
-                            method, AuthenticationActions.link, authenticationId, redirectUrl,
+                            method, AuthenticationActions.access, authenticationId, redirectUrl,
                         () => BlackBarLabs.Security.Tokens.JwtTools.CreateToken(sessionId, callbackLocation, TimeSpan.FromMinutes(30),
                             (token) => onSuccess(
                                 new Session()
                                 {
                                     id = authenticationRequestId,
                                     method = method,
-                                    action = AuthenticationActions.signin,
+                                    action = AuthenticationActions.access,
                                     loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackLocation),
                                     logoutUrl = provider.GetLogoutUrl(authenticationRequestId, callbackLocation),
                                     redirectUrl = redirectUrl,
@@ -66,25 +66,127 @@ namespace EastFive.Security.SessionServer
                 onCredentialSystemNotInitialized.AsAsyncFunc());
         }
 
-        internal Task<TResult> DeleteByIdAsync<TResult>(Guid inviteId,
-            Guid performingActorId, System.Security.Claims.Claim [] claims,
+        internal async Task<TResult> GetAsync<TResult>(Guid authenticationRequestId, Uri callbackUrl,
+            Func<Session, TResult> onSuccess,
+            Func<TResult> onNotFound,
+            Func<string, TResult> onFailure)
+        {
+            return await this.dataContext.AuthenticationRequests.FindByIdAsync(authenticationRequestId,
+                (authenticationRequestStorage) =>
+                {
+                    return context.GetLoginProvider(authenticationRequestStorage.method,
+                        (provider) =>
+                        {
+                            var authenticationRequest = Convert(authenticationRequestStorage);
+                            authenticationRequest.loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackUrl);
+                            return onSuccess(authenticationRequest);
+                        },
+                        () => onFailure("The credential provider for this request is no longer enabled in this system"),
+                        (why) => onFailure(why));
+                },
+                onNotFound);
+        }
+
+        internal async Task<TResult> GetByActorAsync<TResult>(Guid actorId, Uri callbackUrl,
+                Guid actingAs, System.Security.Claims.Claim [] claims,
+            Func<Session[], TResult> onSuccess,
+            Func<TResult> onNotFound,
+            Func<TResult> onUnathorized,
+            Func<string, TResult> onFailure)
+        {
+            if (!await Library.configurationManager.CanAdministerCredentialAsync(actorId,
+                actingAs, claims))
+                return onUnathorized();
+
+            var integrations = await ServiceConfiguration.accessProviders
+                .Select(
+                    ap => this.dataContext.Accesses.FindAsync(actorId, ap.Key,
+                        (authenticationRequestId, extraParams) =>
+                            context.GetLoginProvider(ap.Key,
+                                (provider) =>
+                                {
+                                    var authenticationRequest = new Session
+                                    {
+                                        id = authenticationRequestId,
+                                        action = AuthenticationActions.access,
+                                        authorizationId = actorId,
+                                        extraParams = extraParams,
+                                        loginUrl = provider.GetLoginUrl(Guid.Empty, callbackUrl),
+                                        method = ap.Key,
+                                    };
+                                    return authenticationRequest;
+                                },
+                                () => default(Session?),
+                                (why) => default(Session?)),
+                        () => default(Session?)))
+                .WhenAllAsync()
+                .SelectWhereHasValueAsync()
+                .ToArrayAsync();
+            return onSuccess(integrations);
+        }
+
+        public async Task<TResult> GetParamsByActorAsync<TResult>(Guid actorId, CredentialValidationMethodTypes method,
+            Func<Guid, IDictionary<string, string>, Func<IDictionary<string, string>, Task>, Task<TResult>> onSuccess,
+            Func<TResult> onNotFound)
+        {
+            return await this.dataContext.Accesses.FindUpdatableAsync(actorId, method,
+                onSuccess,
+                onNotFound);
+        }
+
+        internal async Task<TResult> UpdateAsync<TResult>(Persistence.AuthenticationRequest authenticationRequest,
+                Guid sessionId, Guid stateId,
+                CredentialValidationMethodTypes method, IDictionary<string, string> extraParams,
+                Func<Guid, string, IDictionary<string, string>, Task> saveAuthRequest,
+            Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onSuccess,
+            Func<string, TResult> onInvalidToken,
+            Func<string, TResult> onNotConfigured,
+            Func<string, TResult> onFailure)
+        {
+            if (!authenticationRequest.authorizationId.HasValue)
+                return onFailure("The credential is corrupt");
+
+            var authenticationId = authenticationRequest.authorizationId.Value;
+            return await await dataContext.Accesses.CreateAsync(authenticationRequest.id, authenticationId, 
+                    method, extraParams,
+                async () => await await context.Sessions.CreateSessionAsync(sessionId, authenticationId,
+                    async (token, refreshToken) =>
+                    {
+                        await saveAuthRequest(authenticationId, token, extraParams);
+                        return onSuccess(stateId, authenticationId, token, refreshToken,
+                                AuthenticationActions.access, extraParams,
+                                authenticationRequest.redirect);
+                    },
+                    "GUID not unique".AsFunctionException<Task<TResult>>(),
+                    onNotConfigured.AsAsyncFunc()),
+                () => onInvalidToken("Login is already mapped to an access.").ToTask());
+        }
+
+        internal Task<TResult> DeleteByIdAsync<TResult>(Guid accessId,
+                Guid performingActorId, System.Security.Claims.Claim [] claims,
             Func<TResult> onSuccess, 
             Func<TResult> onNotFound,
             Func<TResult> onUnathorized)
         {
-            return this.dataContext.CredentialMappings.DeleteInviteCredentialAsync(inviteId,
-                async (current, deleteAsync) =>
-                {
-                    if (!await Library.configurationManager.CanAdministerCredentialAsync(
-                        current.actorId, performingActorId, claims))
-                        return onUnathorized();
-
-                    await deleteAsync();
-                    return onSuccess();
-                },
+            return this.dataContext.Accesses.DeleteAsync(accessId,
+                onSuccess,
                 onNotFound);
         }
-        
+
+        internal async Task<TResult> DeleteByActorAsync<TResult>(Guid actorId,
+                Guid performingActorId, System.Security.Claims.Claim[] claims,
+            Func<TResult> onSuccess,
+            Func<TResult> onUnathorized)
+        {
+            var integrations = await ServiceConfiguration.accessProviders
+                .Select(
+                    ap => this.dataContext.Accesses.DeleteAsync(actorId, ap.Key,
+                        () => true,
+                        () => false))
+                .WhenAllAsync();
+            return onSuccess();
+        }
+
         private static Session Convert(Persistence.AuthenticationRequest authenticationRequestStorage)
         {
             return new Session

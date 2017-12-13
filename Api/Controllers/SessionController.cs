@@ -25,7 +25,12 @@ namespace EastFive.Security.SessionServer.Api.Controllers
         {
             return this.ActionResult(() => model.UpdateAsync(this.Request));
         }
-        
+
+        public IHttpActionResult Delete([FromBody]Resources.Queries.SessionQuery query)
+        {
+            return this.ActionResult(() => query.DeleteAsync(this.Request, this.Url));
+        }
+
         public IHttpActionResult Options(Nullable<Guid> Id = default(Nullable<Guid>))
         {
             var post1 = new Resources.Session

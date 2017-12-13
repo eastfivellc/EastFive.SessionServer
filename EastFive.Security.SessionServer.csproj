@@ -153,7 +153,6 @@
     <Compile Include="Api\Actions\CredentialActions.cs" />
     <Compile Include="Api\Actions\SamlCredentialActions.cs" />
     <Compile Include="Api\Actions\IntegrationActions.cs" />
-    <Compile Include="Api\Actions\TokenActions.cs" />
     <Compile Include="Api\Actions\RoleActions.cs" />
     <Compile Include="Api\Actions\ActAsUserActions.cs" />
     <Compile Include="Api\Actions\TokenCredentialActions.cs" />
@@ -164,6 +163,7 @@
     <Compile Include="Api\Controllers\ActAsUserViewController.cs" />
     <Compile Include="Api\Controllers\BaseController.cs" />
     <Compile Include="Api\Controllers\ActAsUserController.cs" />
+    <Compile Include="Api\Controllers\AADB2CResponseController.cs" />
     <Compile Include="Api\Controllers\LightspeedResponseController.cs" />
     <Compile Include="Api\Controllers\AuthenticationRequestLinkController.cs" />
     <Compile Include="Api\Controllers\CredentialController.cs" />
@@ -172,6 +172,7 @@
     <Compile Include="Api\Controllers\PingResponseController.cs" />
     <Compile Include="Api\Controllers\SAMLRedirectController.cs" />
     <Compile Include="Api\Controllers\AppleAppSiteAssociationController.cs" />
+    <Compile Include="Api\Controllers\IntegrationController.cs" />
     <Compile Include="Api\Controllers\TokenController.cs" />
     <Compile Include="Api\Controllers\RoleController.cs" />
     <Compile Include="Api\Controllers\TokenCredentialController.cs" />
@@ -208,7 +209,7 @@
     <Compile Include="Configuration\AuthorizationParameters.cs" />
     <Compile Include="Configuration\ClaimsDefinitions.cs" />
     <Compile Include="Configuration\EmailTemplateDefinitions.cs" />
-    <Compile Include="CredentialProviders\OAuthProvider.cs" />
+    <Compile Include="CredentialProviders\LightspeedProvider.cs" />
     <Compile Include="CredentialProviders\PingProvider.cs" />
     <Compile Include="CredentialProviders\SAMLProvider.cs" />
     <Compile Include="CredentialProviders\TokenCredentialProvider.cs" />

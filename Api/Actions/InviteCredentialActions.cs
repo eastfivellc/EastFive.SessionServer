@@ -25,7 +25,6 @@ namespace EastFive.Security.SessionServer.Api
         {
             return await query.ParseAsync(request,
                 q => QueryByIdAsync(q.Id.ParamSingle(), request, urlHelper),
-                q => QueryByTokenAsync(q.Token.ParamSingle(), CredentialValidationMethodTypes.Voucher, request, urlHelper),
                 q => QueryByActorAsync(q.Actor.ParamSingle(), request, urlHelper));
         }
 
@@ -39,58 +38,6 @@ namespace EastFive.Security.SessionServer.Api
                     return response;
                 },
                 () => request.CreateResponse(HttpStatusCode.NotFound));
-        }
-
-        private static async Task<HttpResponseMessage> QueryByTokenAsync(Guid token, 
-            CredentialValidationMethodTypes method, HttpRequestMessage request, UrlHelper urlHelper)
-        {
-            return await request.GetActorIdClaimsAsync(
-                async (actingAs, claims) =>
-                {
-                    var context = request.GetSessionServerContext();
-                    return await await context.Credentials.GetInviteByTokenAsync(token,
-                        async (state) =>
-                        {
-                            var callbackUrl = urlHelper.GetLocation<Controllers.ResponseController>();
-                            return await context.Sessions.GetAsync(state, callbackUrl,
-                                (authenticationRequest) =>
-                                {
-                                    var loginUrl = authenticationRequest.loginUrl;
-                                    var response = request.CreateResponse(HttpStatusCode.Redirect);
-                                    response.Headers.Location = loginUrl;
-                                    return response;
-                                },
-                                () => request.CreateResponseNotFound(state),
-                                (why) => request.CreateResponseUnexpectedFailure(why));
-                        },
-                        async (actorId, extraParams) =>
-                        {
-                            return await await context.Sessions.CreateToken(actorId, Guid.NewGuid(),
-                                (bearerToken, refreshToken) =>
-                                {
-                                    return Library.configurationManager.GetRedirectUriAsync(context, CredentialValidationMethodTypes.Token,
-                                        AuthenticationActions.access,
-                                        token, actorId, bearerToken, refreshToken, extraParams, default(Uri),
-                                        (redirectUrl) =>
-                                        {
-                                            var response = request.CreateResponse(HttpStatusCode.Redirect);
-                                            response.Headers.Location = redirectUrl;
-                                            return response;
-                                        },
-                                        (paramName, whyInvalid) => request.CreateResponse(HttpStatusCode.Conflict)
-                                            .AddReason($"{paramName} is invalid:{whyInvalid}"),
-                                        (why) => request.CreateResponse(HttpStatusCode.Conflict)
-                                            .AddReason(why));
-                                },
-                                () => request.CreateResponse(HttpStatusCode.Conflict)
-                                    .AddReason("Invite does not match an account in the system")
-                                    .ToTask(),
-                                (why) => request.CreateResponse(HttpStatusCode.Conflict).AddReason(why)
-                                    .ToTask());
-                        },
-                        () => request.CreateResponse(HttpStatusCode.NotFound).AddReason("Already used").ToTask(),
-                        () => request.CreateResponse(HttpStatusCode.NotFound).ToTask());
-                });
         }
 
         private static async Task<HttpResponseMessage[]> QueryByActorAsync(Guid actorId, HttpRequestMessage request, UrlHelper urlHelper)

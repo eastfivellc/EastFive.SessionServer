@@ -46,7 +46,7 @@ namespace EastFive.Security.SessionServer
                 routeTemplate: "apple-app-site-association",
                 defaults: new { controller = "AppleAppSiteAssociation", id = RouteParameter.Optional });
 
-            var dataContext = new EastFive.Security.SessionServer.Persistence.DataContext(Configuration.AppSettings.Storage);
+            var dataContext = new Persistence.DataContext(Configuration.AppSettings.Storage);
             var credentialProvidersWithoutMethods = await initializers.Aggregate(
                 (new IProvideAuthorization[] { }).ToTask(),
                 async (providersTask, initializer) =>

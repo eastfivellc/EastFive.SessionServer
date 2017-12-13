@@ -17,6 +17,8 @@ namespace EastFive.Security.SessionServer.Persistence.Documents
         
         public string Method { get; set; }
 
+        public Guid LookupId { get; set; }
+
         public byte[] ExtraParams { get; set; }
 
         internal IDictionary<string, string> GetExtraParams()

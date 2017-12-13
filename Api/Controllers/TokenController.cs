@@ -5,11 +5,12 @@ using BlackBarLabs.Api;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
-    public class TokenController : BaseController
+    public class TokenController : ResponseController
     {
-        public IHttpActionResult Get([FromUri]Resources.TokenQuery query)
+        public override Task<IHttpActionResult> Get([FromUri]ResponseResult query)
         {
-            return this.ActionResult(() => query.GetAsync(this.Request, this.Url));
+            query.method = CredentialValidationMethodTypes.Token;
+            return base.Get(query);
         }
     }
 }

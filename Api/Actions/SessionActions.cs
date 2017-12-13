@@ -24,22 +24,22 @@ namespace EastFive.Security.SessionServer.Api
                 return request.CreateResponse(HttpStatusCode.BadRequest).AddReason("Id must have value");
 
             return await context.Sessions.CreateLoginAsync(credentialId.Value,
-                    urlHelper.GetLocation<Controllers.OpenIdResponseController>(),
-                    authenticationRequest.Method, authenticationRequest.Redirect,
-                    (authenticationRequestPopulated) =>
-                    {
-                        var resource = Convert(authenticationRequestPopulated, urlHelper);
-                        return request.CreateResponse(HttpStatusCode.Created, resource);
-                    },
-                    () => request.CreateResponseNotFound(credentialId.Value),
-                    () => request.CreateResponse(HttpStatusCode.BadRequest)
-                        .AddReason($"Method [{authenticationRequest.Method}] is not enabled for this system"),
-                    (why) => request.CreateResponse(HttpStatusCode.ServiceUnavailable)
-                        .AddReason(why),
-                    (why) => request.CreateResponse(HttpStatusCode.InternalServerError)
-                        .AddReason(why));
+                urlHelper.GetLocation<Controllers.OpenIdResponseController>(),
+                //urlHelper.GetLocation<Controllers.AADB2CResponseController>(),
+                authenticationRequest.Method, authenticationRequest.Redirect,
+                (authenticationRequestPopulated) =>
+                {
+                    var resource = Convert(authenticationRequestPopulated, urlHelper);
+                    return request.CreateResponse(HttpStatusCode.Created, resource);
+                },
+                () => request.CreateResponseNotFound(credentialId.Value),
+                () => request.CreateResponse(HttpStatusCode.BadRequest)
+                    .AddReason($"Method [{authenticationRequest.Method}] is not enabled for this system"),
+                (why) => request.CreateResponse(HttpStatusCode.ServiceUnavailable)
+                    .AddReason(why),
+                (why) => request.CreateResponse(HttpStatusCode.InternalServerError)
+                    .AddReason(why));
         }
-
         
         #region Actionables
 
@@ -84,12 +84,6 @@ namespace EastFive.Security.SessionServer.Api
         public static async Task<HttpResponseMessage> UpdateAsync(this Api.Resources.Session resource,
             HttpRequestMessage request)
         {
-            //if (!resource.IsCredentialsPopulated())
-            //{
-            //    return request.CreateResponse(HttpStatusCode.Conflict)
-            //        .AddReason("Invalid credentials");
-            //}
-
             var context = request.GetSessionServerContext();
             // Can't update a session that does not exist
             var session = await context.Sessions.AuthenticateAsync(resource.Id.ToGuid().Value,
@@ -112,24 +106,25 @@ namespace EastFive.Security.SessionServer.Api
             return session;
         }
 
-        public static async Task<HttpResponseMessage> DeleteAsync(this Resources.Queries.SessionQuery credential,
+        public static async Task<HttpResponseMessage> DeleteAsync(this Resources.Queries.SessionQuery query,
             HttpRequestMessage request, UrlHelper urlHelper)
         {
-            return await credential.ParseAsync(request,
+            return await query.ParseAsync(request,
                 q => DeleteByIdAsync(q.Id.ParamSingle(), request, urlHelper));
         }
 
-        private static async Task<HttpResponseMessage> DeleteByIdAsync(Guid passwordCredentialId, HttpRequestMessage request, UrlHelper urlHelper)
+        private static async Task<HttpResponseMessage> DeleteByIdAsync(Guid sessionId, HttpRequestMessage request, UrlHelper urlHelper)
         {
             var context = request.GetSessionServerContext();
-            return await context.PasswordCredentials.DeletePasswordCredentialAsync(passwordCredentialId,
-                () =>
+            return await context.Sessions.DeleteAsync(sessionId, urlHelper.GetLocation<Controllers.ResponseController>(),
+                (sessionDeleted) =>
                 {
-                    var response = request.CreateResponse(HttpStatusCode.NoContent);
+                    var response = request.CreateResponse(HttpStatusCode.Accepted,
+                        Convert(sessionDeleted, urlHelper));
                     return response;
                 },
                 () => request.CreateResponse(HttpStatusCode.NotFound),
-                (why) => request.CreateResponse(HttpStatusCode.NotFound));
+                (why) => request.CreateResponse(HttpStatusCode.NotFound).AddReason(why));
         }
 
         #endregion

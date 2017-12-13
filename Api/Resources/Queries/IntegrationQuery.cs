@@ -9,5 +9,8 @@ namespace EastFive.Security.SessionServer.Api.Resources.Queries
     [DataContract]
     public class IntegrationQuery : BlackBarLabs.Api.ResourceQueryBase
     {
+
+        [JsonProperty(PropertyName = "actor_id")]
+        public WebIdQuery ActorId { get; set; }
     }
 }
