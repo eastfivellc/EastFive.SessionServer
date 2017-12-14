@@ -151,10 +151,13 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
                 return onFailed(ex.Message);
             }
         }
-        
+
         #endregion
 
         #region IProvideLogin
+
+        public Type CallbackController => typeof(SessionServer.Api.Controllers.OpenIdResponseController);
+            //typeof(SessionServer.Api.Controllers.AADB2CResponseController);
 
         public Uri GetLoginUrl(Guid state, Uri responseLocation)
         {

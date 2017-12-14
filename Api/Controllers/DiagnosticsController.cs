@@ -27,7 +27,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             return await this.Request.GetActorIdClaimsAsync((actorId, claims) =>
             {
                 return EastFive.Web.Configuration.Settings.GetGuid(
-                    EastFive.Api.Configuration.SecurityDefinitions.ActorIdSuperAdmin,
+                    EastFive.Api.AppSettings.ActorIdSuperAdmin,
                     (actorIdSuperAdmin) =>
                     {
                         if (actorIdSuperAdmin == actorId)

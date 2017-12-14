@@ -24,9 +24,10 @@ namespace EastFive.Security.SessionServer.Api
                 return request.CreateResponse(HttpStatusCode.BadRequest).AddReason("Id must have value");
 
             return await context.Sessions.CreateLoginAsync(credentialId.Value,
-                urlHelper.GetLocation<Controllers.OpenIdResponseController>(),
-                //urlHelper.GetLocation<Controllers.AADB2CResponseController>(),
-                authenticationRequest.Method, authenticationRequest.Redirect,
+                    authenticationRequest.Method,
+                    authenticationRequest.LocationAuthenticationReturn,
+                    authenticationRequest.LocationLogoutReturn,
+                    (controllerType) => urlHelper.GetLocation(controllerType),
                 (authenticationRequestPopulated) =>
                 {
                     var resource = Convert(authenticationRequestPopulated, urlHelper);
@@ -73,11 +74,14 @@ namespace EastFive.Security.SessionServer.Api
                 Id = urlHelper.GetWebId<Controllers.SessionController>(authenticationRequest.id),
                 Method = authenticationRequest.method,
                 AuthorizationId = authenticationRequest.authorizationId,
-                JwtToken = authenticationRequest.token,
+                HeaderName = EastFive.Api.Configuration.SecurityDefinitions.AuthorizationHeader,
+                Token = authenticationRequest.token,
                 RefreshToken = authenticationRequest.refreshToken,
                 ExtraParams = authenticationRequest.extraParams,
-                Redirect = authenticationRequest.redirectUrl,
-                Login = authenticationRequest.loginUrl,
+                LocationAuthentication = authenticationRequest.loginUrl,
+                LocationAuthenticationReturn = authenticationRequest.redirectUrl,
+                LocationLogout = authenticationRequest.logoutUrl,
+                LocationLogoutReturn = authenticationRequest.redirectLogoutUrl,
             };
         }
 
@@ -88,21 +92,20 @@ namespace EastFive.Security.SessionServer.Api
             // Can't update a session that does not exist
             var session = await context.Sessions.AuthenticateAsync(resource.Id.ToGuid().Value,
                 resource.Method, resource.ResponseToken,
-                (authId, token, refreshToken, extraParams) =>
+                (sessionId, authId, token, refreshToken, actions, extraParams, redirect) =>
                 {
                     resource.AuthorizationId = authId;
-                    resource.JwtToken = token;
+                    resource.HeaderName = EastFive.Api.Configuration.SecurityDefinitions.AuthorizationHeader;
+                    resource.Token = token;
                     resource.RefreshToken = refreshToken;
+                    resource.ExtraParams = extraParams;
                     return request.CreateResponse(HttpStatusCode.Accepted, resource);
                 },
                 (why) => request.CreateResponse(HttpStatusCode.NotFound).AddReason(why),
-                () => request.CreateResponse(HttpStatusCode.Conflict).AddReason(
-                    "Session is already authenticated. Please create a new session to repeat authorization."),
                 () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("User in token is not connected to this system"),
-                (errorMessage) => request.CreateErrorResponse(HttpStatusCode.NotFound, errorMessage),
-                (why) => request.CreateResponse(HttpStatusCode.BadGateway),
-                (why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why),
-                (why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why));
+                (why) => request.CreateResponse(HttpStatusCode.BadGateway).AddReason(why),
+                (why) => request.CreateResponseConfiguration(string.Empty, why),
+                (why) => request.CreateResponseUnexpectedFailure(why));
             return session;
         }
 

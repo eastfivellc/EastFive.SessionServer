@@ -24,7 +24,7 @@ namespace EastFive.Security.SessionServer.Api
             if (!credentialId.HasValue)
                 return request.CreateResponse(HttpStatusCode.BadRequest).AddReason("Id must have value");
             
-            if (!authenticationRequest.AuthorizationId.HasValue)
+            if (authenticationRequest.AuthorizationId.IsDefault())
                 return request.CreateResponseEmptyId(authenticationRequest, ar => ar.AuthorizationId)
                     .AddReason("Authorization Id must have value for integration");
 
@@ -32,8 +32,8 @@ namespace EastFive.Security.SessionServer.Api
                 (actorId, claims) =>
                     context.Integrations.CreateLinkAsync(credentialId.Value,
                         urlHelper.GetLocation<Controllers.OpenIdResponseController>(),
-                        authenticationRequest.Method, authenticationRequest.Redirect,
-                        authenticationRequest.AuthorizationId.Value, actorId, claims,
+                        authenticationRequest.Method, authenticationRequest.LocationAuthenticationReturn,
+                        authenticationRequest.AuthorizationId, actorId, claims,
                         (authenticationRequestPopulated) =>
                         {
                             var resource = Convert(authenticationRequestPopulated, urlHelper);
@@ -98,49 +98,39 @@ namespace EastFive.Security.SessionServer.Api
                 (why) => request.CreateResponseUnexpectedFailure(why).AsArray());
         }
 
-        private static Resources.Session Convert(Session authenticationRequest, UrlHelper urlHelper)
+        private static Resources.Integration Convert(Session authenticationRequest, UrlHelper urlHelper)
         {
-            return new Resources.Session
+            return new Resources.Integration
             {
-                Id = urlHelper.GetWebId<Controllers.SessionController>(authenticationRequest.id),
+                Id = urlHelper.GetWebId<Controllers.IntegrationController>(authenticationRequest.id),
                 Method = authenticationRequest.method,
-                AuthorizationId = authenticationRequest.authorizationId,
-                JwtToken = authenticationRequest.token,
-                RefreshToken = authenticationRequest.refreshToken,
+                AuthorizationId = authenticationRequest.authorizationId.HasValue?
+                    authenticationRequest.authorizationId.Value
+                    :
+                    default(Guid),
                 ExtraParams = authenticationRequest.extraParams,
-                Redirect = authenticationRequest.redirectUrl,
-                Login = authenticationRequest.loginUrl,
+                LocationAuthentication = authenticationRequest.loginUrl,
+                LocationAuthenticationReturn = authenticationRequest.redirectUrl,
             };
         }
 
         public static async Task<HttpResponseMessage> UpdateAsync(this Api.Resources.Integration resource,
             HttpRequestMessage request)
         {
-            //if (!resource.IsCredentialsPopulated())
-            //{
-            //    return request.CreateResponse(HttpStatusCode.Conflict)
-            //        .AddReason("Invalid credentials");
-            //}
-
             var context = request.GetSessionServerContext();
             // Can't update a session that does not exist
             var session = await context.Sessions.AuthenticateAsync(resource.Id.ToGuid().Value,
                 resource.Method, resource.ResponseToken,
-                (authId, token, refreshToken, extraParams) =>
+                (sessionId, authId, token, refreshToken, action, extraParams, redirectUrl) =>
                 {
                     resource.AuthorizationId = authId;
-                    resource.JwtToken = token;
-                    resource.RefreshToken = refreshToken;
                     return request.CreateResponse(HttpStatusCode.Accepted, resource);
                 },
                 (why) => request.CreateResponse(HttpStatusCode.NotFound).AddReason(why),
-                () => request.CreateResponse(HttpStatusCode.Conflict).AddReason(
-                    "Session is already authenticated. Please create a new session to repeat authorization."),
                 () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("User in token is not connected to this system"),
-                (errorMessage) => request.CreateErrorResponse(HttpStatusCode.NotFound, errorMessage),
-                (why) => request.CreateResponse(HttpStatusCode.BadGateway),
-                (why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why),
-                (why) => request.CreateResponse(HttpStatusCode.InternalServerError).AddReason(why));
+                (why) => request.CreateResponse(HttpStatusCode.BadGateway).AddReason(why),
+                (why) => request.CreateResponseConfiguration(string.Empty, why),
+                (why) => request.CreateResponseUnexpectedFailure(why));
             return session;
         }
 

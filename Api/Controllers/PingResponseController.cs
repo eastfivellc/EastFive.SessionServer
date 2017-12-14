@@ -30,9 +30,9 @@ namespace EastFive.Security.SessionServer.Api.Controllers
     }
     
     [RoutePrefix("aadb2c")]
-    public class PingResponseController : BaseController
+    public class PingResponseController : ResponseController
     {
-        public Task<IHttpActionResult> Get([FromUri]PingRequest query)
+        public Task<IHttpActionResult> Get([FromUri]ResponseResult query)
         {
             //The way this works...
             //1.  User clicks Third Party Applications\AffirmHealth over in Athena.
@@ -48,7 +48,9 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             //Send the token via Postman to debug and see any errors that might come back from Ping.
 
             //return ((IHttpActionResult)(new HttpActionResult(() => Request.CreateResponse(HttpStatusCode.OK).ToTask()))).ToTask();
-            return ParsePingResponseAsync(query.tokenid, query.agentid);
+            // return ParsePingResponseAsync(query.tokenid, query.agentid);
+
+            return base.Get(query);
         }
 
         private async Task<IHttpActionResult> ParsePingResponseAsync(string tokenId, string agentId)
@@ -65,7 +67,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
 
             if (String.IsNullOrWhiteSpace(agentId))
             {
-                telemetry.TrackException(new PingResponseException("PING Response did not include agentId"));
+                telemetry.TrackException(new ResponseException("PING Response did not include agentId"));
                 return this.Request.CreateResponse(HttpStatusCode.Conflict)
                             .AddReason("PING Response did not include agentId")
                             .ToActionResult();
@@ -73,7 +75,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
 
             if (String.IsNullOrWhiteSpace(tokenId))
             {
-                telemetry.TrackException(new PingResponseException("PING Response did not include tokenId"));
+                telemetry.TrackException(new ResponseException("PING Response did not include tokenId"));
                 return this.Request.CreateResponse(HttpStatusCode.Conflict)
                             .AddReason("PING Response did not include tokenId")
                             .ToActionResult();
@@ -81,7 +83,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
 
             var context = Request.GetSessionServerContext();
             var sessionId = Guid.NewGuid();
-            var response = await await context.Sessions.UpdateResponseAsync(sessionId,
+            var response = await await context.Sessions.AuthenticateAsync(sessionId,
                 CredentialValidationMethodTypes.Ping,
                 new Dictionary<string, string>()
                 {
@@ -106,17 +108,9 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                         (why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult());
                     return redirectResponse;
                 },
-                (existingId) =>
-                {
-                    telemetry.TrackException(new PingResponseException($"Could not create session because the GUID is not unique (session already exists)"));
-                    return this.Request.CreateResponse(HttpStatusCode.InternalServerError)
-                        .AddReason("GUID NOT UNIQUE")
-                        .ToActionResult()
-                        .ToTask();
-                },
                 (why) =>
                 {
-                    telemetry.TrackException(new PingResponseException($"Invalid token:{why}"));
+                    telemetry.TrackException(new ResponseException($"Invalid token:{why}"));
                     return this.Request.CreateResponse(HttpStatusCode.BadRequest)
                         .AddReason($"Invalid token:{why}")
                         .ToActionResult()
@@ -124,7 +118,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 },
                 () =>
                 {
-                    telemetry.TrackException(new PingResponseException("Token is not connected to a user in this system"));
+                    telemetry.TrackException(new ResponseException("Token is not connected to a user in this system"));
                     return this.Request.CreateResponse(HttpStatusCode.Conflict)
                         .AddReason("Token is not connected to a user in this system")
                         .ToActionResult()
@@ -132,7 +126,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 },
                 (why) =>
                 {
-                    telemetry.TrackException(new PingResponseException($"Cannot create session because service is unavailable: {why}"));
+                    telemetry.TrackException(new ResponseException($"Cannot create session because service is unavailable: {why}"));
                     return this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
                         .AddReason(why)
                         .ToActionResult()
@@ -140,7 +134,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 },
                 (why) =>
                 {
-                    telemetry.TrackException(new PingResponseException($"Cannot create session because service is unavailable: {why}"));
+                    telemetry.TrackException(new ResponseException($"Cannot create session because service is unavailable: {why}"));
                     return this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
                         .AddReason(why)
                         .ToActionResult()
@@ -148,7 +142,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 },
                 (why) =>
                 {
-                    telemetry.TrackException(new PingResponseException($"General failure: {why}"));
+                    telemetry.TrackException(new ResponseException($"General failure: {why}"));
                     return this.Request.CreateResponse(HttpStatusCode.Conflict)
                         .AddReason(why)
                         .ToActionResult()

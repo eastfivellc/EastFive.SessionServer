@@ -14,6 +14,8 @@ using BlackBarLabs.Extensions;
 using EastFive.Security.CredentialProvider.AzureADB2C;
 using BlackBarLabs.Collections.Generic;
 using EastFive.Collections.Generic;
+using EastFive.Security.SessionServer.Exceptions;
+using Microsoft.ApplicationInsights;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
@@ -61,35 +63,81 @@ namespace EastFive.Security.SessionServer.Api.Controllers
         protected async Task<IHttpActionResult> ProcessRequestAsync(CredentialValidationMethodTypes method,
             IDictionary<string, string> values)
         {
+            var telemetry = Web.Configuration.Settings.GetString(SessionServer.Configuration.AppSettings.ApplicationInsightsKey,
+                (applicationInsightsKey) =>
+                {
+                    return new TelemetryClient { InstrumentationKey = applicationInsightsKey };
+                },
+                (why) =>
+                {
+                    return new TelemetryClient();
+                });
+
             var context = this.Request.GetSessionServerContext();
-            var response = await await context.Sessions.UpdateResponseAsync(Guid.NewGuid(),
+            var response = await await context.Sessions.AuthenticateAsync(Guid.NewGuid(),
                     method, values,
                 (sessionId, authorizationId, jwtToken, refreshToken, action, extraParams, redirectUrl) =>
                     CreateResponse(context, method, action, sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUrl),
-                (existingId) => this.Request.CreateResponse(HttpStatusCode.InternalServerError)
-                        .AddReason("GUID NOT UNIQUE")
+                //(why) => this.Request.CreateResponse(HttpStatusCode.Conflict)
+                //            .AddReason($"Invalid token:{why}")
+                //            .ToActionResult()
+                //            .ToTask(),
+                //() => this.Request.CreateResponse(HttpStatusCode.Conflict)
+                //            .AddReason($"Token is not connected to a user in this system")
+                //            .ToActionResult()
+                //            .ToTask(),
+                //(why) => this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
+                //            .AddReason(why)
+                //            .ToActionResult()
+                //            .ToTask(),
+                //(why) => this.Request.CreateResponse(HttpStatusCode.InternalServerError)
+                //            .AddReason(why)
+                //            .ToActionResult()
+                //            .ToTask(),
+                //(why) => this.Request.CreateResponse(HttpStatusCode.Conflict)
+                //            .AddReason(why)
+                //            .ToActionResult()
+                //            .ToTask());
+                (why) =>
+                {
+                    telemetry.TrackException(new ResponseException($"Invalid token:{why}"));
+                    return this.Request.CreateResponse(HttpStatusCode.BadRequest)
+                        .AddReason($"Invalid token:{why}")
                         .ToActionResult()
-                        .ToTask(),
-                (why) => this.Request.CreateResponse(HttpStatusCode.Conflict)
-                            .AddReason($"Invalid token:{why}")
-                            .ToActionResult()
-                            .ToTask(),
-                () => this.Request.CreateResponse(HttpStatusCode.Conflict)
-                            .AddReason($"Token is not connected to a user in this system")
-                            .ToActionResult()
-                            .ToTask(),
-                (why) => this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
-                            .AddReason(why)
-                            .ToActionResult()
-                            .ToTask(),
-                (why) => this.Request.CreateResponse(HttpStatusCode.InternalServerError)
-                            .AddReason(why)
-                            .ToActionResult()
-                            .ToTask(),
-                (why) => this.Request.CreateResponse(HttpStatusCode.Conflict)
-                            .AddReason(why)
-                            .ToActionResult()
-                            .ToTask());
+                        .ToTask();
+                },
+                () =>
+                {
+                    telemetry.TrackException(new ResponseException("Token is not connected to a user in this system"));
+                    return this.Request.CreateResponse(HttpStatusCode.Conflict)
+                        .AddReason("Token is not connected to a user in this system")
+                        .ToActionResult()
+                        .ToTask();
+                },
+                (why) =>
+                {
+                    telemetry.TrackException(new ResponseException($"Cannot create session because service is unavailable: {why}"));
+                    return this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
+                        .AddReason(why)
+                        .ToActionResult()
+                        .ToTask();
+                },
+                (why) =>
+                {
+                    telemetry.TrackException(new ResponseException($"Cannot create session because service is unavailable: {why}"));
+                    return this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
+                        .AddReason(why)
+                        .ToActionResult()
+                        .ToTask();
+                },
+                (why) =>
+                {
+                    telemetry.TrackException(new ResponseException($"General failure: {why}"));
+                    return this.Request.CreateResponse(HttpStatusCode.Conflict)
+                        .AddReason(why)
+                        .ToActionResult()
+                        .ToTask();
+                });
             return response;
         }
 

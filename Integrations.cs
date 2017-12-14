@@ -43,7 +43,7 @@ namespace EastFive.Security.SessionServer
                 {
                     var sessionId = SecureGuid.Generate();
                     var result = await this.dataContext.AuthenticationRequests.CreateAsync(authenticationRequestId,
-                            method, AuthenticationActions.access, authenticationId, redirectUrl,
+                            method, AuthenticationActions.access, authenticationId, redirectUrl, redirectUrl,
                         () => BlackBarLabs.Security.Tokens.JwtTools.CreateToken(sessionId, callbackLocation, TimeSpan.FromMinutes(30),
                             (token) => onSuccess(
                                 new Session()
@@ -157,7 +157,6 @@ namespace EastFive.Security.SessionServer
                                 AuthenticationActions.access, extraParams,
                                 authenticationRequest.redirect);
                     },
-                    "GUID not unique".AsFunctionException<Task<TResult>>(),
                     onNotConfigured.AsAsyncFunc()),
                 () => onInvalidToken("Login is already mapped to an access.").ToTask());
         }

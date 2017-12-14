@@ -225,6 +225,8 @@ namespace EastFive.Security.CredentialProvider
 
         #region IProvideLogin
 
+        public Type CallbackController => typeof(SessionServer.Api.Controllers.OAuthResponseLightspeedController);
+
         public Uri GetLoginUrl(Guid state, Uri responseControllerLocation)
         {
             // response_type -- Ask for ‘code’ which will give you a temporary token that you can then use to get an access token.

@@ -2,19 +2,19 @@
 
 namespace EastFive.Security.SessionServer.Exceptions
 {
-    public class PingResponseException : Exception
+    public class ResponseException : Exception
     {
-        public PingResponseException()
+        public ResponseException()
             : base()
         {
         }
 
-        public PingResponseException(string message)
+        public ResponseException(string message)
             : base(message)
         {
         }
 
-        public PingResponseException(string message, Exception innerException)
+        public ResponseException(string message, Exception innerException)
             : base(message, innerException)
         {
         }

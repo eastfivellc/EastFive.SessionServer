@@ -35,10 +35,8 @@ namespace EastFive.Security.SessionServer.Api.Controllers
 
             var context = this.Request.GetSessionServerContext();
             if (String.IsNullOrWhiteSpace(redirect_uri))
-            {
                 return this.Request.CreateRedirectResponse<Controllers.AuthenticationRequestLinkController>(Url).ToActionResult();
-            }
-
+            
             if (!Uri.TryCreate(redirect_uri, UriKind.Absolute, out Uri redirectUrl))
                 return this.Request
                     .CreateResponseValidationFailure(q, qry => qry.redirect_uri)
@@ -54,7 +52,8 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                             .First());
                     var authReqId = Guid.NewGuid();
                     return await context.Sessions.CreateLoginAsync(authReqId,
-                        callbackUrl, CredentialValidationMethodTypes.Password, redirectUrl,
+                        CredentialValidationMethodTypes.Password, redirectUrl, redirectUrl,
+                        (type) => Url.GetLocation(type),
                         (authRequest) =>
                         {
                             return this.Request.CreateResponse(System.Net.HttpStatusCode.OK,

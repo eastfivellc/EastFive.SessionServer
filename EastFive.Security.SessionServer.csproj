@@ -198,6 +198,7 @@
     <Compile Include="Api\Resources\Queries\TokenCredentialQuery.cs" />
     <Compile Include="Api\Resources\Role.cs" />
     <Compile Include="Api\Resources\Integration.cs" />
+    <Compile Include="Api\Resources\AuthorizationRequest.cs" />
     <Compile Include="Api\Resources\TokenCredential.cs" />
     <Compile Include="Api\Resources\InviteCredential.cs" />
     <Compile Include="Api\Resources\Queries\InviteCredentialQuery.cs" />

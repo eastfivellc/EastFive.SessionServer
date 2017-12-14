@@ -91,7 +91,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                     .ToActionResult();
 
             var context = this.Request.GetSessionServerContext();
-            var response = await await context.Sessions.UpdateResponseAsync<Task<IHttpActionResult>>(Guid.NewGuid(),
+            var response = await await context.Sessions.AuthenticateAsync<Task<IHttpActionResult>>(Guid.NewGuid(),
                 CredentialValidationMethodTypes.Password,
                 new Dictionary<string, string>()
                 {
@@ -102,9 +102,6 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 {
                     return CreateResponse(context, sessionId, authorizationId, jwtToken, refreshToken, action, extraParams, redirectUri);
                 },
-                (existingId) => this.Request.CreateAlreadyExistsResponse<Controllers.SessionController>(existingId, Url)
-                    .ToActionResult()
-                    .ToTask(),
                 (why) => this.Request.CreateResponse(HttpStatusCode.BadRequest)
                     .AddReason($"Invalid token:{why}")
                     .ToActionResult()

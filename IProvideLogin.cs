@@ -8,6 +8,8 @@ namespace EastFive.Security.SessionServer
 {
     public interface IProvideLogin : IProvideAuthorization
     {
+        Type CallbackController { get; }
+
         Uri GetLoginUrl(Guid state, Uri responseControllerLocation);
 
         Uri GetLogoutUrl(Guid state, Uri responseControllerLocation);

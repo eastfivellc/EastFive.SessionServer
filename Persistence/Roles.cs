@@ -40,7 +40,11 @@ namespace EastFive.Security.SessionServer.Persistence
             rollback.AddTaskCreate(id, document, onAlreadyExists, this.azureStorageRepository);
 
             rollback.AddTaskCreateOrUpdate(actorId,
-                (Documents.ActorMappingsDocument actorDoc) => actorDoc.AddRole(id),
+                (Documents.ActorMappingsDocument actorDoc) =>
+                {
+                    actorDoc.AddRole(id);
+                    return true;
+                },
                 (actorDoc) => actorDoc.RemoveRole(id),
                 onActorNotFound,
                 this.azureStorageRepository);

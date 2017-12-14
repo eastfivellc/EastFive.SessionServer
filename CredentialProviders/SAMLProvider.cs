@@ -89,7 +89,9 @@ namespace EastFive.Security.CredentialProvider.SAML
         }
 
         #region IProvideLogin
-        
+
+        public Type CallbackController => typeof(SessionServer.Api.Controllers.SAMLRedirectController);
+
         public Uri GetSignupUrl(Guid state, Uri responseControllerLocation)
         {
             throw new NotImplementedException();

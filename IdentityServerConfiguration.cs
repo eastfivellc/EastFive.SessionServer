@@ -32,7 +32,7 @@ namespace EastFive.Security.SessionServer
         private bool IsSuperAdmin(Guid actorTakingAction)
         {
             return EastFive.Web.Configuration.Settings.GetGuid(
-                EastFive.Api.Configuration.SecurityDefinitions.ActorIdSuperAdmin,
+                EastFive.Api.AppSettings.ActorIdSuperAdmin,
                 (actorIdSuperAdmin) =>
                 {
                     if (actorIdSuperAdmin == actorTakingAction)

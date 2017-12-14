@@ -24,6 +24,7 @@ namespace EastFive.Security.SessionServer.Persistence
         public IDictionary<string, string> extraParams;
         public string token;
         public Uri redirect;
+        public Uri redirectLogout;
     }
 
     public class AuthenticationRequests
@@ -39,7 +40,7 @@ namespace EastFive.Security.SessionServer.Persistence
 
         public async Task<TResult> CreateAsync<TResult>(Guid authenticationRequestId,
                 CredentialValidationMethodTypes method, AuthenticationActions action,
-                Guid? actorLinkId, Uri redirectUrl,
+                Guid? actorLinkId, Uri redirectUrl, Uri redirectLogoutUrl,
             Func<TResult> onSuccess,
             Func<TResult> onAlreadyExists)
         {
@@ -52,6 +53,10 @@ namespace EastFive.Security.SessionServer.Persistence
                     default(string)
                     :
                     redirectUrl.AbsoluteUri,
+                RedirectLogoutUrl = redirectLogoutUrl.IsDefault() ?
+                    default(string)
+                    :
+                    redirectLogoutUrl.AbsoluteUri,
             };
             return await this.repository.CreateAsync(authenticationRequestId, doc,
                 () => onSuccess(),
@@ -101,6 +106,10 @@ namespace EastFive.Security.SessionServer.Persistence
                     default(Uri)
                     :
                     new Uri(document.RedirectUrl),
+                redirectLogout = document.RedirectLogoutUrl.IsNullOrWhiteSpace() ?
+                    default(Uri)
+                    :
+                    new Uri(document.RedirectLogoutUrl),
             };
         }
     }

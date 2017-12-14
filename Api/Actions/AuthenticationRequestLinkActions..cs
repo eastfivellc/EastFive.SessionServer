@@ -41,7 +41,7 @@ namespace EastFive.Security.SessionServer.Api
             HttpRequestMessage request, UrlHelper urlHelper)
         {
             var context = request.GetSessionServerContext();
-            return await context.LoginProviders.GetAllAsync(!supportsIntegrations,
+            return await context.LoginProviders.GetAllAsync(supportsIntegrations,
                 (methods) =>
                 {
                     var response = request.CreateResponse(HttpStatusCode.OK,

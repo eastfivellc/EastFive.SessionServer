@@ -46,6 +46,8 @@ namespace EastFive.Security.CredentialProvider.Ping
 
         public CredentialValidationMethodTypes Method => CredentialValidationMethodTypes.Ping;
 
+        public Type CallbackController => typeof(SessionServer.Api.Controllers.PingResponseController);
+
         public async Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> extraParams,
             Func<string, Guid?, Guid?, IDictionary<string, string>, TResult> onSuccess,
             Func<string, TResult> onInvalidCredentials,

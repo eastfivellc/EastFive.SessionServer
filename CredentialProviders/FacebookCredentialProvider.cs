@@ -21,6 +21,8 @@ namespace EastFive.Security.CredentialProvider.Facebook
 
         public CredentialValidationMethodTypes Method => CredentialValidationMethodTypes.Facebook;
 
+        public Type CallbackController => typeof(SessionServer.Api.Controllers.ResponseController);
+
         public async Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> extraParams,
             Func<string, Guid?, Guid?, IDictionary<string, string>, TResult> onSuccess,
             Func<string, TResult> onInvalidCredentials,

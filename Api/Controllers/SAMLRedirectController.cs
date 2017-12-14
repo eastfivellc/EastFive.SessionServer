@@ -76,7 +76,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 async (tokens) =>
                 {
                     var context = Request.GetSessionServerContext();
-                    return await await context.Sessions.UpdateResponseAsync<Task<IHttpActionResult>>(Guid.NewGuid(),
+                    return await await context.Sessions.AuthenticateAsync<Task<IHttpActionResult>>(Guid.NewGuid(),
                         CredentialValidationMethodTypes.SAML, tokens,
                         (sessionId, authorizationId, token, refreshToken, action, extraParams, redirectUri) =>
                         {
@@ -89,10 +89,6 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                                 (why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult());
                             return redirectResponse;
                         },
-                        (existingId) => this.Request.CreateResponse(HttpStatusCode.InternalServerError)
-                                .AddReason("GUID NOT UNIQUE")
-                                .ToActionResult()
-                                .ToTask(),
                         (why) => this.Request.CreateResponse(HttpStatusCode.BadRequest)
                                     .AddReason($"Invalid token:{why}")
                                     .ToActionResult()
