@@ -126,6 +126,7 @@ namespace EastFive.Security.SessionServer.Api
                     resource.AuthorizationId = authId;
                     return request.CreateResponse(HttpStatusCode.Accepted, resource);
                 },
+                (logoutRedirect) => request.CreateRedirectResponse(logoutRedirect),
                 (why) => request.CreateResponse(HttpStatusCode.NotFound).AddReason(why),
                 () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("User in token is not connected to this system"),
                 (why) => request.CreateResponse(HttpStatusCode.BadGateway).AddReason(why),

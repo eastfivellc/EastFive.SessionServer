@@ -98,6 +98,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 //            .AddReason(why)
                 //            .ToActionResult()
                 //            .ToTask());
+                (location) => ((IHttpActionResult)Redirect(location)).ToTask(),
                 (why) =>
                 {
                     telemetry.TrackException(new ResponseException($"Invalid token:{why}"));

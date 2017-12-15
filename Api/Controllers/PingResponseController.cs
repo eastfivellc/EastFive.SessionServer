@@ -32,7 +32,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
     [RoutePrefix("aadb2c")]
     public class PingResponseController : ResponseController
     {
-        public Task<IHttpActionResult> Get([FromUri]ResponseResult query)
+        public override Task<IHttpActionResult> Get([FromUri]ResponseResult query)
         {
             //The way this works...
             //1.  User clicks Third Party Applications\AffirmHealth over in Athena.
@@ -50,6 +50,9 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             //return ((IHttpActionResult)(new HttpActionResult(() => Request.CreateResponse(HttpStatusCode.OK).ToTask()))).ToTask();
             // return ParsePingResponseAsync(query.tokenid, query.agentid);
 
+            if (query.IsDefault())
+                query = new ResponseResult();
+            query.method = CredentialValidationMethodTypes.Ping;
             return base.Get(query);
         }
 
@@ -108,6 +111,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                         (why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult());
                     return redirectResponse;
                 },
+                (location) => ((IHttpActionResult)Redirect(location)).ToTask(),
                 (why) =>
                 {
                     telemetry.TrackException(new ResponseException($"Invalid token:{why}"));

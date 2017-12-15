@@ -27,103 +27,113 @@ namespace EastFive.Security.SessionServer.Api.Controllers
     }
 
     [RoutePrefix("aadb2c")]
-    public class OpenIdResponseController : BaseController
+    public class OpenIdResponseController : ResponseController
     {
-        public async Task<IHttpActionResult> Get([FromUri]OpenIdConnectResult result)
+        public override async Task<IHttpActionResult> Get([FromUri]ResponseResult result)
         {
-            if (null == result)
-                return this.Request
-                    .CreateResponseValidationFailure(result, r => r.id_token)
-                    .ToActionResult();
+            if (result.IsDefault())
+                result = new ResponseResult();
+            result.method = CredentialValidationMethodTypes.Password;
+            return await base.Get(result);
 
-            if(!Guid.TryParse(result.state, out Guid authenticationRequestId))
-                return this.Request
-                                .CreateResponse(HttpStatusCode.Conflict)
-                                .AddReason("State value is invalid")
-                                .ToActionResult();
+            //if (null == result)
+            //    return this.Request
+            //        .CreateResponseValidationFailure(result, r => r.id_token)
+            //        .ToActionResult();
 
-            var context = Request.GetSessionServerContext();
-            var callbackUrl = this.Url.GetLocation<OpenIdResponseController>();
-            return await context.Sessions.GetAsync(authenticationRequestId,
-                                callbackUrl,
-                                (authenticationRequest) =>
-                                {
-                                    return Redirect(authenticationRequest.loginUrl);
-                                },
-                                () =>
-                                {
-                                    return this.Request
-                                        .CreateResponse(HttpStatusCode.Conflict)
-                                        .AddReason("The login token is no longer valid")
-                                        .ToActionResult();
-                                },
-                                (why) =>
-                                {
-                                    return this.Request
-                                        .CreateResponse(HttpStatusCode.Conflict)
-                                        .AddReason(why)
-                                        .ToActionResult();
-                                });
+            //if(!Guid.TryParse(result.state, out Guid authenticationRequestId))
+            //    return this.Request
+            //                    .CreateResponse(HttpStatusCode.Conflict)
+            //                    .AddReason("State value is invalid")
+            //                    .ToActionResult();
+
+            //var context = Request.GetSessionServerContext();
+            //var callbackUrl = this.Url.GetLocation<OpenIdResponseController>();
+            //return await context.Sessions.GetAsync(authenticationRequestId,
+            //                    callbackUrl,
+            //                    (authenticationRequest) =>
+            //                    {
+            //                        return Redirect(authenticationRequest.loginUrl);
+            //                    },
+            //                    () =>
+            //                    {
+            //                        return this.Request
+            //                            .CreateResponse(HttpStatusCode.Conflict)
+            //                            .AddReason("The login token is no longer valid")
+            //                            .ToActionResult();
+            //                    },
+            //                    (why) =>
+            //                    {
+            //                        return this.Request
+            //                            .CreateResponse(HttpStatusCode.Conflict)
+            //                            .AddReason(why)
+            //                            .ToActionResult();
+            //                    });
         }
         
 
-        private async Task<IHttpActionResult> CreateResponse(Context context, Guid sessionId, Guid? authorizationId, string jwtToken, string refreshToken,
-            AuthenticationActions action, IDictionary<string, string> extraParams, Uri redirectUri)
+        //private async Task<IHttpActionResult> CreateResponse(Context context, Guid sessionId, Guid? authorizationId, string jwtToken, string refreshToken,
+        //    AuthenticationActions action, IDictionary<string, string> extraParams, Uri redirectUri)
+        //{
+        //    // Enforce a redirect parameter here since OpenIDCreates on in the state data.
+        //    //if (!extraParams.ContainsKey(SessionServer.Configuration.AuthorizationParameters.RedirectUri))
+        //    //    return Request.CreateResponse(HttpStatusCode.Conflict).AddReason("Redirect URL not in response parameters").ToActionResult();
+
+        //    var config = Library.configurationManager;
+        //    var redirectResponse = await config.GetRedirectUriAsync(context, CredentialValidationMethodTypes.Password, action,
+        //        sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUri,
+        //        (redirectUrl) => Redirect(redirectUrl),
+        //        (paramName, why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult(),
+        //        (why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult());
+        //    return redirectResponse;
+        //}
+
+        public override async Task<IHttpActionResult> Post([FromUri]ResponseResult result)
         {
-            // Enforce a redirect parameter here since OpenIDCreates on in the state data.
-            //if (!extraParams.ContainsKey(SessionServer.Configuration.AuthorizationParameters.RedirectUri))
-            //    return Request.CreateResponse(HttpStatusCode.Conflict).AddReason("Redirect URL not in response parameters").ToActionResult();
+            if (result.IsDefault())
+                result = new ResponseResult();
+            result.method = CredentialValidationMethodTypes.Password;
+            return await base.Post(result);
 
-            var config = Library.configurationManager;
-            var redirectResponse = await config.GetRedirectUriAsync(context, CredentialValidationMethodTypes.Password, action,
-                sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUri,
-                (redirectUrl) => Redirect(redirectUrl),
-                (paramName, why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult(),
-                (why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult());
-            return redirectResponse;
-        }
+            //if (!String.IsNullOrWhiteSpace(result.error))
+            //    return this.Request.CreateResponse(HttpStatusCode.Conflict)
+            //        .AddReason(result.error_description)
+            //        .ToActionResult();
 
-        public async Task<IHttpActionResult> Post(OpenIdConnectResult result)
-        {
-            if (!String.IsNullOrWhiteSpace(result.error))
-                return this.Request.CreateResponse(HttpStatusCode.Conflict)
-                    .AddReason(result.error_description)
-                    .ToActionResult();
+            //var context = this.Request.GetSessionServerContext();
+            //var response = await await context.Sessions.AuthenticateAsync<Task<IHttpActionResult>>(Guid.NewGuid(),
+            //    CredentialValidationMethodTypes.Password,
+            //    new Dictionary<string, string>()
+            //    {
+            //        { AzureADB2CProvider.StateKey, result.state },
+            //        { AzureADB2CProvider.IdTokenKey, result.id_token }
+            //    },
+            //    (sessionId, authorizationId, jwtToken, refreshToken, action, extraParams, redirectUri) =>
+            //    {
+            //        return CreateResponse(context, sessionId, authorizationId, jwtToken, refreshToken, action, extraParams, redirectUri);
+            //    },
+            //    (why) => this.Request.CreateResponse(HttpStatusCode.BadRequest)
+            //        .AddReason($"Invalid token:{why}")
+            //        .ToActionResult()
+            //        .ToTask(),
+            //    () => this.Request.CreateResponse(HttpStatusCode.Conflict)
+            //        .AddReason($"Token is for user is not connected to a user in this system")
+            //        .ToActionResult()
+            //        .ToTask(),
+            //    (why) => this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
+            //        .AddReason(why)
+            //        .ToActionResult()
+            //        .ToTask(),
+            //    (why) => this.Request.CreateResponse(HttpStatusCode.InternalServerError)
+            //        .AddReason(why)
+            //        .ToActionResult()
+            //        .ToTask(),
+            //    (why) => this.Request.CreateResponse(HttpStatusCode.Conflict)
+            //        .AddReason(why)
+            //        .ToActionResult()
+            //        .ToTask());
 
-            var context = this.Request.GetSessionServerContext();
-            var response = await await context.Sessions.AuthenticateAsync<Task<IHttpActionResult>>(Guid.NewGuid(),
-                CredentialValidationMethodTypes.Password,
-                new Dictionary<string, string>()
-                {
-                    { AzureADB2CProvider.StateKey, result.state },
-                    { AzureADB2CProvider.IdTokenKey, result.id_token }
-                },
-                (sessionId, authorizationId, jwtToken, refreshToken, action, extraParams, redirectUri) =>
-                {
-                    return CreateResponse(context, sessionId, authorizationId, jwtToken, refreshToken, action, extraParams, redirectUri);
-                },
-                (why) => this.Request.CreateResponse(HttpStatusCode.BadRequest)
-                    .AddReason($"Invalid token:{why}")
-                    .ToActionResult()
-                    .ToTask(),
-                () => this.Request.CreateResponse(HttpStatusCode.Conflict)
-                    .AddReason($"Token is for user is not connected to a user in this system")
-                    .ToActionResult()
-                    .ToTask(),
-                (why) => this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
-                    .AddReason(why)
-                    .ToActionResult()
-                    .ToTask(),
-                (why) => this.Request.CreateResponse(HttpStatusCode.InternalServerError)
-                    .AddReason(why)
-                    .ToActionResult()
-                    .ToTask(),
-                (why) => this.Request.CreateResponse(HttpStatusCode.Conflict)
-                    .AddReason(why)
-                    .ToActionResult()
-                    .ToTask());
-
-            return response;
+            //return response;
         }
     }
 }

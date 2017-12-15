@@ -159,7 +159,8 @@ namespace EastFive.Security.SessionServer
                 Guid sessionId,
                 CredentialValidationMethodTypes method,
                 IDictionary<string, string> extraParams,
-            Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onSuccess,
+            Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onLogin,
+            Func<Uri, TResult> onLogout,
             Func<string, TResult> onInvalidToken,
             Func<TResult> lookupCredentialNotFound,
             Func<string, TResult> systemOffline,
@@ -176,6 +177,9 @@ namespace EastFive.Security.SessionServer
                                 return await this.dataContext.AuthenticationRequests.UpdateAsync(stateId.Value,
                                     async (authenticationRequest, saveAuthRequest) =>
                                     {
+                                        if(authenticationRequest.Deleted.HasValue)
+                                            return onLogout(authenticationRequest.redirectLogout);
+
                                         if (authenticationRequest.method != method)
                                             return onInvalidToken("The credential's authentication method does not match the callback method");
 
@@ -193,7 +197,7 @@ namespace EastFive.Security.SessionServer
                                                     async (token, refreshToken) =>
                                                     {
                                                         await saveAuthRequest(authenticationId, token, extraParamsWithRedemptionParams);
-                                                        return onSuccess(stateId.Value, authenticationId, token, refreshToken, AuthenticationActions.link, extraParams,
+                                                        return onLogin(stateId.Value, authenticationId, token, refreshToken, AuthenticationActions.link, extraParams,
                                                             authenticationRequest.redirect);
                                                     },
                                                     onNotConfigured.AsAsyncFunc()),
@@ -205,7 +209,7 @@ namespace EastFive.Security.SessionServer
                                             return await context.Integrations.UpdateAsync(authenticationRequest, 
                                                     sessionId, stateId.Value, method, extraParamsWithRedemptionParams,
                                                     saveAuthRequest,
-                                                onSuccess,
+                                                onLogin,
                                                 onInvalidToken,
                                                 onNotConfigured,
                                                 onFailure);
@@ -220,7 +224,7 @@ namespace EastFive.Security.SessionServer
                                                     async (token, refreshToken) =>
                                                     {
                                                         await saveAuthRequest(authenticationId, token, extraParams);
-                                                        return onSuccess(stateId.Value, authenticationId,
+                                                        return onLogin(stateId.Value, authenticationId,
                                                             token, refreshToken, AuthenticationActions.signin, extraParams, authenticationRequest.redirect);
                                                     },
                                                     onNotConfigured.AsAsyncFunc());
@@ -232,7 +236,7 @@ namespace EastFive.Security.SessionServer
                                 (authenticationId) =>
                                 {
                                     return context.Sessions.CreateSessionAsync(sessionId, authenticationId,
-                                        (token, refreshToken) => onSuccess(sessionId, authenticationId,
+                                        (token, refreshToken) => onLogin(sessionId, authenticationId,
                                             token, refreshToken, AuthenticationActions.signin, extraParams,
                                             default(Uri)), // No redirect URL is available since an AuthorizationRequest was not provided
                                         onNotConfigured);

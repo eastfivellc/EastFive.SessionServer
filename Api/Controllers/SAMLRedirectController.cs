@@ -89,6 +89,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                                 (why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult());
                             return redirectResponse;
                         },
+                        (location) => ((IHttpActionResult)Redirect(location)).ToTask(),
                         (why) => this.Request.CreateResponse(HttpStatusCode.BadRequest)
                                     .AddReason($"Invalid token:{why}")
                                     .ToActionResult()

@@ -25,6 +25,7 @@ namespace EastFive.Security.SessionServer.Persistence
         public string token;
         public Uri redirect;
         public Uri redirectLogout;
+        internal DateTime? Deleted;
     }
 
     public class AuthenticationRequests
