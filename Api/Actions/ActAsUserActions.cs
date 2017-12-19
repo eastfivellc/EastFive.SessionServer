@@ -72,7 +72,7 @@ namespace EastFive.Security.SessionServer.Api
                     return request.CreateHtmlResponse(html);
                 });
         }
-        
+
         private static string GenerateActAsUserHtml(UserInfo[] userInfos)
         {
             var tableContents = "";

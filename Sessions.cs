@@ -174,64 +174,13 @@ namespace EastFive.Security.SessionServer
                         async (subject, stateId, loginId, extraParamsWithRedemptionParams) =>
                         {
                             if (stateId.HasValue)
-                                return await this.dataContext.AuthenticationRequests.UpdateAsync(stateId.Value,
-                                    async (authenticationRequest, saveAuthRequest) =>
-                                    {
-                                        if(authenticationRequest.Deleted.HasValue)
-                                            return onLogout(authenticationRequest.redirectLogout);
+                                return await AuthenticateStateAsync(sessionId, stateId, loginId, method, subject, extraParams,
+                                    onLogin,
+                                    onLogout,
+                                    onInvalidToken,
+                                    onNotConfigured,
+                                    onFailure);
 
-                                        if (authenticationRequest.method != method)
-                                            return onInvalidToken("The credential's authentication method does not match the callback method");
-
-                                        if (AuthenticationActions.link == authenticationRequest.action)
-                                        {
-                                            // TODO: Call into invites to handle this
-                                            if (!authenticationRequest.authorizationId.HasValue)
-                                                return onFailure("The credential is corrupt");
-
-                                            var authenticationId = authenticationRequest.authorizationId.Value;
-                                            
-                                            return await await dataContext.CredentialMappings.CreateCredentialMappingAsync(Guid.NewGuid(), method, subject,
-                                                    authenticationRequest.authorizationId.Value,
-                                                async () => await await context.Sessions.CreateSessionAsync(sessionId, authenticationId,
-                                                    async (token, refreshToken) =>
-                                                    {
-                                                        await saveAuthRequest(authenticationId, token, extraParamsWithRedemptionParams);
-                                                        return onLogin(stateId.Value, authenticationId, token, refreshToken, AuthenticationActions.link, extraParams,
-                                                            authenticationRequest.redirect);
-                                                    },
-                                                    onNotConfigured.AsAsyncFunc()),
-                                                "GUID not unique".AsFunctionException<Task<TResult>>(),
-                                                () => onInvalidToken("Login is already mapped.").ToTask());
-                                        }
-
-                                        if (AuthenticationActions.access == authenticationRequest.action)
-                                            return await context.Integrations.UpdateAsync(authenticationRequest, 
-                                                    sessionId, stateId.Value, method, extraParamsWithRedemptionParams,
-                                                    saveAuthRequest,
-                                                onLogin,
-                                                onInvalidToken,
-                                                onNotConfigured,
-                                                onFailure);
-
-                                        if (authenticationRequest.authorizationId.HasValue)
-                                            return onInvalidToken("Session's authentication request cannot be re-used.");
-
-                                        return await await dataContext.CredentialMappings.LookupCredentialMappingAsync(method, subject, loginId,
-                                            async (authenticationId) =>
-                                            {
-                                                return await await this.CreateSessionAsync(sessionId, authenticationId,
-                                                    async (token, refreshToken) =>
-                                                    {
-                                                        await saveAuthRequest(authenticationId, token, extraParams);
-                                                        return onLogin(stateId.Value, authenticationId,
-                                                            token, refreshToken, AuthenticationActions.signin, extraParams, authenticationRequest.redirect);
-                                                    },
-                                                    onNotConfigured.AsAsyncFunc());
-                                            },
-                                            () => onInvalidToken("The token does not match an Authentication request").ToTask());
-                                    },
-                                    () => onInvalidToken("The token does not match an Authentication request"));
                             return await await dataContext.CredentialMappings.LookupCredentialMappingAsync(method, subject, loginId,
                                 (authenticationId) =>
                                 {
@@ -250,6 +199,61 @@ namespace EastFive.Security.SessionServer
                 },
                 () => systemOffline("The requested credential system is not enabled for this deployment").ToTask(),
                 (why) => onNotConfigured(why).ToTask());
+        }
+
+        private async Task<TResult> AuthenticateStateAsync<TResult>(Guid sessionId, Guid? stateId, Guid? loginId, CredentialValidationMethodTypes method,
+                string subject, IDictionary<string, string> extraParams,
+            Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onLogin,
+            Func<Uri, TResult> onLogout,
+            Func<string, TResult> onInvalidToken,
+            Func<string, TResult> onNotConfigured,
+            Func<string, TResult> onFailure)
+        {
+            return await this.dataContext.AuthenticationRequests.UpdateAsync(stateId.Value,
+                async (authenticationRequest, saveAuthRequest) =>
+                {
+                    if (authenticationRequest.Deleted.HasValue)
+                        return onLogout(authenticationRequest.redirectLogout);
+
+                    if (authenticationRequest.method != method)
+                        return onInvalidToken("The credential's authentication method does not match the callback method");
+
+                    if (AuthenticationActions.link == authenticationRequest.action)
+                        return await context.Invites.CreateInviteCredentialAsync(sessionId, stateId,
+                                authenticationRequest.authorizationId, method, subject,
+                                extraParams, saveAuthRequest, authenticationRequest.redirect,
+                            onLogin,
+                            onInvalidToken,
+                            onNotConfigured,
+                            onFailure);
+
+                    if (AuthenticationActions.access == authenticationRequest.action)
+                        return await context.Integrations.UpdateAsync(authenticationRequest,
+                                sessionId, stateId.Value, method, extraParams,
+                                saveAuthRequest,
+                            onLogin,
+                            onInvalidToken,
+                            onNotConfigured,
+                            onFailure);
+
+                    if (authenticationRequest.authorizationId.HasValue)
+                        return onInvalidToken("Session's authentication request cannot be re-used.");
+
+                    return await await dataContext.CredentialMappings.LookupCredentialMappingAsync(method, subject, loginId,
+                        async (authenticationId) =>
+                        {
+                            return await await this.CreateSessionAsync(sessionId, authenticationId,
+                                async (token, refreshToken) =>
+                                {
+                                    await saveAuthRequest(authenticationId, token, extraParams);
+                                    return onLogin(stateId.Value, authenticationId,
+                                        token, refreshToken, AuthenticationActions.signin, extraParams, authenticationRequest.redirect);
+                                },
+                                onNotConfigured.AsAsyncFunc());
+                        },
+                        () => onInvalidToken("The token does not match an Authentication request").ToTask());
+                },
+                () => onInvalidToken("The token does not match an Authentication request"));
         }
 
         private TResult GenerateToken<TResult>(Guid sessionId, Guid? actorId, IDictionary<string, string> claims,

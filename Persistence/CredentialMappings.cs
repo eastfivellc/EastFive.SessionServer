@@ -5,12 +5,8 @@ using BlackBarLabs.Persistence.Azure;
 using BlackBarLabs.Persistence.Azure.StorageTables;
 using BlackBarLabs.Extensions;
 using BlackBarLabs.Persistence;
-using BlackBarLabs.Persistence.Azure.Extensions;
 using System.Linq;
-using BlackBarLabs.Linq;
-using BlackBarLabs;
 using System.Collections.Generic;
-using System.Net.Http;
 
 namespace EastFive.Security.SessionServer.Persistence
 {
@@ -34,7 +30,7 @@ namespace EastFive.Security.SessionServer.Persistence
                     onSuccess(mappingDoc.ActorId).ToTask(),
                 () => loginId.HasValue?
                     repository.FindByIdAsync(loginId.Value,
-                        (Documents.LoginActorLookupDocument document) => onSuccess(document.ActorId), // TODO: Migrate this
+                        (Documents.LoginActorLookupDocument document) => onSuccess(document.ActorId), // TODO: Migrate this by creating a CredentialMappingLookupDoc with the subject/partitionKey(method)
                         () => onNotExist())
                     :
                     onNotExist().ToTask(),

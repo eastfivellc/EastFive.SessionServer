@@ -10,6 +10,11 @@ namespace EastFive.Security.SessionServer.Configuration
         public const string TokenExpirationInMinutes = "EastFive.Security.SessionServer.tokenExpirationInMinutes";
         public const string LoginIdClaimType = "EastFive.Security.SessionServer.LoginProvider.LoginIdClaimType";
 
+        [ConfigKey("Identifies this application to an AADB2C application",
+            DeploymentOverrides.Suggested,
+            DeploymentSecurityConcern = false,
+            Location = "Azure Portal | Azure Active Directory | App Registrations | Application ID",
+            PrivateRepositoryOnly = false)]
         public const string AADB2CAudience = "EastFive.Security.LoginProvider.AzureADB2C.Audience";
         public const string AADB2CSigninConfiguration = "EastFive.Security.LoginProvider.AzureADB2C.SigninEndpoint";
         public const string AADB2CSignupConfiguration = "EastFive.Security.LoginProvider.AzureADB2C.SignupEndpoint";

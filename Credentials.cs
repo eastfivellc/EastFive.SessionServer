@@ -53,6 +53,35 @@ namespace EastFive.Security.SessionServer
 
         #region InviteCredential
 
+        public async Task<TResult> CreateInviteCredentialAsync<TResult>(Guid sessionId, Guid? stateId,
+            Guid? authorizationId, CredentialValidationMethodTypes method, string subject,
+            IDictionary<string, string> extraParams, 
+            Func<Guid, string, IDictionary<string, string>, Task> saveAuthRequest,
+            Uri redirectUrl,
+            Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onLogin,
+            Func<string, TResult> onInvalidToken,
+            Func<string, TResult> onNotConfigured,
+            Func<string, TResult> onFailure)
+        {
+            if (!authorizationId.HasValue)
+                return onFailure("The credential is corrupt");
+
+            var authenticationId = authorizationId.Value;
+
+            return await await dataContext.CredentialMappings.CreateCredentialMappingAsync(Guid.NewGuid(), method, subject,
+                    authorizationId.Value,
+                async () => await await context.Sessions.CreateSessionAsync(sessionId, authenticationId,
+                    async (token, refreshToken) =>
+                    {
+                        await saveAuthRequest(authenticationId, token, extraParams);
+                        return onLogin(stateId.Value, authenticationId, token, refreshToken, AuthenticationActions.link, extraParams,
+                            redirectUrl);
+                    },
+                    onNotConfigured.AsAsyncFunc()),
+                "GUID not unique".AsFunctionException<Task<TResult>>(),
+                () => onInvalidToken("Login is already mapped.").ToTask());
+        }
+
         public async Task<TResult> SendEmailInviteAsync<TResult>(Guid inviteId, Guid actorId, string email,
                 Guid performingActorId, System.Security.Claims.Claim[] claims,
                 Func<Guid, Guid, Uri> getRedirectLink,

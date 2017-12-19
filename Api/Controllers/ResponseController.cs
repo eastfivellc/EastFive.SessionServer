@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 
+using Microsoft.ApplicationInsights;
+
 using BlackBarLabs;
 using BlackBarLabs.Api;
 using EastFive.Api.Services;
@@ -15,7 +17,6 @@ using EastFive.Security.CredentialProvider.AzureADB2C;
 using BlackBarLabs.Collections.Generic;
 using EastFive.Collections.Generic;
 using EastFive.Security.SessionServer.Exceptions;
-using Microsoft.ApplicationInsights;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
@@ -77,64 +78,49 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             var response = await await context.Sessions.AuthenticateAsync(Guid.NewGuid(),
                     method, values,
                 (sessionId, authorizationId, jwtToken, refreshToken, action, extraParams, redirectUrl) =>
-                    CreateResponse(context, method, action, sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUrl),
-                //(why) => this.Request.CreateResponse(HttpStatusCode.Conflict)
-                //            .AddReason($"Invalid token:{why}")
-                //            .ToActionResult()
-                //            .ToTask(),
-                //() => this.Request.CreateResponse(HttpStatusCode.Conflict)
-                //            .AddReason($"Token is not connected to a user in this system")
-                //            .ToActionResult()
-                //            .ToTask(),
-                //(why) => this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
-                //            .AddReason(why)
-                //            .ToActionResult()
-                //            .ToTask(),
-                //(why) => this.Request.CreateResponse(HttpStatusCode.InternalServerError)
-                //            .AddReason(why)
-                //            .ToActionResult()
-                //            .ToTask(),
-                //(why) => this.Request.CreateResponse(HttpStatusCode.Conflict)
-                //            .AddReason(why)
-                //            .ToActionResult()
-                //            .ToTask());
+                    CreateResponse(context, method, action, sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUrl, telemetry),
                 (location) => ((IHttpActionResult)Redirect(location)).ToTask(),
                 (why) =>
                 {
-                    telemetry.TrackException(new ResponseException($"Invalid token:{why}"));
-                    return this.Request.CreateResponse(HttpStatusCode.BadRequest)
+                    var message = $"Invalid token:{why}";
+                    telemetry.TrackException(new ResponseException());
+                    return this.Request.CreateResponse(HttpStatusCode.BadRequest, message)
                         .AddReason($"Invalid token:{why}")
                         .ToActionResult()
                         .ToTask();
                 },
                 () =>
                 {
-                    telemetry.TrackException(new ResponseException("Token is not connected to a user in this system"));
+                    var message = "Token is not connected to a user in this system";
+                    telemetry.TrackException(new ResponseException(message));
                     return this.Request.CreateResponse(HttpStatusCode.Conflict)
-                        .AddReason("Token is not connected to a user in this system")
+                        .AddReason(message)
                         .ToActionResult()
                         .ToTask();
                 },
                 (why) =>
                 {
-                    telemetry.TrackException(new ResponseException($"Cannot create session because service is unavailable: {why}"));
-                    return this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
+                    var message = $"Cannot create session because service is unavailable: {why}";
+                    telemetry.TrackException(new ResponseException(message));
+                    return this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable, message)
                         .AddReason(why)
                         .ToActionResult()
                         .ToTask();
                 },
                 (why) =>
                 {
-                    telemetry.TrackException(new ResponseException($"Cannot create session because service is unavailable: {why}"));
-                    return this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
+                    var message = $"Cannot create session because service is unavailable: {why}";
+                    telemetry.TrackException(new ResponseException(message));
+                    return this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable, message)
                         .AddReason(why)
                         .ToActionResult()
                         .ToTask();
                 },
                 (why) =>
                 {
-                    telemetry.TrackException(new ResponseException($"General failure: {why}"));
-                    return this.Request.CreateResponse(HttpStatusCode.Conflict)
+                    var message = $"General failure: {why}";
+                    telemetry.TrackException(new ResponseException(message));
+                    return this.Request.CreateResponse(HttpStatusCode.Conflict, message)
                         .AddReason(why)
                         .ToActionResult()
                         .ToTask();
@@ -145,19 +131,29 @@ namespace EastFive.Security.SessionServer.Api.Controllers
         private async Task<IHttpActionResult> CreateResponse(Context context,
             CredentialValidationMethodTypes method, AuthenticationActions action,
             Guid sessionId, Guid? authorizationId, string jwtToken, string refreshToken,
-            IDictionary<string, string> extraParams, Uri redirectUrl)
+            IDictionary<string, string> extraParams, Uri redirectUrl, TelemetryClient telemetry)
         {
             var config = Library.configurationManager;
             var redirectResponse = await config.GetRedirectUriAsync(context, method, action,
                     sessionId, authorizationId, jwtToken, refreshToken, extraParams,
                     redirectUrl,
                 (redirectUrlSelected) => Redirect(redirectUrlSelected),
-                (paramName, why) => Request.CreateResponse(HttpStatusCode.BadRequest)
-                    .AddReason(why)
-                    .ToActionResult(),
-                (why) => Request.CreateResponse(HttpStatusCode.BadRequest)
-                    .AddReason(why)
-                    .ToActionResult());
+                (paramName, why) =>
+                {
+                    var message = $"Invalid parameter while completing login: {paramName} - {why}";
+                    telemetry.TrackException(new ResponseException(message));
+                    return Request.CreateResponse(HttpStatusCode.BadRequest, message)
+                        .AddReason(why)
+                        .ToActionResult();
+                },
+                (why) =>
+                {
+                    var message = $"General failure while completing login: {why}";
+                    telemetry.TrackException(new ResponseException(message));
+                    return Request.CreateResponse(HttpStatusCode.BadRequest, message)
+                        .AddReason(why)
+                            .ToActionResult();
+                });
             return redirectResponse;
         }
     }

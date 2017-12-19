@@ -18,6 +18,6 @@ namespace EastFive.Security.SessionServer
 {
     public static class Library
     {
-        internal static IConfigureIdentityServer configurationManager;
+        public static IConfigureIdentityServer configurationManager;
     }
 }

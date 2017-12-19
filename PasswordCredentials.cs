@@ -271,7 +271,7 @@ namespace EastFive.Security.SessionServer
             public bool AccountEnabled;
         }
        
-        internal async Task<TResult> GetAllLoginInfoAsync<TResult>(
+        public async Task<TResult> GetAllLoginInfoAsync<TResult>(
             Func<LoginInfo[], TResult> success)
         {
             var passwordCredentialInfosTask = this.dataContext.PasswordCredentials.FindAllAsync(results => results);
