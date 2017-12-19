@@ -103,5 +103,12 @@ namespace EastFive.Security.SessionServer
 
             return deny().ToTask();
         }
+
+        public virtual Task<TResult> RemoveIntegrationAsync<TResult>(Session integration,
+            Func<Uri, TResult> onSuccess,
+            Func<TResult> onFailure)
+        {
+            return onSuccess(default(Uri)).ToTask();
+        }
     }
 }

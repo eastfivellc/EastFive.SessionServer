@@ -93,6 +93,19 @@ namespace EastFive.Security.SessionServer.Persistence
                 () => onNotFound());
         }
 
+        public async Task<TResult> DeleteByIdAsync<TResult>(Guid authenticationRequestId,
+            Func<AuthenticationRequest, TResult> onSuccess,
+            Func<TResult> onNotFound)
+        {
+            return await repository.DeleteIfAsync<Documents.AuthenticationRequestDocument, TResult>(authenticationRequestId,
+                async (document, deleteAsync) =>
+                {
+                    await deleteAsync();
+                    return onSuccess(Convert(document));
+                },
+                () => onNotFound());
+        }
+
         private static AuthenticationRequest Convert(Documents.AuthenticationRequestDocument document)
         {
             return new AuthenticationRequest

@@ -28,5 +28,8 @@ namespace EastFive.Security.SessionServer
 
         Task<TResult> CanActAsUsersAsync<TResult>(Guid actorTakingAction, System.Security.Claims.Claim[] claims, Func<TResult> canActAsUsers, Func<TResult> deny);
 
+        Task<TResult> RemoveIntegrationAsync<TResult>(Session session,
+            Func<Uri, TResult> onSuccess,
+            Func<TResult> onFailure);
     }
 }

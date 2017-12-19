@@ -83,27 +83,28 @@ namespace EastFive.Security.SessionServer.Persistence
         }
 
         public async Task<TResult> DeleteAsync<TResult>(Guid accessId,
-            Func<TResult> onDeleted,
+            Func<CredentialValidationMethodTypes, IDictionary<string, string>, TResult> onDeleted,
             Func<TResult> actorNotFound)
         {
             var results = await repository.DeleteIfAsync<AccessDocument, TResult>(accessId,
                 async (doc, deleteAsync) =>
                 {
                     await deleteAsync();
+                    Enum.TryParse(doc.Method, out CredentialValidationMethodTypes method);
                     return await repository.DeleteIfAsync<AccessDocument, TResult>(doc.LookupId, doc.Method,
                         async (lookupDoc, deleteLookupAsync) =>
                         {
                             await deleteLookupAsync();
-                            return onDeleted();
+                            return onDeleted(method, doc.GetExtraParams());
                         },
-                        () => onDeleted());
+                        () => onDeleted(method, doc.GetExtraParams()));
                 },
                 () => actorNotFound());
             return results;
         }
 
         public async Task<TResult> DeleteAsync<TResult>(Guid actorId, CredentialValidationMethodTypes method,
-            Func<TResult> onDeleted,
+            Func<CredentialValidationMethodTypes, IDictionary<string, string>, TResult> onDeleted,
             Func<TResult> actorNotFound)
         {
             var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
@@ -115,9 +116,9 @@ namespace EastFive.Security.SessionServer.Persistence
                         async (lookupDoc, deleteLookupAsync) =>
                         {
                             await deleteLookupAsync();
-                            return onDeleted();
+                            return onDeleted(method, doc.GetExtraParams());
                         },
-                        () => onDeleted());
+                        () => onDeleted(method, doc.GetExtraParams()));
                 },
                 () => actorNotFound());
             return results;
