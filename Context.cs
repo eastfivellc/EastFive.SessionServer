@@ -182,7 +182,18 @@ namespace EastFive.Security.SessionServer
                 return integrations;
             }
         }
-        
+
+        public Credentials invites;
+        public Credentials Invites
+        {
+            get
+            {
+                if (default(Credentials) == invites)
+                    invites = new Credentials(this, this.DataContext);
+                return invites;
+            }
+        }
+
         private Claims claims;
         public Claims Claims
         {
