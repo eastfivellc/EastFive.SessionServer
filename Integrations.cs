@@ -161,17 +161,21 @@ namespace EastFive.Security.SessionServer
                 () => onInvalidToken("Login is already mapped to an access.").ToTask());
         }
 
-        internal async Task<TResult> DeleteByIdAsync<TResult>(Guid accessId,
+        public async Task<TResult> DeleteByIdAsync<TResult>(Guid accessId,
                 Guid performingActorId, System.Security.Claims.Claim [] claims,
             Func<Uri, TResult> onSuccess, 
             Func<TResult> onNotFound,
             Func<TResult> onUnathorized)
         {
-            return await await this.dataContext.AuthenticationRequests.DeleteByIdAsync(accessId,
-                (integration) => Library.configurationManager.RemoveIntegrationAsync(Convert(integration),
-                    (uri) => onSuccess(uri),
-                    () => onSuccess(default(Uri))),
-                onNotFound.AsAsyncFunc());
+            return await this.dataContext.AuthenticationRequests.DeleteByIdAsync(accessId,
+                async (integration, deleteAsync) => await await Library.configurationManager.RemoveIntegrationAsync(Convert(integration),
+                    async (uri) =>
+                    {
+                        await deleteAsync();
+                        return onSuccess(uri);
+                    },
+                    () => onSuccess(default(Uri)).ToTask()),
+                onNotFound);
         }
 
         private static Session Convert(Persistence.AuthenticationRequest authenticationRequestStorage)

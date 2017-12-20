@@ -94,14 +94,13 @@ namespace EastFive.Security.SessionServer.Persistence
         }
 
         public async Task<TResult> DeleteByIdAsync<TResult>(Guid authenticationRequestId,
-            Func<AuthenticationRequest, TResult> onSuccess,
+            Func<AuthenticationRequest, Func<Task>, Task<TResult>> onSuccess,
             Func<TResult> onNotFound)
         {
             return await repository.DeleteIfAsync<Documents.AuthenticationRequestDocument, TResult>(authenticationRequestId,
                 async (document, deleteAsync) =>
                 {
-                    await deleteAsync();
-                    return onSuccess(Convert(document));
+                    return await onSuccess(Convert(document), deleteAsync);
                 },
                 () => onNotFound());
         }

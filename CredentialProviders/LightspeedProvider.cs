@@ -1,4 +1,5 @@
 ﻿using BlackBarLabs;
+using BlackBarLabs.Api.Extensions;
 using BlackBarLabs.Extensions;
 using BlackBarLabs.Linq;
 using EastFive.Collections.Generic;
@@ -231,7 +232,7 @@ namespace EastFive.Security.CredentialProvider
         {
             // response_type -- Ask for ‘code’ which will give you a temporary token that you can then use to get an access token.
             // https://cloud.merchantos.com/oauth/authorize.php?response_type=code&client_id={client_id}&scope={scope}&state={state}
-            var loginScopes = "employee:register_read+employee:inventory+employee:admin_inventory";
+            var loginScopes = "employee:all+employee:register_read+employee:inventory+employee:admin_inventory";
             var stateString = state.ToString("N");
             var url = $"https://cloud.merchantos.com/oauth/authorize.php?response_type=code&client_id={this.clientId}&scope={loginScopes}&state={stateString}";
             return new Uri(url);
@@ -239,10 +240,9 @@ namespace EastFive.Security.CredentialProvider
 
         public Uri GetLogoutUrl(Guid state, Uri responseControllerLocation)
         {
-            var loginScopes = "employee:register_read+employee:inventory+employee:admin_inventory";
-            var stateString = state.ToString("N");
-            var url = $"https://cloud.merchantos.com/oauth/authorize.php?response_type=code&client_id={this.clientId}&scope={loginScopes}&state={stateString}";
-            return new Uri(url);
+            return responseControllerLocation
+                .AddQuery(LightspeedProvider.stateKey, state.ToString("N"))
+                .AddQuery("method", CredentialValidationMethodTypes.Lightspeed.ToString());
         }
 
         public Uri GetSignupUrl(Guid state, Uri responseControllerLocation)

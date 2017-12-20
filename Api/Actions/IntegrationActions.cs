@@ -141,8 +141,7 @@ namespace EastFive.Security.SessionServer.Api
             return await request.GetActorIdClaimsAsync(
                 (actingAs, claims) =>
                     credential.ParseAsync(request,
-                        q => DeleteByIdAsync(q.Id.ParamSingle(), actingAs, claims, request, urlHelper),
-                        q => DeleteByActorAsync(q.ActorId.ParamSingle(), actingAs, claims, request, urlHelper)));
+                        q => DeleteByIdAsync(q.Id.ParamSingle(), actingAs, claims, request, urlHelper)));
         }
 
         private static async Task<HttpResponseMessage> DeleteByIdAsync(Guid integrationId,
@@ -158,21 +157,6 @@ namespace EastFive.Security.SessionServer.Api
                     return response;
                 },
                 () => request.CreateResponse(HttpStatusCode.NotFound),
-                () => request.CreateResponse(HttpStatusCode.Unauthorized));
-        }
-
-        private static async Task<HttpResponseMessage> DeleteByActorAsync(Guid actorId,
-                Guid actingAs, System.Security.Claims.Claim[] claims,
-            HttpRequestMessage request, UrlHelper urlHelper)
-        {
-            var context = request.GetSessionServerContext();
-            return await context.Integrations.DeleteByActorAsync(actorId,
-                    actingAs, claims,
-                () =>
-                {
-                    var response = request.CreateResponse(HttpStatusCode.NoContent);
-                    return response;
-                },
                 () => request.CreateResponse(HttpStatusCode.Unauthorized));
         }
 
