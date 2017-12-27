@@ -90,6 +90,13 @@ namespace EastFive.Security.SessionServer
             return onSuccess(provider);
         }
 
+        internal TResult GetAccessProviders<TResult>(
+            Func<IProvideAccess[], TResult> onSuccess,
+            Func<string, TResult> onFailure)
+        {
+            return onSuccess(ServiceConfiguration.accessProviders.SelectValues().ToArray());
+        }
+
         internal TResult GetLoginProviders<TResult>(
             Func<IProvideLogin[], TResult> onSuccess,
             Func<string, TResult> onFailure)

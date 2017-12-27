@@ -99,12 +99,15 @@ namespace EastFive.Security.SessionServer
         
         internal async Task<TResult> GetAsync<TResult>(Guid authenticationRequestId, Uri callbackUrl,
             Func<Session, TResult> onSuccess,
-            Func<TResult> onNotFound,
+            Func<string, TResult> onNotFound,
             Func<string, TResult> onFailure)
         {
             return await this.dataContext.AuthenticationRequests.FindByIdAsync(authenticationRequestId,
                 (authenticationRequestStorage) =>
                 {
+                    if (authenticationRequestStorage.Deleted.HasValue)
+                        return onNotFound("Session was deleted");
+
                     return context.GetLoginProvider(authenticationRequestStorage.method,
                         (provider) =>
                         {
@@ -116,7 +119,7 @@ namespace EastFive.Security.SessionServer
                         () => onFailure("The credential provider for this request is no longer enabled in this system"),
                         (why) => onFailure(why));
                 },
-                onNotFound);
+                () => onNotFound("Session does not exist"));
         }
 
         public async Task<TResult> LookupCredentialMappingAsync<TResult>(
@@ -174,7 +177,7 @@ namespace EastFive.Security.SessionServer
                         async (subject, stateId, loginId, extraParamsWithRedemptionParams) =>
                         {
                             if (stateId.HasValue)
-                                return await AuthenticateStateAsync(sessionId, stateId, loginId, method, subject, extraParams,
+                                return await AuthenticateStateAsync(sessionId, stateId, loginId, method, subject, extraParamsWithRedemptionParams,
                                     onLogin,
                                     onLogout,
                                     onInvalidToken,
@@ -186,7 +189,7 @@ namespace EastFive.Security.SessionServer
                                 {
                                     return context.Sessions.CreateSessionAsync(sessionId, authenticationId,
                                         (token, refreshToken) => onLogin(sessionId, authenticationId,
-                                            token, refreshToken, AuthenticationActions.signin, extraParams,
+                                            token, refreshToken, AuthenticationActions.signin, extraParamsWithRedemptionParams,
                                             default(Uri)), // No redirect URL is available since an AuthorizationRequest was not provided
                                         onNotConfigured);
                                 },

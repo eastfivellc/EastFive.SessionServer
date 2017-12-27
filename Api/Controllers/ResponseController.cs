@@ -5,9 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
-using System.Web.Http;
 
-using Microsoft.ApplicationInsights;
 
 using BlackBarLabs;
 using BlackBarLabs.Api;
@@ -17,6 +15,8 @@ using EastFive.Security.CredentialProvider.AzureADB2C;
 using BlackBarLabs.Collections.Generic;
 using EastFive.Collections.Generic;
 using EastFive.Security.SessionServer.Exceptions;
+using System.Web.Http;
+using Microsoft.ApplicationInsights;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {

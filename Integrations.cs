@@ -167,15 +167,49 @@ namespace EastFive.Security.SessionServer
             Func<TResult> onNotFound,
             Func<TResult> onUnathorized)
         {
-            return await this.dataContext.AuthenticationRequests.DeleteByIdAsync(accessId,
-                async (integration, deleteAsync) => await await Library.configurationManager.RemoveIntegrationAsync(Convert(integration),
-                    async (uri) =>
-                    {
-                        await deleteAsync();
-                        return onSuccess(uri);
-                    },
-                    () => onSuccess(default(Uri)).ToTask()),
-                onNotFound);
+            return await await this.dataContext.AuthenticationRequests.DeleteByIdAsync(accessId,
+                async (integration, deleteAsync) =>
+                {
+                    if(!integration.authorizationId.HasValue)
+                        return await Library.configurationManager.RemoveIntegrationAsync(Convert(integration),
+                            async (uri) =>
+                            {
+                                await deleteAsync();
+                                return onSuccess(uri);
+                            },
+                            () => onSuccess(default(Uri)).ToTask());
+
+                    return await dataContext.Accesses.DeleteAsync(integration.authorizationId.Value, integration.method,
+                        async (method, parames) =>
+                        {
+                            return await await Library.configurationManager.RemoveIntegrationAsync(Convert(integration),
+                                async (uri) =>
+                                {
+                                    await deleteAsync();
+                                    return onSuccess(uri);
+                                },
+                                () => onSuccess(default(Uri)).ToTask());
+                        },
+                        onNotFound.AsAsyncFunc());
+                },
+                async () =>
+                {
+                    var x = await context.GetLoginProviders(
+                        async (accessProviders) =>
+                        {
+                            return await accessProviders
+                                .Select(
+                                    accessProvider =>
+                                    {
+                                        return dataContext.Accesses.DeleteAsync(performingActorId, accessProvider.Method,
+                                            (method, parames) => true,
+                                            () => false);
+                                    })
+                                .WhenAllAsync();
+                        },
+                        (why) => (new bool[] { }).ToTask());
+                    return onSuccess(default(Uri));
+                });
         }
 
         private static Session Convert(Persistence.AuthenticationRequest authenticationRequestStorage)

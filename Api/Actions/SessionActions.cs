@@ -63,7 +63,7 @@ namespace EastFive.Security.SessionServer.Api
                         Convert(authenticationRequest, urlHelper));
                     return response;
                 },
-                () => request.CreateResponse(HttpStatusCode.NotFound),
+                (why) => request.CreateResponse(HttpStatusCode.NotFound).AddReason(why),
                 (why) => request.CreateResponseUnexpectedFailure(why));
         }
 
