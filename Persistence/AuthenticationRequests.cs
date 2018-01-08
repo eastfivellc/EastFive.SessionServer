@@ -93,6 +93,23 @@ namespace EastFive.Security.SessionServer.Persistence
                 () => onNotFound());
         }
 
+        public async Task<TResult> DeleteAsync<TResult>(Guid authenticationRequestId,
+            Func<AuthenticationRequest, Func<Task>, Task<TResult>> onFound,
+            Func<TResult> onNotFound)
+        {
+            return await this.repository.UpdateAsync<Documents.AuthenticationRequestDocument, TResult>(authenticationRequestId,
+                async (document, saveAsync) =>
+                {
+                    return await onFound(Convert(document),
+                        async () =>
+                        {
+                            document.Deleted = DateTime.UtcNow;
+                            await saveAsync(document);
+                        });
+                },
+                () => onNotFound());
+        }
+
         public async Task<TResult> DeleteByIdAsync<TResult>(Guid authenticationRequestId,
             Func<AuthenticationRequest, Func<Task>, Task<TResult>> onSuccess,
             Func<TResult> onNotFound)
@@ -123,6 +140,7 @@ namespace EastFive.Security.SessionServer.Persistence
                     default(Uri)
                     :
                     new Uri(document.RedirectLogoutUrl),
+                Deleted = document.Deleted,
             };
         }
     }

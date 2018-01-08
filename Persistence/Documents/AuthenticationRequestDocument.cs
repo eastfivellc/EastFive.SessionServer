@@ -33,6 +33,7 @@ namespace EastFive.Security.SessionServer.Persistence.Documents
         public Guid? LinkedAuthenticationId { get; set; }
         public string RedirectUrl { get; set; }
         public string RedirectLogoutUrl { get; set; }
+        public DateTime? Deleted { get; set; }
 
         internal IDictionary<string, string> GetExtraParams()
         {

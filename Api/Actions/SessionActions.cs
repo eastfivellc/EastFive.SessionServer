@@ -123,6 +123,8 @@ namespace EastFive.Security.SessionServer.Api
             return await context.Sessions.DeleteAsync(sessionId, urlHelper.GetLocation<Controllers.ResponseController>(),
                 (sessionDeleted) =>
                 {
+                    if(!sessionDeleted.logoutUrl.AbsoluteUri.IsNullOrWhiteSpace())
+                        return request.CreateRedirectResponse(sessionDeleted.logoutUrl);
                     var response = request.CreateResponse(HttpStatusCode.Accepted,
                         Convert(sessionDeleted, urlHelper));
                     return response;

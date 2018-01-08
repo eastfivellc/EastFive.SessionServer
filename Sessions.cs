@@ -315,12 +315,14 @@ namespace EastFive.Security.SessionServer
             Func<TResult> onNotFound,
             Func<string, TResult> onFailure)
         {
-            return await await this.dataContext.AuthenticationRequests.FindByIdAsync(sessionId,
-                async session =>
+            return await this.dataContext.AuthenticationRequests.DeleteAsync(sessionId,
+                async (session, markForDeleteAsync) =>
                 {
                     return await this.context.GetLoginProvider(session.method,
                         async (provider) =>
                         {
+                            session.Deleted = DateTime.UtcNow;
+                            await markForDeleteAsync();
                             var deletedSession = Convert(session);
                             deletedSession.logoutUrl = provider.GetLogoutUrl(sessionId, callbackLocation);
                             return onSuccess(deletedSession);
@@ -328,7 +330,7 @@ namespace EastFive.Security.SessionServer
                         () => onFailure("Credential system is no longer available").ToTask(),
                         (why) => onFailure(why).ToTask());
                 },
-                onNotFound.AsAsyncFunc());
+                onNotFound);
         }
     }
 }
