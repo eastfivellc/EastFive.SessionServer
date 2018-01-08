@@ -33,7 +33,7 @@ namespace EastFive.Security.SessionServer.Api
                     var resource = Convert(authenticationRequestPopulated, urlHelper);
                     return request.CreateResponse(HttpStatusCode.Created, resource);
                 },
-                () => request.CreateResponseNotFound(credentialId.Value),
+                () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("The session has already been created"),
                 () => request.CreateResponse(HttpStatusCode.BadRequest)
                     .AddReason($"Method [{authenticationRequest.Method}] is not enabled for this system"),
                 (why) => request.CreateResponse(HttpStatusCode.ServiceUnavailable)

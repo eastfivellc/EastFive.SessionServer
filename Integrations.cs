@@ -11,6 +11,7 @@ using BlackBarLabs.Linq.Async;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using BlackBarLabs;
+using System.Net;
 
 namespace EastFive.Security.SessionServer
 {
@@ -162,8 +163,8 @@ namespace EastFive.Security.SessionServer
         }
 
         public async Task<TResult> DeleteByIdAsync<TResult>(Guid accessId,
-                Guid performingActorId, System.Security.Claims.Claim [] claims,
-            Func<Uri, TResult> onSuccess, 
+                Guid performingActorId, System.Security.Claims.Claim [] claims, HttpRequestMessage request,
+            Func<HttpResponseMessage, TResult> onSuccess, 
             Func<TResult> onNotFound,
             Func<TResult> onUnathorized)
         {
@@ -171,24 +172,24 @@ namespace EastFive.Security.SessionServer
                 async (integration, deleteAsync) =>
                 {
                     if(!integration.authorizationId.HasValue)
-                        return await Library.configurationManager.RemoveIntegrationAsync(Convert(integration),
-                            async (uri) =>
+                        return await Library.configurationManager.RemoveIntegrationAsync(Convert(integration), request,
+                            async (response) =>
                             {
                                 await deleteAsync();
-                                return onSuccess(uri);
+                                return onSuccess(response);
                             },
-                            () => onSuccess(default(Uri)).ToTask());
+                            () => onSuccess(request.CreateResponse(HttpStatusCode.InternalServerError).AddReason("failure")).ToTask());
 
                     return await dataContext.Accesses.DeleteAsync(integration.authorizationId.Value, integration.method,
                         async (method, parames) =>
                         {
-                            return await await Library.configurationManager.RemoveIntegrationAsync(Convert(integration),
-                                async (uri) =>
+                            return await await Library.configurationManager.RemoveIntegrationAsync(Convert(integration), request,
+                                async (response) =>
                                 {
                                     await deleteAsync();
-                                    return onSuccess(uri);
+                                    return onSuccess(response);
                                 },
-                                () => onSuccess(default(Uri)).ToTask());
+                                () => onSuccess(request.CreateResponse(HttpStatusCode.InternalServerError).AddReason("failure")).ToTask());
                         },
                         onNotFound.AsAsyncFunc());
                 },
@@ -208,7 +209,7 @@ namespace EastFive.Security.SessionServer
                                 .WhenAllAsync();
                         },
                         (why) => (new bool[] { }).ToTask());
-                    return onSuccess(default(Uri));
+                    return onSuccess(request.CreateResponse(HttpStatusCode.NoContent).AddReason("Access ID not found"));
                 });
         }
 

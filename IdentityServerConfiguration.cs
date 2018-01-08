@@ -9,6 +9,8 @@ using BlackBarLabs;
 using BlackBarLabs.Extensions;
 using BlackBarLabs.Api;
 using System.Security.Claims;
+using System.Net.Http;
+using System.Net;
 
 namespace EastFive.Security.SessionServer
 {
@@ -104,11 +106,11 @@ namespace EastFive.Security.SessionServer
             return deny().ToTask();
         }
 
-        public virtual Task<TResult> RemoveIntegrationAsync<TResult>(Session integration,
-            Func<Uri, TResult> onSuccess,
+        public virtual Task<TResult> RemoveIntegrationAsync<TResult>(Session integration, HttpRequestMessage request,
+            Func<HttpResponseMessage, TResult> onSuccess,
             Func<TResult> onFailure)
         {
-            return onSuccess(default(Uri)).ToTask();
+            return onSuccess(request.CreateResponse(HttpStatusCode.NoContent)).ToTask();
         }
     }
 }

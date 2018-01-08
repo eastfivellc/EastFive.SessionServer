@@ -150,10 +150,9 @@ namespace EastFive.Security.SessionServer.Api
         {
             var context = request.GetSessionServerContext();
             return await context.Integrations.DeleteByIdAsync(integrationId,
-                    actingAs, claims,
-                (uri) =>
+                    actingAs, claims, request,
+                (response) =>
                 {
-                    var response = request.CreateResponse(HttpStatusCode.NoContent);
                     return response;
                 },
                 () => request.CreateResponse(HttpStatusCode.NotFound),

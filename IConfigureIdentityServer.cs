@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http.Routing;
 using System.Security.Claims;
+using System.Net.Http;
 
 namespace EastFive.Security.SessionServer
 {
@@ -28,8 +29,8 @@ namespace EastFive.Security.SessionServer
 
         Task<TResult> CanActAsUsersAsync<TResult>(Guid actorTakingAction, System.Security.Claims.Claim[] claims, Func<TResult> canActAsUsers, Func<TResult> deny);
 
-        Task<TResult> RemoveIntegrationAsync<TResult>(Session session,
-            Func<Uri, TResult> onSuccess,
+        Task<TResult> RemoveIntegrationAsync<TResult>(Session session, HttpRequestMessage request,
+            Func<HttpResponseMessage, TResult> onSuccess,
             Func<TResult> onFailure);
     }
 }
