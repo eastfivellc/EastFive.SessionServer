@@ -56,7 +56,7 @@ namespace EastFive.Security.SessionServer.Api
         {
             var context = request.GetSessionServerContext();
             return await context.Sessions.GetAsync(authenticationRequestId,
-                    urlHelper.GetLocation<Controllers.ResponseController>(),
+                    (type) => urlHelper.GetLocation(type),
                 (authenticationRequest) =>
                 {
                     var response = request.CreateResponse(HttpStatusCode.OK,
@@ -120,14 +120,17 @@ namespace EastFive.Security.SessionServer.Api
         private static async Task<HttpResponseMessage> DeleteByIdAsync(Guid sessionId, HttpRequestMessage request, UrlHelper urlHelper)
         {
             var context = request.GetSessionServerContext();
-            return await context.Sessions.DeleteAsync(sessionId, urlHelper.GetLocation<Controllers.ResponseController>(),
+            return await context.Sessions.DeleteAsync(sessionId,
+                    (type) => urlHelper.GetLocation(type),
                 (sessionDeleted) =>
                 {
-                    if(!sessionDeleted.logoutUrl.AbsoluteUri.IsNullOrWhiteSpace())
-                        return request.CreateRedirectResponse(sessionDeleted.logoutUrl);
-                    var response = request.CreateResponse(HttpStatusCode.Accepted,
-                        Convert(sessionDeleted, urlHelper));
-                    return response;
+                    if(sessionDeleted.logoutUrl.AbsoluteUri.IsNullOrWhiteSpace())
+                        return request.CreateResponse(HttpStatusCode.OK).AddReason("Logout Complete");
+
+                    return request
+                        .CreateResponse(
+                            HttpStatusCode.Accepted, Convert(sessionDeleted, urlHelper))
+                        .AddReason($"External session removal required:{sessionDeleted.logoutUrl.AbsoluteUri}");
                 },
                 () => request.CreateResponse(HttpStatusCode.NotFound),
                 (why) => request.CreateResponse(HttpStatusCode.NotFound).AddReason(why));

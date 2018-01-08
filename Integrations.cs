@@ -67,7 +67,7 @@ namespace EastFive.Security.SessionServer
                 onCredentialSystemNotInitialized.AsAsyncFunc());
         }
 
-        internal async Task<TResult> GetAsync<TResult>(Guid authenticationRequestId, Uri callbackUrl,
+        internal async Task<TResult> GetAsync<TResult>(Guid authenticationRequestId, Func<Type, Uri> callbackUrlFunc,
             Func<Session, TResult> onSuccess,
             Func<TResult> onNotFound,
             Func<string, TResult> onFailure)
@@ -79,6 +79,7 @@ namespace EastFive.Security.SessionServer
                         (provider) =>
                         {
                             var authenticationRequest = Convert(authenticationRequestStorage);
+                            var callbackUrl = callbackUrlFunc(provider.CallbackController);
                             authenticationRequest.loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackUrl);
                             return onSuccess(authenticationRequest);
                         },
@@ -88,7 +89,7 @@ namespace EastFive.Security.SessionServer
                 onNotFound);
         }
 
-        internal async Task<TResult> GetByActorAsync<TResult>(Guid actorId, Uri callbackUrl,
+        internal async Task<TResult> GetByActorAsync<TResult>(Guid actorId, Func<Type, Uri> callbackUrlFunc,
                 Guid actingAs, System.Security.Claims.Claim [] claims,
             Func<Session[], TResult> onSuccess,
             Func<TResult> onNotFound,
@@ -106,6 +107,7 @@ namespace EastFive.Security.SessionServer
                             context.GetLoginProvider(ap.Key,
                                 (provider) =>
                                 {
+                                    var callbackUrl = callbackUrlFunc(provider.CallbackController);
                                     var authenticationRequest = new Session
                                     {
                                         id = authenticationRequestId,

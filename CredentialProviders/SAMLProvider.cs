@@ -45,6 +45,7 @@ namespace EastFive.Security.CredentialProvider.SAML
 
         public async Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> tokens,
             Func<string, Guid?, Guid?, IDictionary<string, string>, TResult> onSuccess,
+            Func<Guid?, IDictionary<string, string>, TResult> onUnauthenticated,
             Func<string, TResult> onInvalidCredentials,
             Func<string, TResult> onCouldNotConnect,
             Func<string, TResult> onUnspecifiedConfiguration,

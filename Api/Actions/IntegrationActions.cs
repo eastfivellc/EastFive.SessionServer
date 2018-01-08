@@ -68,7 +68,7 @@ namespace EastFive.Security.SessionServer.Api
         {
             var context = request.GetSessionServerContext();
             return await context.Integrations.GetAsync(authenticationRequestId,
-                    urlHelper.GetLocation<Controllers.ResponseController>(),
+                    (controllerType) => urlHelper.GetLocation(controllerType),
                 (authenticationRequest) =>
                 {
                     var response = request.CreateResponse(HttpStatusCode.OK,
@@ -85,7 +85,7 @@ namespace EastFive.Security.SessionServer.Api
         {
             var context = request.GetSessionServerContext();
             return await context.Integrations.GetByActorAsync(actorId,
-                    urlHelper.GetLocation<Controllers.ResponseController>(),
+                    (controllerType) => urlHelper.GetLocation(controllerType),
                     actingAs, claims,
                 (authenticationRequests) =>
                 {

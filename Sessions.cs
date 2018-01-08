@@ -97,7 +97,7 @@ namespace EastFive.Security.SessionServer
                 () => authenticate(new Dictionary<string, string>()));
         }
         
-        internal async Task<TResult> GetAsync<TResult>(Guid authenticationRequestId, Uri callbackUrl,
+        internal async Task<TResult> GetAsync<TResult>(Guid authenticationRequestId, Func<Type, Uri> callbackUrlFunc,
             Func<Session, TResult> onSuccess,
             Func<string, TResult> onNotFound,
             Func<string, TResult> onFailure)
@@ -112,6 +112,7 @@ namespace EastFive.Security.SessionServer
                         (provider) =>
                         {
                             var authenticationRequest = Convert(authenticationRequestStorage);
+                            var callbackUrl = callbackUrlFunc(provider.CallbackController);
                             authenticationRequest.loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackUrl);
                             authenticationRequest.logoutUrl = provider.GetLogoutUrl(authenticationRequestId, callbackUrl);
                             return onSuccess(authenticationRequest);
@@ -177,7 +178,7 @@ namespace EastFive.Security.SessionServer
                         async (subject, stateId, loginId, extraParamsWithRedemptionParams) =>
                         {
                             if (stateId.HasValue)
-                                return await AuthenticateStateAsync(sessionId, stateId, loginId, method, subject, extraParamsWithRedemptionParams,
+                                return await AuthenticateStateAsync(sessionId, stateId.Value, loginId, method, subject, extraParamsWithRedemptionParams,
                                     onLogin,
                                     onLogout,
                                     onInvalidToken,
@@ -193,7 +194,16 @@ namespace EastFive.Security.SessionServer
                                             default(Uri)), // No redirect URL is available since an AuthorizationRequest was not provided
                                         onNotConfigured);
                                 },
-                                () => onInvalidToken("The token does not match an Authentication request").ToTask());
+                                () => onInvalidToken("The token does not map to a user in this system.").ToTask());
+                        },
+                        async (stateId, extraParamsWithRedemptionParams) =>
+                        {
+                            if (!stateId.HasValue)
+                                onLogout(default(Uri));
+
+                            return await dataContext.AuthenticationRequests.FindByIdAsync(stateId.Value,
+                                (authRequest) => onLogout(authRequest.redirectLogout),
+                                () => onLogout(default(Uri)));
                         },
                         onInvalidToken.AsAsyncFunc(),
                         systemOffline.AsAsyncFunc(),
@@ -204,7 +214,7 @@ namespace EastFive.Security.SessionServer
                 (why) => onNotConfigured(why).ToTask());
         }
 
-        private async Task<TResult> AuthenticateStateAsync<TResult>(Guid sessionId, Guid? stateId, Guid? loginId, CredentialValidationMethodTypes method,
+        private async Task<TResult> AuthenticateStateAsync<TResult>(Guid sessionId, Guid stateId, Guid? loginId, CredentialValidationMethodTypes method,
                 string subject, IDictionary<string, string> extraParams,
             Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onLogin,
             Func<Uri, TResult> onLogout,
@@ -212,7 +222,7 @@ namespace EastFive.Security.SessionServer
             Func<string, TResult> onNotConfigured,
             Func<string, TResult> onFailure)
         {
-            return await this.dataContext.AuthenticationRequests.UpdateAsync(stateId.Value,
+            return await this.dataContext.AuthenticationRequests.UpdateAsync(stateId,
                 async (authenticationRequest, saveAuthRequest) =>
                 {
                     if (authenticationRequest.Deleted.HasValue)
@@ -232,7 +242,7 @@ namespace EastFive.Security.SessionServer
 
                     if (AuthenticationActions.access == authenticationRequest.action)
                         return await context.Integrations.UpdateAsync(authenticationRequest,
-                                sessionId, stateId.Value, method, extraParams,
+                                sessionId, stateId, method, extraParams,
                                 saveAuthRequest,
                             onLogin,
                             onInvalidToken,
@@ -249,12 +259,12 @@ namespace EastFive.Security.SessionServer
                                 async (token, refreshToken) =>
                                 {
                                     await saveAuthRequest(authenticationId, token, extraParams);
-                                    return onLogin(stateId.Value, authenticationId,
+                                    return onLogin(stateId, authenticationId,
                                         token, refreshToken, AuthenticationActions.signin, extraParams, authenticationRequest.redirect);
                                 },
                                 onNotConfigured.AsAsyncFunc());
                         },
-                        () => onInvalidToken("The token does not match an Authentication request").ToTask());
+                        () => onInvalidToken("The token does not match a user in this system.").ToTask());
                 },
                 () => onInvalidToken("The token does not match an Authentication request"));
         }
@@ -310,7 +320,7 @@ namespace EastFive.Security.SessionServer
         }
 
         public async Task<TResult> DeleteAsync<TResult>(Guid sessionId,
-                Uri callbackLocation,
+                Func<Type, Uri> callbackLocationFunc,
             Func<Session, TResult> onSuccess,
             Func<TResult> onNotFound,
             Func<string, TResult> onFailure)
@@ -324,6 +334,7 @@ namespace EastFive.Security.SessionServer
                             session.Deleted = DateTime.UtcNow;
                             await markForDeleteAsync();
                             var deletedSession = Convert(session);
+                            var callbackLocation = callbackLocationFunc(provider.CallbackController);
                             deletedSession.logoutUrl = provider.GetLogoutUrl(sessionId, callbackLocation);
                             return onSuccess(deletedSession);
                         },

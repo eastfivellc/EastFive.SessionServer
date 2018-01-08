@@ -34,7 +34,8 @@ namespace EastFive.Security.SessionServer.Api
                     var response = request.CreateResponse(HttpStatusCode.OK,
                         methods.Select(method => Convert(method, urlHelper)));
                     return response;
-                });
+                },
+                why => request.CreateResponse(HttpStatusCode.ServiceUnavailable).AddReason(why));
         }
         
         private static async Task<HttpResponseMessage> QueryByIntegrationAsync(bool supportsIntegrations,
@@ -47,7 +48,8 @@ namespace EastFive.Security.SessionServer.Api
                     var response = request.CreateResponse(HttpStatusCode.OK,
                         methods.Select(method => Convert(method, urlHelper)));
                     return response;
-                });
+                },
+                why => request.CreateResponse(HttpStatusCode.ServiceUnavailable).AddReason(why));
         }
 
         private static Resources.AuthenticationRequestLink Convert(CredentialValidationMethodTypes method, UrlHelper urlHelper)

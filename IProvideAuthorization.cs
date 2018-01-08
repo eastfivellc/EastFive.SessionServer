@@ -23,6 +23,7 @@ namespace EastFive.Security.SessionServer
         /// not be a default or empty string if the token was valid.</returns>
         Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> responseParams,
             Func<string, Guid?, Guid?, IDictionary<string, string>, TResult> onSuccess,
+            Func<Guid?, IDictionary<string, string>, TResult> onNotAuthenticated,
             Func<string, TResult> onInvalidToken,
             Func<string, TResult> onCouldNotConnect,
             Func<string, TResult> onUnspecifiedConfiguration,

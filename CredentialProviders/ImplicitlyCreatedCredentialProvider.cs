@@ -24,6 +24,7 @@ namespace EastFive.Security.SessionServer.CredentialProvider.ImplicitCreation
         public CredentialValidationMethodTypes Method => CredentialValidationMethodTypes.Implicit;
         public Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> extraParams,
             Func<string, Guid?, Guid?, IDictionary<string, string>, TResult> onSuccess,
+            Func<Guid?, IDictionary<string, string>, TResult> onUnauthenticated,
             Func<string, TResult> onInvalidCredentials,
             Func<string, TResult> onCouldNotConnect,
             Func<string, TResult> onUnspecifiedConfiguration,

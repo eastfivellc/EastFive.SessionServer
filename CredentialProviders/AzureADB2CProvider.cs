@@ -92,18 +92,22 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
 
         public async Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> extraParams,
             Func<string, Guid?, Guid?, IDictionary<string, string>, TResult> onSuccess,
+            Func<Guid?, IDictionary<string, string>, TResult> onUnauthenticated,
             Func<string, TResult> onInvalidCredentials,
             Func<string, TResult> onCouldNotConnect,
             Func<string, TResult> onUnspecifiedConfiguration,
             Func<string, TResult> onFailure)
         {
-            if (!extraParams.ContainsKey(AzureADB2CProvider.IdTokenKey))
-                return onFailure($"{AzureADB2CProvider.IdTokenKey} not in auth response");
             if (!extraParams.ContainsKey(AzureADB2CProvider.StateKey))
                 return onFailure($"{AzureADB2CProvider.StateKey} not in auth response");
-
-            var token = extraParams[AzureADB2CProvider.IdTokenKey];
             var stateParam = extraParams[AzureADB2CProvider.StateKey];
+            if (!Guid.TryParse(stateParam, out Guid stateId))
+                return onFailure($"Invalid state parameter [{stateParam}] is not a GUID");
+
+            if (!extraParams.ContainsKey(AzureADB2CProvider.IdTokenKey))
+                return onUnauthenticated(stateId, extraParams);
+            var token = extraParams[AzureADB2CProvider.IdTokenKey];
+
             return await this.ValidateToken(token,
                 (claims) =>
                 {
@@ -111,9 +115,6 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
                             EastFive.Security.SessionServer.Configuration.AppSettings.LoginIdClaimType,
                         (claimType) =>
                         {
-                            if (!Guid.TryParse(stateParam, out Guid stateId))
-                                return onFailure($"Invalid state parameter [{stateParam}] is not a GUID");
-
                             var authClaims = claims.Claims
                                         .Where(claim => claim.Type.CompareTo(claimType) == 0)
                                         .ToArray();

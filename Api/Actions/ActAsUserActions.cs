@@ -135,7 +135,7 @@ namespace EastFive.Security.SessionServer.Api
                 () =>
                 {
                     return request.CreateResponse(HttpStatusCode.NotFound)
-                        .AddReason($"The provided loginId [{loginId}] was not found")
+                        .AddReason($"The provided loginId [{loginId}] did not map to a user in this system.")
                         .ToTask();
                 },
                 (why) =>
