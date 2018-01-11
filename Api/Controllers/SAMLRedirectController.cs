@@ -28,13 +28,13 @@ namespace EastFive.Security.SessionServer.Api.Controllers
     {
         public async Task<IHttpActionResult> Post()
         {
-            //return await await this.Request.Content.ParseMultipartAsync(
-            //    (string SAMLResponse) =>
-            //    {
-            //        return ParseSAMLResponseAsync(SAMLResponse);
-            //    });
             return await await this.Request.Content.ParseMultipartAsync(
-                (byte[] SAMLResponse) => ParseSAMLResponseAsync(SAMLResponse));
+                (byte[] SAMLResponse) => ParseSAMLResponseAsync(SAMLResponse),
+                () => this.Request
+                    .CreateResponse(HttpStatusCode.BadRequest)
+                    .AddReason("Content was not multipart")
+                    .ToActionResult()
+                    .ToTask());
         }
 
         private TResult ParseToDictionary<TResult>(string samlResponse,
