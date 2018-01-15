@@ -8,6 +8,8 @@ namespace EastFive.Security.SessionServer
     public interface IProvideAuthorization
     {
         CredentialValidationMethodTypes Method { get; }
+        
+        Type CallbackController { get; }
 
         /// <summary>
         /// This method validates that the provided token is valid for

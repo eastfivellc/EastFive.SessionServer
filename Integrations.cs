@@ -43,25 +43,24 @@ namespace EastFive.Security.SessionServer
                 async (provider) =>
                 {
                     var sessionId = SecureGuid.Generate();
-                    var result = await this.dataContext.AuthenticationRequests.CreateAsync(authenticationRequestId,
-                            method, AuthenticationActions.access, authenticationId, redirectUrl, redirectUrl,
-                        () => BlackBarLabs.Security.Tokens.JwtTools.CreateToken(sessionId, callbackLocation, TimeSpan.FromMinutes(30),
-                            (token) => onSuccess(
-                                new Session()
-                                {
-                                    id = authenticationRequestId,
-                                    method = method,
-                                    action = AuthenticationActions.access,
-                                    loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackLocation),
-                                    logoutUrl = provider.GetLogoutUrl(authenticationRequestId, callbackLocation),
-                                    redirectUrl = redirectUrl,
-                                    authorizationId = authenticationId,
-                                    token = token,
-                                }),
-                            why => onFailure(why),
-                            (param, why) => onFailure($"Invalid configuration for {param}:{why}")),
-                        onAlreadyExists);
-                    return result;
+                    return await BlackBarLabs.Security.Tokens.JwtTools.CreateToken(sessionId, callbackLocation, TimeSpan.FromMinutes(30),
+                            (token) => this.dataContext.AuthenticationRequests.CreateAsync(authenticationRequestId,
+                                    method, AuthenticationActions.access, authenticationId, token, redirectUrl, redirectUrl,
+                                () => onSuccess(
+                                    new Session()
+                                    {
+                                        id = authenticationRequestId,
+                                        method = method,
+                                        action = AuthenticationActions.access,
+                                        loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackLocation),
+                                        logoutUrl = provider.GetLogoutUrl(authenticationRequestId, callbackLocation),
+                                        redirectUrl = redirectUrl,
+                                        authorizationId = authenticationId,
+                                        token = token,
+                                    }),
+                                onAlreadyExists),
+                            why => onFailure(why).ToTask(),
+                            (param, why) => onFailure($"Invalid configuration for {param}:{why}").ToTask());
                 },
                 onCredentialSystemNotAvailable.AsAsyncFunc(),
                 onCredentialSystemNotInitialized.AsAsyncFunc());
@@ -100,7 +99,7 @@ namespace EastFive.Security.SessionServer
                 actingAs, claims))
                 return onUnathorized();
 
-            var integrations = await ServiceConfiguration.accessProviders
+            var integrations = await ServiceConfiguration.loginProviders
                 .Select(
                     ap => this.dataContext.Accesses.FindAsync(actorId, ap.Key,
                         (authenticationRequestId, extraParams) =>

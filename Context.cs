@@ -75,27 +75,27 @@ namespace EastFive.Security.SessionServer
             return onSuccess(provider);
         }
 
-        internal TResult GetAccessProvider<TResult>(CredentialValidationMethodTypes method,
-            Func<IProvideAccess, TResult> onSuccess,
-            Func<TResult> onCredintialSystemNotAvailable,
-            Func<string, TResult> onFailure)
-        {
-            if (ServiceConfiguration.accessProviders.IsDefault())
-                return onFailure("Authentication system not initialized.");
+        //internal TResult GetAccessProvider<TResult>(CredentialValidationMethodTypes method,
+        //    Func<IProvideAccess, TResult> onSuccess,
+        //    Func<TResult> onCredintialSystemNotAvailable,
+        //    Func<string, TResult> onFailure)
+        //{
+        //    if (ServiceConfiguration.accessProviders.IsDefault())
+        //        return onFailure("Authentication system not initialized.");
 
-            if (!ServiceConfiguration.accessProviders.ContainsKey(method))
-                return onCredintialSystemNotAvailable();
+        //    if (!ServiceConfiguration.accessProviders.ContainsKey(method))
+        //        return onCredintialSystemNotAvailable();
 
-            var provider = ServiceConfiguration.accessProviders[method];
-            return onSuccess(provider);
-        }
+        //    var provider = ServiceConfiguration.accessProviders[method];
+        //    return onSuccess(provider);
+        //}
 
-        internal TResult GetAccessProviders<TResult>(
-            Func<IProvideAccess[], TResult> onSuccess,
-            Func<string, TResult> onFailure)
-        {
-            return onSuccess(ServiceConfiguration.accessProviders.SelectValues().ToArray());
-        }
+        //internal TResult GetAccessProviders<TResult>(
+        //    Func<IProvideAccess[], TResult> onSuccess,
+        //    Func<string, TResult> onFailure)
+        //{
+        //    return onSuccess(ServiceConfiguration.accessProviders.SelectValues().ToArray());
+        //}
 
         internal TResult GetLoginProviders<TResult>(
             Func<IProvideLogin[], TResult> onSuccess,

@@ -53,7 +53,7 @@ namespace EastFive.Security.SessionServer
                     var callbackLocation = controllerToLocation(provider.CallbackController);
                     var sessionId = SecureGuid.Generate();
                     var result = await this.dataContext.AuthenticationRequests.CreateAsync(authenticationRequestId,
-                            method, AuthenticationActions.signin, default(Guid?), redirectUrl, redirectLogoutUrl,
+                            method, AuthenticationActions.signin, redirectUrl, redirectLogoutUrl,
                         () => BlackBarLabs.Security.Tokens.JwtTools.CreateToken(sessionId, callbackLocation, TimeSpan.FromMinutes(30),
                             (token) => onSuccess(
                                 new Session()
@@ -74,6 +74,43 @@ namespace EastFive.Security.SessionServer
                 },
                 onCredentialSystemNotAvailable.AsAsyncFunc(),
                 onCredentialSystemNotInitialized.AsAsyncFunc());
+        }
+
+        internal async Task<TResult> CreateLoginAsync<TResult>(Guid authenticationRequestId, Guid authenticationId,
+                CredentialValidationMethodTypes method, Uri callbackLocation,
+            Func<Session, TResult> onSuccess,
+            Func<TResult> onAlreadyExists,
+            Func<string, TResult> onFailure)
+        {
+            return await EastFive.Web.Configuration.Settings.GetUri(
+                EastFive.Security.AppSettings.TokenScope,
+                async (scope) =>
+                {
+                    var sessionId = SecureGuid.Generate();
+                    var claims = await this.context.Claims.FindByAccountIdAsync(authenticationId,
+                        (c) => c,
+                        () => new System.Security.Claims.Claim[] { });
+                    return await BlackBarLabs.Security.Tokens.JwtTools.CreateToken(sessionId: sessionId,
+                            authId: authenticationId, scope: scope, duration: TimeSpan.FromMinutes(30), claims: claims,
+                            tokenCreated:
+                                (token) => this.dataContext.AuthenticationRequests.CreateAsync(authenticationRequestId,
+                                        method, AuthenticationActions.signin, authenticationId, token, callbackLocation, callbackLocation,
+                                    () =>
+                                    {
+                                        var session = new Session()
+                                        {
+                                            id = authenticationRequestId,
+                                            method = method,
+                                            action = AuthenticationActions.signin,
+                                            token = token,
+                                        };
+                                        return onSuccess(session);
+                                    },
+                                    onAlreadyExists),
+                            missingConfigurationSetting: why => onFailure(why).ToTask(),
+                            invalidConfigurationSetting: (param, why) => onFailure($"Invalid configuration for {param}:{why}").ToTask());
+                },
+                onFailure.AsAsyncFunc());
         }
 
         internal async Task<TResult> CreateSessionAsync<TResult>(Guid sessionId, Guid authenticationId,

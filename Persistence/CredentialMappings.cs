@@ -26,7 +26,7 @@ namespace EastFive.Security.SessionServer.Persistence
             var partitionKey = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
             return await await repository.FindLinkedDocumentAsync(subject, partitionKey,
                 (Azure.Documents.CredentialMappingLookupDocument document) => document.CredentialMappingId,
-                (Azure.Documents.CredentialMappingLookupDocument lookupDoc, Azure.Documents.CredentialMappingDocument mappingDoc) =>
+                (Azure.Documents.CredentialMappingLookupDocument lookupDoc, Documents.CredentialMappingDocument mappingDoc) =>
                     onSuccess(mappingDoc.ActorId).ToTask(),
                 () => loginId.HasValue?
                     repository.FindByIdAsync(loginId.Value,
@@ -48,11 +48,11 @@ namespace EastFive.Security.SessionServer.Persistence
         }
 
         public async Task<TResult> FindAllCredentialMappingAsync<TResult>(
-            Func<Tuple<Guid, Guid>[], TResult> onSuccess)
+            Func<CredentialMapping[], TResult> onSuccess)
         {
             return await repository.FindAllAsync(
-                (Documents.LoginActorLookupDocument[] docs) =>
-                    onSuccess(docs.Select(x => new Tuple<Guid,Guid>(x.Id, x.ActorId)).ToArray())
+                (Documents.CredentialMappingDocument[] docs) =>
+                    onSuccess(docs.Select(doc => Convert(doc)).ToArray())
                 );
         }
         
@@ -65,7 +65,7 @@ namespace EastFive.Security.SessionServer.Persistence
             var rollback = new RollbackAsync<TResult>();
 
             var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
-            var credentialMappingDoc = new Azure.Documents.CredentialMappingDocument()
+            var credentialMappingDoc = new Documents.CredentialMappingDocument()
             {
                 Method = methodName,
                 Subject = subjectId,
@@ -293,6 +293,17 @@ namespace EastFive.Security.SessionServer.Persistence
                 actorId = inviteDoc.ActorId,
                 email = inviteDoc.Email,
                 lastSent = inviteDoc.LastSent,
+            };
+        }
+
+        private static CredentialMapping Convert(Documents.CredentialMappingDocument mappingDoc)
+        {
+            return new CredentialMapping
+            {
+                id = mappingDoc.Id,
+                actorId = mappingDoc.ActorId,
+                method =  mappingDoc.Method.AsEnum<CredentialValidationMethodTypes>(),
+                subject = mappingDoc.Subject,
             };
         }
 

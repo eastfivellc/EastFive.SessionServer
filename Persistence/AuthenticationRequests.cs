@@ -41,7 +41,31 @@ namespace EastFive.Security.SessionServer.Persistence
 
         public async Task<TResult> CreateAsync<TResult>(Guid authenticationRequestId,
                 CredentialValidationMethodTypes method, AuthenticationActions action,
-                Guid? actorLinkId, Uri redirectUrl, Uri redirectLogoutUrl,
+                Uri redirectUrl, Uri redirectLogoutUrl,
+            Func<TResult> onSuccess,
+            Func<TResult> onAlreadyExists)
+        {
+            var doc = new Documents.AuthenticationRequestDocument
+            {
+                Method = Enum.GetName(typeof(CredentialValidationMethodTypes), method),
+                Action = Enum.GetName(typeof(AuthenticationActions), action),
+                RedirectUrl = redirectUrl.IsDefault()?
+                    default(string)
+                    :
+                    redirectUrl.AbsoluteUri,
+                RedirectLogoutUrl = redirectLogoutUrl.IsDefault() ?
+                    default(string)
+                    :
+                    redirectLogoutUrl.AbsoluteUri,
+            };
+            return await this.repository.CreateAsync(authenticationRequestId, doc,
+                () => onSuccess(),
+                () => onAlreadyExists());
+        }
+
+        public async Task<TResult> CreateAsync<TResult>(Guid authenticationRequestId,
+                CredentialValidationMethodTypes method, AuthenticationActions action,
+                Guid actorLinkId, string token, Uri redirectUrl, Uri redirectLogoutUrl,
             Func<TResult> onSuccess,
             Func<TResult> onAlreadyExists)
         {
@@ -50,7 +74,8 @@ namespace EastFive.Security.SessionServer.Persistence
                 Method = Enum.GetName(typeof(CredentialValidationMethodTypes), method),
                 Action = Enum.GetName(typeof(AuthenticationActions), action),
                 LinkedAuthenticationId = actorLinkId,
-                RedirectUrl = redirectUrl.IsDefault()?
+                Token = token,
+                RedirectUrl = redirectUrl.IsDefault() ?
                     default(string)
                     :
                     redirectUrl.AbsoluteUri,

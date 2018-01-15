@@ -46,18 +46,17 @@ namespace EastFive.Security.SessionServer
                                         {
                                             var loginActorLookupActorId = default(Guid);
                                             var actorMappingId = default(Guid);
-                                            var loginActorLookup = loginActorLookups.FirstOrDefault(l => l.Item1 == pc.LoginId);
-                                            if (default(Tuple<Guid, Guid>) != loginActorLookup)
+                                            var loginActorLookupsMatchingLoginId = loginActorLookups
+                                                .Where(l => l.loginId == pc.LoginId);
+
+                                            var loginActorFound = loginActorLookupsMatchingLoginId.Any();
+                                            if(loginActorFound)
                                             {
-                                                loginActorLookupActorId = loginActorLookup.Item2;
-                                                
+                                                var loginActorLookup = loginActorLookupsMatchingLoginId.First();
+                                                loginActorLookupActorId = loginActorLookup.actorId;
                                                 actorMappingId = actorMappingIds.FirstOrDefault(id => id == loginActorLookupActorId);
                                             }
-
-                                            var loginActorFound = false;
-                                            if (default(Guid) != loginActorLookupActorId)
-                                                loginActorFound = true;
-
+                                            
                                             var actorMappingFound = false;
                                             if (default(Guid) != actorMappingId)
                                                 actorMappingFound = true;

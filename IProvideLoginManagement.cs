@@ -52,5 +52,6 @@ namespace EastFive.Security.SessionServer
             Func<string, TResult> onServiceNotAvailable,
             Func<TResult> onServiceNotSupported,
             Func<string, TResult> onFailure);
+        
     }
 }

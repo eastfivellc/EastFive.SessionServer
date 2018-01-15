@@ -180,6 +180,7 @@
     <Compile Include="Api\Controllers\SessionController.cs" />
     <Compile Include="Api\RequestExtensions.cs" />
     <Compile Include="Api\Resources\AccountLink.cs" />
+    <Compile Include="Api\Resources\UserInfo.cs" />
     <Compile Include="Api\Resources\AuthHeaderProps.cs" />
     <Compile Include="Api\Controllers\AccountLinksController.cs" />
     <Compile Include="Api\Resources\ActAsUser.cs" />
@@ -213,7 +214,7 @@
     <Compile Include="CredentialProviders\PingProvider.cs" />
     <Compile Include="CredentialProviders\SAMLProvider.cs" />
     <Compile Include="CredentialProviders\TokenCredentialProvider.cs" />
-    <Compile Include="IProvideAccess.cs" />
+    <Compile Include="IProvideToken.cs" />
     <Compile Include="IProvideLoginManagement.cs" />
     <Compile Include="Integrations.cs" />
     <Compile Include="IProvideLogin.cs" />

@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace EastFive.Security.CredentialProvider
 {
-    public class LightspeedProvider : IProvideLogin, IProvideAccess
+    public class LightspeedProvider : IProvideLogin
     {
         #region Initialization
 
@@ -253,24 +253,6 @@ namespace EastFive.Security.CredentialProvider
         
         #endregion
 
-        #region IProvideAccess
-
-        public async Task<TResult> CreateSessionAsync<TResult>(IDictionary<string, string> parameters, 
-            Func<HttpClient, IDictionary<string, string>, TResult> onCreatedSession, 
-            Func<string, TResult> onFailedToCreateSession)
-        {
-            if (!parameters.ContainsKey(LightspeedProvider.accessTokenKey))
-                return onFailedToCreateSession($"Could not create connection because [{LightspeedProvider.accessTokenKey}] was not included in parameters");
-
-            using (var client = new HttpClient())
-            {
-                var accessToken = parameters[LightspeedProvider.accessTokenKey];
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
-                return await onCreatedSession(client, parameters).ToTask();
-            }
-        }
         
-        #endregion
     }
 }

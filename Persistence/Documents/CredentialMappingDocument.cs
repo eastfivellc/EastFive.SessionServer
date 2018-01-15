@@ -2,7 +2,7 @@
 using System;
 using System.Runtime.Serialization;
 
-namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
+namespace EastFive.Security.SessionServer.Persistence.Documents
 {
     internal class CredentialMappingDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
     {

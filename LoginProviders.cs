@@ -49,9 +49,7 @@ namespace EastFive.Security.SessionServer
         {
             if (!integrationOnly)
                 return GetAllAsync(onSuccess, onFailure);
-            return onSuccess(ServiceConfiguration.accessProviders.SelectKeys().ToArray()).ToTask();
+            return onSuccess(ServiceConfiguration.loginProviders.SelectKeys().ToArray()).ToTask();
         }
-
-
     }
 }

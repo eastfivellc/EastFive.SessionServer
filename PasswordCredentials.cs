@@ -257,50 +257,53 @@ namespace EastFive.Security.SessionServer
 
         public struct LoginInfo
         {
-            public LoginInfo(string userId, Guid loginId, Guid actorId, bool accountEnabled)
-            {
-                UserId = userId;
-                LoginId = loginId;
-                ActorId = actorId;
-                AccountEnabled = accountEnabled;
-            }
-
             public string UserId;
             public Guid LoginId;
             public Guid ActorId;
             public bool AccountEnabled;
+            public IDictionary<string, string> Tokens;
+            public CredentialValidationMethodTypes Method;
         }
        
         public async Task<TResult> GetAllLoginInfoAsync<TResult>(
-            Func<LoginInfo[], TResult> success)
+            Func<LoginInfo[], TResult> onSuccess,
+            Func<TResult> onNoTokenProviders)
         {
-            var passwordCredentialInfosTask = this.dataContext.PasswordCredentials.FindAllAsync(results => results);
-            var loginInfosTask =  managmentProvider.GetAllAuthorizationsAsync(results => results, 
-                why => new SessionServer.LoginInfo[] {},
-                () => new SessionServer.LoginInfo[] {},
-                why => new SessionServer.LoginInfo[] {});
-            var mapTask = this.context.Credentials.GetAllAccountIdAsync(results => results);
+            if (!ServiceConfiguration.tokenProviders.Any())
+                return onNoTokenProviders();
 
-            await Task.WhenAll(passwordCredentialInfosTask, loginInfosTask, mapTask);
-
-            var passwordCredentialInfos = await passwordCredentialInfosTask;
-            var loginInfos = await loginInfosTask;
-            var map = await mapTask;
-
-            return success(passwordCredentialInfos
-                .Select(
-                    p =>
-                    {
-                        var actorId = map.Where(m => m.Item1 == p.LoginId).Select(m => m.Item2).FirstOrDefault();
-                        var loginInfo = loginInfos.FirstOrDefault(t => t.loginId == p.LoginId);
-                        var userName = loginInfo.userName;
-                        var accountEnabled = loginInfo.accountEnabled;
-                        return (default(Guid) == actorId || String.IsNullOrEmpty(userName))
-                            ? default(LoginInfo?) : new LoginInfo(userName, p.LoginId, actorId, accountEnabled);
-                    })
-                .Where(x => x.HasValue)
-                .Select(x => x.Value)
-                .ToArray());
+            var tokenProvider = ServiceConfiguration.tokenProviders.First().Value;
+            return await await this.context.Credentials.GetAllAccountIdAsync(
+                async credentialMappings =>
+                {
+                    var lookups = await credentialMappings
+                        .Take(3)
+                        .Select(
+                            async credentialMapping =>
+                            {
+                                var mapping = new LoginInfo
+                                {
+                                    AccountEnabled = true,
+                                    ActorId = credentialMapping.actorId,
+                                    LoginId = credentialMapping.loginId,
+                                    Tokens = tokenProvider.CreateTokens(credentialMapping.actorId),
+                                    Method = tokenProvider.Method,
+                                };
+                                if (ServiceConfiguration.managementProviders.ContainsKey(credentialMapping.method))
+                                {
+                                    var provider = ServiceConfiguration.managementProviders[credentialMapping.method];
+                                    mapping.UserId = await provider.GetAuthorizationAsync(credentialMapping.loginId,
+                                        un => un.displayName,
+                                        () => string.Empty,
+                                        (why) => string.Empty,
+                                        () => string.Empty,
+                                        (why) => string.Empty);
+                                }
+                                return mapping;
+                            })
+                        .WhenAllAsync();
+                    return onSuccess(lookups);
+                });
         }
 
         internal async Task<TResult> UpdatePasswordCredentialAsync<TResult>(Guid passwordCredentialId,

@@ -176,7 +176,7 @@ namespace EastFive.Security.SessionServer
         #endregion
         
         public Task<TResult> GetAllAccountIdAsync<TResult>(
-            Func<Tuple<Guid, Guid>[], TResult> onSuccess)
+            Func<Persistence.CredentialMapping[], TResult> onSuccess)
         {
             return this.dataContext.CredentialMappings.FindAllCredentialMappingAsync(onSuccess);
         }

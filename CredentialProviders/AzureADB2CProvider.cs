@@ -284,8 +284,8 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
             var result = await client.DeleteUser(loginId.ToString());
             return onSuccess();
         }
-        
+
         #endregion
-        
+
     }
 }
