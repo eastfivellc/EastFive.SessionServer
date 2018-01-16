@@ -28,12 +28,19 @@ namespace EastFive.Security.SessionServer.Persistence
                 (Azure.Documents.CredentialMappingLookupDocument document) => document.CredentialMappingId,
                 (Azure.Documents.CredentialMappingLookupDocument lookupDoc, Documents.CredentialMappingDocument mappingDoc) =>
                     onSuccess(mappingDoc.ActorId).ToTask(),
-                () => loginId.HasValue?
-                    repository.FindByIdAsync(loginId.Value,
-                        (Documents.LoginActorLookupDocument document) => onSuccess(document.ActorId), // TODO: Migrate this by creating a CredentialMappingLookupDoc with the subject/partitionKey(method)
-                        () => onNotExist())
+                async () => loginId.HasValue?
+                    await await repository.FindByIdAsync(loginId.Value,
+                        (Documents.LoginActorLookupDocument document) =>
+                        {
+                            // Migrate this by creating a CredentialMappingLookupDoc with the subject/partitionKey(method)
+                            return CreateCredentialMappingAsync(Guid.NewGuid(), method, subject, document.ActorId,
+                                () => onSuccess(document.ActorId),
+                                () => onSuccess(document.ActorId),
+                                () => onSuccess(document.ActorId));
+                        }, 
+                        onNotExist.AsAsyncFunc())
                     :
-                    onNotExist().ToTask(),
+                    onNotExist(),
                 () => onNotExist().ToTask());
         }
 
@@ -50,10 +57,21 @@ namespace EastFive.Security.SessionServer.Persistence
         public async Task<TResult> FindAllCredentialMappingAsync<TResult>(
             Func<CredentialMapping[], TResult> onSuccess)
         {
+            var actorCredMappings = await repository.FindAllAsync(
+                (Documents.LoginActorLookupDocument[] docs) =>
+                    docs
+                        .Select(
+                            doc => new CredentialMapping
+                            {
+                                actorId = doc.ActorId,
+                                loginId = doc.Id,
+                                method = CredentialValidationMethodTypes.Password,
+                                id = Guid.NewGuid(),
+                            }));
+
             return await repository.FindAllAsync(
                 (Documents.CredentialMappingDocument[] docs) =>
-                    onSuccess(docs.Select(doc => Convert(doc)).ToArray())
-                );
+                    onSuccess(docs.Select(doc => Convert(doc)).Concat(actorCredMappings).ToArray()));
         }
         
         internal async Task<TResult> CreateCredentialMappingAsync<TResult>(Guid credentialMappingId,
