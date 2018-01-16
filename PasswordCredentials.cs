@@ -269,10 +269,10 @@ namespace EastFive.Security.SessionServer
             Func<LoginInfo[], TResult> onSuccess,
             Func<TResult> onNoTokenProviders)
         {
-            if (!ServiceConfiguration.tokenProviders.Any())
+            if (!ServiceConfiguration.credentialProviders.Any())
                 return onNoTokenProviders();
 
-            var tokenProvider = ServiceConfiguration.tokenProviders.First().Value;
+            var tokenProvider = ServiceConfiguration.credentialProviders.First().Value;
             return await await this.context.Credentials.GetAllAccountIdAsync(
                 async credentialMappings =>
                 {
@@ -286,7 +286,7 @@ namespace EastFive.Security.SessionServer
                                     AccountEnabled = true,
                                     ActorId = credentialMapping.actorId,
                                     LoginId = credentialMapping.loginId,
-                                    Tokens = tokenProvider.CreateTokens(credentialMapping.actorId),
+                                    //Tokens = tokenProvider.CreateTokens(credentialMapping.actorId),
                                     Method = tokenProvider.Method,
                                 };
                                 if (ServiceConfiguration.managementProviders.ContainsKey(credentialMapping.method))
