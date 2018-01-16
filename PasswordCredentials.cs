@@ -10,6 +10,7 @@ using System.Security.Claims;
 using BlackBarLabs;
 using BlackBarLabs.Linq;
 using BlackBarLabs.Linq.Async;
+using EastFive.Linq.Async;
 
 namespace EastFive.Security.SessionServer
 {
@@ -265,7 +266,7 @@ namespace EastFive.Security.SessionServer
             public CredentialValidationMethodTypes Method;
         }
        
-        public async Task<TResult> GetAllLoginInfoAsync<TResult>(
+        public async Task<TResult> GetAllLoginInfoAsync<TResult>(Guid actorPerforming, System.Security.Claims.Claim [] claims,
             Func<LoginInfo[], TResult> onSuccess,
             Func<TResult> onNoTokenProviders)
         {
@@ -277,7 +278,8 @@ namespace EastFive.Security.SessionServer
                 async credentialMappings =>
                 {
                     var lookups = await credentialMappings
-                        .Select(
+                        .WhereAsync(info => Library.configurationManager.CanAdministerCredentialAsync(info.actorId, actorPerforming, claims))
+                        .SelectAsync(
                             async credentialMapping =>
                             {
                                 var mapping = new LoginInfo

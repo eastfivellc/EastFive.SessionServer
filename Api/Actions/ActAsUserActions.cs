@@ -51,12 +51,11 @@ namespace EastFive.Security.SessionServer.Api
             HttpRequestMessage request, UrlHelper url)
         {
             var context = request.GetSessionServerContext();
-            return await await context.PasswordCredentials.GetAllLoginInfoAsync(
-                async loginInfos =>
+            return await context.PasswordCredentials.GetAllLoginInfoAsync(actorPerforming, claims,
+                loginInfos =>
                 {
-                    var userInfos = await loginInfos
-                        .WhereAsync(info => Library.configurationManager.CanAdministerCredentialAsync(info.ActorId, actorPerforming, claims))
-                        .SelectAsync(
+                    var userInfos = loginInfos
+                        .Select(
                             info =>
                             {
                                 var userInfo = new Resources.UserInfo
@@ -67,14 +66,15 @@ namespace EastFive.Security.SessionServer.Api
                                     Link = info.Tokens
                                         .NullToEmpty()
                                         .Append("RedirectUri".PairWithValue(redirectUri))
+                                        .Append("ActorId".PairWithValue(info.ActorId.ToString()))
                                         .Aggregate(
-                                            url.GetLocation(ServiceConfiguration.credentialProviders[info.Method].CallbackController),
+                                            url.GetLocation<Controllers.ActAsUserController>(),
                                             (baseUrl, param) => baseUrl.AddParameter(param.Key, param.Value),
                                             (uri) => uri.AbsoluteUri),
                                 };
                                 return userInfo;
                             })
-                        .ToArrayAsync();
+                        .ToArray();
 
                     if (request.Headers.Accept.Where(accept => accept.MediaType == "application/json").Any())
                         return request.CreateResponse(HttpStatusCode.OK, userInfos);
@@ -83,8 +83,7 @@ namespace EastFive.Security.SessionServer.Api
                     return request.CreateHtmlResponse(html);
                 },
                 () => request.CreateResponse(HttpStatusCode.ServiceUnavailable)
-                    .AddReason("No token providers configured")
-                    .ToTask());
+                    .AddReason("No token providers configured"));
         }
 
         private static string GenerateActAsUserHtml(Resources.UserInfo[] userInfos)

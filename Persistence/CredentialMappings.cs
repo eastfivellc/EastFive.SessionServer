@@ -67,6 +67,7 @@ namespace EastFive.Security.SessionServer.Persistence
                                 loginId = doc.Id,
                                 method = CredentialValidationMethodTypes.Password,
                                 id = Guid.NewGuid(),
+                                subject = doc.Id.ToString("N"),
                             }));
 
             return await repository.FindAllAsync(
