@@ -277,7 +277,6 @@ namespace EastFive.Security.SessionServer
                 async credentialMappings =>
                 {
                     var lookups = await credentialMappings
-                        .Take(3)
                         .Select(
                             async credentialMapping =>
                             {
