@@ -88,11 +88,9 @@ namespace EastFive.Security.SessionServer
                 {
                     var sessionId = SecureGuid.Generate();
                     var claims = await this.context.Claims.FindByAccountIdAsync(authenticationId,
-                        (c) => c,
-                        () => new System.Security.Claims.Claim[] { });
-                    return await BlackBarLabs.Security.Tokens.JwtTools.CreateToken(sessionId: sessionId,
-                            authId: authenticationId, scope: scope, duration: TimeSpan.FromMinutes(30), claims: claims,
-                            tokenCreated:
+                        (cs) => cs.Select(c => c.Type.PairWithValue(c.Value)).ToDictionary(),
+                        () => new Dictionary<string, string>());
+                    return await Sessions.GenerateToken(sessionId, authenticationId, claims,
                                 (token) => this.dataContext.AuthenticationRequests.CreateAsync(authenticationRequestId,
                                         method, AuthenticationActions.signin, authenticationId, token, callbackLocation, callbackLocation,
                                     () =>
@@ -107,8 +105,7 @@ namespace EastFive.Security.SessionServer
                                         return onSuccess(session);
                                     },
                                     onAlreadyExists),
-                            missingConfigurationSetting: why => onFailure(why).ToTask(),
-                            invalidConfigurationSetting: (param, why) => onFailure($"Invalid configuration for {param}:{why}").ToTask());
+                            why => onFailure(why).ToTask());
                 },
                 onFailure.AsAsyncFunc());
         }
@@ -306,7 +303,7 @@ namespace EastFive.Security.SessionServer
                 () => onInvalidToken("The token does not match an Authentication request"));
         }
 
-        private TResult GenerateToken<TResult>(Guid sessionId, Guid? actorId, IDictionary<string, string> claims,
+        internal static TResult GenerateToken<TResult>(Guid sessionId, Guid? actorId, IDictionary<string, string> claims,
             Func<string, TResult> onTokenGenerated,
             Func<string, TResult> onConfigurationIssue)
         {
