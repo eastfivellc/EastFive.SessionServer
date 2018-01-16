@@ -10,6 +10,7 @@ using BlackBarLabs.Linq;
 using System.Collections.Generic;
 using Microsoft.WindowsAzure.Storage.Table;
 using System.Runtime.Serialization;
+using EastFive.Linq;
 
 namespace EastFive.Security.SessionServer.Persistence.Documents
 {

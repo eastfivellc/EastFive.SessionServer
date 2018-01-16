@@ -16,6 +16,8 @@ using EastFive.Collections.Generic;
 using Microsoft.ApplicationInsights;
 using EastFive.Linq.Async;
 using BlackBarLabs.Linq.Async;
+using EastFive.Linq;
+using BlackBarLabs.Linq;
 
 namespace EastFive.Security.SessionServer.Api
 {
@@ -63,7 +65,8 @@ namespace EastFive.Security.SessionServer.Api
                                     ActorId = info.ActorId,
                                     AccountEnabled = info.AccountEnabled,
                                     Link = info.Tokens
-                                        .Append("RedirectUri", redirectUri)
+                                        .NullToEmpty()
+                                        .Append("RedirectUri".PairWithValue(redirectUri))
                                         .Aggregate(
                                             url.GetLocation(ServiceConfiguration.credentialProviders[info.Method].CallbackController),
                                             (baseUrl, param) => baseUrl.AddParameter(param.Key, param.Value),

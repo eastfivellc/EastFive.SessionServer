@@ -16,9 +16,8 @@ using System.Xml.Linq;
 using Newtonsoft.Json;
 using System.Dynamic;
 using EastFive.Security.CredentialProvider.SAML;
-using BlackBarLabs.Linq;
-using BlackBarLabs.Collections.Generic;
 using EastFive.Collections.Generic;
+using EastFive.Linq;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
