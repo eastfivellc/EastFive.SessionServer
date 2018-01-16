@@ -303,7 +303,7 @@ namespace EastFive.Security.SessionServer
                 () => onInvalidToken("The token does not match an Authentication request"));
         }
 
-        internal static TResult GenerateToken<TResult>(Guid sessionId, Guid? actorId, IDictionary<string, string> claims,
+        private static TResult GenerateToken<TResult>(Guid sessionId, Guid? actorId, IDictionary<string, string> claims,
             Func<string, TResult> onTokenGenerated,
             Func<string, TResult> onConfigurationIssue)
         {
