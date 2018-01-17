@@ -79,7 +79,18 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                     method, values,
                 (sessionId, authorizationId, jwtToken, refreshToken, action, extraParams, redirectUrl) =>
                     CreateResponse(context, method, action, sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUrl, telemetry),
-                (location) => ((IHttpActionResult)Redirect(location)).ToTask(),
+                (location) =>
+                {
+                    if (location.IsDefaultOrNull())
+                        return Web.Configuration.Settings.GetUri(SessionServer.Configuration.AppSettings.LandingPage,
+                            (redirect) => ((IHttpActionResult)Redirect(location))
+                                .ToTask(),
+                            (why) => this.Request.CreateResponse(HttpStatusCode.BadRequest, why)
+                                .AddReason($"Location was null")
+                                .ToActionResult()
+                                .ToTask());
+                    return ((IHttpActionResult)Redirect(location)).ToTask();
+                },
                 (why) =>
                 {
                     var message = $"Invalid token:{why}";
