@@ -33,6 +33,10 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             var response_mode = q.response_mode;
             var redirect_uri = q.redirect_uri;
 
+            return this.Request.CreateResponse(System.Net.HttpStatusCode.OK,
+                "You have an old version of the site. Please refresh your browser")
+                .ToActionResult();
+
             var context = this.Request.GetSessionServerContext();
             if (String.IsNullOrWhiteSpace(redirect_uri))
                 return this.Request.CreateRedirectResponse<Controllers.AuthenticationRequestLinkController>(Url).ToActionResult();
