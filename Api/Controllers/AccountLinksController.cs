@@ -33,9 +33,9 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             var response_mode = q.response_mode;
             var redirect_uri = q.redirect_uri;
 
-            return this.Request.CreateResponse(System.Net.HttpStatusCode.OK,
-                "You have an old version of the site. Please refresh your browser")
-                .ToActionResult();
+            //return this.Request.CreateResponse(System.Net.HttpStatusCode.OK,
+            //    "You have an old version of the site. Please refresh your browser")
+            //    .ToActionResult();
 
             var context = this.Request.GetSessionServerContext();
             if (String.IsNullOrWhiteSpace(redirect_uri))
@@ -65,7 +65,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                                 {
                                     Login = authRequest.loginUrl,
                                     Signup = loginProvider.GetSignupUrl(authReqId, callbackUrl),
-                                    Logout = authRequest.logoutUrl,
+                                    Logout = new Uri($"http://dash.affirmhealth.com/?cache={Guid.NewGuid().ToString("N")}"), // authRequest.logoutUrl,
                                 });
                         },
                         () => Request.CreateResponse(System.Net.HttpStatusCode.InternalServerError).AddReason("GUID NOT UNIQUE"),
