@@ -37,7 +37,7 @@ namespace EastFive.Security.SessionServer.Persistence
                                 () => onSuccess(document.ActorId),
                                 () => onSuccess(document.ActorId),
                                 () => onSuccess(document.ActorId));
-                        }, 
+                        },
                         onNotExist.AsAsyncFunc())
                     :
                     onNotExist(),

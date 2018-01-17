@@ -14,8 +14,12 @@ namespace EastFive.Security.SessionServer.Api.Resources
         public WebId ActorId { get; set; }
         
         [DataMember]
-        [JsonProperty("user_id")]
-        public string UserId { get; set; }
+        [JsonProperty("username")]
+        public string Username { get; set; }
+
+        [DataMember]
+        [JsonProperty("display_name")]
+        public string DisplayName { get; set; }
 
         [DataMember]
         [JsonProperty(PropertyName = "link")]

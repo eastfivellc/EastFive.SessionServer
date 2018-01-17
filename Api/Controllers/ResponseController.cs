@@ -89,6 +89,8 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                                 .AddReason($"Location was null")
                                 .ToActionResult()
                                 .ToTask());
+                    if (location.Query.IsNullOrWhiteSpace())
+                        location = location.SetQueryParam("cache", Guid.NewGuid().ToString("N"));
                     return ((IHttpActionResult)Redirect(location)).ToTask();
                 },
                 (why) =>

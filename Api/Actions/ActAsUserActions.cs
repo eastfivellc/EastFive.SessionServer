@@ -61,7 +61,8 @@ namespace EastFive.Security.SessionServer.Api
                             {
                                 var userInfo = new Resources.UserInfo
                                 {
-                                    UserId = info.UserId,
+                                    Username = info.Username,
+                                    DisplayName = info.DisplayName,
                                     ActorId = info.ActorId,
                                     AccountEnabled = info.AccountEnabled,
                                     Link = info.Tokens
@@ -93,7 +94,7 @@ namespace EastFive.Security.SessionServer.Api
             var tableContents = "";
             foreach (var userInfo in userInfos)
             {
-                tableContents += $"<tr><td><a href=\"{userInfo.Link}\">Username: {userInfo.UserId}</a></td></tr>\n";
+                tableContents += $"<tr><td><a href=\"{userInfo.Link}\">Username: {userInfo.Username}</a></td></tr>\n";
             }
             var html = $"<html><body><table><tr><th>UserId</th></tr>{tableContents}</table></body></html>";
             return html;

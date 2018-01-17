@@ -258,12 +258,13 @@ namespace EastFive.Security.SessionServer
 
         public struct LoginInfo
         {
-            public string UserId;
+            public string Username;
             public Guid LoginId;
             public Guid ActorId;
             public bool AccountEnabled;
             public IDictionary<string, string> Tokens;
             public CredentialValidationMethodTypes Method;
+            public string DisplayName;
         }
        
         public async Task<TResult> GetAllLoginInfoAsync<TResult>(Guid actorPerforming, System.Security.Claims.Claim [] claims,
@@ -293,16 +294,18 @@ namespace EastFive.Security.SessionServer
                                 if (ServiceConfiguration.managementProviders.ContainsKey(credentialMapping.method))
                                 {
                                     var provider = ServiceConfiguration.managementProviders[credentialMapping.method];
-                                    mapping.UserId = await provider.GetAuthorizationAsync(credentialMapping.loginId,
-                                        un => un.displayName,
-                                        () => string.Empty,
-                                        (why) => string.Empty,
-                                        () => string.Empty,
-                                        (why) => string.Empty);
+                                    var displayUsernameKvp = await provider.GetAuthorizationAsync(credentialMapping.loginId,
+                                        un => un.displayName.PairWithKey(un.userName),
+                                        () => string.Empty.PairWithKey(string.Empty),
+                                        (why) => string.Empty.PairWithKey(string.Empty),
+                                        () => string.Empty.PairWithKey(string.Empty),
+                                        (why) => string.Empty.PairWithKey(string.Empty));
+                                    mapping.Username = displayUsernameKvp.Value;
+                                    mapping.DisplayName = displayUsernameKvp.Key;
                                 }
                                 return mapping;
                             })
-                        .WhenAllAsync();
+                        .WhenAllAsync(5);
                     return onSuccess(lookups);
                 });
         }
