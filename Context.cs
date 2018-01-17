@@ -13,6 +13,7 @@ using BlackBarLabs.Linq;
 using BlackBarLabs.Collections.Generic;
 using BlackBarLabs.Api;
 using EastFive.Collections.Generic;
+using EastFive.Extensions;
 
 namespace EastFive.Security.SessionServer
 {

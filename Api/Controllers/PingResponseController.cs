@@ -19,6 +19,7 @@ using System.Net.Http.Headers;
 using Microsoft.ApplicationInsights;
 using EastFive.Security.SessionServer.Configuration;
 using EastFive.Security.SessionServer.Exceptions;
+using EastFive.Extensions;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {

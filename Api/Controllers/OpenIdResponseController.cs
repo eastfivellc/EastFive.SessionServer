@@ -12,6 +12,7 @@ using BlackBarLabs.Api;
 using EastFive.Api.Services;
 using BlackBarLabs.Extensions;
 using EastFive.Security.CredentialProvider.AzureADB2C;
+using EastFive.Extensions;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
