@@ -11,6 +11,7 @@ using System.Web.Http;
 using BlackBarLabs.Api;
 using System.Web.Http.Routing;
 using BlackBarLabs.Extensions;
+using EastFive.Extensions;
 
 namespace EastFive.Security.SessionServer.Api
 {

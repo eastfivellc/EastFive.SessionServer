@@ -12,6 +12,7 @@ using BlackBarLabs.Collections.Generic;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using EastFive.Collections.Generic;
+using EastFive.Extensions;
 
 namespace EastFive.Security.SessionServer
 {

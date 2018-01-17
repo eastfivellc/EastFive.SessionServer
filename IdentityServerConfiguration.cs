@@ -11,6 +11,7 @@ using BlackBarLabs.Api;
 using System.Security.Claims;
 using System.Net.Http;
 using System.Net;
+using EastFive.Extensions;
 
 namespace EastFive.Security.SessionServer
 {

@@ -12,6 +12,7 @@ using BlackBarLabs.Persistence;
 using BlackBarLabs.Persistence.Azure.Extensions;
 using BlackBarLabs.Linq;
 using BlackBarLabs;
+using EastFive.Extensions;
 
 namespace EastFive.Security.SessionServer.Persistence
 {

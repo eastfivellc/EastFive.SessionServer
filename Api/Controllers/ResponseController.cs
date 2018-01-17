@@ -17,6 +17,7 @@ using EastFive.Collections.Generic;
 using EastFive.Security.SessionServer.Exceptions;
 using System.Web.Http;
 using Microsoft.ApplicationInsights;
+using EastFive.Extensions;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
