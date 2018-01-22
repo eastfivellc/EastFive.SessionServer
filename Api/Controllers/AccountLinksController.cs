@@ -30,8 +30,11 @@ namespace EastFive.Security.SessionServer.Api.Controllers
         [HttpGet]
         public async Task<IHttpActionResult> Get([FromUri]AccountLinksQuery q)
         {
+            var location = EastFive.Web.Configuration.Settings.GetString("AffirmHealth.PDMS.Api.UILocation", s => s, (s) => "");
+
             var response_mode = q.response_mode;
-            var redirect_uri = q.redirect_uri;
+            //var redirect_uri = q.redirect_uri;
+            var redirect_uri = $"{location}/upgrade";
 
             //return this.Request.CreateResponse(System.Net.HttpStatusCode.OK,
             //    "You have an old version of the site. Please refresh your browser")
@@ -65,7 +68,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                                 {
                                     Login = authRequest.loginUrl,
                                     Signup = loginProvider.GetSignupUrl(authReqId, callbackUrl),
-                                    Logout = new Uri($"http://dash.affirmhealth.com/?cache={Guid.NewGuid().ToString("N")}"), // authRequest.logoutUrl,
+                                    Logout = authRequest.logoutUrl,
                                 });
                         },
                         () => Request.CreateResponse(System.Net.HttpStatusCode.InternalServerError).AddReason("GUID NOT UNIQUE"),

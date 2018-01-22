@@ -134,4 +134,13 @@
   ]
 }</value>
   </data>
+  <data name="spabody" xml:space="preserve">
+    <value>&lt;dash-root&gt;&lt;/dash-root&gt;&lt;script type="text/javascript" src="inline.54c1233f72172d979b96.bundle.js"&gt;&lt;/script&gt;&lt;script type="text/javascript" src="polyfills.d9faed5c4d2817543fd2.bundle.js"&gt;&lt;/script&gt;&lt;script type="text/javascript" src="scripts.02bf58f26e3bc6f16cdb.bundle.js"&gt;&lt;/script&gt;&lt;script type="text/javascript" src="main.6d7888cd63472334f6ce.bundle.js"&gt;&lt;/script&gt;</value>
+  </data>
+  <data name="spahead" xml:space="preserve">
+    <value>&lt;meta charset="utf-8"&gt;&lt;title&gt;Dash&lt;/title&gt;&lt;base href="/"&gt;&lt;meta name="viewport" content="width=device-width,initial-scale=1"&gt;&lt;link rel="icon" type="image/x-icon" href="favicon.ico"&gt;&lt;link href="styles.0bc98765f532baaa7699.bundle.css" rel="stylesheet"/&gt;</value>
+  </data>
+  <data name="spahtml" xml:space="preserve">
+    <value>&lt;!doctype html&gt;&lt;html lang="en" data.ie="isloading"&gt;&lt;head&gt;&lt;meta charset="utf-8"&gt;&lt;title&gt;Dash&lt;/title&gt;&lt;base href="/"&gt;&lt;meta name="viewport" content="width=device-width,initial-scale=1"&gt;&lt;link rel="icon" type="image/x-icon" href="favicon.ico"&gt;&lt;link href="styles.0bc98765f532baaa7699.bundle.css" rel="stylesheet"/&gt;&lt;/head&gt;&lt;body class="hold-transition sidebar-mini fixed"&gt;&lt;dash-root&gt;&lt;/dash-root&gt;&lt;script type="text/javascript" src="inline.54c1233f72172d979b96.bundle.js"&gt;&lt;/script&gt;&lt;script type="text/javascript" src="polyfills.d9faed5c4d2817543fd2.bundle.js"&gt;&lt;/script&gt;&lt;script type="text/javascript" src="scripts.02bf58f26e3bc6f16cdb.bundle.js"&gt;&lt;/script&gt;&lt;script type="text/javascript" src="main.6d7888cd63472334f6ce.bundle.js"&gt;&lt;/script&gt;&lt;/body&gt;&lt;/html&gt;</value>
+  </data>
 </root>

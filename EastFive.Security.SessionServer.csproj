@@ -158,6 +158,7 @@
     <Compile Include="Api\Actions\PasswordCredentialActions.cs" />
     <Compile Include="Api\Actions\InviteCredentialActions.cs" />
     <Compile Include="Api\Constants.cs" />
+    <Compile Include="Api\Controllers\SpaServeController.cs" />
     <Compile Include="Api\Controllers\DiagnosticsController.cs" />
     <Compile Include="Api\Controllers\ActAsUserViewController.cs" />
     <Compile Include="Api\Controllers\BaseController.cs" />
