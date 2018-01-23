@@ -32,7 +32,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 var body = doc.DocumentNode.SelectSingleNode("//body").ChildNodes
                     .AsHtmlNodes()
                     .Where(node => node.Name.ToLower() != "script")
-                    .Select(node => node.InnerHtml)
+                    .Select(node => node.OuterHtml)
                     .Join(" ");
 
                 var scripts = doc.DocumentNode.SelectNodes("//script");
