@@ -40,6 +40,9 @@
       <HintPath>..\packages\Facebook.7.0.6\lib\net45\Facebook.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="HtmlAgilityPack">
+      <HintPath>..\AffirmHealth.PDMS.Api\Bin\HtmlAgilityPack.dll</HintPath>
+    </Reference>
     <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
       <HintPath>..\..\packages\log4net.1.2.10\lib\2.0\log4net.dll</HintPath>
       <Private>True</Private>
@@ -98,6 +101,8 @@
       <HintPath>..\packages\System.IdentityModel.Tokens.Jwt.5.1.2\lib\net451\System.IdentityModel.Tokens.Jwt.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Net" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Net.Http.Formatting, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
@@ -206,6 +211,7 @@
     <Compile Include="Api\Resources\Queries\PasswordCredentialQuery.cs" />
     <Compile Include="AuthenticationActions.cs" />
     <Compile Include="Accesses.cs" />
+    <Compile Include="Exceptions\AgilityPackExtensions.cs" />
     <Compile Include="Health.cs" />
     <Compile Include="Configuration\AppSettings.cs" />
     <Compile Include="Configuration\AuthorizationParameters.cs" />
@@ -224,6 +230,7 @@
     <Compile Include="Exceptions\PingResponseException.cs" />
     <Compile Include="IConfigureIdentityServer.cs" />
     <Compile Include="IdentityServerConfiguration.cs" />
+    <Compile Include="Modules\SpaHandlerModule.cs" />
     <Compile Include="PasswordCredentials.cs" />
     <Compile Include="Credentials.cs" />
     <Compile Include="CredentialProviders\AzureADB2CProvider.cs" />

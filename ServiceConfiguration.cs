@@ -12,6 +12,9 @@ using BlackBarLabs.Api;
 using BlackBarLabs.Extensions;
 using BlackBarLabs.Linq;
 using EastFive.Linq;
+using System.IO;
+using System.IO.Compression;
+using EastFive.Collections.Generic;
 
 namespace EastFive.Security.SessionServer
 {
@@ -85,6 +88,14 @@ namespace EastFive.Security.SessionServer
                 .ToDictionary(
                     credentialProvider => credentialProvider.Method,
                     credentialProvider => (IProvideToken)credentialProvider);
+
+            //var spaZipPath = System.Web.Hosting.HostingEnvironment.MapPath("~/Spa.zip");
+            //var zipArchive = ZipFile.OpenRead(spaZipPath);
+
+            //var lookupSpaFile = zipArchive.Entries
+            //    .Select(
+            //        entity => entity.FullName.PairWithValue(entity.Open().ToBytes()))
+            //    .ToDictionary();
 
             return onSuccess();
         }

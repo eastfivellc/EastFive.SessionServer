@@ -84,6 +84,26 @@ namespace EastFive.Security.SessionServer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to &lt;!DOCTYPE html&gt;
+        ///&lt;html&gt;
+        ///&lt;head id=&quot;head&quot;&gt;&lt;/head&gt;
+        ///&lt;body id=&quot;body&quot; class=&quot;hold-transition sidebar-mini fixed&quot;&gt;
+        ///        &lt;script&gt;
+        ///
+        ///            function loadScript(bodyElement, url, callback) {
+        ///                var script = document.createElement(&quot;script&quot;);
+        ///                script.type = &quot;text/javascript&quot;;
+        ///                if (script.readyState) {  //IE
+        ///                    script.onreadystatechange = function () {
+        ///                        if (script.readyState === &quot;loaded&quot; || script.readyState === &quot;complete [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string indexPage {
+            get {
+                return ResourceManager.GetString("indexPage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to &lt;dash-root&gt;&lt;/dash-root&gt;&lt;script type=&quot;text/javascript&quot; src=&quot;inline.54c1233f72172d979b96.bundle.js&quot;&gt;&lt;/script&gt;&lt;script type=&quot;text/javascript&quot; src=&quot;polyfills.d9faed5c4d2817543fd2.bundle.js&quot;&gt;&lt;/script&gt;&lt;script type=&quot;text/javascript&quot; src=&quot;scripts.02bf58f26e3bc6f16cdb.bundle.js&quot;&gt;&lt;/script&gt;&lt;script type=&quot;text/javascript&quot; src=&quot;main.6d7888cd63472334f6ce.bundle.js&quot;&gt;&lt;/script&gt;.
         /// </summary>
         internal static string spabody {

@@ -55,8 +55,9 @@ namespace EastFive.Security.SessionServer
                     var result = await this.dataContext.AuthenticationRequests.CreateAsync(authenticationRequestId,
                             method, AuthenticationActions.signin, redirectUrl, redirectLogoutUrl,
                         () => BlackBarLabs.Security.Tokens.JwtTools.CreateToken(sessionId, callbackLocation, TimeSpan.FromMinutes(30),
-                            (token) => onSuccess(
-                                new Session()
+                            (token) =>
+                            {
+                                var session = new Session()
                                 {
                                     id = authenticationRequestId,
                                     method = method,
@@ -66,7 +67,9 @@ namespace EastFive.Security.SessionServer
                                     redirectUrl = redirectUrl,
                                     redirectLogoutUrl = redirectLogoutUrl,
                                     token = token,
-                                }),
+                                };
+                                return onSuccess(session);
+                            },
                             why => onFailure(why),
                             (param, why) => onFailure($"Invalid configuration for {param}:{why}")),
                         onAlreadyExists);

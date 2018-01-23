@@ -134,6 +134,77 @@
   ]
 }</value>
   </data>
+  <data name="indexPage" xml:space="preserve">
+    <value>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head id="head"&gt;&lt;/head&gt;
+&lt;body id="body" class="hold-transition sidebar-mini fixed"&gt;
+        &lt;script&gt;
+
+            function loadScript(bodyElement, url, callback) {
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                if (script.readyState) {  //IE
+                    script.onreadystatechange = function () {
+                        if (script.readyState === "loaded" || script.readyState === "complete") {
+                            script.onreadystatechange = null;
+                            callback();
+                        }
+                    };
+                } else {  //Others
+                    script.onload = function () {
+                        callback();
+                    };
+                }
+
+                script.src = url;
+                bodyElement.appendChild(script);
+            }
+
+            function scriptCallback(bodyElement, scripts) {
+
+                if (scripts.length === 0)
+                    return;
+
+                var scriptToRun = scripts[0];
+                var remainingScripts = scripts.slice(1);
+                loadScript(bodyElement, scriptToRun, function () { scriptCallback(bodyElement, remainingScripts)});
+            }
+
+
+
+            try {
+                var xhr = new XMLHttpRequest();
+                var ticks = ((new Date().getTime() * 10000) + 621355968000000000);
+                xhr.open('GET', '/api/spaserve/' + ticks);
+                xhr.onload = function () {
+                    if (xhr.status === 200) {
+                        var contents = JSON.parse(xhr.responseText);
+
+                        var headContent = contents.head;
+                        var bodyContent = contents.body;
+
+                        var element = document.getElementById("head");
+                        element.innerHTML = headContent;
+                        var bodyElement = document.getElementById("body");
+                        bodyElement.innerHTML = bodyContent;
+
+                        scriptCallback(bodyElement, contents.scripts);
+                    }
+                    else {
+                        alert('Request failed.  Returned status of ' + xhr.status);
+                    }
+                };
+                xhr.send();
+            }
+            catch (ex) {
+                console.log("Issue with script");
+            }
+
+        &lt;/script&gt;
+    &lt;/body&gt;
+&lt;/html&gt;</value>
+  </data>
   <data name="spabody" xml:space="preserve">
     <value>&lt;dash-root&gt;&lt;/dash-root&gt;&lt;script type="text/javascript" src="inline.54c1233f72172d979b96.bundle.js"&gt;&lt;/script&gt;&lt;script type="text/javascript" src="polyfills.d9faed5c4d2817543fd2.bundle.js"&gt;&lt;/script&gt;&lt;script type="text/javascript" src="scripts.02bf58f26e3bc6f16cdb.bundle.js"&gt;&lt;/script&gt;&lt;script type="text/javascript" src="main.6d7888cd63472334f6ce.bundle.js"&gt;&lt;/script&gt;</value>
   </data>
