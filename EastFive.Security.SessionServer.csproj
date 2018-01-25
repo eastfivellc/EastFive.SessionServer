@@ -62,6 +62,12 @@
     <Reference Include="Microsoft.Data.Services.Client, Version=5.8.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>$(SolutionDir)\packages\Microsoft.Data.Services.Client.5.8.2\lib\net40\Microsoft.Data.Services.Client.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.IdentityModel.Clients.ActiveDirectory, Version=3.18.0.2306, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.IdentityModel.Clients.ActiveDirectory.3.18.0\lib\net45\Microsoft.IdentityModel.Clients.ActiveDirectory.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.IdentityModel.Clients.ActiveDirectory.Platform, Version=3.18.0.2306, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.IdentityModel.Clients.ActiveDirectory.3.18.0\lib\net45\Microsoft.IdentityModel.Clients.ActiveDirectory.Platform.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.IdentityModel.Logging, Version=1.1.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>$(SolutionDir)\packages\Microsoft.IdentityModel.Logging.1.1.5\lib\net451\Microsoft.IdentityModel.Logging.dll</HintPath>
     </Reference>
@@ -210,6 +216,15 @@
     <Compile Include="Api\Resources\Queries\PasswordCredentialQuery.cs" />
     <Compile Include="AuthenticationActions.cs" />
     <Compile Include="Accesses.cs" />
+    <Compile Include="CredentialProviders\AzureADB2C\AppSettings.cs" />
+    <Compile Include="CredentialProviders\AzureADB2C\B2CGraphClient.cs" />
+    <Compile Include="CredentialProviders\AzureADB2C\Globals.cs" />
+    <Compile Include="CredentialProviders\AzureADB2C\Libary.cs" />
+    <Compile Include="CredentialProviders\AzureADB2C\Resources\ConfigurationResource.cs" />
+    <Compile Include="CredentialProviders\AzureADB2C\Resources\KeyResource.cs" />
+    <Compile Include="CredentialProviders\AzureADB2C\Resources\ODataError.cs" />
+    <Compile Include="CredentialProviders\AzureADB2C\Resources\ODataMetadata.cs" />
+    <Compile Include="CredentialProviders\AzureADB2C\Resources\User.cs" />
     <Compile Include="Exceptions\AgilityPackExtensions.cs" />
     <Compile Include="Health.cs" />
     <Compile Include="Configuration\AppSettings.cs" />
@@ -315,7 +330,7 @@
       <Project>{5bb52391-2704-44c0-bc8a-dbbe31498814}</Project>
       <Name>BlackBarLabs.Web</Name>
     </ProjectReference>
-    <ProjectReference Include="$(SolutionDir)\EastFive.AzureADB2C\EastFive.AzureADB2C.csproj">
+    <ProjectReference Include="C:\Users\Josh\Repos\OrderOwl\\EastFive.AzureADB2C\EastFive.AzureADB2C.csproj">
       <Project>{08e8c50b-e8b6-43e6-ae5e-9511a3d04d2c}</Project>
       <Name>EastFive.AzureADB2C</Name>
     </ProjectReference>

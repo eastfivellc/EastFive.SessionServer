@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using Microsoft.WindowsAzure.Storage.Table;
 using System.Runtime.Serialization;
 using EastFive.Linq;
+using EastFive.Serialization;
 
 namespace EastFive.Security.SessionServer.Persistence.Documents
 {

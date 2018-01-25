@@ -11,6 +11,7 @@ using BlackBarLabs.Collections.Async;
 using BlackBarLabs.Persistence.Azure;
 using BlackBarLabs.Persistence.Azure.StorageTables;
 using BlackBarLabs.Linq;
+using EastFive.Serialization;
 
 namespace EastFive.Security.SessionServer.Persistence.Documents
 {

@@ -14,6 +14,7 @@ using BlackBarLabs.Collections.Generic;
 using BlackBarLabs.Api;
 using EastFive.Collections.Generic;
 using EastFive.Extensions;
+using EastFive.Serialization;
 
 namespace EastFive.Security.SessionServer
 {

@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using System.IdentityModel;
 using System.Net.Http;
 using EastFive.Security.SessionServer.Persistence.Documents;
+using EastFive.Serialization;
 
 namespace EastFive.Security.SessionServer.Persistence
 {
