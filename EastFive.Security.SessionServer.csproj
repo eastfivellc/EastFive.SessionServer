@@ -318,10 +318,6 @@
       <Project>{a228d9d3-91c9-48cb-9498-8e7b39f10ffe}</Project>
       <Name>BlackBarLabs.Persistence.Azure</Name>
     </ProjectReference>
-    <ProjectReference Include="$(SolutionDir)\BlackBarLabs.Persistence\BlackBarLabs.Persistence.csproj">
-      <Project>{c7d886bb-2da8-47ef-9136-1cb13b44d2d7}</Project>
-      <Name>BlackBarLabs.Persistence</Name>
-    </ProjectReference>
     <ProjectReference Include="$(SolutionDir)\BlackBarLabs.Security\BlackBarLabs.Security.csproj">
       <Project>{17a2e027-c32a-41db-9b46-5222d55c0e26}</Project>
       <Name>BlackBarLabs.Security</Name>

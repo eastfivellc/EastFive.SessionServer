@@ -22,8 +22,8 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
 
         internal const string StateKey = "state";
         internal const string IdTokenKey = "id_token";
-        
-        EastFive.AzureADB2C.B2CGraphClient client = new EastFive.AzureADB2C.B2CGraphClient();
+
+        EastFive.AzureADB2C.B2CGraphClient client;
         private TokenValidationParameters validationParameters;
         internal string audience;
         private Uri signinConfiguration;
@@ -32,11 +32,12 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
         private string signupEndpoint;
         private string logoutEndpoint;
 
-        public AzureADB2CProvider(string audience, Uri signinConfiguration, Uri signupConfiguration)
+        private AzureADB2CProvider(string audience, Uri signinConfiguration, Uri signupConfiguration, EastFive.AzureADB2C.B2CGraphClient client)
         {
             this.audience = audience;
             this.signinConfiguration = signinConfiguration;
             this.signupConfiguration = signupConfiguration;
+            this.client = client;
         }
 
         public static TResult LoadFromConfig<TResult>(
@@ -52,8 +53,14 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
                             return Web.Configuration.Settings.GetUri(SessionServer.Configuration.AppSettings.AADB2CSignupConfiguration,
                                 (signupConfiguration) =>
                                 {
-                                    var provider = new AzureADB2CProvider(audience, signinConfiguration, signupConfiguration);
-                                    return onLoaded(provider);
+                                    return EastFive.AzureADB2C.B2CGraphClient.LoadFromConfig(
+                                        client =>
+                                        {
+                                            var provider = new AzureADB2CProvider(
+                                                audience, signinConfiguration, signupConfiguration, client);
+                                            return onLoaded(provider);
+                                        },
+                                        onConfigurationNotAvailable);
                                 },
                                 onConfigurationNotAvailable);
                         },

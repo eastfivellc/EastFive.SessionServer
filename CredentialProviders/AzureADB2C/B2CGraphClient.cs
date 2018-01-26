@@ -24,12 +24,12 @@ namespace EastFive.AzureADB2C
         private AuthenticationContext authContext;
         private ClientCredential credential;
         
-        public B2CGraphClient()
+        private B2CGraphClient(string clientId, string clientSecret, string tenant)
         {
             // The client_id, client_secret, and tenant are pulled in from the App.config file
-            this.clientId = CloudConfigurationManager.GetSetting(AppSettings.ClientId);
-            this.clientSecret = CloudConfigurationManager.GetSetting(AppSettings.ClientSecret);
-            this.tenant = CloudConfigurationManager.GetSetting(AppSettings.Tenant);
+            this.clientId = clientId;
+            this.clientSecret = clientSecret;
+            this.tenant = tenant;
 
             // The AuthenticationContext is ADAL's primary class, in which you indicate the direcotry to use.
             this.authContext = new AuthenticationContext("https://login.microsoftonline.com/" + tenant);
@@ -37,6 +37,36 @@ namespace EastFive.AzureADB2C
             // The ClientCredential is where you pass in your client_id and client_secret, which are 
             // provided to Azure AD in order to receive an access_token using the app's identity.
             this.credential = new ClientCredential(clientId,  clientSecret);
+        }
+
+        internal static TResult LoadFromConfig<TResult>(
+            Func<B2CGraphClient, TResult> onSuccess,
+            Func<string, TResult> onConfigurationNotAvailable)
+        {
+            // The client_id, client_secret, and tenant are pulled in from the App.config file
+            return Web.Configuration.Settings.GetString(AppSettings.ClientId,
+                   (clientId) =>
+                   {
+                       return Web.Configuration.Settings.GetString(AppSettings.ClientSecret,
+                           (signinConfiguration) =>
+                           {
+                               return Web.Configuration.Settings.GetString(AppSettings.Tenant,
+                                   (signupConfiguration) =>
+                                   {
+                                       try
+                                       {
+                                           var client = new B2CGraphClient(clientId, signinConfiguration, signupConfiguration);
+                                           return onSuccess(client);
+                                       } catch(Exception ex)
+                                       {
+                                           return onConfigurationNotAvailable(ex.Message);
+                                       }
+                                   },
+                                   onConfigurationNotAvailable);
+                           },
+                           onConfigurationNotAvailable);
+                   },
+                   onConfigurationNotAvailable);
         }
 
         public async Task<TResult> GetUserByObjectId<TResult>(string objectId,
