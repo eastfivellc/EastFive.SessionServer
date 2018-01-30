@@ -86,13 +86,18 @@ namespace EastFive.Security.SessionServer.Modules
                 return;
             }
 
-            // TODO: Fix something like this
-            HttpContextBase httpContextBase = new HttpContextWrapper(context);
-            if (System.Web.Routing.RouteTable.Routes
-                .SelectMany(
-                    route => route.GetRouteData(httpContextBase).Values.Select(kvp => kvp.Key))
+            // TODO: A better job of matching that just grabbing the first segment
+            var firstSegments = System.Web.Routing.RouteTable.Routes
+                .Where(route => route is System.Web.Routing.Route)
+                .Select(route => route as System.Web.Routing.Route)
+                .Where(route => !route.Url.IsNullOrWhiteSpace())
+                .Select(
+                    route => route.Url.Split(new char[] { '/' }).First())
+                .ToArray();
+
+            if (firstSegments
                 .Where(
-                    route => httpApp.Request.Path.StartsWith(route))
+                    firstSegment => httpApp.Request.Path.StartsWith(firstSegment))
                 .Any())
             {
                 return;
