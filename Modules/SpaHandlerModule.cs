@@ -28,8 +28,7 @@ namespace EastFive.Security.SessionServer.Modules
         public void Init(HttpApplication context)
         {
             context.BeginRequest += CheckForAssetMatch;
-
-                        
+            
         }
 
         private void ExtractSpaFiles(HttpRequest request)
@@ -84,6 +83,18 @@ namespace EastFive.Security.SessionServer.Modules
 
                 context.Response.BinaryWrite(lookupSpaFile[fileName]);
                 HttpContext.Current.ApplicationInstance.CompleteRequest();
+                return;
+            }
+
+            // TODO: Fix something like this
+            HttpContextBase httpContextBase = new HttpContextWrapper(context);
+            if (System.Web.Routing.RouteTable.Routes
+                .SelectMany(
+                    route => route.GetRouteData(httpContextBase).Values.Select(kvp => kvp.Key))
+                .Where(
+                    route => httpApp.Request.Path.StartsWith(route))
+                .Any())
+            {
                 return;
             }
 
