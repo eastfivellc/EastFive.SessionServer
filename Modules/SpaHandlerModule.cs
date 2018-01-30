@@ -97,44 +97,15 @@ namespace EastFive.Security.SessionServer.Modules
 
             if (firstSegments
                 .Where(
-                    firstSegment => httpApp.Request.Path.StartsWith(firstSegment))
+                    firstSegment => httpApp.Request.Path.ToLower().StartsWith($"/{firstSegment}"))
                 .Any())
             {
                 return;
             }
 
-            if (httpApp.Request.Path.StartsWith("/api"))
-                return;
-            if (httpApp.Request.Path.StartsWith("/aadb2c"))
-                return;
-            if (httpApp.Request.Path.StartsWith("/content"))
-                return;
 
             context.Response.Write(Properties.Resources.indexPage);
             HttpContext.Current.ApplicationInstance.CompleteRequest();
-
-            //HttpContext.Current.RemapHandler(new AssetHandler(lookupSpaFile[fileName]));
-
         }
-
-        //private class AssetHandler : IHttpHandler
-        //{
-        //    private byte[] file;
-
-        //    public AssetHandler(byte[] file)
-        //    {
-        //        this.file = file;
-        //    }
-
-        //    public bool IsReusable => throw new NotImplementedException();
-
-        //    public void ProcessRequest(HttpContext context)
-        //    {
-        //        context.
-
-        //        context.Response = new HttpResponse(file);
-        //    }
-        //}
-
     }
 }
