@@ -71,7 +71,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 });
 
             var context = this.Request.GetSessionServerContext();
-            var response = await await context.Sessions.UpdateWithAuthenticationAsync(Guid.NewGuid(),
+            var response = await await context.Sessions.CreateOrUpdateWithAuthenticationAsync(
                     method, values,
                 (sessionId, authorizationId, jwtToken, refreshToken, action, extraParams, redirectUrl) =>
                     CreateResponse(context, method, action, sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUrl, telemetry),
