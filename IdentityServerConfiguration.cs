@@ -69,7 +69,7 @@ namespace EastFive.Security.SessionServer
                 return onSuccess(redirectUrl);
             }
 
-            if(authParams.ContainsKey(Configuration.AuthorizationParameters.RedirectUri))
+            if(null != authParams && authParams.ContainsKey(Configuration.AuthorizationParameters.RedirectUri))
             {
                 Uri redirectUri;
                 var redirectUriString = authParams[Configuration.AuthorizationParameters.RedirectUri];

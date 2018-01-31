@@ -105,17 +105,17 @@ namespace EastFive.Security.CredentialProvider.Ping
         
         public Uri GetLogoutUrl(Guid state, Uri responseControllerLocation)
         {
-            throw new NotImplementedException();
+            return default(Uri);
         }
 
         public Uri GetLoginUrl(Guid state, Uri responseControllerLocation)
         {
-            throw new NotImplementedException();
+            return default(Uri);
         }
 
         public Uri GetSignupUrl(Guid state, Uri responseControllerLocation)
         {
-            throw new NotImplementedException();
+            return default(Uri);
         }
 
         #endregion
