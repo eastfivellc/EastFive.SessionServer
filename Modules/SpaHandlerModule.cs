@@ -28,8 +28,7 @@ namespace EastFive.Security.SessionServer.Modules
         public void Init(HttpApplication context)
         {
             context.BeginRequest += CheckForAssetMatch;
-
-                        
+            
         }
 
         private void ExtractSpaFiles(HttpRequest request)
@@ -87,38 +86,26 @@ namespace EastFive.Security.SessionServer.Modules
                 return;
             }
 
-            if (httpApp.Request.Path.StartsWith("/api"))
+            // TODO: A better job of matching that just grabbing the first segment
+            var firstSegments = System.Web.Routing.RouteTable.Routes
+                .Where(route => route is System.Web.Routing.Route)
+                .Select(route => route as System.Web.Routing.Route)
+                .Where(route => !route.Url.IsNullOrWhiteSpace())
+                .Select(
+                    route => route.Url.Split(new char[] { '/' }).First())
+                .ToArray();
+
+            if (firstSegments
+                .Where(
+                    firstSegment => httpApp.Request.Path.ToLower().StartsWith($"/{firstSegment}"))
+                .Any())
+            {
                 return;
-            if (httpApp.Request.Path.StartsWith("/aadb2c"))
-                return;
-            if (httpApp.Request.Path.StartsWith("/content"))
-                return;
+            }
+
 
             context.Response.Write(Properties.Resources.indexPage);
             HttpContext.Current.ApplicationInstance.CompleteRequest();
-
-            //HttpContext.Current.RemapHandler(new AssetHandler(lookupSpaFile[fileName]));
-
         }
-
-        //private class AssetHandler : IHttpHandler
-        //{
-        //    private byte[] file;
-
-        //    public AssetHandler(byte[] file)
-        //    {
-        //        this.file = file;
-        //    }
-
-        //    public bool IsReusable => throw new NotImplementedException();
-
-        //    public void ProcessRequest(HttpContext context)
-        //    {
-        //        context.
-
-        //        context.Response = new HttpResponse(file);
-        //    }
-        //}
-
     }
 }
