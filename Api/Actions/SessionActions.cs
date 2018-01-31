@@ -91,7 +91,7 @@ namespace EastFive.Security.SessionServer.Api
         {
             var context = request.GetSessionServerContext();
             // Can't update a session that does not exist
-            var session = await context.Sessions.AuthenticateAsync(resource.Id.ToGuid().Value,
+            var session = await context.Sessions.UpdateWithAuthenticationAsync(resource.Id.ToGuid().Value,
                 resource.Method, resource.ResponseToken,
                 (sessionId, authId, token, refreshToken, actions, extraParams, redirect) =>
                 {

@@ -196,7 +196,7 @@ namespace EastFive.Security.SessionServer
             return resultFound;
         }
         
-        public async Task<TResult> AuthenticateAsync<TResult>(
+        public async Task<TResult> UpdateWithAuthenticationAsync<TResult>(
                 Guid sessionId,
                 CredentialValidationMethodTypes method,
                 IDictionary<string, string> extraParams,
@@ -215,12 +215,17 @@ namespace EastFive.Security.SessionServer
                         async (subject, stateId, loginId, extraParamsWithRedemptionParams) =>
                         {
                             if (stateId.HasValue)
-                                return await AuthenticateStateAsync(sessionId, stateId.Value, loginId, method, subject, extraParamsWithRedemptionParams,
+                            {
+                                if (stateId.Value != sessionId)
+                                    return onInvalidToken("The authorization flow did not match this resource");
+
+                                return await AuthenticateStateAsync(stateId.Value, loginId, method, subject, extraParamsWithRedemptionParams,
                                     onLogin,
                                     onLogout,
                                     onInvalidToken,
                                     onNotConfigured,
                                     onFailure);
+                            }
 
                             return await await dataContext.CredentialMappings.LookupCredentialMappingAsync(method, subject, loginId,
                                 (authenticationId) =>
@@ -251,7 +256,65 @@ namespace EastFive.Security.SessionServer
                 (why) => onNotConfigured(why).ToTask());
         }
 
-        private async Task<TResult> AuthenticateStateAsync<TResult>(Guid sessionId, Guid stateId, Guid? loginId, CredentialValidationMethodTypes method,
+        public async Task<TResult> CreateOrUpdateWithAuthenticationAsync<TResult>(
+                CredentialValidationMethodTypes method,
+                IDictionary<string, string> extraParams,
+            Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onLogin,
+            Func<Uri, TResult> onLogout,
+            Func<string, TResult> onInvalidToken,
+            Func<TResult> lookupCredentialNotFound,
+            Func<string, TResult> systemOffline,
+            Func<string, TResult> onNotConfigured,
+            Func<string, TResult> onFailure)
+        {
+            return await this.context.GetCredentialProvider(method,
+                async (provider) =>
+                {
+                    return await await provider.RedeemTokenAsync(extraParams,
+                        async (subject, stateId, loginId, extraParamsWithRedemptionParams) =>
+                        {
+                            // This is the case where the login process started from an existing authentication resource
+                            if (stateId.HasValue)
+                                return await AuthenticateStateAsync(stateId.Value, loginId, method, subject, extraParamsWithRedemptionParams,
+                                    onLogin,
+                                    onLogout,
+                                    onInvalidToken,
+                                    onNotConfigured,
+                                    onFailure);
+
+                            // This is the case where the login process started from an external system
+                            return await await dataContext.CredentialMappings.LookupCredentialMappingAsync(method, subject, loginId,
+                                (authenticationId) =>
+                                {
+                                    var authorizationId = Guid.NewGuid();
+                                    return this.CreateLoginAsync(authorizationId, authenticationId, method, default(Uri),
+                                        (session) => onLogin(authorizationId, authenticationId, session.token, session.refreshToken, AuthenticationActions.signin, session.extraParams,
+                                                default(Uri)),
+                                        "Guid not unique for creating authentication started from external system".AsFunctionException<TResult>(),
+                                        onFailure);
+                                },
+                                () => onInvalidToken("The token does not map to a user in this system.").ToTask());
+                        },
+                        async (stateId, extraParamsWithRedemptionParams) =>
+                        {
+                            if (!stateId.HasValue)
+                                onLogout(default(Uri));
+
+                            return await dataContext.AuthenticationRequests.FindByIdAsync(stateId.Value,
+                                (authRequest) => onLogout(authRequest.redirectLogout),
+                                () => onLogout(default(Uri)));
+                        },
+                        onInvalidToken.AsAsyncFunc(),
+                        systemOffline.AsAsyncFunc(),
+                        onNotConfigured.AsAsyncFunc(),
+                        onFailure.AsAsyncFunc());
+                },
+                () => systemOffline("The requested credential system is not enabled for this deployment").ToTask(),
+                (why) => onNotConfigured(why).ToTask());
+        }
+
+
+        private async Task<TResult> AuthenticateStateAsync<TResult>(Guid sessionId, Guid? loginId, CredentialValidationMethodTypes method,
                 string subject, IDictionary<string, string> extraParams,
             Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onLogin,
             Func<Uri, TResult> onLogout,
@@ -259,7 +322,7 @@ namespace EastFive.Security.SessionServer
             Func<string, TResult> onNotConfigured,
             Func<string, TResult> onFailure)
         {
-            return await this.dataContext.AuthenticationRequests.UpdateAsync(stateId,
+            return await this.dataContext.AuthenticationRequests.UpdateAsync(sessionId,
                 async (authenticationRequest, saveAuthRequest) =>
                 {
                     if (authenticationRequest.Deleted.HasValue)
@@ -269,7 +332,7 @@ namespace EastFive.Security.SessionServer
                         return onInvalidToken("The credential's authentication method does not match the callback method");
 
                     if (AuthenticationActions.link == authenticationRequest.action)
-                        return await context.Invites.CreateInviteCredentialAsync(sessionId, stateId,
+                        return await context.Invites.CreateInviteCredentialAsync(sessionId, sessionId,
                                 authenticationRequest.authorizationId, method, subject,
                                 extraParams, saveAuthRequest, authenticationRequest.redirect,
                             onLogin,
@@ -279,7 +342,7 @@ namespace EastFive.Security.SessionServer
 
                     if (AuthenticationActions.access == authenticationRequest.action)
                         return await context.Integrations.UpdateAsync(authenticationRequest,
-                                sessionId, stateId, method, extraParams,
+                                sessionId, sessionId, method, extraParams,
                                 saveAuthRequest,
                             onLogin,
                             onInvalidToken,
@@ -296,7 +359,7 @@ namespace EastFive.Security.SessionServer
                                 async (token, refreshToken) =>
                                 {
                                     await saveAuthRequest(authenticationId, token, extraParams);
-                                    return onLogin(stateId, authenticationId,
+                                    return onLogin(sessionId, authenticationId,
                                         token, refreshToken, AuthenticationActions.signin, extraParams, authenticationRequest.redirect);
                                 },
                                 onNotConfigured.AsAsyncFunc());

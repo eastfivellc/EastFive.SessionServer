@@ -86,8 +86,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             }
 
             var context = Request.GetSessionServerContext();
-            var sessionId = Guid.NewGuid();
-            var response = await await context.Sessions.AuthenticateAsync(sessionId,
+            var response = await await context.Sessions.CreateOrUpdateWithAuthenticationAsync(
                 CredentialValidationMethodTypes.Ping,
                 new Dictionary<string, string>()
                 {

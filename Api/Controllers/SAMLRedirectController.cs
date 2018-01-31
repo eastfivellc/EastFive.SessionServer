@@ -75,7 +75,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 async (tokens) =>
                 {
                     var context = Request.GetSessionServerContext();
-                    return await await context.Sessions.AuthenticateAsync<Task<IHttpActionResult>>(Guid.NewGuid(),
+                    return await await context.Sessions.UpdateWithAuthenticationAsync<Task<IHttpActionResult>>(Guid.NewGuid(),
                         CredentialValidationMethodTypes.SAML, tokens,
                         (sessionId, authorizationId, token, refreshToken, action, extraParams, redirectUri) =>
                         {
