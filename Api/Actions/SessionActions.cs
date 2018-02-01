@@ -125,7 +125,7 @@ namespace EastFive.Security.SessionServer.Api
                     (type) => urlHelper.GetLocation(type),
                 (sessionDeleted) =>
                 {
-                    if(sessionDeleted.logoutUrl.AbsoluteUri.IsNullOrWhiteSpace())
+                    if(null == sessionDeleted.logoutUrl || sessionDeleted.logoutUrl.AbsoluteUri.IsNullOrWhiteSpace())
                         return request.CreateResponse(HttpStatusCode.OK).AddReason("Logout Complete");
 
                     return request
