@@ -77,6 +77,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                     CreateResponse(context, method, action, sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUrl, telemetry),
                 (location) =>
                 {
+                    telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - location: {location.AbsolutePath}");
                     if (location.IsDefaultOrNull())
                         return Web.Configuration.Settings.GetUri(SessionServer.Configuration.AppSettings.LandingPage,
                             (redirect) => ((IHttpActionResult)Redirect(location))

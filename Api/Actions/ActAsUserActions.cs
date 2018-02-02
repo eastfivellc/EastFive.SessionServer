@@ -126,7 +126,7 @@ namespace EastFive.Security.SessionServer.Api
             var redirectUrl = new Uri(redirectString);
             var method = ServiceConfiguration.credentialProviders.First().Value.Method;
             return await await context.Sessions.CreateLoginAsync(authenticationRequestId, actorId,
-                    method, redirectUrl,
+                    method, redirectUrl, new Dictionary<string, string>(),
                 async (session) =>
                 {
                     var config = Library.configurationManager;
