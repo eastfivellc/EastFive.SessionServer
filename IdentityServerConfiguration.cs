@@ -92,9 +92,9 @@ namespace EastFive.Security.SessionServer
         protected Uri SetRedirectParameters(Uri redirectUri, Guid requestId, Guid? authorizationId, string token, string refreshToken)
         {
             var redirectUrl = redirectUri
-                .SetQueryParam(parameterAuthorizationId, authorizationId.Value.ToString("N"))
-                .SetQueryParam(parameterToken, token)
-                .SetQueryParam(parameterRefreshToken, refreshToken)
+                //.SetQueryParam(parameterAuthorizationId, authorizationId.Value.ToString("N"))
+                //.SetQueryParam(parameterToken, token)
+                //.SetQueryParam(parameterRefreshToken, refreshToken)
                 .SetQueryParam("request_id", requestId.ToString("N"));
             return redirectUrl;
         }
