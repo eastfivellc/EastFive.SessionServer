@@ -9,6 +9,7 @@ using BlackBarLabs.Collections.Generic;
 using BlackBarLabs.Extensions;
 using BlackBarLabs;
 using EastFive.Collections.Generic;
+using Microsoft.ApplicationInsights;
 
 namespace EastFive.Security.SessionServer
 {
@@ -31,11 +32,22 @@ namespace EastFive.Security.SessionServer
     {
         private Context context;
         private Persistence.DataContext dataContext;
+        private TelemetryClient telemetry;
 
         internal Sessions(Context context, Persistence.DataContext dataContext)
         {
             this.dataContext = dataContext;
             this.context = context;
+
+            telemetry = Web.Configuration.Settings.GetString(SessionServer.Configuration.AppSettings.ApplicationInsightsKey,
+                (applicationInsightsKey) =>
+                {
+                    return new TelemetryClient { InstrumentationKey = applicationInsightsKey };
+                },
+                (why) =>
+                {
+                    return new TelemetryClient();
+                });
         }
         
         public async Task<TResult> CreateLoginAsync<TResult>(Guid authenticationRequestId,
@@ -80,7 +92,7 @@ namespace EastFive.Security.SessionServer
         }
 
         internal async Task<TResult> CreateLoginAsync<TResult>(Guid authenticationRequestId, Guid authenticationId,
-                CredentialValidationMethodTypes method, Uri callbackLocation,
+                CredentialValidationMethodTypes method, Uri callbackLocation, IDictionary<string, string> authParams,
             Func<Session, TResult> onSuccess,
             Func<TResult> onAlreadyExists,
             Func<string, TResult> onFailure)
@@ -98,12 +110,14 @@ namespace EastFive.Security.SessionServer
                                         method, AuthenticationActions.signin, authenticationId, token, callbackLocation, callbackLocation,
                                     () =>
                                     {
+                                        telemetry.TrackEvent("Sessions.CreateLoginAsync - Create Session", authParams);
                                         var session = new Session()
                                         {
                                             id = authenticationRequestId,
                                             method = method,
                                             action = AuthenticationActions.signin,
                                             token = token,
+                                            extraParams = authParams
                                         };
                                         return onSuccess(session);
                                     },
@@ -273,21 +287,25 @@ namespace EastFive.Security.SessionServer
                     return await await provider.RedeemTokenAsync(extraParams,
                         async (subject, stateId, loginId, extraParamsWithRedemptionParams) =>
                         {
+                            telemetry.TrackEvent("Sessions.CreateOrUpdateWithAuthenticationAsync:  Authenticated");
                             // This is the case where the login process started from an existing authentication resource
                             if (stateId.HasValue)
+                            {
+                                telemetry.TrackEvent($"Sessions.CreateOrUpdateWithAuthenticationAsync:  StateId: {stateId.Value.ToString()}");
                                 return await AuthenticateStateAsync(stateId.Value, loginId, method, subject, extraParamsWithRedemptionParams,
                                     onLogin,
                                     onLogout,
                                     onInvalidToken,
                                     onNotConfigured,
                                     onFailure);
-
+                            }
                             // This is the case where the login process started from an external system
                             return await await dataContext.CredentialMappings.LookupCredentialMappingAsync(method, subject, loginId,
                                 (authenticationId) =>
                                 {
+                                    telemetry.TrackEvent($"Sessions.CreateOrUpdateWithAuthenticationAsync:  Called from external login system.  AuthenticationId: {authenticationId.ToString()}");
                                     var authorizationId = Guid.NewGuid();
-                                    return this.CreateLoginAsync(authorizationId, authenticationId, method, default(Uri),
+                                    return this.CreateLoginAsync(authorizationId, authenticationId, method, default(Uri), extraParamsWithRedemptionParams,
                                         (session) => onLogin(authorizationId, authenticationId, session.token, session.refreshToken, AuthenticationActions.signin, session.extraParams,
                                                 default(Uri)),
                                         "Guid not unique for creating authentication started from external system".AsFunctionException<TResult>(),
@@ -297,6 +315,7 @@ namespace EastFive.Security.SessionServer
                         },
                         async (stateId, extraParamsWithRedemptionParams) =>
                         {
+                            telemetry.TrackEvent("Sessions.CreateOrUpdateWithAuthenticationAsync:  Not Authenticated");
                             if (!stateId.HasValue)
                                 onLogout(default(Uri));
 
