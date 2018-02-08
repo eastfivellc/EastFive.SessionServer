@@ -42,7 +42,8 @@ namespace EastFive.Security.SessionServer.Modules
                     .Open()
                     .ToBytes();
 
-                var siteLocation = $"{request.Url.Scheme}://{request.Url.Authority}";
+                var siteLocation = "https://dash.affirmhealth.com";
+                //var siteLocation = $"{request.Url.Scheme}://{request.Url.Authority}";
                 lookupSpaFile = zipArchive.Entries
                     .Where(item => string.Compare(item.FullName, IndexHTMLFileName, true) != 0)
                     .Select(

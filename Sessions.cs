@@ -287,7 +287,7 @@ namespace EastFive.Security.SessionServer
                     return await await provider.RedeemTokenAsync(extraParams,
                         async (subject, stateId, loginId, extraParamsWithRedemptionParams) =>
                         {
-                            telemetry.TrackEvent("Sessions.CreateOrUpdateWithAuthenticationAsync:  Authenticated");
+                            telemetry.TrackEvent("Sessions.CreateOrUpdateWithAuthenticationAsync:  Authenticated", extraParamsWithRedemptionParams);
                             // This is the case where the login process started from an existing authentication resource
                             if (stateId.HasValue)
                             {
@@ -300,6 +300,7 @@ namespace EastFive.Security.SessionServer
                                     onFailure);
                             }
                             // This is the case where the login process started from an external system
+                            telemetry.TrackEvent("StateId not found.  Starting external system login flow.");
                             return await await dataContext.CredentialMappings.LookupCredentialMappingAsync(method, subject, loginId,
                                 (authenticationId) =>
                                 {
