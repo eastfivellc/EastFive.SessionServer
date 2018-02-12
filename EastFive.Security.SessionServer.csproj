@@ -216,6 +216,7 @@
     <Compile Include="Api\Resources\Queries\PasswordCredentialQuery.cs" />
     <Compile Include="AuthenticationActions.cs" />
     <Compile Include="Accesses.cs" />
+    <Compile Include="Constants.cs" />
     <Compile Include="CredentialProviders\AzureADB2C\AppSettings.cs" />
     <Compile Include="CredentialProviders\AzureADB2C\B2CGraphClient.cs" />
     <Compile Include="CredentialProviders\AzureADB2C\Globals.cs" />

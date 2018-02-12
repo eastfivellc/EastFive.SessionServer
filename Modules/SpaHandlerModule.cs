@@ -10,6 +10,7 @@ using System.Web;
 using EastFive.Serialization;
 using System.Net.NetworkInformation;
 using EastFive.Extensions;
+using BlackBarLabs.Web;
 
 namespace EastFive.Security.SessionServer.Modules
 {
@@ -42,26 +43,33 @@ namespace EastFive.Security.SessionServer.Modules
                     .Open()
                     .ToBytes();
 
-                var siteLocation = "https://dash.affirmhealth.com";
-                //var siteLocation = $"{request.Url.Scheme}://{request.Url.Authority}";
-                lookupSpaFile = zipArchive.Entries
-                    .Where(item => string.Compare(item.FullName, IndexHTMLFileName, true) != 0)
-                    .Select(
-                        entity =>
-                        {
-                            if (!entity.FullName.EndsWith(".js"))
-                                return entity.FullName.PairWithValue(entity.Open().ToBytes());
+                var lookupSpaFile = ConfigurationContext.Instance.GetSettingValue(Constants.AppSettingKeys.SpaSiteLocation,
+                    (siteLocation) =>
+                    {
+                        return zipArchive.Entries
+                            .Where(item => string.Compare(item.FullName, IndexHTMLFileName, true) != 0)
+                            .Select(
+                                entity =>
+                                {
+                                    if (!entity.FullName.EndsWith(".js"))
+                                        return entity.FullName.PairWithValue(entity.Open().ToBytes());
 
-                            var fileBytes = entity.Open()
-                                .ToBytes()
-                                .GetString()
-                                .Replace("8FCC3D6A-9C25-4802-8837-16C51BE9FDBE.example.com", siteLocation)
-                                .GetBytes();
+                                    var fileBytes = entity.Open()
+                                        .ToBytes()
+                                        .GetString()
+                                        .Replace("8FCC3D6A-9C25-4802-8837-16C51BE9FDBE.example.com", siteLocation)
+                                        .GetBytes();
 
-                            return entity.FullName.PairWithValue(fileBytes);
+                                    return entity.FullName.PairWithValue(fileBytes);
 
-                        })
-                    .ToDictionary();
+                                })
+                            .ToDictionary();
+                    },
+                    () =>
+                    {
+                        // TODO AI Error
+                        return new Dictionary<string, byte[]>();
+                    });
             }
         }
 
