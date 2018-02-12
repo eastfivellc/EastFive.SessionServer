@@ -11,6 +11,7 @@ using EastFive.Serialization;
 using System.Net.NetworkInformation;
 using EastFive.Extensions;
 using BlackBarLabs.Web;
+using Microsoft.ApplicationInsights;
 
 namespace EastFive.Security.SessionServer.Modules
 {
@@ -20,6 +21,17 @@ namespace EastFive.Security.SessionServer.Modules
 
         private Dictionary<string, byte[]> lookupSpaFile;
         static internal byte[] indexHTML;
+        private readonly TelemetryClient telemetry;
+
+        public SpaHandlerModule()
+        {
+            telemetry = new TelemetryClient();
+            if (ConfigurationContext.Instance.AppSettings.ContainsKey(Constants.AppSettingKeys.ApplicationInsightsKey))
+            {
+                var applicationInsightsKey = ConfigurationContext.Instance.AppSettings[Constants.AppSettingKeys.ApplicationInsightsKey];
+                telemetry = new TelemetryClient { InstrumentationKey = applicationInsightsKey };
+            }
+        }
 
         public void Dispose()
         {
@@ -29,7 +41,6 @@ namespace EastFive.Security.SessionServer.Modules
         public void Init(HttpApplication context)
         {
             context.BeginRequest += CheckForAssetMatch;
-            
         }
 
         private void ExtractSpaFiles(HttpRequest request)
@@ -43,9 +54,10 @@ namespace EastFive.Security.SessionServer.Modules
                     .Open()
                     .ToBytes();
 
-                var lookupSpaFile = ConfigurationContext.Instance.GetSettingValue(Constants.AppSettingKeys.SpaSiteLocation,
+                lookupSpaFile = ConfigurationContext.Instance.GetSettingValue(Constants.AppSettingKeys.SpaSiteLocation,
                     (siteLocation) =>
                     {
+                        telemetry.TrackEvent($"SpaHandlerModule - ExtractSpaFiles   siteLocation: {siteLocation}");
                         return zipArchive.Entries
                             .Where(item => string.Compare(item.FullName, IndexHTMLFileName, true) != 0)
                             .Select(
@@ -67,7 +79,7 @@ namespace EastFive.Security.SessionServer.Modules
                     },
                     () =>
                     {
-                        // TODO AI Error
+                        telemetry.TrackException(new ArgumentNullException("Could not find SpaSiteLocation - is this key set in app settings?"));
                         return new Dictionary<string, byte[]>();
                     });
             }
