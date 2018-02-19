@@ -10,6 +10,8 @@ using System.Web;
 using EastFive.Serialization;
 using System.Net.NetworkInformation;
 using EastFive.Extensions;
+using BlackBarLabs.Web;
+using Microsoft.ApplicationInsights;
 
 namespace EastFive.Security.SessionServer.Modules
 {
@@ -19,6 +21,17 @@ namespace EastFive.Security.SessionServer.Modules
 
         private Dictionary<string, byte[]> lookupSpaFile;
         static internal byte[] indexHTML;
+        private readonly TelemetryClient telemetry;
+
+        public SpaHandlerModule()
+        {
+            telemetry = new TelemetryClient();
+            if (ConfigurationContext.Instance.AppSettings.ContainsKey(Constants.AppSettingKeys.ApplicationInsightsKey))
+            {
+                var applicationInsightsKey = ConfigurationContext.Instance.AppSettings[Constants.AppSettingKeys.ApplicationInsightsKey];
+                telemetry = new TelemetryClient { InstrumentationKey = applicationInsightsKey };
+            }
+        }
 
         public void Dispose()
         {
@@ -28,7 +41,6 @@ namespace EastFive.Security.SessionServer.Modules
         public void Init(HttpApplication context)
         {
             context.BeginRequest += CheckForAssetMatch;
-            
         }
 
         private void ExtractSpaFiles(HttpRequest request)
@@ -42,25 +54,34 @@ namespace EastFive.Security.SessionServer.Modules
                     .Open()
                     .ToBytes();
 
-                var siteLocation = $"{request.Url.Scheme}://{request.Url.Authority}";
-                lookupSpaFile = zipArchive.Entries
-                    .Where(item => string.Compare(item.FullName, IndexHTMLFileName, true) != 0)
-                    .Select(
-                        entity =>
-                        {
-                            if (!entity.FullName.EndsWith(".js"))
-                                return entity.FullName.PairWithValue(entity.Open().ToBytes());
+                lookupSpaFile = ConfigurationContext.Instance.GetSettingValue(Constants.AppSettingKeys.SpaSiteLocation,
+                    (siteLocation) =>
+                    {
+                        telemetry.TrackEvent($"SpaHandlerModule - ExtractSpaFiles   siteLocation: {siteLocation}");
+                        return zipArchive.Entries
+                            .Where(item => string.Compare(item.FullName, IndexHTMLFileName, true) != 0)
+                            .Select(
+                                entity =>
+                                {
+                                    if (!entity.FullName.EndsWith(".js"))
+                                        return entity.FullName.PairWithValue(entity.Open().ToBytes());
 
-                            var fileBytes = entity.Open()
-                                .ToBytes()
-                                .GetString()
-                                .Replace("8FCC3D6A-9C25-4802-8837-16C51BE9FDBE.example.com", siteLocation)
-                                .GetBytes();
+                                    var fileBytes = entity.Open()
+                                        .ToBytes()
+                                        .GetString()
+                                        .Replace("8FCC3D6A-9C25-4802-8837-16C51BE9FDBE.example.com", siteLocation)
+                                        .GetBytes();
 
-                            return entity.FullName.PairWithValue(fileBytes);
+                                    return entity.FullName.PairWithValue(fileBytes);
 
-                        })
-                    .ToDictionary();
+                                })
+                            .ToDictionary();
+                    },
+                    () =>
+                    {
+                        telemetry.TrackException(new ArgumentNullException("Could not find SpaSiteLocation - is this key set in app settings?"));
+                        return new Dictionary<string, byte[]>();
+                    });
             }
         }
 

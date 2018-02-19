@@ -73,8 +73,12 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             var context = this.Request.GetSessionServerContext();
             var response = await await context.Sessions.CreateOrUpdateWithAuthenticationAsync(
                     method, values,
-                (sessionId, authorizationId, jwtToken, refreshToken, action, extraParams, redirectUrl) =>
-                    CreateResponse(context, method, action, sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUrl, telemetry),
+                async (sessionId, authorizationId, jwtToken, refreshToken, action, extraParams, redirectUrl) =>
+                {
+                    telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Created Authentication.  Creating response.");
+                    var resp = await CreateResponse(context, method, action, sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUrl, telemetry);
+                    return resp;
+                },
                 (location) =>
                 {
                     telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - location: {location.AbsolutePath}");
@@ -147,7 +151,12 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             var redirectResponse = await config.GetRedirectUriAsync(context, method, action,
                     sessionId, authorizationId, jwtToken, refreshToken, extraParams,
                     redirectUrl,
-                (redirectUrlSelected) => Redirect(redirectUrlSelected),
+                (redirectUrlSelected) =>
+                {
+                    telemetry.TrackEvent($"CreateResponse - redirectUrlSelected1: {redirectUrlSelected.AbsolutePath}");
+                    telemetry.TrackEvent($"CreateResponse - redirectUrlSelected2: {redirectUrlSelected.AbsoluteUri}");
+                    return Redirect(redirectUrlSelected);
+                },
                 (paramName, why) =>
                 {
                     var message = $"Invalid parameter while completing login: {paramName} - {why}";
@@ -164,6 +173,9 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                         .AddReason(why)
                             .ToActionResult();
                 });
+
+            var msg = redirectResponse;
+            telemetry.TrackEvent($"CreateResponse - {msg}");
             return redirectResponse;
         }
     }

@@ -3,16 +3,11 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
-
 using Microsoft.IdentityModel.Tokens;
-
-using EastFive.Api.Services;
 using System.Web;
-using BlackBarLabs.Linq;
 using System.IdentityModel.Tokens.Jwt;
-using EastFive.Security.SessionServer.Persistence;
-using BlackBarLabs.Extensions;
 using EastFive.Security.SessionServer;
+using BlackBarLabs.Extensions;
 
 namespace EastFive.Security.CredentialProvider.AzureADB2C
 {
