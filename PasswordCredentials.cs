@@ -292,19 +292,22 @@ namespace EastFive.Security.SessionServer
                                     //Tokens = tokenProvider.CreateTokens(credentialMapping.actorId),
                                     Method = tokenProvider.Method,
                                 };
-                                if (ServiceConfiguration.managementProviders.ContainsKey(credentialMapping.method))
-                                {
-                                    var provider = ServiceConfiguration.managementProviders[credentialMapping.method];
-                                    var displayUsernameKvp = await provider.GetAuthorizationAsync(credentialMapping.loginId,
-                                        un => un.displayName.PairWithKey(un.userName),
-                                        () => string.Empty.PairWithKey(string.Empty),
-                                        (why) => string.Empty.PairWithKey(string.Empty),
-                                        () => string.Empty.PairWithKey(string.Empty),
-                                        (why) => string.Empty.PairWithKey(string.Empty));
-                                    mapping.Username = displayUsernameKvp.Value;
-                                    mapping.DisplayName = displayUsernameKvp.Key;
-                                }
-                                return mapping;
+                                if (!ServiceConfiguration.managementProviders.ContainsKey(credentialMapping.method))
+                                    return mapping;
+
+                                var provider = ServiceConfiguration.managementProviders[credentialMapping.method];
+                                return await provider.GetAuthorizationAsync(credentialMapping.loginId,
+                                    un => 
+                                    {
+                                        mapping.AccountEnabled = un.accountEnabled;
+                                        mapping.Username = un.userName;
+                                        mapping.DisplayName = un.displayName;
+                                        return mapping;
+                                    },
+                                    () => mapping,
+                                    (why) => mapping,
+                                    () => mapping,
+                                    (why) => mapping);
                             })
                         .WhenAllAsync(5);
                     return onSuccess(lookups);
@@ -342,6 +345,7 @@ namespace EastFive.Security.SessionServer
                             {
                                 if (!loginInfo.isEmail)
                                 {
+                                    //Library.configurationManager.MyNewMethod
                                     failureMessage = "UserID is not an email address";
                                     return resultFailure;
                                 }

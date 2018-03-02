@@ -10,6 +10,7 @@ namespace EastFive.Security.SessionServer
         public Guid loginId;
         public string userName;
         public bool isEmail;
+        public string otherMail;
         public bool forceChange;
         public bool accountEnabled;
         internal string displayName;
