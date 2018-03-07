@@ -36,7 +36,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                                 .Select(x => new AppSetting { Name = x, Value = ConfigurationManager.AppSettings[x] }).OrderBy(x => x.Name).ToArray();
                             return this.Request.CreateResponse(System.Net.HttpStatusCode.OK, settings, "application/json").ToTask();
                         }
-                        return this.Request.CreateResponse(System.Net.HttpStatusCode.InternalServerError).ToTask();
+                        return this.Request.CreateResponse(System.Net.HttpStatusCode.NotFound).ToTask();
                     },
                     (why) => this.Request.CreateResponse(System.Net.HttpStatusCode.InternalServerError, why).ToTask());
             });
