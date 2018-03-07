@@ -70,7 +70,7 @@ namespace EastFive.AzureADB2C
         }
 
         public async Task<TResult> GetUserByObjectId<TResult>(string objectId,
-            Func<string, string, bool, bool, bool, TResult> onSuccess,
+            Func<string, string, bool, string, bool, bool, TResult> onSuccess,
             Func<string, TResult> onFailure)
         {
             try
@@ -80,18 +80,20 @@ namespace EastFive.AzureADB2C
                 var signinName = default(string);
                 var displayName = default(string);
                 var isEmail = default(bool);
+                var otherMail = default(string);
                 if (default(Resources.User.SignInName[]) != user.SignInNames &&
                     user.SignInNames.Length > 0)
                 {
                     displayName = user.DisplayName;
                     signinName = user.SignInNames[0].Value;
                     isEmail = String.Compare(user.SignInNames[0].Type, "emailAddress") == 0;
+                    otherMail = user.OtherMails?.FirstOrDefault();
                 }
                 var forceChange = default(Resources.User.PasswordProfileResource) != user.PasswordProfile
                     ? user.PasswordProfile.ForceChangePasswordNextLogin
                     : default(bool);
 
-                return onSuccess(displayName, signinName, isEmail, forceChange, user.AccountEnabled);
+                return onSuccess(displayName, signinName, isEmail, otherMail, forceChange, user.AccountEnabled);
             }
             catch (Exception e)
             {
@@ -114,28 +116,30 @@ namespace EastFive.AzureADB2C
             var user = ParseUser(users[0]);
             if (null == user)
                 return onFailure("Could not parse user");
-            return onSuccess(user.Item1, user.Item3, user.Item4, user.Item5);
+            return onSuccess(user.Item1, user.Item3, user.Item5, user.Item6);
         }
 
-        private Tuple<Guid, string, bool, bool, bool> ParseUser(Resources.User user)
+        private Tuple<Guid, string, bool, string, bool, bool> ParseUser(Resources.User user)
         {
             Guid loginId;
             if (!Guid.TryParse(user.ObjectId, out loginId))
-                return default(Tuple<Guid, string, bool, bool, bool>);
+                return default(Tuple<Guid, string, bool, string, bool, bool>);
             var isEmail = false;
             var userName = string.Empty;
+            var otherMail = default(string);
             if (default(Resources.User.SignInName[]) != user.SignInNames &&
                 user.SignInNames.Length > 0)
             {
                 isEmail = String.Compare(user.SignInNames[0].Type, "emailAddress") == 0;
                 userName = user.SignInNames[0].Value;
+                otherMail = user.OtherMails?.FirstOrDefault();
             }
             var forceChange = default(Resources.User.PasswordProfileResource) != user.PasswordProfile && user.PasswordProfile.ForceChangePasswordNextLogin;
-            return new Tuple<Guid, string, bool, bool, bool>(loginId,userName,isEmail,forceChange,user.AccountEnabled);
+            return new Tuple<Guid, string, bool, string, bool, bool>(loginId,userName,isEmail,otherMail,forceChange,user.AccountEnabled);
         }
 
         public async Task<TResult> GetAllUsersAsync<TResult>(
-            Action<Tuple<Guid,string,bool,bool,bool>[]> onSegment,
+            Action<Tuple<Guid,string,bool,string,bool,bool>[]> onSegment,
             Func<TResult> onSuccess,
             Func<string,TResult> onFailure)
         {

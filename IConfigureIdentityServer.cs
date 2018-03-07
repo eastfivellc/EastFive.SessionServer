@@ -32,5 +32,11 @@ namespace EastFive.Security.SessionServer
         Task<TResult> RemoveIntegrationAsync<TResult>(Session session, HttpRequestMessage request,
             Func<HttpResponseMessage, TResult> onSuccess,
             Func<TResult> onFailure);
+
+        Task<TResult> GetActorAdministrationEmailAsync<TResult>(Guid actorId,
+            Func<string, TResult> onSuccess,
+            Func<TResult> onActorNotFound,
+            Func<TResult> onNoEmail,
+            Func<string, TResult> onFailure);
     }
 }

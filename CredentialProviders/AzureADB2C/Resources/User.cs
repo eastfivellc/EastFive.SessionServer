@@ -57,6 +57,9 @@ namespace EastFive.AzureADB2C.Resources
             [JsonProperty("value")]
             public string Value { get; set; }
         }
+
+        [JsonProperty("otherMails")]
+        public string[] OtherMails { get; set; }
     }
 
     [DataContract]

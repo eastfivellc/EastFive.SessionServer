@@ -226,15 +226,16 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
             Func<string, TResult> onFailure)
         {
             return await client.GetUserByObjectId(loginId.ToString(),
-                (displayName, signinName, isEmail, forceChange, accountEnabled) => onSuccess(new LoginInfo
+                (displayName, signinName, isEmail, otherMail, forceChange, accountEnabled) => onSuccess(new LoginInfo
                 {
                     loginId = loginId,
-                    accountEnabled = accountEnabled,
-                    forceChange = forceChange,
-                    isEmail = isEmail,
                     userName = signinName,
+                    isEmail = isEmail,
+                    otherMail = otherMail,
+                    forceChange = forceChange,
+                    accountEnabled = accountEnabled,
                     displayName = displayName,
-                    forceChangePassword = forceChange,
+                    forceChangePassword = forceChange
                 }),
                 (why) => onServiceNotAvailable(why));
         }
@@ -256,8 +257,9 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
                                 loginId = tuple.Item1,
                                 userName = tuple.Item2,
                                 isEmail = tuple.Item3,
-                                forceChange = tuple.Item4,
-                                accountEnabled = tuple.Item5,
+                                otherMail = tuple.Item4,
+                                forceChange = tuple.Item5,
+                                accountEnabled = tuple.Item6,
                             }))
                         .ToArray();
                 },
