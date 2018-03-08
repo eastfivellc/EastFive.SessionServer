@@ -33,7 +33,7 @@ namespace EastFive.Security.SessionServer
             Func<HttpResponseMessage, TResult> onSuccess,
             Func<TResult> onFailure);
 
-        Task<TResult> GetActorAdministrationEmailAsync<TResult>(Guid actorId,
+        Task<TResult> GetActorAdministrationEmailAsync<TResult>(Guid actorId, Guid performingActorId, IEnumerable<System.Security.Claims.Claim> claims,
             Func<string, TResult> onSuccess,
             Func<TResult> onActorNotFound,
             Func<TResult> onNoEmail,

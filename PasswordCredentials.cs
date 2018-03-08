@@ -12,6 +12,7 @@ using BlackBarLabs.Linq;
 using BlackBarLabs.Linq.Async;
 using EastFive.Linq.Async;
 using EastFive.Extensions;
+using System.Web.Security;
 
 namespace EastFive.Security.SessionServer
 {
@@ -90,7 +91,7 @@ namespace EastFive.Security.SessionServer
                                         async (authenticationRequest) =>
                                         {
                                             var loginUrl = authenticationRequest.loginUrl;
-                                            var resultMail = await SendInvitePasswordAsync(username, token, loginUrl,
+                                            var resultMail = await SendInvitePasswordAsync(username, username, token, loginUrl,
                                                 onSuccess, onServiceNotAvailable, onFailure);
                                             return resultMail;
                                         },
@@ -289,7 +290,6 @@ namespace EastFive.Security.SessionServer
                                     AccountEnabled = true,
                                     ActorId = credentialMapping.actorId,
                                     LoginId = credentialMapping.loginId,
-                                    //Tokens = tokenProvider.CreateTokens(credentialMapping.actorId),
                                     Method = tokenProvider.Method,
                                 };
                                 if (!ServiceConfiguration.managementProviders.ContainsKey(credentialMapping.method))
@@ -343,50 +343,47 @@ namespace EastFive.Security.SessionServer
                         var resultGetLogin = await await managmentProvider.GetAuthorizationAsync(loginId,
                             async (loginInfo) =>
                             {
-                                if (!loginInfo.isEmail)
+                                var email = await Library.configurationManager.GetActorAdministrationEmailAsync(actorId, performingActorId, claims,
+                                    address => address,
+                                    () => string.Empty,
+                                    () => string.Empty,
+                                    (why) => string.Empty);
+                                if (string.IsNullOrWhiteSpace(email))
                                 {
-                                    //Library.configurationManager.MyNewMethod
-                                    failureMessage = "UserID is not an email address";
+                                    email = loginInfo.GetEmail(
+                                        address => address,
+                                        () => string.Empty);
+                                }
+                                
+                                if (string.IsNullOrWhiteSpace(email))
+                                {
+                                    failureMessage = "No email address found for user.";
                                     return resultFailure;
                                 }
 
                                 return await Web.Configuration.Settings.GetUri(Configuration.AppSettings.LandingPage,
                                     async (landingPage) =>
                                     {
-                                        return await await context.Sessions.CreateLoginAsync(Guid.NewGuid(),
-                                            CredentialValidationMethodTypes.Password, landingPage, landingPage,
-                                            (type) => callbackUrl,
-                                            async (authenticationRequest) =>
+                                        if (string.IsNullOrWhiteSpace(password))
+                                            password = Membership.GeneratePassword(8, 2);
+                                        // TODO: the purpose of the next line is to send the password. 
+                                        // If we don't want it sent, don't update the last sent value!!!
+                                        return await await SendInvitePasswordAsync(email, loginInfo.userName, password, landingPage,
+                                            async () =>
                                             {
-                                                var loginUrl = authenticationRequest.loginUrl;
-                                                // TODO: the purpose of the next line is to send the password. 
-                                                // If we don't want it sent, don't update the last sent value!!!
-                                                return await await SendInvitePasswordAsync(loginInfo.userName, "*********", loginUrl,
-                                                    async () =>
-                                                    {
-                                                        await updateEmailLastSentAsync(emailLastSent.Value);
-                                                        return resultSuccess;
-                                                    },
-                                                    () =>
-                                                    {
-                                                        DiscriminatedDelegate<Guid, TResult, Task<TResult>> resultServiceUnavailable =
-                                                        (success, fail) => fail(onServiceNotAvailable());
-                                                        return resultServiceUnavailable.ToTask();
-                                                    },
-                                                    (why) =>
-                                                    {
-                                                        failureMessage = why;
-                                                        return resultFailure.ToTask();
-                                                    });
+                                                await updateEmailLastSentAsync(emailLastSent.Value);
+                                                return resultSuccess;
                                             },
-                                            "GUID not unique".AsFunctionException<Task<DiscriminatedDelegate<Guid, TResult, Task<TResult>>>>(),
-                                            "Password system said not available while in use".AsFunctionException<Task<DiscriminatedDelegate<Guid, TResult, Task<TResult>>>>(),
-                                            "Password system said not initialized while in use".AsFunctionException<string, Task<DiscriminatedDelegate<Guid, TResult, Task<TResult>>>>(),
+                                            () =>
+                                            {
+                                                DiscriminatedDelegate<Guid, TResult, Task<TResult>> resultServiceUnavailable =
+                                                (success, fail) => fail(onServiceNotAvailable());
+                                                return resultServiceUnavailable.ToTask();
+                                            },
                                             (why) =>
                                             {
-                                                DiscriminatedDelegate<Guid, TResult, Task<TResult>> resultFailureCreateLogin =
-                                                        (success, fail) => fail(onFailure(why));
-                                                return resultFailureCreateLogin.ToTask();
+                                                failureMessage = why;
+                                                return resultFailure.ToTask();
                                             });
                                     },
                                     (why) =>
@@ -425,32 +422,34 @@ namespace EastFive.Security.SessionServer
                 (r) => r.ToTask());
         }
 
-        private async Task<TResult> SendInvitePasswordAsync<TResult>(string emailAddress, string password, Uri loginUrl,
+        private Task<TResult> SendInvitePasswordAsync<TResult>(string emailAddress, string userName, string password, Uri loginUrl,
             Func<TResult> onSuccess,
             Func<TResult> onServiceNotAvailable,
             Func<string, TResult> onFailure)
         {
-            var templateName = ConfigurationManager.AppSettings[Configuration.EmailTemplateDefinitions.InvitePassword];
-            if (string.IsNullOrEmpty(templateName))
-                return onFailure($"Email template setting not found.  Expected template value for key {Configuration.EmailTemplateDefinitions.InvitePassword}");
-            
-            var mailService = Web.Services.ServiceConfiguration.SendMessageService();
-            var resultMail = await mailService.SendEmailMessageAsync(
-                templateName, 
-                emailAddress, string.Empty,
-                "newaccounts@orderowl.com", "New Account Services",
-                "New Order Owl Account",
-                new Dictionary<string, string>()
-                {
-                    { "login_link", loginUrl.AbsoluteUri },
-                    { "username",   emailAddress },
-                    { "password",   password }
-                },
-                default(IDictionary<string, IDictionary<string, string>[]>),
-                (sentCode) => onSuccess(),
-                () => onServiceNotAvailable(),
-                (why) => onFailure(why));
-            return resultMail;
+            return EastFive.Web.Configuration.Settings.GetString(Configuration.EmailTemplateDefinitions.InvitePassword,
+                templateName => EastFive.Web.Configuration.Settings.GetString(Configuration.EmailTemplateDefinitions.InviteFromAddress,
+                    fromAddress => EastFive.Web.Configuration.Settings.GetString(Configuration.EmailTemplateDefinitions.InviteFromName,
+                        fromName => EastFive.Web.Configuration.Settings.GetString(Configuration.EmailTemplateDefinitions.InviteSubject,
+                            subject => Web.Services.ServiceConfiguration.SendMessageService()
+                                .SendEmailMessageAsync(templateName,
+                                    emailAddress, string.Empty,
+                                    fromAddress, fromName,  //"newaccounts@orderowl.com", "New Account Services"
+                                    subject, //"New Order Owl Account"
+                                    new Dictionary<string, string>()
+                                    {
+                                        { "login_link", loginUrl.AbsoluteUri },
+                                        { "username",   userName },
+                                        { "password",   password }
+                                    },
+                                    default(IDictionary<string, IDictionary<string, string>[]>),
+                                    (sentCode) => onSuccess(),
+                                    onServiceNotAvailable,
+                                    onFailure),
+                        onFailure.AsAsyncFunc()),
+                    onFailure.AsAsyncFunc()),
+                onFailure.AsAsyncFunc()),
+            onFailure.AsAsyncFunc());
         }
         
         internal async Task<TResult> DeletePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
@@ -471,6 +470,5 @@ namespace EastFive.Security.SessionServer
         }
 
         #endregion
-        
     }
 }

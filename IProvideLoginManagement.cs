@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace EastFive.Security.SessionServer
@@ -15,8 +13,19 @@ namespace EastFive.Security.SessionServer
         public bool accountEnabled;
         internal string displayName;
         internal bool forceChangePassword;
-    }
 
+        public TResult GetEmail<TResult>(
+            Func<string,TResult> onSuccess,
+            Func<TResult> onNotFound)
+        {
+            if (isEmail)
+                return onSuccess(userName);
+            else if (!string.IsNullOrWhiteSpace(otherMail))
+                return onSuccess(otherMail);
+            else
+                return onNotFound();
+        }
+    }
 
     public interface IProvideLoginManagement
     {
