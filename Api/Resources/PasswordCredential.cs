@@ -11,6 +11,7 @@ namespace EastFive.Security.SessionServer.Api.Resources
     {
         #region Properties
         
+        [DataMember]
         [JsonProperty(PropertyName = "actor")]
         public WebId Actor { get; set; }
 

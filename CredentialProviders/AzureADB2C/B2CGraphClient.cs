@@ -197,6 +197,7 @@ namespace EastFive.AzureADB2C
                     ForceChangePasswordNextLogin = forceChange,
                     Password = secret,
                 },
+                OtherMails = isEmail ? new[] { userId } : default(string[])
             };
             var json = JsonConvert.SerializeObject(user);
             var result = await await SendGraphPostRequest("/users", json,

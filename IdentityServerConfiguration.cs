@@ -114,7 +114,7 @@ namespace EastFive.Security.SessionServer
             return onSuccess(request.CreateResponse(HttpStatusCode.NoContent)).ToTask();
         }
 
-        public virtual Task<TResult> GetActorAdministrationEmailAsync<TResult>(Guid actorId, Func<string, TResult> onSuccess, Func<TResult> onActorNotFound, Func<TResult> onNoEmail, Func<string, TResult> onFailure)
+        public virtual Task<TResult> GetActorAdministrationEmailAsync<TResult>(Guid actorId, Guid performingActorId, IEnumerable<System.Security.Claims.Claim> claims, Func<string, TResult> onSuccess, Func<TResult> onActorNotFound, Func<TResult> onNoEmail, Func<string, TResult> onFailure)
         {
             return onNoEmail().ToTask();
         }
