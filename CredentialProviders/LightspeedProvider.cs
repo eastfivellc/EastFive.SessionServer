@@ -109,7 +109,7 @@ namespace EastFive.Security.CredentialProvider
                     return onInvalidCredentials($"Token validation failed:{error}");
                 }
                 
-                //{"access_token":"ede8a1eca4f1077a06d84f662b112dab5ac8be86","expires_in":1800,"token_type":"bearer","scope":"employee:register_read employee:inventory employee:admin_inventory systemuserid:491223","refresh_token":"3f82439dc8355081a462be15f68d218fdf81b2ca"}
+                //{"access_token":"HEX","expires_in":1800,"token_type":"bearer","scope":"employee:register_read employee:inventory employee:admin_inventory systemuserid:491223","refresh_token":"HEX"}
                 var content = await response.Content.ReadAsStringAsync();
                 dynamic stuff = Newtonsoft.Json.JsonConvert.DeserializeObject(content);
 
