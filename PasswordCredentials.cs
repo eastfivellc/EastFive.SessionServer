@@ -261,6 +261,7 @@ namespace EastFive.Security.SessionServer
         public struct LoginInfo
         {
             public string Username;
+            public string Email;
             public Guid LoginId;
             public Guid ActorId;
             public bool AccountEnabled;
@@ -292,7 +293,7 @@ namespace EastFive.Security.SessionServer
                                     LoginId = credentialMapping.loginId,
                                     Method = tokenProvider.Method,
                                 };
-                                if (!ServiceConfiguration.managementProviders.ContainsKey(credentialMapping.method))
+                                if (!ServiceConfiguration.managementProviders.ContainsKey(credentialMapping.method) || default(Guid) == credentialMapping.loginId)
                                     return mapping;
 
                                 var provider = ServiceConfiguration.managementProviders[credentialMapping.method];
@@ -302,6 +303,7 @@ namespace EastFive.Security.SessionServer
                                         mapping.AccountEnabled = un.accountEnabled;
                                         mapping.Username = un.userName;
                                         mapping.DisplayName = un.displayName;
+                                        mapping.Email = un.GetEmail(email => email, () => "");
                                         return mapping;
                                     },
                                     () => mapping,

@@ -6,6 +6,7 @@ using BlackBarLabs.Persistence.Azure.StorageTables;
 using BlackBarLabs.Extensions;
 using BlackBarLabs.Persistence;
 using System.Linq;
+using EastFive.Linq;
 using System.Collections.Generic;
 
 namespace EastFive.Security.SessionServer.Persistence
@@ -67,12 +68,18 @@ namespace EastFive.Security.SessionServer.Persistence
                                 loginId = doc.Id,
                                 method = CredentialValidationMethodTypes.Password,
                                 id = Guid.NewGuid(),
-                                subject = doc.Id.ToString("N"),
+                                subject = doc.Id.ToString(),
                             }));
 
             return await repository.FindAllAsync(
                 (Documents.CredentialMappingDocument[] docs) =>
-                    onSuccess(docs.Select(doc => Convert(doc)).Concat(actorCredMappings).ToArray()));
+                    onSuccess(docs.Select(doc => Convert(doc))
+                        .Concat(actorCredMappings)
+                        .GroupBy(
+                            x => new { x.actorId, x.subject, x.method, x.loginId})  // this makes the returned array distinct on the important fields since we've joined two tables
+                        .Select(g => g.First())
+                        .OrderBy(c => c.actorId)
+                        .ToArray()));
         }
         
         internal async Task<TResult> CreateCredentialMappingAsync<TResult>(Guid credentialMappingId,
@@ -317,12 +324,14 @@ namespace EastFive.Security.SessionServer.Persistence
 
         private static CredentialMapping Convert(Documents.CredentialMappingDocument mappingDoc)
         {
+            Guid.TryParse(mappingDoc.Subject, out Guid loginId);
             return new CredentialMapping
             {
                 id = mappingDoc.Id,
                 actorId = mappingDoc.ActorId,
                 method =  mappingDoc.Method.AsEnum<CredentialValidationMethodTypes>(),
                 subject = mappingDoc.Subject,
+                loginId = loginId
             };
         }
 
