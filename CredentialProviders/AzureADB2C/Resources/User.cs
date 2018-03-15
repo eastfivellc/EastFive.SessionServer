@@ -73,4 +73,13 @@ namespace EastFive.AzureADB2C.Resources
         
     }
 
+    [DataContract]
+    public class UserEmailPatch
+    {
+        [JsonProperty("objectId")]
+        public string ObjectId { get; set; }
+
+        [JsonProperty("otherMails")]
+        public string[] OtherMails { get; set; }
+    }
 }

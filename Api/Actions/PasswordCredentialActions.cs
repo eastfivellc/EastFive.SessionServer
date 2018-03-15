@@ -67,11 +67,9 @@ namespace EastFive.Security.SessionServer.Api
             return await request.GetActorIdClaimsAsync(ClaimsDefinitions.AccountIdClaimType,
                 async (performingActorId, claims) =>
                 {
-                    var callbackUrl = url.GetLocation<Controllers.OpenIdResponseController>();
-
                     var context = request.GetSessionServerContext();
                     var creationResults = await context.PasswordCredentials.UpdatePasswordCredentialAsync(credential.Id.UUID,
-                        credential.Token, credential.ForceChange, credential.LastEmailSent, callbackUrl,
+                        credential.Token, credential.ForceChange, credential.LastEmailSent,
                         performingActorId, claims,
                         () => request.CreateResponse(HttpStatusCode.NoContent),
                         () => request.CreateResponse(HttpStatusCode.NotFound),

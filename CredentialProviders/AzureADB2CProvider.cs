@@ -279,6 +279,18 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
                 onFailure);
         }
 
+        public async Task<TResult> UpdateEmailAsync<TResult>(Guid loginId,
+                string email,
+            Func<TResult> onSuccess,
+            Func<string, TResult> onServiceNotAvailable,
+            Func<TResult> onServiceNotSupported,
+            Func<string, TResult> onFailure)
+        {
+            return await client.UpdateUserEmailAsync(loginId.ToString(), email,
+                ok => onSuccess(),
+                onFailure);
+        }
+
         public async Task<TResult> DeleteAuthorizationAsync<TResult>(Guid loginId,
             Func<TResult> onSuccess,
             Func<string, TResult> onServiceNotAvailable, 

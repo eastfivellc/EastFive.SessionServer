@@ -57,6 +57,12 @@ namespace EastFive.Security.SessionServer
             Func<TResult> onServiceNotSupported,
             Func<string, TResult> onFailure);
 
+        Task<TResult> UpdateEmailAsync<TResult>(Guid loginId, string email,
+            Func<TResult> onSuccess,
+            Func<string, TResult> onServiceNotAvailable,
+            Func<TResult> onServiceNotSupported,
+            Func<string, TResult> onFailure);
+
         Task<TResult> DeleteAuthorizationAsync<TResult>(Guid loginId,
             Func<TResult> onSuccess,
             Func<string, TResult> onServiceNotAvailable,

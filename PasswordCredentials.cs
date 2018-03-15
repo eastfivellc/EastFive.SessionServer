@@ -317,7 +317,7 @@ namespace EastFive.Security.SessionServer
         }
 
         internal async Task<TResult> UpdatePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
-            string password, bool forceChange, DateTime? emailLastSent, Uri callbackUrl,
+            string password, bool forceChange, DateTime? emailLastSent,
             Guid performingActorId, System.Security.Claims.Claim[] claims,
             Func<TResult> onSuccess,
             Func<TResult> onNotFound,
@@ -422,6 +422,38 @@ namespace EastFive.Security.SessionServer
                         (why) => onFailure(why));
                 },
                 (r) => r.ToTask());
+        }
+
+        public async Task<TResult> UpdateEmailAsync<TResult>(Guid actorId,
+            string email,
+            Guid performingActorId, System.Security.Claims.Claim[] claims,
+            Func<TResult> onSuccess,
+            Func<TResult> onNotFound,
+            Func<TResult> onUnathorized,
+            Func<TResult> onServiceNotAvailable,
+            Func<string, TResult> onFailure)
+        {
+            return await await dataContext.PasswordCredentials.FindPasswordCredentialByActorAsync(actorId,
+                async (credentials) =>
+                {
+                    if (!await Library.configurationManager.CanAdministerCredentialAsync(
+                        actorId, performingActorId, claims))
+                        return onUnathorized();
+
+                    if (string.IsNullOrWhiteSpace(email))
+                        return onSuccess();
+
+                    var reasons = await credentials
+                        .Select(
+                            c => managmentProvider.UpdateEmailAsync(c.loginId, email,
+                                () => string.Empty,
+                                (why) => why,
+                                () => "service unavailable",
+                                (why) => why))
+                        .WhenAllAsync();
+                    return reasons.Any(x => !string.IsNullOrEmpty(x)) ? onFailure(reasons.First()) : onSuccess();
+                },
+                onNotFound.AsAsyncFunc());
         }
 
         private Task<TResult> SendInvitePasswordAsync<TResult>(string emailAddress, string userName, string password, Uri loginUrl,

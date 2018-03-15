@@ -249,7 +249,21 @@ namespace EastFive.AzureADB2C
                 {
                     ForceChangePasswordNextLogin = forceChange,
                     Password = password,
-                },
+                }
+            };
+            var json = JsonConvert.SerializeObject(user);
+            return await SendGraphPatchRequest("/users/" + objectId, json,
+                onSuccess, onFailure);
+        }
+
+        public async Task<TResult> UpdateUserEmailAsync<TResult>(string objectId, string email,
+            Func<string, TResult> onSuccess,
+            Func<string, TResult> onFailure)
+        {
+            var user = new EastFive.AzureADB2C.Resources.UserEmailPatch()
+            {
+                ObjectId = objectId,
+                OtherMails = string.IsNullOrWhiteSpace(email) ? new string[] { } : new [] { email }
             };
             var json = JsonConvert.SerializeObject(user);
             return await SendGraphPatchRequest("/users/" + objectId, json,
