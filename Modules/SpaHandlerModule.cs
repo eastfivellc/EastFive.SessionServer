@@ -45,7 +45,14 @@ namespace EastFive.Security.SessionServer.Modules
 
         private void ExtractSpaFiles(HttpRequest request)
         {
-            var spaZipPath = System.Web.Hosting.HostingEnvironment.MapPath("~/Spa.zip");
+            var spaZipPath = System.Web.Hosting.HostingEnvironment.MapPath("~/Content/Spa.zip");
+            if (!System.IO.File.Exists(spaZipPath))
+            {
+                lookupSpaFile = new Dictionary<string, byte[]>();
+                indexHTML = System.Text.Encoding.UTF8.GetBytes("SPA Not Installed");
+                return;
+            };
+
             using (var zipArchive = ZipFile.OpenRead(spaZipPath))
             {
 
