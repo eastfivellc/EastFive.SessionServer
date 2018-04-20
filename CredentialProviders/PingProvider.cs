@@ -18,6 +18,7 @@ using System.Net;
 using EastFive.Api.Services;
 using System.Security.Claims;
 using EastFive.Security.SessionServer;
+using System.Collections;
 
 namespace EastFive.Security.CredentialProvider.Ping
 {
@@ -116,6 +117,16 @@ namespace EastFive.Security.CredentialProvider.Ping
         public Uri GetSignupUrl(Guid state, Uri responseControllerLocation)
         {
             return default(Uri);
+        }
+
+        public Task<TResult> UserParametersAsync<TResult>(Guid actorId, System.Security.Claims.Claim[] claims, 
+                IDictionary<string, string> extraParams, 
+            Func<IDictionary<string, string>, IDictionary<string, Type>, IDictionary<string, string>, TResult> onSuccess)
+        {
+            return onSuccess(
+                new Dictionary<string, string>() { { "PushPMPFileToEHR", "Push PMP file to EHR" } },
+                new Dictionary<string, Type>() { { "PushPMPFileToEHR", typeof(bool) } },
+                new Dictionary<string, string>() { { "PushPMPFileToEHR", "When true, the system will push PMP files into the provider's clinical documents in their EHR system." } }).ToTask();
         }
 
         #endregion

@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -249,9 +250,14 @@ namespace EastFive.Security.CredentialProvider
         {
             return default(Uri);
         }
-        
+
+        public Task<TResult> UserParametersAsync<TResult>(Guid actorId, System.Security.Claims.Claim[] claims, IDictionary<string, string> extraParams, Func<IDictionary<string, string>, IDictionary<string, Type>, IDictionary<string, string>, TResult> onSuccess)
+        {
+            throw new NotImplementedException();
+        }
+
         #endregion
 
-        
+
     }
 }

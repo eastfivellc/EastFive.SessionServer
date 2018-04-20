@@ -63,22 +63,32 @@ namespace EastFive.Security.SessionServer.Persistence
             return results;
         }
 
-        public async Task<TResult> FindUpdatableAsync<TResult>(Guid actorId, CredentialValidationMethodTypes method,
+        internal async Task<TResult> FindUpdatableAsync<TResult>(Guid actorId, CredentialValidationMethodTypes method,
             Func<Guid, IDictionary<string, string>, Func<IDictionary<string, string>, Task>, Task<TResult>> onFound,
-            Func<TResult> actorNotFound)
+            Func<Func<IDictionary<string, string>, Task<Guid>>, Task<TResult>> onNotFound)
         {
             var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
-            var results = await repository.UpdateAsync<AccessDocument, TResult>(actorId, methodName,
-                async (doc, saveAsync) =>
+            var results = await await repository.UpdateAsync<AccessDocument, Task<TResult>>(actorId, methodName,
+                (doc, saveAsync) =>
                 {
-                    return await onFound(doc.LookupId, doc.GetExtraParams(),
-                        async (extraParamsNew) =>
+                    return onFound(doc.LookupId, doc.GetExtraParams(),
+                        (extraParamsNew) =>
                         {
                             doc.SetExtraParams(extraParamsNew);
-                            await saveAsync(doc);
-                        });
+                            return saveAsync(doc);
+                        }).ToTask();
                 },
-                () => actorNotFound());
+                () =>
+                {
+                    return onNotFound(
+                        (extraParams) =>
+                        {
+                            var integrationId = Guid.NewGuid();
+                            return this.CreateAsync(integrationId, actorId, method, extraParams,
+                                () => integrationId,
+                                "Guid not unique".AsFunctionException<Guid>());
+                        });
+                });
             return results;
         }
 

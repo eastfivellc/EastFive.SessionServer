@@ -12,6 +12,8 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using BlackBarLabs;
 using System.Net;
+using EastFive.Collections.Generic;
+using EastFive.Extensions;
 
 namespace EastFive.Security.SessionServer
 {
@@ -71,21 +73,26 @@ namespace EastFive.Security.SessionServer
             Func<TResult> onNotFound,
             Func<string, TResult> onFailure)
         {
-            return await this.dataContext.AuthenticationRequests.FindByIdAsync(authenticationRequestId,
-                (authenticationRequestStorage) =>
+            return await await this.dataContext.AuthenticationRequests.FindByIdAsync(authenticationRequestId,
+                async (authenticationRequestStorage) =>
                 {
-                    return context.GetLoginProvider(authenticationRequestStorage.method,
-                        (provider) =>
+                    return await context.GetLoginProvider(authenticationRequestStorage.method,
+                        async (provider) =>
                         {
-                            var authenticationRequest = Convert(authenticationRequestStorage);
-                            var callbackUrl = callbackUrlFunc(provider.CallbackController);
-                            authenticationRequest.loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackUrl);
-                            return onSuccess(authenticationRequest);
+                            var extraParams = authenticationRequestStorage.extraParams;
+                            return await provider.UserParametersAsync(authenticationRequestStorage.authorizationId.Value, null, extraParams,
+                                (labels, types, descriptions) =>
+                                {
+                                    var callbackUrl = callbackUrlFunc(provider.CallbackController);
+                                    var loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackUrl);
+                                    var authenticationRequest = Convert(authenticationRequestStorage, loginUrl, extraParams, labels, types, descriptions);
+                                    return onSuccess(authenticationRequest);
+                                });
                         },
-                        () => onFailure("The credential provider for this request is no longer enabled in this system"),
-                        (why) => onFailure(why));
+                        () => onFailure("The credential provider for this request is no longer enabled in this system").ToTask(),
+                        (why) => onFailure(why).ToTask());
                 },
-                onNotFound);
+                ()=> onNotFound().ToTask());
         }
 
         internal async Task<TResult> GetByActorAsync<TResult>(Guid actorId, Func<Type, Uri> callbackUrlFunc,
@@ -101,26 +108,24 @@ namespace EastFive.Security.SessionServer
 
             var integrations = await ServiceConfiguration.loginProviders
                 .Select(
-                    ap => this.dataContext.Accesses.FindAsync(actorId, ap.Key,
+                    async ap => await await this.dataContext.Accesses.FindAsync(actorId, ap.Key,
                         (authenticationRequestId, extraParams) =>
-                            context.GetLoginProvider(ap.Key,
-                                (provider) =>
+                            context.GetLoginProvider<Task<Session?>>(ap.Key,
+                                async (provider) =>
                                 {
-                                    var callbackUrl = callbackUrlFunc(provider.CallbackController);
-                                    var authenticationRequest = new Session
-                                    {
-                                        id = authenticationRequestId,
-                                        action = AuthenticationActions.access,
-                                        authorizationId = actorId,
-                                        extraParams = extraParams,
-                                        loginUrl = provider.GetLoginUrl(Guid.Empty, callbackUrl),
-                                        method = ap.Key,
-                                    };
-                                    return authenticationRequest;
+                                    return await provider.UserParametersAsync(actorId, null, extraParams,
+                                        (labels, types, descriptions) =>
+                                        {
+                                            var callbackUrl = callbackUrlFunc(provider.CallbackController);
+                                            var loginUrl = provider.GetLoginUrl(Guid.Empty, callbackUrl);
+                                            var authenticationRequest = Convert(authenticationRequestId, ap.Key, AuthenticationActions.access, 
+                                                default(string), authenticationRequestId, loginUrl, default(Uri), extraParams, labels, types, descriptions);
+                                            return authenticationRequest;
+                                        });
                                 },
-                                () => default(Session?),
-                                (why) => default(Session?)),
-                        () => default(Session?)))
+                                () => default(Session?).ToTask(),
+                                (why) => default(Session?).ToTask()),
+                        () => default(Session?).ToTask()))
                 .WhenAllAsync()
                 .SelectWhereHasValueAsync()
                 .ToArrayAsync();
@@ -133,6 +138,20 @@ namespace EastFive.Security.SessionServer
         {
             return await this.dataContext.Accesses.FindUpdatableAsync(actorId, method,
                 onSuccess,
+                (createAsync) => onNotFound().ToTask());
+        }
+
+        public async Task<TResult> CreateOrUpdateParamsByActorAsync<TResult>(Guid actorId, CredentialValidationMethodTypes method,
+            Func<
+                Guid,
+                IDictionary<string, string>, 
+                Func<IDictionary<string, string>, Task>, 
+                Task<TResult>> onFound,
+            Func<
+                Func<IDictionary<string, string>, Task<Guid>>, Task<TResult>> onNotFound)
+        {
+            return await this.dataContext.Accesses.FindUpdatableAsync(actorId, method,
+                onFound,
                 onNotFound);
         }
 
@@ -173,7 +192,8 @@ namespace EastFive.Security.SessionServer
                 async (integration, deleteAsync) =>
                 {
                     if(!integration.authorizationId.HasValue)
-                        return await Library.configurationManager.RemoveIntegrationAsync(Convert(integration), request,
+                        return await Library.configurationManager.RemoveIntegrationAsync(Convert(integration, default(Uri), default(Dictionary<string, string>),
+                                default(Dictionary<string, string>), default(Dictionary<string, Type>), default(Dictionary<string, string>)), request,
                             async (response) =>
                             {
                                 await deleteAsync();
@@ -184,7 +204,8 @@ namespace EastFive.Security.SessionServer
                     return await dataContext.Accesses.DeleteAsync(integration.authorizationId.Value, integration.method,
                         async (method, parames) =>
                         {
-                            return await await Library.configurationManager.RemoveIntegrationAsync(Convert(integration), request,
+                            return await await Library.configurationManager.RemoveIntegrationAsync(Convert(integration, default(Uri), default(Dictionary<string, string>),
+                                    default(Dictionary<string, string>), default(Dictionary<string, Type>), default(Dictionary<string, string>)), request,
                                 async (response) =>
                                 {
                                     await deleteAsync();
@@ -214,17 +235,57 @@ namespace EastFive.Security.SessionServer
                 });
         }
 
-        private static Session Convert(Persistence.AuthenticationRequest authenticationRequestStorage)
+        private static Session Convert(
+            Persistence.AuthenticationRequest authenticationRequest,
+            Uri loginUrl,
+            IDictionary<string, string> extraParams, 
+            IDictionary<string, string> labels, 
+            IDictionary<string, Type> types, 
+            IDictionary<string, string> descriptions)
         {
+            return Convert(authenticationRequest.id, authenticationRequest.method, authenticationRequest.action, authenticationRequest.token, 
+                authenticationRequest.authorizationId.Value, loginUrl, authenticationRequest.redirect, extraParams, labels, types, descriptions);
+        }
+
+        private static Session Convert(
+            Guid authenticationRequestStorageId,
+            CredentialValidationMethodTypes method,
+            AuthenticationActions action,
+            string token,
+            Guid authorizationId,
+            Uri loginUrl,
+            Uri redirect,
+            IDictionary<string, string> extraParams,
+            IDictionary<string, string> labels,
+            IDictionary<string, Type> types,
+            IDictionary<string, string> descriptions)
+        {
+            var keys = labels.SelectKeys().Concat(types.SelectKeys()).Concat(descriptions.SelectKeys());
+            var userParams = keys
+                .Distinct()
+                .Select(
+                    key =>
+                    {
+                        return (new CustomParameter
+                        {
+                            Value = extraParams.ContainsKey(key) ? extraParams[key] : default(string),
+                            Type = types.ContainsKey(key) ? types[key] : default(Type),
+                            Label = labels.ContainsKey(key) ? labels[key] : default(string),
+                            Description = descriptions.ContainsKey(key) ? descriptions[key] : default(string),
+                        }).PairWithKey(key);
+                    })
+                .ToDictionary();
+
             return new Session
             {
-                id = authenticationRequestStorage.id,
-                method = authenticationRequestStorage.method,
-                action = authenticationRequestStorage.action,
-                token = authenticationRequestStorage.token,
-                authorizationId = authenticationRequestStorage.authorizationId,
-                extraParams = authenticationRequestStorage.extraParams,
-                redirectUrl = authenticationRequestStorage.redirect,
+                id = authenticationRequestStorageId,
+                method = method,
+                action = action,
+                token = token,
+                authorizationId = authorizationId,
+                redirectUrl = redirect,
+                loginUrl = loginUrl,
+                userParams = userParams
             };
         }
     }

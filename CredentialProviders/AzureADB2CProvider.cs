@@ -301,6 +301,11 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
             return onSuccess();
         }
 
+        public Task<TResult> UserParametersAsync<TResult>(Guid actorId, System.Security.Claims.Claim[] claims, IDictionary<string, string> extraParams, Func<IDictionary<string, string>, IDictionary<string, Type>, IDictionary<string, string>, TResult> onSuccess)
+        {
+            throw new NotImplementedException();
+        }
+
         #endregion
 
     }

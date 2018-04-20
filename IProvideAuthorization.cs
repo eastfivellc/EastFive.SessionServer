@@ -30,5 +30,12 @@ namespace EastFive.Security.SessionServer
             Func<string, TResult> onCouldNotConnect,
             Func<string, TResult> onUnspecifiedConfiguration,
             Func<string, TResult> onFailure);
+
+        Task<TResult> UserParametersAsync<TResult>(Guid actorId, System.Security.Claims.Claim[] claims, IDictionary<string, string> extraParams,
+            Func<
+                IDictionary<string, string>, //Key, label
+                IDictionary<string, Type>,   //Key, type
+                IDictionary<string, string>, //Key, description
+                TResult> onSuccess);
     }
 }
