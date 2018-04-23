@@ -102,6 +102,7 @@ namespace EastFive.Security.SessionServer.Api
 
         private static Resources.Integration Convert(Session authenticationRequest, UrlHelper urlHelper)
         {
+            var userParameters = (Dictionary<string, EastFive.Security.SessionServer.CustomParameter>) authenticationRequest.userParams ?? new Dictionary<string, EastFive.Security.SessionServer.CustomParameter>();
             return new Resources.Integration
             {
                 Id = urlHelper.GetWebId<Controllers.IntegrationController>(authenticationRequest.id),
@@ -110,10 +111,10 @@ namespace EastFive.Security.SessionServer.Api
                     authenticationRequest.authorizationId.Value
                     :
                     default(Guid),
-                ExtraParams = authenticationRequest.userParams
+                ExtraParams = userParameters
                     .Select(param => param.Key.PairWithValue(param.Value.Value))
                     .ToDictionary(),  //This should be depricated in favor of UserParameters, eventually.
-                UserParameters = authenticationRequest.userParams
+                UserParameters = userParameters
                     .Select(
                         param => param.Key.PairWithValue(
                             new Resources.Integration.CustomParameter
