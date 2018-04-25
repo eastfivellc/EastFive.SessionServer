@@ -108,9 +108,9 @@ namespace EastFive.Security.SessionServer.Persistence
                 async (document, saveAsync) =>
                 {
                     return await onFound(Convert(document),
-                        async (oinkedAuthenticationId, token, extraParams) =>
+                        async (linkedAuthenticationId, token, extraParams) =>
                         {
-                            document.LinkedAuthenticationId = oinkedAuthenticationId;
+                            document.LinkedAuthenticationId = linkedAuthenticationId;
                             document.Token = token;
                             document.SetExtraParams(extraParams);
                             await saveAsync(document);

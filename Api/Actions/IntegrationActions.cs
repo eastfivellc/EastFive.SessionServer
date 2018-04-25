@@ -12,6 +12,7 @@ using BlackBarLabs.Api;
 using System.Web.Http.Routing;
 using BlackBarLabs.Extensions;
 using EastFive.Extensions;
+using EastFive.Collections.Generic;
 
 namespace EastFive.Security.SessionServer.Api
 {
@@ -101,15 +102,29 @@ namespace EastFive.Security.SessionServer.Api
 
         private static Resources.Integration Convert(Session authenticationRequest, UrlHelper urlHelper)
         {
+            var userParameters = (Dictionary<string, EastFive.Security.SessionServer.CustomParameter>) authenticationRequest.userParams ?? new Dictionary<string, EastFive.Security.SessionServer.CustomParameter>();
             return new Resources.Integration
             {
                 Id = urlHelper.GetWebId<Controllers.IntegrationController>(authenticationRequest.id),
                 Method = authenticationRequest.method,
-                AuthorizationId = authenticationRequest.authorizationId.HasValue?
+                AuthorizationId = authenticationRequest.authorizationId.HasValue ?
                     authenticationRequest.authorizationId.Value
                     :
                     default(Guid),
-                ExtraParams = authenticationRequest.extraParams,
+                ExtraParams = userParameters
+                    .Select(param => param.Key.PairWithValue(param.Value.Value))
+                    .ToDictionary(),  //This should be depricated in favor of UserParameters, eventually.
+                UserParameters = userParameters
+                    .Select(
+                        param => param.Key.PairWithValue(
+                            new Resources.Integration.CustomParameter
+                                {
+                                    Label = param.Value.Label,
+                                    Type = param.Value.Type.Name,
+                                    Description = param.Value.Description,
+                                    Value = param.Value.Value
+                                }))
+                    .ToDictionary(),
                 LocationAuthentication = authenticationRequest.loginUrl,
                 LocationAuthenticationReturn = authenticationRequest.redirectUrl,
             };
@@ -118,22 +133,32 @@ namespace EastFive.Security.SessionServer.Api
         public static async Task<HttpResponseMessage> UpdateAsync(this Api.Resources.Integration resource,
             HttpRequestMessage request)
         {
-            var context = request.GetSessionServerContext();
-            // Can't update a session that does not exist
-            var session = await context.Sessions.UpdateWithAuthenticationAsync(resource.Id.ToGuid().Value,
-                resource.Method, resource.ResponseToken,
-                (sessionId, authId, token, refreshToken, action, extraParams, redirectUrl) =>
+            return await request.GetActorIdClaimsAsync(
+                async (actingAs, claims) =>
                 {
-                    resource.AuthorizationId = authId;
-                    return request.CreateResponse(HttpStatusCode.Accepted, resource);
-                },
-                (logoutRedirect) => request.CreateRedirectResponse(logoutRedirect),
-                (why) => request.CreateResponse(HttpStatusCode.NotFound).AddReason(why),
-                () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("User in token is not connected to this system"),
-                (why) => request.CreateResponse(HttpStatusCode.BadGateway).AddReason(why),
-                (why) => request.CreateResponseConfiguration(string.Empty, why),
-                (why) => request.CreateResponseUnexpectedFailure(why));
-            return session;
+                    var context = request.GetSessionServerContext();
+
+                    // Can't update a session that does not exist
+                    var session = await context.Sessions.UpdateAsync(resource.Id.ToGuid().Value,
+                        actingAs, claims, 
+                        resource.UserParameters
+                            .ToDictionary(
+                                userParam => userParam.Key,
+                                userParam => userParam.Value.Value),
+                        ()=> request.CreateResponse(HttpStatusCode.NoContent),
+                        (sessionId, authId, token, refreshToken, action, extraParams, redirectUrl) =>
+                        {
+                            resource.AuthorizationId = authId;
+                            return request.CreateResponse(HttpStatusCode.Accepted, resource);
+                        },
+                        (logoutRedirect) => request.CreateRedirectResponse(logoutRedirect),
+                        (why) => request.CreateResponse(HttpStatusCode.NotFound).AddReason(why),
+                        () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("User in token is not connected to this system"),
+                        (why) => request.CreateResponse(HttpStatusCode.BadGateway).AddReason(why),
+                        (why) => request.CreateResponseConfiguration(string.Empty, why),
+                        (why) => request.CreateResponseUnexpectedFailure(why));
+                    return session;
+                });
         }
 
         public static async Task<HttpResponseMessage> DeleteAsync(this Resources.Queries.IntegrationQuery credential,

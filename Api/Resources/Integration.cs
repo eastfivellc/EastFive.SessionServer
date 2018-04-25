@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 namespace EastFive.Security.SessionServer.Api.Resources
 {
     [DataContract]
-    public class Integration:  AuthorizationRequest
+    public class Integration : AuthorizationRequest
     {
         [DataMember]
         [JsonProperty(PropertyName = "authorization_id")]

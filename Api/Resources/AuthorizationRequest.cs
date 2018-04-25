@@ -28,6 +28,25 @@ namespace EastFive.Security.SessionServer.Api.Resources
         [DataMember]
         [JsonProperty(PropertyName = "extra_params")]
         public IDictionary<string, string> ExtraParams { get; set; }
-        
+
+        [JsonProperty(PropertyName = "user_parameters")]
+        public IDictionary<string, CustomParameter> UserParameters { get; set; }
+
+
+        [DataContract]
+        public class CustomParameter
+        {
+            [JsonProperty(PropertyName = "value")]
+            public string Value { get; set; }
+
+            [JsonProperty(PropertyName = "type")]
+            public string Type { get; set; }
+
+            [JsonProperty(PropertyName = "label")]
+            public string Label { get; set; }
+
+            [JsonProperty(PropertyName = "description")]
+            public string Description { get; set; }
+        }
     }
 }
