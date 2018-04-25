@@ -42,7 +42,7 @@ namespace EastFive.Security.SessionServer.Persistence
                         onNotExist.AsAsyncFunc())
                     :
                     onNotExist(),
-                () => onNotExist().ToTask());
+                (lookupDoc) => onNotExist().ToTask());
         }
 
         public async Task<TResult> LookupCredentialMappingByIdAsync<TResult>(

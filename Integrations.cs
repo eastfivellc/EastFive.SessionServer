@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Threading.Tasks;
 
+using EastFive;
 using BlackBarLabs.Extensions;
 using BlackBarLabs.Api;
 using BlackBarLabs.Linq.Async;

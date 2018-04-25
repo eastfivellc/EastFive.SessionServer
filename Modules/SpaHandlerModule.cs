@@ -25,12 +25,13 @@ namespace EastFive.Security.SessionServer.Modules
 
         public SpaHandlerModule()
         {
-            telemetry = new TelemetryClient();
-            if (ConfigurationContext.Instance.AppSettings.ContainsKey(Constants.AppSettingKeys.ApplicationInsightsKey))
-            {
-                var applicationInsightsKey = ConfigurationContext.Instance.AppSettings[Constants.AppSettingKeys.ApplicationInsightsKey];
-                telemetry = new TelemetryClient { InstrumentationKey = applicationInsightsKey };
-            }
+            telemetry = (ConfigurationContext.Instance.AppSettings.ContainsKey(Constants.AppSettingKeys.ApplicationInsightsKey)).IfElse(
+                () =>
+                {
+                    var applicationInsightsKey = ConfigurationContext.Instance.AppSettings[Constants.AppSettingKeys.ApplicationInsightsKey];
+                    return new TelemetryClient { InstrumentationKey = applicationInsightsKey };
+                },
+                () => new TelemetryClient());
         }
 
         public void Dispose()

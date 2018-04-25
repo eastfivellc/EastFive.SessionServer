@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 
 using BlackBarLabs;
+using EastFive;
 using BlackBarLabs.Api;
 using BlackBarLabs.Extensions;
 using EastFive.Collections.Generic;
@@ -49,9 +50,8 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                     .ToArray()
                     .ToTask(),
                 async () => await await Request.Content.ReadMultipartContentAsync(
-                    values => values
-                        .Select(async v => v.Key.PairWithValue(await v.Value.ReadAsStringAsync()))
-                        .WhenAllAsync(),
+                    values => BlackBarLabs.TaskExtensions.WhenAllAsync(values
+                        .Select(async v => v.Key.PairWithValue(await v.Value.ReadAsStringAsync()))),
                     () => (new KeyValuePair<string, string>()).AsArray().ToTask()));
             var allrequestParams = kvps.Concat(bodyValues).ToDictionary();
             return await ProcessRequestAsync(result.method, allrequestParams);

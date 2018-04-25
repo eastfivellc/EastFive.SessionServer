@@ -7,6 +7,7 @@ using System.Web.Http.Routing;
 using BlackBarLabs.Api;
 using System.Linq;
 using BlackBarLabs;
+using EastFive;
 using BlackBarLabs.Extensions;
 using EastFive.Security.SessionServer.Api.Controllers;
 
@@ -43,7 +44,7 @@ namespace EastFive.Security.SessionServer.Api
         {
             return contactIds
                 .Select(contactId => QueryById(contactId, request, url))
-                .WhenAllAsync();
+                .WhenAllAsync<HttpResponseMessage>();
         }
 
         private static async Task<HttpResponseMessage> QueryById(Guid roleId, HttpRequestMessage request, UrlHelper url)
