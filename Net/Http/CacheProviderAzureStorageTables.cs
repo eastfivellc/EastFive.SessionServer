@@ -67,6 +67,9 @@ namespace EastFive.Net.Http
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            if (IsNoCache(request))
+                return await base.SendAsync(request, cancellationToken);
+
             var lookupGuid = request.RequestUri.AbsoluteUri.MD5HashGuid();
             return await await this.repository.FindByIdAsync(lookupGuid,
                 (CacheDocument doc) =>
