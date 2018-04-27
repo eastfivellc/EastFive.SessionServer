@@ -65,7 +65,7 @@ namespace EastFive.Security.SessionServer.Persistence
 
         internal async Task<TResult> FindUpdatableAsync<TResult>(Guid actorId, CredentialValidationMethodTypes method,
             Func<Guid, IDictionary<string, string>, Func<IDictionary<string, string>, Task>, Task<TResult>> onFound,
-            Func<Func<IDictionary<string, string>, Task<Guid>>, Task<TResult>> onNotFound)
+            Func<Func<Guid, IDictionary<string, string>, Task<Guid>>, Task<TResult>> onNotFound)
         {
             var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
             var results = await await repository.UpdateAsync<AccessDocument, Task<TResult>>(actorId, methodName,
@@ -81,9 +81,8 @@ namespace EastFive.Security.SessionServer.Persistence
                 () =>
                 {
                     return onNotFound(
-                        (extraParams) =>
+                        (integrationId, extraParams) =>
                         {
-                            var integrationId = Guid.NewGuid();
                             return this.CreateAsync(integrationId, actorId, method, extraParams,
                                 () => integrationId,
                                 "Guid not unique".AsFunctionException<Guid>());

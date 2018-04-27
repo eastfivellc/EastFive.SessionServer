@@ -110,22 +110,50 @@ namespace EastFive.Security.SessionServer
             var integrations = await ServiceConfiguration.loginProviders
                 .Select(
                     async ap => await await this.dataContext.Accesses.FindAsync(actorId, ap.Key,
-                        (authenticationRequestId, extraParams) =>
-                            context.GetLoginProvider<Task<Session?>>(ap.Key,
+                        async (authenticationRequestId, extraParams) =>
+                        {
+                            return await context.GetLoginProvider<Task<Session?>>(ap.Key,
                                 async (provider) =>
                                 {
-                                    return await provider.UserParametersAsync(actorId, null, extraParams,
-                                        (labels, types, descriptions) =>
+                                    return await await this.dataContext.AuthenticationRequests.FindByIdAsync(authenticationRequestId,
+                                        async (authRequest) =>
                                         {
-                                            var callbackUrl = callbackUrlFunc(provider.CallbackController);
-                                            var loginUrl = provider.GetLoginUrl(Guid.Empty, callbackUrl);
-                                            var authenticationRequest = Convert(authenticationRequestId, ap.Key, AuthenticationActions.access, 
-                                                default(string), authenticationRequestId, loginUrl, default(Uri), extraParams, labels, types, descriptions);
-                                            return authenticationRequest;
+                                            return await provider.UserParametersAsync(actorId, null, extraParams,
+                                                (labels, types, descriptions) =>
+                                                {
+                                                    var callbackUrl = callbackUrlFunc(provider.CallbackController);
+                                                    var loginUrl = provider.GetLoginUrl(Guid.Empty, callbackUrl);
+                                                    var authenticationRequest = Convert(authenticationRequestId, ap.Key, AuthenticationActions.access,
+                                                        default(string), authenticationRequestId, loginUrl, default(Uri), extraParams, labels, types, descriptions);
+                                                    return authenticationRequest;
+                                                });
+                                        },
+                                        async () =>
+                                        {
+                                            #region SHIM
+                                            var integrationId = authenticationRequestId;
+                                            return await await this.dataContext.AuthenticationRequests.CreateAsync(integrationId, ap.Key, AuthenticationActions.link, actorId,
+                                                string.Empty, default(Uri), default(Uri),
+                                                async () =>
+                                                {
+                                                    return await provider.UserParametersAsync(actorId, null, extraParams,
+                                                        (labels, types, descriptions) =>
+                                                        {
+                                                            var callbackUrl = callbackUrlFunc(provider.CallbackController);
+                                                            var loginUrl = provider.GetLoginUrl(Guid.Empty, callbackUrl);
+                                                            var authenticationRequest = Convert(authenticationRequestId, ap.Key, AuthenticationActions.access,
+                                                                default(string), authenticationRequestId, loginUrl, default(Uri), extraParams, labels, types, descriptions);
+                                                            return authenticationRequest;
+                                                        });
+                                                },
+                                                "Guid not unique".AsFunctionException<Task<Session>>());
+                                            #endregion
                                         });
+
                                 },
                                 () => default(Session?).ToTask(),
-                                (why) => default(Session?).ToTask()),
+                                (why) => default(Session?).ToTask());
+                        },
                         () => default(Session?).ToTask()))
                 .WhenAllAsync()
                 .SelectWhereHasValueAsync()
@@ -153,7 +181,22 @@ namespace EastFive.Security.SessionServer
         {
             return await this.dataContext.Accesses.FindUpdatableAsync(actorId, method,
                 onFound,
-                onNotFound);
+                (createAsync) =>
+                {
+                    return onNotFound(
+                        async (parameters) =>
+                        {
+                            var integrationId = Guid.NewGuid();
+                            return await await this.dataContext.AuthenticationRequests.CreateAsync(integrationId, method, AuthenticationActions.link, actorId,
+                                string.Empty, default(Uri), default(Uri),
+                                async () =>
+                                {
+                                    await createAsync(integrationId, parameters);
+                                    return integrationId;
+                                },
+                                "Guid not unique".AsFunctionException<Task<Guid>>());
+                        });
+                });
         }
 
         internal async Task<TResult> UpdateAsync<TResult>(Persistence.AuthenticationRequest authenticationRequest,
