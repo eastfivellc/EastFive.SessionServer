@@ -137,7 +137,7 @@ namespace EastFive.Security.SessionServer
                 onFailure.AsAsyncFunc());
         }
 
-        internal async Task<TResult> CreateSessionAsync<TResult>(Guid sessionId, Guid authenticationId,
+        internal async Task<TResult> GenerateSessionWithClaimsAsync<TResult>(Guid sessionId, Guid authenticationId,
             Func<string, string, TResult> onSuccess,
             Func<string, TResult> onConfigurationFailure)
         {
@@ -194,7 +194,7 @@ namespace EastFive.Security.SessionServer
         {
             // Convert authentication unique ID to Actor ID
             var resultLookup = await await dataContext.CredentialMappings.LookupCredentialMappingAsync(method, subject, loginId,
-                (actorId) => CreateSessionAsync(sessionId, actorId,
+                (actorId) => GenerateSessionWithClaimsAsync(sessionId, actorId,
                     (token, refreshToken) => onSuccess(actorId, token, refreshToken, extraParams),
                     onConfigurationFailure),
                 () => credentialNotInSystem().ToTask());
@@ -312,7 +312,7 @@ namespace EastFive.Security.SessionServer
                             return await await dataContext.CredentialMappings.LookupCredentialMappingAsync(method, subject, loginId,
                                 (authenticationId) =>
                                 {
-                                    return context.Sessions.CreateSessionAsync(sessionId, authenticationId,
+                                    return context.Sessions.GenerateSessionWithClaimsAsync(sessionId, authenticationId,
                                         (token, refreshToken) => onLogin(sessionId, authenticationId,
                                             token, refreshToken, AuthenticationActions.signin, extraParamsWithRedemptionParams,
                                             default(Uri)), // No redirect URL is available since an AuthorizationRequest was not provided
@@ -429,13 +429,16 @@ namespace EastFive.Security.SessionServer
                             onFailure);
 
                     if (AuthenticationActions.access == authenticationRequest.action)
-                        return await context.Integrations.UpdateAsync(authenticationRequest,
-                                sessionId, sessionId, method, extraParams,
-                                saveAuthRequest,
-                            onLogin,
-                            onInvalidToken,
-                            onNotConfigured,
-                            onFailure);
+                        return await await context.Integrations.SetAsAuthenticatedAsync(authenticationRequest,
+                                sessionId, method, extraParams,
+                            async (authenticationId, token, refreshToken, redirect) =>
+                            {
+                                await saveAuthRequest(authenticationId, token, extraParams);
+                                return onLogin(sessionId, authenticationId, token, refreshToken, AuthenticationActions.access, extraParams, redirect);
+                            },
+                            () => onInvalidToken("Token has already been used to gain access").ToTask(),
+                            onNotConfigured.AsAsyncFunc(),
+                            onFailure.AsAsyncFunc());
 
                     if (authenticationRequest.authorizationId.HasValue)
                         return onInvalidToken("Session's authentication request cannot be re-used.");
@@ -443,7 +446,7 @@ namespace EastFive.Security.SessionServer
                     return await await dataContext.CredentialMappings.LookupCredentialMappingAsync(method, subject, loginId,
                         async (authenticationId) =>
                         {
-                            return await await this.CreateSessionAsync(sessionId, authenticationId,
+                            return await await this.GenerateSessionWithClaimsAsync(sessionId, authenticationId,
                                 async (token, refreshToken) =>
                                 {
                                     await saveAuthRequest(authenticationId, token, extraParams);

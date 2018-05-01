@@ -29,7 +29,7 @@ namespace EastFive.Security.SessionServer.Persistence
         }
 
         public async Task<TResult> CreateAsync<TResult>(Guid integrationId, Guid accountId, 
-                CredentialValidationMethodTypes method, IDictionary<string, string> paramSet,
+                CredentialValidationMethodTypes method,// IDictionary<string, string> paramSet,
             Func<TResult> onSuccess,
             Func<TResult> onAlreadyExists)
         {
@@ -39,13 +39,13 @@ namespace EastFive.Security.SessionServer.Persistence
                 LookupId = integrationId,
                 Method = methodName,
             };
-            docByMethod.SetExtraParams(paramSet);
+            //docByMethod.SetExtraParams(paramSet);
             var docById = new AccessDocument
             {
                 LookupId = accountId,
                 Method = methodName,
             };
-            docById.SetExtraParams(paramSet);
+            //docById.SetExtraParams(paramSet);
             var rollback = new RollbackAsync<TResult>();
             rollback.AddTaskCreate(accountId, methodName, docByMethod, onAlreadyExists, this.repository);
             rollback.AddTaskCreate(integrationId, docById, onAlreadyExists, this.repository);
@@ -60,34 +60,6 @@ namespace EastFive.Security.SessionServer.Persistence
             var results = await repository.FindByIdAsync(actorId, methodName,
                 (AccessDocument doc) => found(doc.LookupId, doc.GetExtraParams()),
                 () => actorNotFound());
-            return results;
-        }
-
-        internal async Task<TResult> FindUpdatableAsync<TResult>(Guid actorId, CredentialValidationMethodTypes method,
-            Func<Guid, IDictionary<string, string>, Func<IDictionary<string, string>, Task>, Task<TResult>> onFound,
-            Func<Func<Guid, IDictionary<string, string>, Task<Guid>>, Task<TResult>> onNotFound)
-        {
-            var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
-            var results = await await repository.UpdateAsync<AccessDocument, Task<TResult>>(actorId, methodName,
-                (doc, saveAsync) =>
-                {
-                    return onFound(doc.LookupId, doc.GetExtraParams(),
-                        (extraParamsNew) =>
-                        {
-                            doc.SetExtraParams(extraParamsNew);
-                            return saveAsync(doc);
-                        }).ToTask();
-                },
-                () =>
-                {
-                    return onNotFound(
-                        (integrationId, extraParams) =>
-                        {
-                            return this.CreateAsync(integrationId, actorId, method, extraParams,
-                                () => integrationId,
-                                "Guid not unique".AsFunctionException<Guid>());
-                        });
-                });
             return results;
         }
 

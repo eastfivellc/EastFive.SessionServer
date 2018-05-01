@@ -161,11 +161,19 @@ namespace EastFive.Security.SessionServer
             return onSuccess(integrations);
         }
 
+        public async Task<TResult> GetAsync<TIntegration, TResult>(Guid actorId,
+            Func<TIntegration, TResult> onEnabled,
+            Func<TResult> onDisabled,
+            Func<string, TResult> onFailure)
+        {
+            return ServiceConfiguration.integrations.
+        }
+
         public async Task<TResult> GetParamsByActorAsync<TResult>(Guid actorId, CredentialValidationMethodTypes method,
             Func<Guid, IDictionary<string, string>, Func<IDictionary<string, string>, Task>, Task<TResult>> onSuccess,
             Func<TResult> onNotFound)
         {
-            return await this.dataContext.Accesses.FindUpdatableAsync(actorId, method,
+            return await this.dataContext.Accesses.FindAsync(actorId, method,
                 onSuccess,
                 (createAsync) => onNotFound().ToTask());
         }
@@ -199,12 +207,11 @@ namespace EastFive.Security.SessionServer
                 });
         }
 
-        internal async Task<TResult> UpdateAsync<TResult>(Persistence.AuthenticationRequest authenticationRequest,
-                Guid sessionId, Guid stateId,
+        internal async Task<TResult> SetAsAuthenticatedAsync<TResult>(Persistence.AuthenticationRequest authenticationRequest,
+                Guid sessionId,
                 CredentialValidationMethodTypes method, IDictionary<string, string> extraParams,
-                Func<Guid, string, IDictionary<string, string>, Task> saveAuthRequest,
-            Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onSuccess,
-            Func<string, TResult> onInvalidToken,
+            Func<Guid, string, string, Uri, TResult> onSuccess,
+            Func<TResult> onAlreadyAuthenticated,
             Func<string, TResult> onNotConfigured,
             Func<string, TResult> onFailure)
         {
@@ -213,17 +220,15 @@ namespace EastFive.Security.SessionServer
 
             var authenticationId = authenticationRequest.authorizationId.Value;
             return await await dataContext.Accesses.CreateAsync(authenticationRequest.id, authenticationId, 
-                    method, extraParams,
-                async () => await await context.Sessions.CreateSessionAsync(sessionId, authenticationId,
-                    async (token, refreshToken) =>
+                    method,
+                () => context.Sessions.GenerateSessionWithClaimsAsync(sessionId, authenticationId,
+                    (token, refreshToken) =>
                     {
-                        await saveAuthRequest(authenticationId, token, extraParams);
-                        return onSuccess(stateId, authenticationId, token, refreshToken,
-                                AuthenticationActions.access, extraParams,
+                        return onSuccess(authenticationId, token, refreshToken,
                                 authenticationRequest.redirect);
                     },
-                    onNotConfigured.AsAsyncFunc()),
-                () => onInvalidToken("Login is already mapped to an access.").ToTask());
+                    onNotConfigured),
+                () => onAlreadyAuthenticated().ToTask());
         }
 
         public async Task<TResult> DeleteByIdAsync<TResult>(Guid accessId,

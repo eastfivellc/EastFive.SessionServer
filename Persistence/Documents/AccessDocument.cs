@@ -21,18 +21,18 @@ namespace EastFive.Security.SessionServer.Persistence.Documents
 
         public byte[] ExtraParams { get; set; }
 
-        internal IDictionary<string, string> GetExtraParams()
-        {
-            return ExtraParams.FromByteArray(
-                (keyBytes) => System.Text.Encoding.UTF8.GetString(keyBytes),
-                (valueBytes) => System.Text.Encoding.UTF8.GetString(valueBytes));
-        }
+        //internal IDictionary<string, string> GetExtraParams()
+        //{
+        //    return ExtraParams.FromByteArray(
+        //        (keyBytes) => System.Text.Encoding.UTF8.GetString(keyBytes),
+        //        (valueBytes) => System.Text.Encoding.UTF8.GetString(valueBytes));
+        //}
 
-        internal void SetExtraParams(IDictionary<string, string> extraParams)
-        {
-            ExtraParams = extraParams.ToByteArray(
-                (key) => System.Text.Encoding.UTF8.GetBytes(key),
-                (value) => System.Text.Encoding.UTF8.GetBytes(value));
-        }
+        //internal void SetExtraParams(IDictionary<string, string> extraParams)
+        //{
+        //    ExtraParams = extraParams.ToByteArray(
+        //        (key) => System.Text.Encoding.UTF8.GetBytes(key),
+        //        (value) => System.Text.Encoding.UTF8.GetBytes(value));
+        //}
     }
 }

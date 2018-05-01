@@ -70,7 +70,7 @@ namespace EastFive.Security.SessionServer
 
             return await await dataContext.CredentialMappings.CreateCredentialMappingAsync(Guid.NewGuid(), method, subject,
                     authorizationId.Value,
-                async () => await await context.Sessions.CreateSessionAsync(sessionId, authenticationId,
+                async () => await await context.Sessions.GenerateSessionWithClaimsAsync(sessionId, authenticationId,
                     async (token, refreshToken) =>
                     {
                         await saveAuthRequest(authenticationId, token, extraParams);
