@@ -17,6 +17,7 @@ namespace EastFive.Security.SessionServer
     public struct Session
     {
         public Guid id;
+        public string name;
         public CredentialValidationMethodTypes method;
         public string token;
         public Uri loginUrl;
@@ -141,6 +142,13 @@ namespace EastFive.Security.SessionServer
             Func<string, string, TResult> onSuccess,
             Func<string, TResult> onConfigurationFailure)
         {
+            return await CreateSessionAsync(sessionId, authenticationId, onSuccess, onConfigurationFailure);
+        }
+
+        internal async Task<TResult> CreateSessionAsync<TResult>(Guid sessionId, Guid authenticationId,
+            Func<string, string, TResult> onSuccess,
+            Func<string, TResult> onConfigurationFailure)
+        {
             Func<IDictionary<string, string>, TResult> authenticate =
                 (claims) =>
                 {
@@ -194,7 +202,7 @@ namespace EastFive.Security.SessionServer
         {
             // Convert authentication unique ID to Actor ID
             var resultLookup = await await dataContext.CredentialMappings.LookupCredentialMappingAsync(method, subject, loginId,
-                (actorId) => GenerateSessionWithClaimsAsync(sessionId, actorId,
+                (actorId) => CreateSessionAsync(sessionId, actorId,
                     (token, refreshToken) => onSuccess(actorId, token, refreshToken, extraParams),
                     onConfigurationFailure),
                 () => credentialNotInSystem().ToTask());
@@ -254,7 +262,7 @@ namespace EastFive.Security.SessionServer
                                 {
                                     return labels.SelectKeys().Concat(types.SelectKeys()).Concat(descriptions.SelectKeys())
                                         .Distinct()
-                                        .AsHashSet();
+                                        .AsHashSet(StringComparer.InvariantCultureIgnoreCase);
                                 });
 
                             var mergedExtraParams = authRequestStorage.extraParams
@@ -312,7 +320,7 @@ namespace EastFive.Security.SessionServer
                             return await await dataContext.CredentialMappings.LookupCredentialMappingAsync(method, subject, loginId,
                                 (authenticationId) =>
                                 {
-                                    return context.Sessions.GenerateSessionWithClaimsAsync(sessionId, authenticationId,
+                                    return context.Sessions.CreateSessionAsync(sessionId, authenticationId,
                                         (token, refreshToken) => onLogin(sessionId, authenticationId,
                                             token, refreshToken, AuthenticationActions.signin, extraParamsWithRedemptionParams,
                                             default(Uri)), // No redirect URL is available since an AuthorizationRequest was not provided
@@ -428,17 +436,14 @@ namespace EastFive.Security.SessionServer
                             onNotConfigured,
                             onFailure);
 
-                    if (AuthenticationActions.access == authenticationRequest.action)
-                        return await await context.Integrations.SetAsAuthenticatedAsync(authenticationRequest,
-                                sessionId, method, extraParams,
-                            async (authenticationId, token, refreshToken, redirect) =>
-                            {
-                                await saveAuthRequest(authenticationId, token, extraParams);
-                                return onLogin(sessionId, authenticationId, token, refreshToken, AuthenticationActions.access, extraParams, redirect);
-                            },
-                            () => onInvalidToken("Token has already been used to gain access").ToTask(),
-                            onNotConfigured.AsAsyncFunc(),
-                            onFailure.AsAsyncFunc());
+                    //if (AuthenticationActions.access == authenticationRequest.action)
+                    //    return await context.Integrations.UpdateAsync(authenticationRequest,
+                    //            sessionId, sessionId, method, extraParams,
+                    //            saveAuthRequest,
+                    //        onLogin,
+                    //        onInvalidToken,
+                    //        onNotConfigured,
+                    //        onFailure);
 
                     if (authenticationRequest.authorizationId.HasValue)
                         return onInvalidToken("Session's authentication request cannot be re-used.");
@@ -446,7 +451,7 @@ namespace EastFive.Security.SessionServer
                     return await await dataContext.CredentialMappings.LookupCredentialMappingAsync(method, subject, loginId,
                         async (authenticationId) =>
                         {
-                            return await await this.GenerateSessionWithClaimsAsync(sessionId, authenticationId,
+                            return await await this.CreateSessionAsync(sessionId, authenticationId,
                                 async (token, refreshToken) =>
                                 {
                                     await saveAuthRequest(authenticationId, token, extraParams);

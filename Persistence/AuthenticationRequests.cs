@@ -116,7 +116,10 @@ namespace EastFive.Security.SessionServer.Persistence
                             await saveAsync(document);
                         });
                 },
-                () => onNotFound());
+                () =>
+                {
+                    return onNotFound();
+                });
         }
 
         public async Task<TResult> DeleteAsync<TResult>(Guid authenticationRequestId,

@@ -53,13 +53,41 @@ namespace EastFive.Security.SessionServer.Persistence
         }
 
         public async Task<TResult> FindAsync<TResult>(Guid actorId, CredentialValidationMethodTypes method,
-            Func<Guid, IDictionary<string, string>, TResult> found,
+            Func<Guid, TResult> found,
             Func<TResult> actorNotFound)
         {
             var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
             var results = await repository.FindByIdAsync(actorId, methodName,
-                (AccessDocument doc) => found(doc.LookupId, doc.GetExtraParams()),
+                (AccessDocument doc) => found(doc.LookupId),
                 () => actorNotFound());
+            return results;
+        }
+
+        internal async Task<TResult> FindUpdatableAsync<TResult>(Guid actorId, CredentialValidationMethodTypes method,
+            Func<Guid, IDictionary<string, string>, Func<IDictionary<string, string>, Task>, Task<TResult>> onFound,
+            Func<Func<Guid, IDictionary<string, string>, Task<Guid>>, Task<TResult>> onNotFound)
+        {
+            var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
+            var results = await await repository.UpdateAsync<AccessDocument, Task<TResult>>(actorId, methodName,
+                (doc, saveAsync) =>
+                {
+                    return onFound(doc.LookupId, doc.GetExtraParams(),
+                        (extraParamsNew) =>
+                        {
+                            doc.SetExtraParams(extraParamsNew);
+                            return saveAsync(doc);
+                        }).ToTask();
+                },
+                () =>
+                {
+                    return onNotFound(
+                        (integrationId, extraParams) =>
+                        {
+                            return this.CreateAsync(integrationId, actorId, method, //extraParams,
+                                () => integrationId,
+                                "Guid not unique".AsFunctionException<Guid>());
+                        });
+                });
             return results;
         }
 

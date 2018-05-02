@@ -110,7 +110,7 @@ namespace EastFive.Security.SessionServer
             var integrations = await ServiceConfiguration.loginProviders
                 .Select(
                     async ap => await await this.dataContext.Accesses.FindAsync(actorId, ap.Key,
-                        async (authenticationRequestId, extraParams) =>
+                        async (authenticationRequestId) =>
                         {
                             return await context.GetLoginProvider<Task<Session?>>(ap.Key,
                                 async (provider) =>
@@ -118,13 +118,13 @@ namespace EastFive.Security.SessionServer
                                     return await await this.dataContext.AuthenticationRequests.FindByIdAsync(authenticationRequestId,
                                         async (authRequest) =>
                                         {
-                                            return await provider.UserParametersAsync(actorId, null, extraParams,
+                                            return await provider.UserParametersAsync(actorId, null, null,
                                                 (labels, types, descriptions) =>
                                                 {
                                                     var callbackUrl = callbackUrlFunc(provider.CallbackController);
                                                     var loginUrl = provider.GetLoginUrl(Guid.Empty, callbackUrl);
                                                     var authenticationRequest = Convert(authenticationRequestId, ap.Key, AuthenticationActions.access,
-                                                        default(string), authenticationRequestId, loginUrl, default(Uri), extraParams, labels, types, descriptions);
+                                                        default(string), authenticationRequestId, loginUrl, default(Uri), authRequest.extraParams, labels, types, descriptions);
                                                     return authenticationRequest;
                                                 });
                                         },
@@ -132,17 +132,16 @@ namespace EastFive.Security.SessionServer
                                         {
                                             #region SHIM
                                             var integrationId = authenticationRequestId;
-                                            return await await this.dataContext.AuthenticationRequests.CreateAsync(integrationId, ap.Key, AuthenticationActions.link, actorId,
-                                                string.Empty, default(Uri), default(Uri),
+                                            return await await this.dataContext.AuthenticationRequests.CreateAsync(integrationId, ap.Key, AuthenticationActions.link, default(Uri), default(Uri),
                                                 async () =>
                                                 {
-                                                    return await provider.UserParametersAsync(actorId, null, extraParams,
+                                                    return await provider.UserParametersAsync(actorId, null, null,
                                                         (labels, types, descriptions) =>
                                                         {
                                                             var callbackUrl = callbackUrlFunc(provider.CallbackController);
                                                             var loginUrl = provider.GetLoginUrl(Guid.Empty, callbackUrl);
                                                             var authenticationRequest = Convert(authenticationRequestId, ap.Key, AuthenticationActions.access,
-                                                                default(string), authenticationRequestId, loginUrl, default(Uri), extraParams, labels, types, descriptions);
+                                                                default(string), authenticationRequestId, loginUrl, default(Uri), default(IDictionary<string, string>), labels, types, descriptions);
                                                             return authenticationRequest;
                                                         });
                                                 },
@@ -166,16 +165,25 @@ namespace EastFive.Security.SessionServer
             Func<TResult> onDisabled,
             Func<string, TResult> onFailure)
         {
-            return ServiceConfiguration.integrations.
+            throw new NotImplementedException();
+            //return ServiceConfiguration.integrations.
         }
 
         public async Task<TResult> GetParamsByActorAsync<TResult>(Guid actorId, CredentialValidationMethodTypes method,
-            Func<Guid, IDictionary<string, string>, Func<IDictionary<string, string>, Task>, Task<TResult>> onSuccess,
+            Func<IDictionary<string, string>, TResult> onSuccess,
             Func<TResult> onNotFound)
         {
-            return await this.dataContext.Accesses.FindAsync(actorId, method,
-                onSuccess,
-                (createAsync) => onNotFound().ToTask());
+            return await await dataContext.Accesses.FindAsync(actorId, method,
+                async (authenticationRequestId) =>
+                {
+                    return await this.dataContext.AuthenticationRequests.FindByIdAsync(authenticationRequestId,
+                        (authRequest) =>
+                        {
+                            return onSuccess(authRequest.extraParams);
+                        },
+                        onNotFound);
+                },
+                ()=> onNotFound().ToTask());
         }
 
         public async Task<TResult> CreateOrUpdateParamsByActorAsync<TResult>(Guid actorId, CredentialValidationMethodTypes method,
@@ -196,7 +204,7 @@ namespace EastFive.Security.SessionServer
                         {
                             var integrationId = Guid.NewGuid();
                             return await await this.dataContext.AuthenticationRequests.CreateAsync(integrationId, method, AuthenticationActions.link, actorId,
-                                string.Empty, default(Uri), default(Uri),
+                                string.Empty, default(Uri), default(Uri), 
                                 async () =>
                                 {
                                     await createAsync(integrationId, parameters);
@@ -207,29 +215,29 @@ namespace EastFive.Security.SessionServer
                 });
         }
 
-        internal async Task<TResult> SetAsAuthenticatedAsync<TResult>(Persistence.AuthenticationRequest authenticationRequest,
-                Guid sessionId,
-                CredentialValidationMethodTypes method, IDictionary<string, string> extraParams,
-            Func<Guid, string, string, Uri, TResult> onSuccess,
-            Func<TResult> onAlreadyAuthenticated,
-            Func<string, TResult> onNotConfigured,
-            Func<string, TResult> onFailure)
-        {
-            if (!authenticationRequest.authorizationId.HasValue)
-                return onFailure("The credential is corrupt");
+        //internal async Task<TResult> SetAsAuthenticatedAsync<TResult>(Persistence.AuthenticationRequest authenticationRequest,
+        //        Guid sessionId,
+        //        CredentialValidationMethodTypes method, IDictionary<string, string> extraParams,
+        //    Func<Guid, string, string, Uri, TResult> onSuccess,
+        //    Func<TResult> onAlreadyAuthenticated,
+        //    Func<string, TResult> onNotConfigured,
+        //    Func<string, TResult> onFailure)
+        //{
+        //    if (!authenticationRequest.authorizationId.HasValue)
+        //        return onFailure("The credential is corrupt");
 
-            var authenticationId = authenticationRequest.authorizationId.Value;
-            return await await dataContext.Accesses.CreateAsync(authenticationRequest.id, authenticationId, 
-                    method,
-                () => context.Sessions.GenerateSessionWithClaimsAsync(sessionId, authenticationId,
-                    (token, refreshToken) =>
-                    {
-                        return onSuccess(authenticationId, token, refreshToken,
-                                authenticationRequest.redirect);
-                    },
-                    onNotConfigured),
-                () => onAlreadyAuthenticated().ToTask());
-        }
+        //    var authenticationId = authenticationRequest.authorizationId.Value;
+        //    return await await dataContext.Accesses.CreateAsync(authenticationRequest.id, authenticationId, 
+        //            method,
+        //        () => context.Sessions.GenerateSessionWithClaimsAsync(sessionId, authenticationId,
+        //            (token, refreshToken) =>
+        //            {
+        //                return onSuccess(authenticationId, token, refreshToken,
+        //                        authenticationRequest.redirect);
+        //            },
+        //            onNotConfigured),
+        //        () => onAlreadyAuthenticated().ToTask());
+        //}
 
         public async Task<TResult> DeleteByIdAsync<TResult>(Guid accessId,
                 Guid performingActorId, System.Security.Claims.Claim [] claims, HttpRequestMessage request,
