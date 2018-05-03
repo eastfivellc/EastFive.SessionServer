@@ -255,7 +255,7 @@
     <Compile Include="CredentialProviders\FacebookCredentialProvider.cs" />
     <Compile Include="CredentialProviders\Voucher\Utilities.cs" />
     <Compile Include="CredentialValidationMethodTypes.cs" />
-    <Compile Include="Persistence\Accesses.cs" />
+    <Compile Include="Persistence\Integrations.cs" />
     <Compile Include="Persistence\Documents\AuthenticationRequestDocument.cs" />
     <Compile Include="Persistence\Documents\AccessDocument.cs" />
     <Compile Include="Persistence\Documents\CredentialMappingLookupDocument.cs" />

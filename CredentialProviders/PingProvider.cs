@@ -57,6 +57,10 @@ namespace EastFive.Security.CredentialProvider.Ping
             Func<string, TResult> onUnspecifiedConfiguration,
             Func<string, TResult> onFailure)
         {
+            if (!extraParams.ContainsKey(PingProvider.TokenId))
+                return onInvalidCredentials("Token Id was not provided");
+            if (!extraParams.ContainsKey(PingProvider.AgentId))
+                return onInvalidCredentials("AgentId was not provided");
             var tokenId = extraParams[PingProvider.TokenId];
             var agentId = extraParams[PingProvider.AgentId];
             return await Web.Configuration.Settings.GetString<Task<TResult>>(SessionServer.Configuration.AppSettings.PingIdentityAthenaRestApiKey,

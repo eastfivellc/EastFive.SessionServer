@@ -15,6 +15,7 @@ using BlackBarLabs;
 using System.Net;
 using EastFive.Collections.Generic;
 using EastFive.Extensions;
+using EastFive.Linq;
 
 namespace EastFive.Security.SessionServer
 {
@@ -109,7 +110,7 @@ namespace EastFive.Security.SessionServer
 
             var integrations = await ServiceConfiguration.loginProviders
                 .Select(
-                    async ap => await await this.dataContext.Accesses.FindAsync(actorId, ap.Key,
+                    async ap => await await this.dataContext.Integrations.FindAsync(actorId, ap.Key,
                         async (authenticationRequestId) =>
                         {
                             return await context.GetLoginProvider<Task<Session?>>(ap.Key,
@@ -173,7 +174,7 @@ namespace EastFive.Security.SessionServer
             Func<IDictionary<string, string>, TResult> onSuccess,
             Func<TResult> onNotFound)
         {
-            return await await dataContext.Accesses.FindAsync(actorId, method,
+            return await await dataContext.Integrations.FindAsync(actorId, method,
                 async (authenticationRequestId) =>
                 {
                     return await this.dataContext.AuthenticationRequests.FindByIdAsync(authenticationRequestId,
@@ -195,7 +196,7 @@ namespace EastFive.Security.SessionServer
             Func<
                 Func<IDictionary<string, string>, Task<Guid>>, Task<TResult>> onNotFound)
         {
-            return await this.dataContext.Accesses.FindUpdatableAsync(actorId, method,
+            return await this.dataContext.Integrations.FindUpdatableAsync(actorId, method,
                 onFound,
                 (createAsync) =>
                 {
@@ -214,6 +215,91 @@ namespace EastFive.Security.SessionServer
                         });
                 });
         }
+
+        public async Task<TResult> CreateOrUpdateAuthenticatedIntegrationAsync<TResult>(Guid actorId, CredentialValidationMethodTypes method,
+           Func<
+               Guid?,
+               IDictionary<string, string>,
+               Func<IDictionary<string, string>, Task<Guid>>,
+               Task<TResult>> onCreatedOrFound)
+        {
+            return await this.dataContext.Integrations.CreateOrUpdateAsync(actorId, method,
+                (integrationIdMaybe, paramsCurrent, updateAsync) =>
+                {
+                    return onCreatedOrFound(integrationIdMaybe, paramsCurrent, updateAsync);
+                });
+        }
+
+        public Task<TResult> UpdateAsync<TResult>(Guid authenticationRequestId, Guid actingAsUser, System.Security.Claims.Claim[] claims,
+              IDictionary<string, string> updatedUserParameters,
+          Func<TResult> onUpdated,
+          Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onLogin,
+          Func<Uri, TResult> onLogout,
+          Func<string, TResult> onInvalidToken,
+          Func<TResult> onLookupCredentialNotFound,
+          Func<string, TResult> onSystemOffline,
+          Func<string, TResult> onNotConfigured,
+          Func<string, TResult> onFailure)
+        {
+            return dataContext.AuthenticationRequests.UpdateAsync(authenticationRequestId,
+                (authRequestStorage, saveAsync) =>
+                {
+                    if (!authRequestStorage.authorizationId.HasValue)
+                    {
+                        return context.Sessions.UpdateWithAuthenticationAsync(authenticationRequestId, authRequestStorage.method, updatedUserParameters,
+                            onLogin,
+                            onLogout,
+                            onInvalidToken,
+                            onLookupCredentialNotFound,
+                            onSystemOffline,
+                            onNotConfigured,
+                            onFailure);
+                    }
+
+                    return UpdateUserParameters(authRequestStorage.authorizationId.Value, authRequestStorage.method, actingAsUser, 
+                        claims, authRequestStorage.token, authRequestStorage.extraParams, updatedUserParameters, saveAsync, onUpdated, onFailure );
+                },
+                onLookupCredentialNotFound);
+        }
+
+        private async Task<TResult> UpdateUserParameters<TResult>(Guid authorizationId, CredentialValidationMethodTypes method, Guid actingAsUser, System.Security.Claims.Claim[] claims,
+            string token,
+            IDictionary<string, string> extraParams,
+            IDictionary<string, string> updatedUserParameters,
+            Func<Guid, string, IDictionary<string, string>, Task> saveAsync,
+            Func<TResult> onUpdated,
+            Func<string, TResult> onFailure)
+        {
+            return await context.GetLoginProvider(method,
+                async (provider) =>
+                {
+                    var userHash = await provider.UserParametersAsync(actingAsUser, claims, extraParams,
+                        (labels, types, descriptions) =>
+                        {
+                            return labels.SelectKeys().Concat(types.SelectKeys()).Concat(descriptions.SelectKeys())
+                                .Distinct()
+                                .AsHashSet(StringComparer.InvariantCultureIgnoreCase);
+                        });
+
+                    var mergedExtraParams = extraParams
+                        .Aggregate(
+                            updatedUserParameters
+                                .Where(param => userHash.Contains(param.Key))
+                                .ToDictionary(),
+                            (userParametersBeingUpdated, extraParamFromStorage) =>
+                            {
+                                if (userParametersBeingUpdated.ContainsKey(extraParamFromStorage.Key))
+                                    return userParametersBeingUpdated;
+
+                                return userParametersBeingUpdated.Append(extraParamFromStorage).ToDictionary();
+                            });
+                    await saveAsync(authorizationId, token, mergedExtraParams);
+                    return onUpdated();
+                },
+                () => onFailure("Integration is no longer available for the system given").ToTask(),
+                onFailure.AsAsyncFunc());
+        }
+
 
         //internal async Task<TResult> SetAsAuthenticatedAsync<TResult>(Persistence.AuthenticationRequest authenticationRequest,
         //        Guid sessionId,
@@ -258,7 +344,7 @@ namespace EastFive.Security.SessionServer
                             },
                             () => onSuccess(request.CreateResponse(HttpStatusCode.InternalServerError).AddReason("failure")).ToTask());
 
-                    return await dataContext.Accesses.DeleteAsync(integration.authorizationId.Value, integration.method,
+                    return await dataContext.Integrations.DeleteAsync(integration.authorizationId.Value, integration.method,
                         async (method, parames) =>
                         {
                             return await await Library.configurationManager.RemoveIntegrationAsync(Convert(integration, default(Uri), default(Dictionary<string, string>),
@@ -281,7 +367,7 @@ namespace EastFive.Security.SessionServer
                                 .Select(
                                     accessProvider =>
                                     {
-                                        return dataContext.Accesses.DeleteAsync(performingActorId, accessProvider.Method,
+                                        return dataContext.Integrations.DeleteAsync(performingActorId, accessProvider.Method,
                                             (method, parames) => true,
                                             () => false);
                                     })
@@ -323,9 +409,13 @@ namespace EastFive.Security.SessionServer
                 .Select(
                     key =>
                     {
+                        var val = default(string);
+                        if (null != extraParams)
+                            val = extraParams.ContainsKey(key) ? extraParams[key] : default(string);
+
                         return (new CustomParameter
                         {
-                            Value = extraParams.ContainsKey(key) ? extraParams[key] : default(string),
+                            Value = val,
                             Type = types.ContainsKey(key) ? types[key] : default(Type),
                             Label = labels.ContainsKey(key) ? labels[key] : default(string),
                             Description = descriptions.ContainsKey(key) ? descriptions[key] : default(string),
