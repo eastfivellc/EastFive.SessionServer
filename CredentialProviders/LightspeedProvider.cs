@@ -251,9 +251,18 @@ namespace EastFive.Security.CredentialProvider
             return default(Uri);
         }
 
-        public Task<TResult> UserParametersAsync<TResult>(Guid actorId, System.Security.Claims.Claim[] claims, IDictionary<string, string> extraParams, Func<IDictionary<string, string>, IDictionary<string, Type>, IDictionary<string, string>, TResult> onSuccess)
+        public Task<TResult> UserParametersAsync<TResult>(Guid actorId, System.Security.Claims.Claim[] claims, 
+            IDictionary<string, string> extraParams, 
+            Func<
+                IDictionary<string, string>,
+                IDictionary<string, Type>, 
+                IDictionary<string, string>,
+                TResult> onSuccess)
         {
-            throw new NotImplementedException();
+            return onSuccess(
+                new Dictionary<string, string>() { { "AutoIntegrateProducts", "Automatically Map Products" } },
+                new Dictionary<string, Type>() { { "AutoIntegrateProducts", typeof(bool) } },
+                new Dictionary<string, string>() { { "AutoIntegrateProducts", "When true, the system pick the best match for products when a mapping does not exists." } }).ToTask();
         }
 
         #endregion
