@@ -1,18 +1,14 @@
-﻿using System;
+﻿using BlackBarLabs.Api;
+using BlackBarLabs.Extensions;
+using EastFive.Collections.Generic;
+using EastFive.Extensions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
-using System.Web.Http;
-
-using BlackBarLabs.Api;
 using System.Web.Http.Routing;
-using BlackBarLabs.Extensions;
-using EastFive.Extensions;
-using EastFive.Collections.Generic;
 
 namespace EastFive.Security.SessionServer.Api
 {
@@ -33,9 +29,9 @@ namespace EastFive.Security.SessionServer.Api
             return await request.GetActorIdClaimsAsync(
                 (actorId, claims) =>
                     context.Integrations.CreateLinkAsync(credentialId.Value,
-                        urlHelper.GetLocation<Controllers.OpenIdResponseController>(),
-                        authenticationRequest.Method, authenticationRequest.LocationAuthenticationReturn,
-                        authenticationRequest.AuthorizationId, actorId, claims,
+                            urlHelper.GetLocation<Controllers.OpenIdResponseController>(),
+                            authenticationRequest.Method, authenticationRequest.LocationAuthenticationReturn,
+                            authenticationRequest.AuthorizationId, actorId, claims,
                         (authenticationRequestPopulated) =>
                         {
                             var resource = Convert(authenticationRequestPopulated, urlHelper);
@@ -139,7 +135,7 @@ namespace EastFive.Security.SessionServer.Api
                     var context = request.GetSessionServerContext();
 
                     // Can't update a session that does not exist
-                    var session = await context.Sessions.UpdateAsync(resource.Id.ToGuid().Value,
+                    var session = await context.Integrations.UpdateAsync(resource.Id.ToGuid().Value,
                         actingAs, claims, 
                         resource.UserParameters
                             .ToDictionary(

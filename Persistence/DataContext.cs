@@ -52,14 +52,14 @@ namespace EastFive.Security.SessionServer.Persistence
             }
         }
 
-        private Accesses accesses = null;
-        public Accesses Accesses
+        private Integrations integrations = null;
+        public Integrations Integrations
         {
             get
             {
-                if (default(Accesses) == accesses)
-                    accesses = new Accesses(this.AzureStorageRepository);
-                return accesses;
+                if (default(Integrations) == integrations)
+                    integrations = new Integrations(this.AzureStorageRepository);
+                return integrations;
             }
         }
 

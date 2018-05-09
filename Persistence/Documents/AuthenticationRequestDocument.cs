@@ -29,12 +29,13 @@ namespace EastFive.Security.SessionServer.Persistence.Documents
         public string Method { get; set; }
         public string Token { get; set; }
 
-        public byte[] ExtraParams { get; set; }
         public string Action { get; set; }
         public Guid? LinkedAuthenticationId { get; set; }
         public string RedirectUrl { get; set; }
         public string RedirectLogoutUrl { get; set; }
         public DateTime? Deleted { get; set; }
+
+        public byte[] ExtraParams { get; set; }
 
         internal IDictionary<string, string> GetExtraParams()
         {

@@ -246,6 +246,7 @@
     <Compile Include="IConfigureIdentityServer.cs" />
     <Compile Include="IdentityServerConfiguration.cs" />
     <Compile Include="Modules\SpaHandlerModule.cs" />
+    <Compile Include="Net\Http\CacheProviderAzureStorageTables.cs" />
     <Compile Include="PasswordCredentials.cs" />
     <Compile Include="Credentials.cs" />
     <Compile Include="CredentialProviders\AzureADB2CProvider.cs" />
@@ -254,7 +255,7 @@
     <Compile Include="CredentialProviders\FacebookCredentialProvider.cs" />
     <Compile Include="CredentialProviders\Voucher\Utilities.cs" />
     <Compile Include="CredentialValidationMethodTypes.cs" />
-    <Compile Include="Persistence\Accesses.cs" />
+    <Compile Include="Persistence\Integrations.cs" />
     <Compile Include="Persistence\Documents\AuthenticationRequestDocument.cs" />
     <Compile Include="Persistence\Documents\AccessDocument.cs" />
     <Compile Include="Persistence\Documents\CredentialMappingLookupDocument.cs" />

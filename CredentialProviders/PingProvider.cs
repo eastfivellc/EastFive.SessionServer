@@ -57,6 +57,10 @@ namespace EastFive.Security.CredentialProvider.Ping
             Func<string, TResult> onUnspecifiedConfiguration,
             Func<string, TResult> onFailure)
         {
+            if (!extraParams.ContainsKey(PingProvider.TokenId))
+                return onInvalidCredentials("Token Id was not provided");
+            if (!extraParams.ContainsKey(PingProvider.AgentId))
+                return onInvalidCredentials("AgentId was not provided");
             var tokenId = extraParams[PingProvider.TokenId];
             var agentId = extraParams[PingProvider.AgentId];
             return await Web.Configuration.Settings.GetString<Task<TResult>>(SessionServer.Configuration.AppSettings.PingIdentityAthenaRestApiKey,
@@ -124,9 +128,9 @@ namespace EastFive.Security.CredentialProvider.Ping
             Func<IDictionary<string, string>, IDictionary<string, Type>, IDictionary<string, string>, TResult> onSuccess)
         {
             return onSuccess(
-                new Dictionary<string, string>() { { "PushPMPFileToEHR", "Push PMP file to EHR" } },
-                new Dictionary<string, Type>() { { "PushPMPFileToEHR", typeof(bool) } },
-                new Dictionary<string, string>() { { "PushPMPFileToEHR", "When true, the system will push PMP files into the provider's clinical documents in their EHR system." } }).ToTask();
+                new Dictionary<string, string>() { { "push_pmp_file_to_ehr", "Push PMP file to EHR" } },
+                new Dictionary<string, Type>() { { "push_pmp_file_to_ehr", typeof(bool) } },
+                new Dictionary<string, string>() { { "push_pmp_file_to_ehr", "When true, the system will push PMP files into the provider's clinical documents in their EHR system." } }).ToTask();
         }
 
         #endregion

@@ -25,40 +25,46 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             var doc = new HtmlDocument();
             //doc.LoadHtml(indexFile.ToString());
 
-            using (var fileStream = new MemoryStream(indexFile))
+            try
             {
-                doc.Load(fileStream);
-                var head = doc.DocumentNode.SelectSingleNode("//head").InnerHtml;
-                var body = doc.DocumentNode.SelectSingleNode("//body").ChildNodes
-                    .AsHtmlNodes()
-                    .Where(node => node.Name.ToLower() != "script")
-                    .Select(node => node.OuterHtml)
-                    .Join(" ");
-
-                var scripts = doc.DocumentNode.SelectNodes("//script");
-
-                var scriptList = new List<string>();
-
-                foreach(var script in scripts)
+                using (var fileStream = new MemoryStream(indexFile))
                 {
-                    scriptList.Add(script.Attributes["src"].Value);
-                }
+                    doc.Load(fileStream);
+                    var head = doc.DocumentNode.SelectSingleNode("//head").InnerHtml;
+                    var body = doc.DocumentNode.SelectSingleNode("//body").ChildNodes
+                        .AsHtmlNodes()
+                        .Where(node => node.Name.ToLower() != "script")
+                        .Select(node => node.OuterHtml)
+                        .Join(" ");
 
+                    var scripts = doc.DocumentNode.SelectNodes("//script");
 
-                //var content = Properties.Resources.spahead + "|" + Properties.Resources.spabody;
+                    var scriptList = new List<string>();
 
-
-                //var content = $"{head}|{body}";
-
-                var response = Request.CreateResponse(HttpStatusCode.OK, 
-                    new
+                    foreach (var script in scripts)
                     {
-                        head = head,
-                        scripts = scriptList.ToArray(),
-                        body = body
-                    });
-                //response.Content = new StringContent(content);
-                return response.ToActionResult();
+                        scriptList.Add(script.Attributes["src"].Value);
+                    }
+
+
+                    //var content = Properties.Resources.spahead + "|" + Properties.Resources.spabody;
+
+
+                    //var content = $"{head}|{body}";
+
+                    var response = Request.CreateResponse(HttpStatusCode.OK,
+                        new
+                        {
+                            head = head,
+                            scripts = scriptList.ToArray(),
+                            body = body
+                        });
+                    //response.Content = new StringContent(content);
+                    return response.ToActionResult();
+                }
+            } catch (Exception ex)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError).ToActionResult();
             }
         }
     }

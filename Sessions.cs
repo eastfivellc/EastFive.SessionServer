@@ -17,6 +17,7 @@ namespace EastFive.Security.SessionServer
     public struct Session
     {
         public Guid id;
+        public string name;
         public CredentialValidationMethodTypes method;
         public string token;
         public Uri loginUrl;
@@ -137,6 +138,13 @@ namespace EastFive.Security.SessionServer
                 onFailure.AsAsyncFunc());
         }
 
+        internal async Task<TResult> GenerateSessionWithClaimsAsync<TResult>(Guid sessionId, Guid authenticationId,
+            Func<string, string, TResult> onSuccess,
+            Func<string, TResult> onConfigurationFailure)
+        {
+            return await CreateSessionAsync(sessionId, authenticationId, onSuccess, onConfigurationFailure);
+        }
+
         internal async Task<TResult> CreateSessionAsync<TResult>(Guid sessionId, Guid authenticationId,
             Func<string, string, TResult> onSuccess,
             Func<string, TResult> onConfigurationFailure)
@@ -220,64 +228,6 @@ namespace EastFive.Security.SessionServer
             return resultFound;
         }
         
-        public Task<TResult> UpdateAsync<TResult>(Guid authenticationRequestId, Guid actingAsUser, System.Security.Claims.Claim[] claims,
-            IDictionary<string, string> updatedUserParameters,
-            Func<TResult> onUpdated,
-            Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onLogin,
-            Func<Uri, TResult> onLogout,
-            Func<string, TResult> onInvalidToken,
-            Func<TResult> onLookupCredentialNotFound,
-            Func<string, TResult> onSystemOffline,
-            Func<string, TResult> onNotConfigured,
-            Func<string, TResult> onFailure)
-        {
-            return dataContext.AuthenticationRequests.UpdateAsync(authenticationRequestId, 
-                async (authRequestStorage, saveAsync) =>
-                {
-                    if (!authRequestStorage.authorizationId.HasValue)
-                    {
-                        return await UpdateWithAuthenticationAsync(authenticationRequestId, authRequestStorage.method, updatedUserParameters,
-                            onLogin,
-                            onLogout,
-                            onInvalidToken,
-                            onLookupCredentialNotFound,
-                            onSystemOffline,
-                            onNotConfigured,
-                            onFailure);
-                    }
-
-                    return await context.GetLoginProvider(authRequestStorage.method,
-                        async (provider) =>
-                        {
-                            var userHash = await provider.UserParametersAsync(actingAsUser, claims, authRequestStorage.extraParams,
-                                (labels, types, descriptions) =>
-                                {
-                                    return labels.SelectKeys().Concat(types.SelectKeys()).Concat(descriptions.SelectKeys())
-                                        .Distinct()
-                                        .AsHashSet();
-                                });
-
-                            var mergedExtraParams = authRequestStorage.extraParams
-                                .Aggregate(
-                                    updatedUserParameters
-                                        .Where(param => userHash.Contains(param.Key))
-                                        .ToDictionary(),
-                                    (userParametersBeingUpdated, extraParamFromStorage) =>
-                                    {
-                                        if (userParametersBeingUpdated.ContainsKey(extraParamFromStorage.Key))
-                                            return userParametersBeingUpdated;
-
-                                        return userParametersBeingUpdated.Append(extraParamFromStorage).ToDictionary();
-                                    });
-                            await saveAsync(authRequestStorage.authorizationId.Value, authRequestStorage.token, mergedExtraParams);
-                            return onUpdated();
-                        },
-                        ()=> onFailure("Integration is no longer available for the system given").ToTask(),
-                        onFailure.AsAsyncFunc());
-                },
-                onLookupCredentialNotFound);
-        }
-
         public async Task<TResult> UpdateWithAuthenticationAsync<TResult>(
                 Guid sessionId,
                 CredentialValidationMethodTypes method,
@@ -428,14 +378,14 @@ namespace EastFive.Security.SessionServer
                             onNotConfigured,
                             onFailure);
 
-                    if (AuthenticationActions.access == authenticationRequest.action)
-                        return await context.Integrations.UpdateAsync(authenticationRequest,
-                                sessionId, sessionId, method, extraParams,
-                                saveAuthRequest,
-                            onLogin,
-                            onInvalidToken,
-                            onNotConfigured,
-                            onFailure);
+                    //if (AuthenticationActions.access == authenticationRequest.action)
+                    //    return await context.Integrations.UpdateAsync(authenticationRequest,
+                    //            sessionId, sessionId, method, extraParams,
+                    //            saveAuthRequest,
+                    //        onLogin,
+                    //        onInvalidToken,
+                    //        onNotConfigured,
+                    //        onFailure);
 
                     if (authenticationRequest.authorizationId.HasValue)
                         return onInvalidToken("Session's authentication request cannot be re-used.");
