@@ -84,6 +84,7 @@ namespace EastFive.Security.SessionServer
                                 {
                                     id = authenticationRequestId,
                                     method = method,
+                                    name = method.ToString(),
                                     action = AuthenticationActions.signin,
                                     loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackLocation),
                                     logoutUrl = provider.GetLogoutUrl(authenticationRequestId, callbackLocation),
@@ -126,6 +127,7 @@ namespace EastFive.Security.SessionServer
                                         {
                                             id = authenticationRequestId,
                                             method = method,
+                                            name = method.ToString(),
                                             action = AuthenticationActions.signin,
                                             token = token,
                                             extraParams = authParams
