@@ -16,6 +16,8 @@ using System.IdentityModel;
 using System.Net.Http;
 using EastFive.Security.SessionServer.Persistence.Documents;
 using EastFive.Serialization;
+using Microsoft.WindowsAzure.Storage.Table;
+using EastFive.Collections.Generic;
 
 namespace EastFive.Security.SessionServer.Persistence
 {
@@ -103,7 +105,9 @@ namespace EastFive.Security.SessionServer.Persistence
                         async (parameters) =>
                         {
                             var integrationId = Guid.NewGuid();
-                            return await CreateAuthenticatedAsync(integrationId, actorId, method, parameters, ()=> integrationId, "Guid not unique".AsFunctionException<Guid>());
+                            return await CreateAuthenticatedAsync(integrationId, actorId, method, parameters,
+                                ()=> integrationId,
+                                "Guid not unique".AsFunctionException<Guid>());
                         });
                 },
                 async (parentDoc) =>
@@ -111,6 +115,21 @@ namespace EastFive.Security.SessionServer.Persistence
                     await repository.DeleteAsync(parentDoc, ()=> true, ()=> false);
                     return await CreateOrUpdateAsync(actorId, method, onFound);
                 });
+        }
+
+        public async Task<IDictionary<string, KeyValuePair<Guid, IDictionary<string, string>>>> FindAsync(Guid actorId)
+        {
+            try
+            {
+                var query = new TableQuery<AccessDocument>().Where(TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, actorId.AsRowKey()));
+                var results = await repository.FindByQueryAsync(query);
+                return results
+                    .Select(result => result.Method.PairWithValue(result.Id.PairWithValue(result.GetExtraParams())))
+                    .ToDictionary();
+            }catch(Exception ex)
+            {
+                return null;
+            }
         }
 
         public async Task<TResult> FindAsync<TResult>(Guid actorId, CredentialValidationMethodTypes method,

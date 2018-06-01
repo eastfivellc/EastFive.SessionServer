@@ -161,6 +161,23 @@ namespace EastFive.Security.SessionServer
             return onSuccess(integrations);
         }
 
+        public async Task<T[]> GetActivitiesAsync<T>(Guid actorId)
+        {
+            var integrations = await dataContext.Integrations.FindAsync(actorId);
+            return ServiceConfiguration.IntegrationActivites
+                .Where(activity => integrations.ContainsKey(activity.Key.GetCustomAttribute<Attributes.IntegrationNameAttribute>().Name))
+                .Where(activity => typeof(T).IsAssignableFrom(activity.Value.Body.Type))
+                .Select(
+                    activity =>
+                    {
+                        var integration = integrations[activity.Key.GetCustomAttribute<Attributes.IntegrationNameAttribute>().Name];
+                        return (T)activity.Value.Compile().Invoke(actorId, integration.Key, integration.Value,
+                            (obj) => obj.ToTask(),
+                            (obj, why) => obj.ToTask());
+                    })
+                .ToArray();
+        }
+
         public async Task<TResult> GetAsync<TIntegration, TResult>(Guid actorId,
             Func<TIntegration, TResult> onEnabled,
             Func<TResult> onDisabled,

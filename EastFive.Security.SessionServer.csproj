@@ -214,6 +214,7 @@
     <Compile Include="Api\Resources\InviteCredential.cs" />
     <Compile Include="Api\Resources\Queries\InviteCredentialQuery.cs" />
     <Compile Include="Api\Resources\Queries\PasswordCredentialQuery.cs" />
+    <Compile Include="Attributes\IntegrationNameAttribute.cs" />
     <Compile Include="AuthenticationActions.cs" />
     <Compile Include="Accesses.cs" />
     <Compile Include="Constants.cs" />

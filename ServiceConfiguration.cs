@@ -15,11 +15,16 @@ using EastFive.Linq;
 using System.IO;
 using System.IO.Compression;
 using EastFive.Collections.Generic;
+using System.Linq.Expressions;
 
 namespace EastFive.Security.SessionServer
 {
     public static class ServiceConfiguration
     {
+        public delegate object IntegrationActivityDelegate(Guid authorizationId, Guid integrationId, IDictionary<string, string> parameters,
+            Func<object, Task<object>> unlockAsync,
+            Func<object, string, Task<object>> unlockWithIssueAsync);
+
         internal static Dictionary<CredentialValidationMethodTypes, IProvideAuthorization> credentialProviders =
             default(Dictionary<CredentialValidationMethodTypes, IProvideAuthorization>);
 
@@ -32,6 +37,9 @@ namespace EastFive.Security.SessionServer
         internal static Dictionary<CredentialValidationMethodTypes, IProvideToken> tokenProviders =
             default(Dictionary<CredentialValidationMethodTypes, IProvideToken>);
 
+        internal static KeyValuePair<Type, Expression<IntegrationActivityDelegate>>[] IntegrationActivites =
+            new KeyValuePair<Type, Expression<IntegrationActivityDelegate>>[] { };
+
         //internal static Dictionary<CredentialValidationMethodTypes, IProvideAccess> accessProviders =
         //    default(Dictionary<CredentialValidationMethodTypes, IProvideAccess>);
 
@@ -42,6 +50,7 @@ namespace EastFive.Security.SessionServer
                     Func<IProvideAuthorization[]>, // onProvideNothing
                     Func<string, IProvideAuthorization[]>, // onFailure
                     Task<IProvideAuthorization[]>> [] initializers,
+                KeyValuePair<Type, Expression<IntegrationActivityDelegate>>[] activities,
             Func<TResult> onSuccess,
             Func<string, TResult> onFailure)
         {
@@ -96,6 +105,8 @@ namespace EastFive.Security.SessionServer
             //    .Select(
             //        entity => entity.FullName.PairWithValue(entity.Open().ToBytes()))
             //    .ToDictionary();
+
+            IntegrationActivites = activities; //.Select(activity => activity.Key.PairWithValue(activity.Value))
 
             return onSuccess();
         }
