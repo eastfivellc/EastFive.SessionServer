@@ -167,15 +167,21 @@ namespace EastFive.Security.SessionServer
             return ServiceConfiguration.IntegrationActivites
                 .Where(activity => integrations.ContainsKey(activity.Key.GetCustomAttribute<Attributes.IntegrationNameAttribute>().Name))
                 .Where(activity => typeof(T).IsAssignableFrom(activity.Value.Body.Type))
-                .Select(
-                    activity =>
+                .FlatMap(
+                    (activity, next, skip) =>
                     {
                         var integration = integrations[activity.Key.GetCustomAttribute<Attributes.IntegrationNameAttribute>().Name];
-                        return (T)activity.Value.Compile().Invoke(actorId, integration.Key, integration.Value,
+                        var action = (T)activity.Value.Compile().Invoke(actorId, integration.Key, integration.Value,
                             (obj) => obj.ToTask(),
                             (obj, why) => obj.ToTask());
-                    })
-                .ToArray();
+                        if (action.IsDefault())
+                            return skip();
+                        return next(action);
+                    },
+                    (IEnumerable<T> activies) =>
+                    {
+                        return activies.ToArray();
+                    });
         }
 
         public async Task<TResult> GetAsync<TIntegration, TResult>(Guid actorId,

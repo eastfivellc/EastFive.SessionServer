@@ -18,6 +18,7 @@ using EastFive.Security.SessionServer.Persistence.Documents;
 using EastFive.Serialization;
 using Microsoft.WindowsAzure.Storage.Table;
 using EastFive.Collections.Generic;
+using EastFive.Linq;
 
 namespace EastFive.Security.SessionServer.Persistence
 {
@@ -122,11 +123,18 @@ namespace EastFive.Security.SessionServer.Persistence
             try
             {
                 var query = new TableQuery<AccessDocument>().Where(TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, actorId.AsRowKey()));
-                var results = await repository.FindByQueryAsync(query);
-                return results
-                    .Select(result => result.Method.PairWithValue(result.Id.PairWithValue(result.GetExtraParams())))
-                    .ToDictionary();
-            }catch(Exception ex)
+                var accessDocs = await repository.FindByQueryAsync(query);
+                return await accessDocs
+                    .FlatMap(
+                        async (accessDoc, next, skip) => await await repository.FindByIdAsync(
+                            accessDoc.LookupId,
+                                (AuthenticationRequestDocument integrationDoc) =>
+                                    next(accessDoc.Method.PairWithValue(accessDoc.Id.PairWithValue(integrationDoc.GetExtraParams()))),
+                        () => skip()),
+                    (IEnumerable<KeyValuePair<string, KeyValuePair<Guid, IDictionary<string, string>>>> integrations) =>
+                        integrations.ToDictionary().ToTask());
+            }
+            catch(Exception ex)
             {
                 return null;
             }
