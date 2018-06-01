@@ -55,6 +55,7 @@ namespace EastFive.Security.SessionServer
                                     {
                                         id = authenticationRequestId,
                                         method = method,
+                                        name = method.ToString(),
                                         action = AuthenticationActions.access,
                                         loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackLocation),
                                         logoutUrl = provider.GetLogoutUrl(authenticationRequestId, callbackLocation),
@@ -95,6 +96,15 @@ namespace EastFive.Security.SessionServer
                         (why) => onFailure(why).ToTask());
                 },
                 ()=> onNotFound().ToTask());
+        }
+
+        public Task<TResult> GetByIdAsync<TResult>(Guid authenticationRequestId,
+            Func<Guid?, CredentialValidationMethodTypes, TResult> onSuccess,
+            Func<TResult> onNotFound)
+        {
+            return this.dataContext.AuthenticationRequests.FindByIdAsync(authenticationRequestId,
+                (authenticationRequestStorage) => onSuccess(authenticationRequestStorage.authorizationId, authenticationRequestStorage.method),
+                () => onNotFound());
         }
 
         internal async Task<TResult> GetByActorAsync<TResult>(Guid actorId, Func<Type, Uri> callbackUrlFunc,
@@ -450,6 +460,7 @@ namespace EastFive.Security.SessionServer
             {
                 id = authenticationRequestStorageId,
                 method = method,
+                name = method.ToString(),
                 action = action,
                 token = token,
                 authorizationId = authorizationId,

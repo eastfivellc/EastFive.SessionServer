@@ -168,6 +168,7 @@
     <Compile Include="Api\Actions\PasswordCredentialActions.cs" />
     <Compile Include="Api\Actions\InviteCredentialActions.cs" />
     <Compile Include="Api\Constants.cs" />
+    <Compile Include="Api\Controllers\SheetIntegrationController.cs" />
     <Compile Include="Api\Controllers\SpaServeController.cs" />
     <Compile Include="Api\Controllers\DiagnosticsController.cs" />
     <Compile Include="Api\Controllers\ActAsUserViewController.cs" />
@@ -191,6 +192,10 @@
     <Compile Include="Api\Controllers\SessionController.cs" />
     <Compile Include="Api\RequestExtensions.cs" />
     <Compile Include="Api\Resources\AccountLink.cs" />
+    <Compile Include="Api\Resources\Connection.cs" />
+    <Compile Include="Api\Resources\Adapter.cs" />
+    <Compile Include="Api\Resources\Queries\ConnectionQuery.cs" />
+    <Compile Include="Api\Resources\Queries\AdapterQuery.cs" />
     <Compile Include="Api\Resources\UserInfo.cs" />
     <Compile Include="Api\Resources\AuthHeaderProps.cs" />
     <Compile Include="Api\Controllers\AccountLinksController.cs" />
@@ -328,6 +333,10 @@
     <ProjectReference Include="$(SolutionDir)\BlackBarLabs.Web\BlackBarLabs.Web.csproj">
       <Project>{5bb52391-2704-44c0-bc8a-dbbe31498814}</Project>
       <Name>BlackBarLabs.Web</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\EastFive.Sheets\EastFive.Sheets.csproj">
+      <Project>{A6A53D1C-FC21-4385-AFD7-F5748CC5135B}</Project>
+      <Name>EastFive.Sheets</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup />

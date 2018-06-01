@@ -55,6 +55,11 @@ namespace EastFive.Security.SessionServer
             Func<string, TResult> onFailure)
         {
             Library.configurationManager = configurationManager;
+            
+            EastFive.Api.Modules.ControllerModule.AddInstigator(typeof(Context),
+                (httpApp, request, parameterInfo, onCreatedSessionContext) => onCreatedSessionContext(new Context(
+                    () => new Persistence.DataContext(Configuration.AppSettings.Storage))));
+
             //config.AddExternalControllers<SessionServer.Api.Controllers.OpenIdResponseController>();
             AddExternalControllers<Api.Controllers.OpenIdResponseController>(config);
             //return InitializeAsync(audience, configurationEndpoint, onSuccess, onFailed);
@@ -62,7 +67,6 @@ namespace EastFive.Security.SessionServer
                 routeTemplate: "apple-app-site-association",
                 defaults: new { controller = "AppleAppSiteAssociation", id = RouteParameter.Optional });
 
-            var dataContext = new Persistence.DataContext(Configuration.AppSettings.Storage);
             var credentialProvidersWithoutMethods = await initializers.Aggregate(
                 (new IProvideAuthorization[] { }).ToTask(),
                 async (providersTask, initializer) =>

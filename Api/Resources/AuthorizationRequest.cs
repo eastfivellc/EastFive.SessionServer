@@ -14,6 +14,10 @@ namespace EastFive.Security.SessionServer.Api.Resources
         public CredentialValidationMethodTypes Method { get; set; }
 
         [DataMember]
+        [JsonProperty(PropertyName = "name")]
+        public string Name { get; set; }
+
+        [DataMember]
         [JsonProperty(PropertyName = "location_authentication")]
         public Uri LocationAuthentication { get; set; }
 
@@ -32,7 +36,9 @@ namespace EastFive.Security.SessionServer.Api.Resources
         [JsonProperty(PropertyName = "user_parameters")]
         public IDictionary<string, CustomParameter> UserParameters { get; set; }
 
-
+        [JsonProperty(PropertyName = "resource_types")]
+        public ResourceType[] ResourceTypes { get; set; }
+        
         [DataContract]
         public class CustomParameter
         {
@@ -47,6 +53,19 @@ namespace EastFive.Security.SessionServer.Api.Resources
 
             [JsonProperty(PropertyName = "description")]
             public string Description { get; set; }
+        }
+
+        [DataContract]
+        public class ResourceType
+        {
+            [JsonProperty(PropertyName = "name")]
+            public string Name { get; set; }
+
+            [JsonProperty(PropertyName = "type")]
+            public Uri Type { get; set; }
+
+            [JsonProperty(PropertyName = "value")]
+            public string Value { get; set; }
         }
     }
 }
