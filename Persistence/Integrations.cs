@@ -28,31 +28,32 @@ namespace EastFive.Security.SessionServer.Persistence
             this.repository = repository;
         }
 
-        public async Task<TResult> CreateAsync<TResult>(Guid integrationId, Guid accountId, 
-                CredentialValidationMethodTypes method,// IDictionary<string, string> paramSet,
+        public async Task<TResult> CreateUnauthenticatedAsync<TResult>(Guid integrationId, Guid accountId, 
+                CredentialValidationMethodTypes method,
             Func<TResult> onSuccess,
             Func<TResult> onAlreadyExists)
         {
+            var rollback = new RollbackAsync<TResult>();
+            
             var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
             var docByMethod = new AccessDocument
             {
                 LookupId = integrationId,
                 Method = methodName,
             };
-            //docByMethod.SetExtraParams(paramSet);
+            rollback.AddTaskCreate(accountId, methodName, docByMethod, onAlreadyExists, this.repository);
+
             var docById = new AccessDocument
             {
                 LookupId = accountId,
                 Method = methodName,
             };
-            //docById.SetExtraParams(paramSet);
-            var rollback = new RollbackAsync<TResult>();
-            rollback.AddTaskCreate(accountId, methodName, docByMethod, onAlreadyExists, this.repository);
             rollback.AddTaskCreate(integrationId, docById, onAlreadyExists, this.repository);
+
             return await rollback.ExecuteAsync(onSuccess);
         }
 
-        public async Task<TResult> CreateAsync<TResult>(Guid integrationId, Guid authenticationId,
+        public async Task<TResult> CreateAuthenticatedAsync<TResult>(Guid integrationId, Guid authenticationId,
                 CredentialValidationMethodTypes method, IDictionary<string, string> paramSet,
             Func<TResult> onSuccess,
             Func<TResult> onAlreadyExists)
@@ -91,6 +92,7 @@ namespace EastFive.Security.SessionServer.Persistence
                     return onFound(authRequestDoc.Id, authRequestDoc.GetExtraParams(),
                         async (updatedParams)=>
                         {
+                            authRequestDoc.LinkedAuthenticationId = actorId;
                             authRequestDoc.SetExtraParams(updatedParams);
                             return await repository.UpdateIfNotModifiedAsync(authRequestDoc, ()=> accessDoc.LookupId, ()=> accessDoc.LookupId); 
                         });
@@ -101,7 +103,7 @@ namespace EastFive.Security.SessionServer.Persistence
                         async (parameters) =>
                         {
                             var integrationId = Guid.NewGuid();
-                            return await CreateAsync(integrationId, actorId, method, parameters, ()=> integrationId, "Guid not unique".AsFunctionException<Guid>());
+                            return await CreateAuthenticatedAsync(integrationId, actorId, method, parameters, ()=> integrationId, "Guid not unique".AsFunctionException<Guid>());
                         });
                 },
                 async (parentDoc) =>
@@ -142,7 +144,7 @@ namespace EastFive.Security.SessionServer.Persistence
                     return onNotFound(
                         (integrationId, extraParams) =>
                         {
-                            return this.CreateAsync(integrationId, actorId, method, //extraParams,
+                            return this.CreateUnauthenticatedAsync(integrationId, actorId, method, //extraParams,
                                 () => integrationId,
                                 "Guid not unique".AsFunctionException<Guid>());
                         });
