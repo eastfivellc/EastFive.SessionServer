@@ -1,7 +1,9 @@
 ﻿using BlackBarLabs.Api;
 using BlackBarLabs.Extensions;
 using EastFive.Api;
+using EastFive.Collections.Generic;
 using EastFive.Security.SessionServer;
+using EastFive.Serialization;
 using EastFive.Sheets;
 using System;
 using System.Collections.Generic;
@@ -25,14 +27,29 @@ namespace EastFive.Api.Controllers
 
         [HttpPost]
         public async static Task<HttpResponseMessage> XlsPostAsync(EastFive.Security.SessionServer.Context context,
-                System.IO.Stream sheet, [Required]Guid integration, IDictionary<string, bool> resourceTypes,
+                ContentBytes sheet, [Required]Guid integration, IDictionary<string, bool> resourceTypes,
                 HttpRequestMessage request, System.Web.Http.Routing.UrlHelper url,
-            UnauthorizedResponse onUnauthorized,
             RedirectResponse onSuccess,
-            ViewFileResponse onError)
+            NotFoundResponse onNotFound,
+            GeneralConflictResponse onError)
         {
-            return onUnauthorized();
-            // return onSuccess(new Uri("http://example.com"));
+            var sheetId = Guid.NewGuid();
+            return await await context.Integrations.UpdateAsync(integration,
+                sheet.content.MD5HashGuid().ToString("N"),
+                new Dictionary<string, string>()
+                {
+                    { "resource_types",  resourceTypes.SelectKeys().Join(",") },
+                    { "sheet_id", sheetId.ToString("N") },
+                },
+                (redirectUrl) =>
+                {
+                    return EastFive.Api.Azure.Sheets.SaveAsync(sheetId, sheet.contentType.MediaType,  sheet.content, integration,
+                            context.DataContext,
+                        () => onSuccess(redirectUrl),
+                        "Guid not unique".AsFunctionException<HttpResponseMessage>());
+                },
+                () => onNotFound().ToTask(),
+                () => onError("The provided integration ID has not been connected to an authorization.").ToTask());
         }
     }
 }

@@ -10,6 +10,7 @@ using System.Collections.Generic;
 
 namespace EastFive.Security.SessionServer.CredentialProvider.ImplicitCreation
 {
+    [SessionServer.Attributes.IntegrationName("Implicit")]
     public class ImplicitlyCreatedCredentialProvider : IProvideLoginManagement, IProvideAuthorization
     {
         public static Task<TResult> InitializeAsync<TResult>(

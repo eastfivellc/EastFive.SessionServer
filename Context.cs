@@ -56,13 +56,13 @@ namespace EastFive.Security.SessionServer
                 return onFailure("Authentication system not initialized.");
 
             if (!ServiceConfiguration.credentialProviders.ContainsKey(method))
-                return GetLoginProvider(method, onSuccess, onCredintialSystemNotAvailable, onFailure);
+                return Context.GetLoginProvider(method, onSuccess, onCredintialSystemNotAvailable, onFailure);
 
             var provider = ServiceConfiguration.credentialProviders[method];
             return onSuccess(provider);
         }
 
-        internal TResult GetLoginProvider<TResult>(CredentialValidationMethodTypes method,
+        internal static TResult GetLoginProvider<TResult>(CredentialValidationMethodTypes method,
             Func<IProvideLogin, TResult> onSuccess,
             Func<TResult> onCredintialSystemNotAvailable,
             Func<string, TResult> onFailure)
@@ -70,10 +70,42 @@ namespace EastFive.Security.SessionServer
             if (ServiceConfiguration.loginProviders.IsDefault())
                 return onFailure("Authentication system not initialized.");
 
-            if (!ServiceConfiguration.loginProviders.ContainsKey(method))
+            var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
+            if (!ServiceConfiguration.loginProviders.ContainsKey(methodName))
                 return onCredintialSystemNotAvailable();
 
-            var provider = ServiceConfiguration.loginProviders[method];
+            var provider = ServiceConfiguration.loginProviders[methodName];
+            return onSuccess(provider);
+        }
+
+        internal static TResult GetLoginProvider<TResult>(Type providerType,
+            Func<IProvideLogin, TResult> onSuccess,
+            Func<TResult> onCredintialSystemNotAvailable,
+            Func<string, TResult> onFailure)
+        {
+            if (ServiceConfiguration.loginProviders.IsDefault())
+                return onFailure("Authentication system not initialized.");
+
+            var methodName = providerType.GetCustomAttribute<Attributes.IntegrationNameAttribute>().Name;
+            if (!ServiceConfiguration.loginProviders.ContainsKey(methodName))
+                return onCredintialSystemNotAvailable();
+
+            var provider = ServiceConfiguration.loginProviders[methodName];
+            return onSuccess(provider);
+        }
+
+        internal static TResult GetLoginProvider<TResult>(string methodName,
+            Func<IProvideLogin, TResult> onSuccess,
+            Func<TResult> onCredintialSystemNotAvailable,
+            Func<string, TResult> onFailure)
+        {
+            if (ServiceConfiguration.loginProviders.IsDefault())
+                return onFailure("Authentication system not initialized.");
+            
+            if (!ServiceConfiguration.loginProviders.ContainsKey(methodName))
+                return onCredintialSystemNotAvailable();
+
+            var provider = ServiceConfiguration.loginProviders[methodName];
             return onSuccess(provider);
         }
 

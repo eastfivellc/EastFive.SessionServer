@@ -28,8 +28,8 @@ namespace EastFive.Security.SessionServer
         internal static Dictionary<CredentialValidationMethodTypes, IProvideAuthorization> credentialProviders =
             default(Dictionary<CredentialValidationMethodTypes, IProvideAuthorization>);
 
-        internal static Dictionary<CredentialValidationMethodTypes, IProvideLogin> loginProviders =
-            default(Dictionary<CredentialValidationMethodTypes, IProvideLogin>);
+        internal static Dictionary<string, IProvideLogin> loginProviders =
+            default(Dictionary<string, IProvideLogin>);
 
         internal static Dictionary<CredentialValidationMethodTypes, IProvideLoginManagement> managementProviders =
             default(Dictionary<CredentialValidationMethodTypes, IProvideLoginManagement>);
@@ -79,28 +79,33 @@ namespace EastFive.Security.SessionServer
                     });
             credentialProviders = credentialProvidersWithoutMethods
                 .ToDictionary(
-                    credentialProvider => credentialProvider.Method,
+                    credentialProvider =>
+                    {
+                        var methodName = credentialProvider.GetType().GetCustomAttribute<Attributes.IntegrationNameAttribute>().Name;
+                        Enum.TryParse(methodName, out CredentialValidationMethodTypes method);
+                        return method;
+                    },
                     credentialProvider => credentialProvider);
             loginProviders = credentialProvidersWithoutMethods
                 .Where(credentialProvider => typeof(IProvideLogin).IsAssignableFrom(credentialProvider.GetType()))
                 .ToDictionary(
-                    credentialProvider => credentialProvider.Method,
+                    credentialProvider => credentialProvider.GetType().GetCustomAttribute<Attributes.IntegrationNameAttribute>().Name,
                     credentialProvider => (IProvideLogin)credentialProvider);
-            managementProviders = credentialProvidersWithoutMethods
-                .Where(credentialProvider => typeof(IProvideLoginManagement).IsAssignableFrom(credentialProvider.GetType()))
+            managementProviders = credentialProviders
+                .Where(credentialProvider => typeof(IProvideLoginManagement).IsAssignableFrom(credentialProvider.Value.GetType()))
                 .ToDictionary(
-                    credentialProvider => credentialProvider.Method,
-                    credentialProvider => (IProvideLoginManagement)credentialProvider);
+                    credentialProvider => credentialProvider.Key,
+                    credentialProvider => (IProvideLoginManagement)credentialProvider.Value);
             //accessProviders = credentialProvidersWithoutMethods
             //    .Where(credentialProvider => typeof(IProvideAccess).IsAssignableFrom(credentialProvider.GetType()))
             //    .ToDictionary(
             //        credentialProvider => credentialProvider.Method,
             //        credentialProvider => (IProvideAccess)credentialProvider);
-            tokenProviders = credentialProvidersWithoutMethods
-                .Where(credentialProvider => typeof(IProvideToken).IsAssignableFrom(credentialProvider.GetType()))
+            tokenProviders = credentialProviders
+                .Where(credentialProvider => typeof(IProvideToken).IsAssignableFrom(credentialProvider.Value.GetType()))
                 .ToDictionary(
-                    credentialProvider => credentialProvider.Method,
-                    credentialProvider => (IProvideToken)credentialProvider);
+                    credentialProvider => credentialProvider.Key,
+                    credentialProvider => (IProvideToken)credentialProvider.Value);
 
             //var spaZipPath = System.Web.Hosting.HostingEnvironment.MapPath("~/Spa.zip");
             //var zipArchive = ZipFile.OpenRead(spaZipPath);

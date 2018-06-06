@@ -7,7 +7,7 @@ namespace EastFive.Security.SessionServer
 {
     public interface IProvideAuthorization
     {
-        CredentialValidationMethodTypes Method { get; }
+        //CredentialValidationMethodTypes Method { get; }
         
         Type CallbackController { get; }
 

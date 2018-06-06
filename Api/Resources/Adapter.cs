@@ -14,6 +14,9 @@ namespace EastFive.Api.Resources
         [JsonProperty(PropertyName = "resource_id")]
         public WebId ResourceId { get; set; }
 
+        [JsonProperty(PropertyName = "integration")]
+        public WebId Integration { get; set; }
+
         [JsonProperty(PropertyName = "name")]
         public string Name { get; set; }
 
@@ -25,6 +28,5 @@ namespace EastFive.Api.Resources
 
         [JsonProperty(PropertyName = "method")]
         public string Method { get; set; }
-
     }
 }

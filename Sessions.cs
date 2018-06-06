@@ -18,7 +18,7 @@ namespace EastFive.Security.SessionServer
     {
         public Guid id;
         public string name;
-        public CredentialValidationMethodTypes method;
+        public string method;
         public string token;
         public Uri loginUrl;
         public Uri logoutUrl;
@@ -70,7 +70,7 @@ namespace EastFive.Security.SessionServer
             Func<string, TResult> onCredentialSystemNotInitialized,
             Func<string, TResult> onFailure)
         {
-            return await context.GetLoginProvider(method,
+            return await Context.GetLoginProvider(method,
                 async (provider) =>
                 {
                     var callbackLocation = controllerToLocation(provider.CallbackController);
@@ -83,7 +83,7 @@ namespace EastFive.Security.SessionServer
                                 var session = new Session()
                                 {
                                     id = authenticationRequestId,
-                                    method = method,
+                                    method = Enum.GetName(typeof(CredentialValidationMethodTypes), method),
                                     name = method.ToString(),
                                     action = AuthenticationActions.signin,
                                     loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackLocation),
@@ -126,7 +126,7 @@ namespace EastFive.Security.SessionServer
                                         var session = new Session()
                                         {
                                             id = authenticationRequestId,
-                                            method = method,
+                                            method = Enum.GetName(typeof(CredentialValidationMethodTypes), method),
                                             name = method.ToString(),
                                             action = AuthenticationActions.signin,
                                             token = token,
@@ -179,7 +179,7 @@ namespace EastFive.Security.SessionServer
                     if (authenticationRequestStorage.Deleted.HasValue)
                         return onNotFound("Session was deleted");
 
-                    return context.GetLoginProvider(authenticationRequestStorage.method,
+                    return Context.GetLoginProvider(authenticationRequestStorage.method,
                         (provider) =>
                         {
                             var authenticationRequest = Convert(authenticationRequestStorage);
@@ -368,7 +368,7 @@ namespace EastFive.Security.SessionServer
                     if (authenticationRequest.Deleted.HasValue)
                         return onLogout(authenticationRequest.redirectLogout);
 
-                    if (authenticationRequest.method != method)
+                    if (authenticationRequest.method != Enum.GetName(typeof(CredentialValidationMethodTypes), method))
                         return onInvalidToken("The credential's authentication method does not match the callback method");
 
                     if (AuthenticationActions.link == authenticationRequest.action)
@@ -468,7 +468,7 @@ namespace EastFive.Security.SessionServer
             return await this.dataContext.AuthenticationRequests.DeleteAsync(sessionId,
                 async (session, markForDeleteAsync) =>
                 {
-                    return await this.context.GetLoginProvider(session.method,
+                    return await Context.GetLoginProvider(session.method,
                         async (provider) =>
                         {
                             session.Deleted = DateTime.UtcNow;

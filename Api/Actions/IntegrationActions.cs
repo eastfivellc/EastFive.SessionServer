@@ -25,7 +25,7 @@ namespace EastFive.Security.SessionServer.Api
             if (authenticationRequest.AuthorizationId.IsDefault())
                 return request.CreateResponseEmptyId(authenticationRequest, ar => ar.AuthorizationId)
                     .AddReason("Authorization Id must have value for integration");
-
+            
             return await request.GetActorIdClaimsAsync(
                 (actorId, claims) =>
                     context.Integrations.CreateLinkAsync(credentialId.Value,

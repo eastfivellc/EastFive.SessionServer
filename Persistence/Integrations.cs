@@ -32,13 +32,12 @@ namespace EastFive.Security.SessionServer.Persistence
         }
 
         public async Task<TResult> CreateUnauthenticatedAsync<TResult>(Guid integrationId, Guid accountId, 
-                CredentialValidationMethodTypes method,
+                string methodName,
             Func<TResult> onSuccess,
             Func<TResult> onAlreadyExists)
         {
             var rollback = new RollbackAsync<TResult>();
             
-            var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
             var docByMethod = new AccessDocument
             {
                 LookupId = integrationId,
@@ -140,23 +139,21 @@ namespace EastFive.Security.SessionServer.Persistence
             }
         }
 
-        public async Task<TResult> FindAsync<TResult>(Guid actorId, CredentialValidationMethodTypes method,
+        public async Task<TResult> FindAsync<TResult>(Guid actorId, string methodName,
             Func<Guid, TResult> found,
             Func<TResult> actorNotFound)
         {
-            var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
             var results = await repository.FindByIdAsync(actorId, methodName,
                 (AccessDocument doc) => found(doc.LookupId),
                 () => actorNotFound());
             return results;
         }
 
-        internal async Task<TResult> FindUpdatableAsync<TResult>(Guid actorId, CredentialValidationMethodTypes method,
+        internal async Task<TResult> FindUpdatableAsync<TResult>(Guid actorId, string method,
             Func<Guid, IDictionary<string, string>, Func<IDictionary<string, string>, Task>, Task<TResult>> onFound,
             Func<Func<Guid, IDictionary<string, string>, Task<Guid>>, Task<TResult>> onNotFound)
         {
-            var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
-            var results = await await repository.UpdateAsync<AccessDocument, Task<TResult>>(actorId, methodName,
+            var results = await await repository.UpdateAsync<AccessDocument, Task<TResult>>(actorId, method,
                 (doc, saveAsync) =>
                 {
                     return onFound(doc.LookupId, doc.GetExtraParams(),
@@ -200,12 +197,11 @@ namespace EastFive.Security.SessionServer.Persistence
             return results;
         }
 
-        public async Task<TResult> DeleteAsync<TResult>(Guid actorId, CredentialValidationMethodTypes method,
-            Func<CredentialValidationMethodTypes, IDictionary<string, string>, TResult> onDeleted,
+        public async Task<TResult> DeleteAsync<TResult>(Guid actorId, string method,
+            Func<IDictionary<string, string>, TResult> onDeleted,
             Func<TResult> actorNotFound)
         {
-            var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
-            var results = await repository.DeleteIfAsync<AccessDocument, TResult>(actorId, methodName,
+            var results = await repository.DeleteIfAsync<AccessDocument, TResult>(actorId, method,
                 async (doc, deleteAsync) =>
                 {
                     await deleteAsync();
@@ -213,9 +209,9 @@ namespace EastFive.Security.SessionServer.Persistence
                         async (lookupDoc, deleteLookupAsync) =>
                         {
                             await deleteLookupAsync();
-                            return onDeleted(method, doc.GetExtraParams());
+                            return onDeleted(doc.GetExtraParams());
                         },
-                        () => onDeleted(method, doc.GetExtraParams()));
+                        () => onDeleted(doc.GetExtraParams()));
                 },
                 () => actorNotFound());
             return results;

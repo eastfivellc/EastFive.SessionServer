@@ -19,7 +19,7 @@ namespace EastFive.Security.SessionServer.Persistence
     public struct AuthenticationRequest
     {
         public Guid id;
-        public CredentialValidationMethodTypes method;
+        public string method;
         public AuthenticationActions action;
         public Guid? authorizationId;
         public IDictionary<string, string> extraParams;
@@ -51,6 +51,32 @@ namespace EastFive.Security.SessionServer.Persistence
                 Method = Enum.GetName(typeof(CredentialValidationMethodTypes), method),
                 Action = Enum.GetName(typeof(AuthenticationActions), action),
                 RedirectUrl = redirectUrl.IsDefault()?
+                    default(string)
+                    :
+                    redirectUrl.AbsoluteUri,
+                RedirectLogoutUrl = redirectLogoutUrl.IsDefault() ?
+                    default(string)
+                    :
+                    redirectLogoutUrl.AbsoluteUri,
+            };
+            return await this.repository.CreateAsync(authenticationRequestId, doc,
+                () => onSuccess(),
+                () => onAlreadyExists());
+        }
+
+        public async Task<TResult> CreateAsync<TResult>(Guid authenticationRequestId,
+                string method, AuthenticationActions action,
+                Guid actorLinkId, string token, Uri redirectUrl, Uri redirectLogoutUrl,
+            Func<TResult> onSuccess,
+            Func<TResult> onAlreadyExists)
+        {
+            var doc = new Documents.AuthenticationRequestDocument
+            {
+                Method = method,
+                Action = Enum.GetName(typeof(AuthenticationActions), action),
+                LinkedAuthenticationId = actorLinkId,
+                Token = token,
+                RedirectUrl = redirectUrl.IsDefault() ?
                     default(string)
                     :
                     redirectUrl.AbsoluteUri,
@@ -156,7 +182,7 @@ namespace EastFive.Security.SessionServer.Persistence
             return new AuthenticationRequest
             {
                 id = document.Id,
-                method = (CredentialValidationMethodTypes)Enum.Parse(typeof(CredentialValidationMethodTypes), document.Method, true),
+                method = document.Method,
                 action = (AuthenticationActions)Enum.Parse(typeof(AuthenticationActions), document.Action, true),
                 authorizationId = document.LinkedAuthenticationId,
                 token = document.Token,

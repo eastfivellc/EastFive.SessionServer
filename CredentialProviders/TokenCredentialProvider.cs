@@ -9,6 +9,7 @@ using EastFive.Security.SessionServer;
 
 namespace EastFive.Security.CredentialProvider.Token
 {
+    [SessionServer.Attributes.IntegrationName("Token")]
     public class TokenCredentialProvider : IProvideAuthorization, IProvideLoginManagement
     {
         private SessionServer.Persistence.DataContext dataContext;

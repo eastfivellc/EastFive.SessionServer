@@ -18,6 +18,7 @@ using EastFive.Security.SessionServer;
 
 namespace EastFive.Security.CredentialProvider.SAML
 {
+    [SessionServer.Attributes.IntegrationName("SAML")]
     public class SAMLProvider : IProvideLogin
     {
         private DataContext dataContext;

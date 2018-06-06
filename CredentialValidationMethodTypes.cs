@@ -13,6 +13,6 @@
         Mock,
         PMPExtender,
         CSMD,
-        PMPAware
+        PMPAware,
     }
 }

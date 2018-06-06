@@ -11,7 +11,7 @@ namespace EastFive.Security.SessionServer.Api.Resources
     {
         [DataMember]
         [JsonProperty(PropertyName = "method")]
-        public CredentialValidationMethodTypes Method { get; set; }
+        public string Method { get; set; }
 
         [DataMember]
         [JsonProperty(PropertyName = "name")]
