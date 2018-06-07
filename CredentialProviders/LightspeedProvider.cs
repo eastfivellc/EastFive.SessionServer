@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 
 namespace EastFive.Security.CredentialProvider
 {
+    [SessionServer.Attributes.IntegrationName("Lightspeed")]
     public class LightspeedProvider : IProvideLogin
     {
         #region Initialization

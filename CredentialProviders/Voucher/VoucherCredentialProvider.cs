@@ -9,6 +9,7 @@ using EastFive.Security.SessionServer;
 
 namespace EastFive.Security.CredentialProvider.Voucher
 {
+    [SessionServer.Attributes.IntegrationName("Voucher")]
     public class VoucherCredentialProvider : IProvideAuthorization
     {
         public static Task<TResult> InitializeAsync<TResult>(

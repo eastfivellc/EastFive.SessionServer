@@ -99,6 +99,7 @@
     <Reference Include="System.Diagnostics.DiagnosticSource, Version=4.0.2.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>$(SolutionDir)\packages\System.Diagnostics.DiagnosticSource.4.4.1\lib\net46\System.Diagnostics.DiagnosticSource.dll</HintPath>
     </Reference>
+    <Reference Include="System.Drawing" />
     <Reference Include="System.IdentityModel" />
     <Reference Include="System.IdentityModel.Tokens.Jwt, Version=5.1.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>$(SolutionDir)\packages\System.IdentityModel.Tokens.Jwt.5.1.5\lib\net451\System.IdentityModel.Tokens.Jwt.dll</HintPath>
@@ -168,6 +169,8 @@
     <Compile Include="Api\Actions\PasswordCredentialActions.cs" />
     <Compile Include="Api\Actions\InviteCredentialActions.cs" />
     <Compile Include="Api\Constants.cs" />
+    <Compile Include="Api\Controllers\ContentController.cs" />
+    <Compile Include="Api\Controllers\SheetIntegrationController.cs" />
     <Compile Include="Api\Controllers\SpaServeController.cs" />
     <Compile Include="Api\Controllers\DiagnosticsController.cs" />
     <Compile Include="Api\Controllers\ActAsUserViewController.cs" />
@@ -191,6 +194,10 @@
     <Compile Include="Api\Controllers\SessionController.cs" />
     <Compile Include="Api\RequestExtensions.cs" />
     <Compile Include="Api\Resources\AccountLink.cs" />
+    <Compile Include="Api\Resources\Connection.cs" />
+    <Compile Include="Api\Resources\Adapter.cs" />
+    <Compile Include="Api\Resources\Queries\ConnectionQuery.cs" />
+    <Compile Include="Api\Resources\Queries\AdapterQuery.cs" />
     <Compile Include="Api\Resources\UserInfo.cs" />
     <Compile Include="Api\Resources\AuthHeaderProps.cs" />
     <Compile Include="Api\Controllers\AccountLinksController.cs" />
@@ -214,6 +221,7 @@
     <Compile Include="Api\Resources\InviteCredential.cs" />
     <Compile Include="Api\Resources\Queries\InviteCredentialQuery.cs" />
     <Compile Include="Api\Resources\Queries\PasswordCredentialQuery.cs" />
+    <Compile Include="Attributes\IntegrationNameAttribute.cs" />
     <Compile Include="AuthenticationActions.cs" />
     <Compile Include="Accesses.cs" />
     <Compile Include="Constants.cs" />
@@ -236,6 +244,10 @@
     <Compile Include="CredentialProviders\PingProvider.cs" />
     <Compile Include="CredentialProviders\SAMLProvider.cs" />
     <Compile Include="CredentialProviders\TokenCredentialProvider.cs" />
+    <Compile Include="Persistence\Content.cs" />
+    <Compile Include="Persistence\Sheet.cs" />
+    <Compile Include="Content.cs" />
+    <Compile Include="Sheets.cs" />
     <Compile Include="IProvideToken.cs" />
     <Compile Include="IProvideLoginManagement.cs" />
     <Compile Include="Integrations.cs" />
@@ -327,6 +339,10 @@
     <ProjectReference Include="$(SolutionDir)\BlackBarLabs.Web\BlackBarLabs.Web.csproj">
       <Project>{5bb52391-2704-44c0-bc8a-dbbe31498814}</Project>
       <Name>BlackBarLabs.Web</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\EastFive.Sheets\EastFive.Sheets.csproj">
+      <Project>{A6A53D1C-FC21-4385-AFD7-F5748CC5135B}</Project>
+      <Name>EastFive.Sheets</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup />

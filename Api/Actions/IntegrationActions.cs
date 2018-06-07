@@ -25,7 +25,7 @@ namespace EastFive.Security.SessionServer.Api
             if (authenticationRequest.AuthorizationId.IsDefault())
                 return request.CreateResponseEmptyId(authenticationRequest, ar => ar.AuthorizationId)
                     .AddReason("Authorization Id must have value for integration");
-
+            
             return await request.GetActorIdClaimsAsync(
                 (actorId, claims) =>
                     context.Integrations.CreateLinkAsync(credentialId.Value,
@@ -102,6 +102,7 @@ namespace EastFive.Security.SessionServer.Api
             return new Resources.Integration
             {
                 Id = urlHelper.GetWebId<Controllers.IntegrationController>(authenticationRequest.id),
+                Name = authenticationRequest.name,
                 Method = authenticationRequest.method,
                 AuthorizationId = authenticationRequest.authorizationId.HasValue ?
                     authenticationRequest.authorizationId.Value
@@ -123,6 +124,21 @@ namespace EastFive.Security.SessionServer.Api
                     .ToDictionary(),
                 LocationAuthentication = authenticationRequest.loginUrl,
                 LocationAuthenticationReturn = authenticationRequest.redirectUrl,
+                ResourceTypes = new Resources.AuthorizationRequest.ResourceType[]
+                {
+                    new Resources.AuthorizationRequest.ResourceType()
+                    {
+                        Name = "Products",
+                        Value = "Product",
+                        Type = new Uri("urn:Product::*"),
+                    },
+                    new Resources.AuthorizationRequest.ResourceType()
+                    {
+                        Name = "Product Properties",
+                        Value = "ProductProperty",
+                        Type = new Uri("urn:ProductProperty::*"),
+                    },
+                },
             };
         }
 

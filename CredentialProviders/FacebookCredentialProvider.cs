@@ -8,6 +8,7 @@ using BlackBarLabs.Extensions;
 
 namespace EastFive.Security.CredentialProvider.Facebook
 {
+    [SessionServer.Attributes.IntegrationName("Facebook")]
     public class FacebookCredentialProvider : IProvideLogin
     {
         public static Task<TResult> InitializeAsync<TResult>(

@@ -11,6 +11,7 @@ using BlackBarLabs.Extensions;
 
 namespace EastFive.Security.CredentialProvider.AzureADB2C
 {
+    [SessionServer.Attributes.IntegrationName("Password")]
     public class AzureADB2CProvider : IProvideLogin, IProvideLoginManagement
     {
         #region Setup

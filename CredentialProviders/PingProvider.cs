@@ -22,6 +22,7 @@ using System.Collections;
 
 namespace EastFive.Security.CredentialProvider.Ping
 {
+    [SessionServer.Attributes.IntegrationName("Ping")]
     public class PingProvider : IProvideLogin
     {
         public const string TokenId = "tokenid";

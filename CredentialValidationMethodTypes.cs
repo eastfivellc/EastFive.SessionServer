@@ -10,6 +10,9 @@
         Lightspeed,
         Facebook,
         Implicit,
-        Mock
+        Mock,
+        PMPExtender,
+        CSMD,
+        PMPAware,
     }
 }

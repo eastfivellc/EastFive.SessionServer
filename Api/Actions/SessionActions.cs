@@ -23,8 +23,9 @@ namespace EastFive.Security.SessionServer.Api
             if (!credentialId.HasValue)
                 return request.CreateResponse(HttpStatusCode.BadRequest).AddReason("Id must have value");
 
+            Enum.TryParse(authenticationRequest.Method, out CredentialValidationMethodTypes method);
             return await context.Sessions.CreateLoginAsync(credentialId.Value,
-                    authenticationRequest.Method,
+                    method,
                     authenticationRequest.LocationAuthenticationReturn,
                     authenticationRequest.LocationLogoutReturn,
                     (controllerType) => urlHelper.GetLocation(controllerType),
@@ -67,7 +68,7 @@ namespace EastFive.Security.SessionServer.Api
                 (why) => request.CreateResponse(HttpStatusCode.NotFound).AddReason(why),
                 (why) => request.CreateResponseUnexpectedFailure(why));
         }
-
+        
         private static Resources.Session Convert(Session authenticationRequest, UrlHelper urlHelper)
         {
             return new Resources.Session
@@ -91,8 +92,9 @@ namespace EastFive.Security.SessionServer.Api
         {
             var context = request.GetSessionServerContext();
             // Can't update a session that does not exist
+            Enum.TryParse(resource.Method, out CredentialValidationMethodTypes method);
             var session = await context.Sessions.UpdateWithAuthenticationAsync(resource.Id.ToGuid().Value,
-                resource.Method, resource.ResponseToken,
+                method, resource.ResponseToken,
                 (sessionId, authId, token, refreshToken, actions, extraParams, redirect) =>
                 {
                     resource.AuthorizationId = authId;

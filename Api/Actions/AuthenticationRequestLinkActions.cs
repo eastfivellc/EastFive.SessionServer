@@ -11,20 +11,23 @@ using BlackBarLabs.Api;
 using BlackBarLabs.Extensions;
 using EastFive.Api.Services;
 using EastFive.Security.SessionServer.Configuration;
+using EastFive.Api;
 
 namespace EastFive.Security.SessionServer.Api
 {
+    [FunctionViewController(Route = "AuthenticationRequestLink")]
     public static class AuthenticationRequestLinkActions
     {
         public static Task<HttpResponseMessage> QueryAsync(this Resources.Queries.AuthenticationRequestLinkQuery query,
             HttpRequestMessage request, UrlHelper urlHelper)
         {
             return query.ParseAsync(request,
-                    q => QueryByIdAsync(request, urlHelper),
+                    q => QueryAsync(request, urlHelper),
                     q => QueryByIntegrationAsync(q.SupportsIntegration.ParamValue(), request, urlHelper));
         }
 
-        private static async Task<HttpResponseMessage> QueryByIdAsync(
+        [HttpGet]
+        public static async Task<HttpResponseMessage> QueryAsync(
             HttpRequestMessage request, UrlHelper urlHelper)
         {
             var context = request.GetSessionServerContext();
@@ -37,12 +40,13 @@ namespace EastFive.Security.SessionServer.Api
                 },
                 why => request.CreateResponse(HttpStatusCode.ServiceUnavailable).AddReason(why));
         }
-        
-        private static async Task<HttpResponseMessage> QueryByIntegrationAsync(bool supportsIntegrations,
+
+        [HttpGet]
+        public static async Task<HttpResponseMessage> QueryByIntegrationAsync([Required]bool supportsIntegration,
             HttpRequestMessage request, UrlHelper urlHelper)
         {
             var context = request.GetSessionServerContext();
-            return await context.LoginProviders.GetAllAsync(supportsIntegrations,
+            return await context.LoginProviders.GetAllAsync(supportsIntegration,
                 (methods) =>
                 {
                     var response = request.CreateResponse(HttpStatusCode.OK,
@@ -52,7 +56,7 @@ namespace EastFive.Security.SessionServer.Api
                 why => request.CreateResponse(HttpStatusCode.ServiceUnavailable).AddReason(why));
         }
 
-        private static Resources.AuthenticationRequestLink Convert(CredentialValidationMethodTypes method, UrlHelper urlHelper)
+        private static Resources.AuthenticationRequestLink Convert(string method, UrlHelper urlHelper)
         {
             return new Resources.AuthenticationRequestLink
             {

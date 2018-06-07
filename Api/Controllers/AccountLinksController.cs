@@ -42,14 +42,14 @@ namespace EastFive.Security.SessionServer.Api.Controllers
 
             var context = this.Request.GetSessionServerContext();
             if (String.IsNullOrWhiteSpace(redirect_uri))
-                return this.Request.CreateRedirectResponse<Controllers.AuthenticationRequestLinkController>(Url).ToActionResult();
+                return this.Request.CreateRedirectResponse<AuthenticationRequestLinkController>(Url).ToActionResult();
             
             if (!Uri.TryCreate(redirect_uri, UriKind.Absolute, out Uri redirectUrl))
                 return this.Request
                     .CreateResponseValidationFailure(q, qry => qry.redirect_uri)
                     .ToActionResult();
             
-            var response = await context.GetLoginProvider(CredentialValidationMethodTypes.Password,
+            var response = await Context.GetLoginProvider(CredentialValidationMethodTypes.Password,
                 async (loginProvider) =>
                 {
                     var callbackUrl = this.Url.GetLocation<OpenIdResponseController>(

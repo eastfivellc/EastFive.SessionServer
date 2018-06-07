@@ -278,6 +278,7 @@ namespace EastFive.Security.SessionServer
                 return onNoTokenProviders();
 
             var tokenProvider = ServiceConfiguration.credentialProviders.First().Value;
+            Enum.TryParse(tokenProvider.GetType().GetCustomAttribute<Attributes.IntegrationNameAttribute>().Name, out CredentialValidationMethodTypes method);
             return await await this.context.Credentials.GetAllAccountIdAsync(
                 async credentialMappings =>
                 {
@@ -291,7 +292,7 @@ namespace EastFive.Security.SessionServer
                                     AccountEnabled = true,
                                     ActorId = credentialMapping.actorId,
                                     LoginId = credentialMapping.loginId,
-                                    Method = tokenProvider.Method,
+                                    Method = method,
                                 };
                                 if (!ServiceConfiguration.managementProviders.ContainsKey(credentialMapping.method) || default(Guid) == credentialMapping.loginId)
                                     return mapping;

@@ -124,7 +124,7 @@ namespace EastFive.Security.SessionServer.Api
             var context = request.GetSessionServerContext();
             var authenticationRequestId = Guid.NewGuid();
             var redirectUrl = new Uri(redirectString);
-            var method = ServiceConfiguration.credentialProviders.First().Value.Method;
+            Enum.TryParse(ServiceConfiguration.credentialProviders.First().Value.GetType().GetCustomAttribute<Attributes.IntegrationNameAttribute>().Name, out CredentialValidationMethodTypes method);
             return await await context.Sessions.CreateLoginAsync(authenticationRequestId, actorId,
                     method, redirectUrl, new Dictionary<string, string>(),
                 async (session) =>
