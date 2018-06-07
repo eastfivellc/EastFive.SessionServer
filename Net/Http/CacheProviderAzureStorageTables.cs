@@ -67,14 +67,10 @@ namespace EastFive.Net.Http
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            var lookupGuid = request.RequestUri.AbsoluteUri.MD5HashGuid();
-
             if (IsNoCache(request))
-            {
-                var response = await base.SendAsync(request, cancellationToken);
-                return await SaveAsync(lookupGuid, response);
-            }
+                return await base.SendAsync(request, cancellationToken);
             
+            var lookupGuid = request.RequestUri.AbsoluteUri.MD5HashGuid();
             return await await this.repository.FindByIdAsync(lookupGuid,
                 (CacheDocument doc) =>
                 {
@@ -128,7 +124,7 @@ namespace EastFive.Net.Http
 
             var data = await response.Content.ReadAsByteArrayAsync();
             if (data.Length > propSizeLimit * 32)
-                return GenerateResponse(data);
+                return GenerateResponse(data, response.StatusCode);
 
             var doc = new CacheDocument()
             {
@@ -168,8 +164,7 @@ namespace EastFive.Net.Http
             bool success = await this.repository.CreateAsync(lookupGuid, doc,
                 () => true,
                 () => false);
-            return GenerateResponse(data);
+            return GenerateResponse(data, response.StatusCode);
         }
-        
     }
 }
