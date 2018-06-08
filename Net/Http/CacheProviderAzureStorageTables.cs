@@ -123,8 +123,11 @@ namespace EastFive.Net.Http
                 return response;
 
             var data = await response.Content.ReadAsByteArrayAsync();
+            var statusCode = response.StatusCode;
+            response.Dispose();
+
             if (data.Length > propSizeLimit * 32)
-                return GenerateResponse(data, response.StatusCode);
+                return GenerateResponse(data, statusCode);
 
             var doc = new CacheDocument()
             {
@@ -164,7 +167,7 @@ namespace EastFive.Net.Http
             bool success = await this.repository.CreateAsync(lookupGuid, doc,
                 () => true,
                 () => false);
-            return GenerateResponse(data, response.StatusCode);
+            return GenerateResponse(data, statusCode);
         }
     }
 }
