@@ -122,52 +122,56 @@ namespace EastFive.Net.Http
             if (!response.IsSuccessStatusCode)
                 return response;
 
-            var data = await response.Content.ReadAsByteArrayAsync();
+            // stream is passed to GenerateResponse and disposed there
+            var memStream = new MemoryStream();
+            await response.Content.CopyToAsync(memStream);
+            var data = memStream.ToArray();
+            memStream.Seek(0, SeekOrigin.Begin);
             var statusCode = response.StatusCode;
             response.Dispose();
 
-            if (data.Length > propSizeLimit * 32)
-                return GenerateResponse(data, statusCode);
-
-            var doc = new CacheDocument()
+            if (data.Length <= propSizeLimit * 32)
             {
-                Data1 = data.Take(propSizeLimit).ToArray(),
-                Data2 = data.Skip(propSizeLimit).Take(propSizeLimit).ToArray(),
-                Data3 = data.Skip(propSizeLimit * 2).Take(propSizeLimit).ToArray(),
-                Data4 = data.Skip(propSizeLimit * 3).Take(propSizeLimit).ToArray(),
-                Data5 = data.Skip(propSizeLimit * 4).Take(propSizeLimit).ToArray(),
-                Data6 = data.Skip(propSizeLimit * 5).Take(propSizeLimit).ToArray(),
-                Data7 = data.Skip(propSizeLimit * 6).Take(propSizeLimit).ToArray(),
-                Data8 = data.Skip(propSizeLimit * 7).Take(propSizeLimit).ToArray(),
-                Data9 = data.Skip(propSizeLimit * 8).Take(propSizeLimit).ToArray(),
-                Data10 = data.Skip(propSizeLimit * 9).Take(propSizeLimit).ToArray(),
-                Data11 = data.Skip(propSizeLimit * 10).Take(propSizeLimit).ToArray(),
-                Data12 = data.Skip(propSizeLimit * 11).Take(propSizeLimit).ToArray(),
-                Data13 = data.Skip(propSizeLimit * 12).Take(propSizeLimit).ToArray(),
-                Data14 = data.Skip(propSizeLimit * 13).Take(propSizeLimit).ToArray(),
-                Data15 = data.Skip(propSizeLimit * 14).Take(propSizeLimit).ToArray(),
-                Data16 = data.Skip(propSizeLimit * 15).Take(propSizeLimit).ToArray(),
-                Data17 = data.Skip(propSizeLimit * 16).Take(propSizeLimit).ToArray(),
-                Data18 = data.Skip(propSizeLimit * 17).Take(propSizeLimit).ToArray(),
-                Data19 = data.Skip(propSizeLimit * 18).Take(propSizeLimit).ToArray(),
-                Data20 = data.Skip(propSizeLimit * 19).Take(propSizeLimit).ToArray(),
-                Data21 = data.Skip(propSizeLimit * 20).Take(propSizeLimit).ToArray(),
-                Data22 = data.Skip(propSizeLimit * 21).Take(propSizeLimit).ToArray(),
-                Data23 = data.Skip(propSizeLimit * 22).Take(propSizeLimit).ToArray(),
-                Data24 = data.Skip(propSizeLimit * 23).Take(propSizeLimit).ToArray(),
-                Data25 = data.Skip(propSizeLimit * 24).Take(propSizeLimit).ToArray(),
-                Data26 = data.Skip(propSizeLimit * 25).Take(propSizeLimit).ToArray(),
-                Data27 = data.Skip(propSizeLimit * 26).Take(propSizeLimit).ToArray(),
-                Data28 = data.Skip(propSizeLimit * 27).Take(propSizeLimit).ToArray(),
-                Data29 = data.Skip(propSizeLimit * 28).Take(propSizeLimit).ToArray(),
-                Data30 = data.Skip(propSizeLimit * 29).Take(propSizeLimit).ToArray(),
-                Data31 = data.Skip(propSizeLimit * 30).Take(propSizeLimit).ToArray(),
-                Data32 = data.Skip(propSizeLimit * 31).Take(propSizeLimit).ToArray(),
-            };
-            bool success = await this.repository.CreateAsync(lookupGuid, doc,
-                () => true,
-                () => false);
-            return GenerateResponse(data, statusCode);
+                var doc = new CacheDocument()
+                {
+                    Data1 = data.Take(propSizeLimit).ToArray(),
+                    Data2 = data.Skip(propSizeLimit).Take(propSizeLimit).ToArray(),
+                    Data3 = data.Skip(propSizeLimit * 2).Take(propSizeLimit).ToArray(),
+                    Data4 = data.Skip(propSizeLimit * 3).Take(propSizeLimit).ToArray(),
+                    Data5 = data.Skip(propSizeLimit * 4).Take(propSizeLimit).ToArray(),
+                    Data6 = data.Skip(propSizeLimit * 5).Take(propSizeLimit).ToArray(),
+                    Data7 = data.Skip(propSizeLimit * 6).Take(propSizeLimit).ToArray(),
+                    Data8 = data.Skip(propSizeLimit * 7).Take(propSizeLimit).ToArray(),
+                    Data9 = data.Skip(propSizeLimit * 8).Take(propSizeLimit).ToArray(),
+                    Data10 = data.Skip(propSizeLimit * 9).Take(propSizeLimit).ToArray(),
+                    Data11 = data.Skip(propSizeLimit * 10).Take(propSizeLimit).ToArray(),
+                    Data12 = data.Skip(propSizeLimit * 11).Take(propSizeLimit).ToArray(),
+                    Data13 = data.Skip(propSizeLimit * 12).Take(propSizeLimit).ToArray(),
+                    Data14 = data.Skip(propSizeLimit * 13).Take(propSizeLimit).ToArray(),
+                    Data15 = data.Skip(propSizeLimit * 14).Take(propSizeLimit).ToArray(),
+                    Data16 = data.Skip(propSizeLimit * 15).Take(propSizeLimit).ToArray(),
+                    Data17 = data.Skip(propSizeLimit * 16).Take(propSizeLimit).ToArray(),
+                    Data18 = data.Skip(propSizeLimit * 17).Take(propSizeLimit).ToArray(),
+                    Data19 = data.Skip(propSizeLimit * 18).Take(propSizeLimit).ToArray(),
+                    Data20 = data.Skip(propSizeLimit * 19).Take(propSizeLimit).ToArray(),
+                    Data21 = data.Skip(propSizeLimit * 20).Take(propSizeLimit).ToArray(),
+                    Data22 = data.Skip(propSizeLimit * 21).Take(propSizeLimit).ToArray(),
+                    Data23 = data.Skip(propSizeLimit * 22).Take(propSizeLimit).ToArray(),
+                    Data24 = data.Skip(propSizeLimit * 23).Take(propSizeLimit).ToArray(),
+                    Data25 = data.Skip(propSizeLimit * 24).Take(propSizeLimit).ToArray(),
+                    Data26 = data.Skip(propSizeLimit * 25).Take(propSizeLimit).ToArray(),
+                    Data27 = data.Skip(propSizeLimit * 26).Take(propSizeLimit).ToArray(),
+                    Data28 = data.Skip(propSizeLimit * 27).Take(propSizeLimit).ToArray(),
+                    Data29 = data.Skip(propSizeLimit * 28).Take(propSizeLimit).ToArray(),
+                    Data30 = data.Skip(propSizeLimit * 29).Take(propSizeLimit).ToArray(),
+                    Data31 = data.Skip(propSizeLimit * 30).Take(propSizeLimit).ToArray(),
+                    Data32 = data.Skip(propSizeLimit * 31).Take(propSizeLimit).ToArray(),
+                };
+                bool success = await this.repository.CreateAsync(lookupGuid, doc,
+                    () => true,
+                    () => false);
+            }
+            return GenerateResponse(memStream, statusCode);
         }
     }
 }
