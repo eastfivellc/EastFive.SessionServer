@@ -94,6 +94,12 @@ namespace EastFive.Security.SessionServer.Persistence
                     return onFound(authRequestDoc.Id, authRequestDoc.GetExtraParams(),
                         async (updatedParams)=>
                         {
+							var same = authRequestDoc.LinkedAuthenticationId == actorId &&
+								authRequestDoc.GetExtraParams().OrderBy(pair => pair.Key)
+									.SequenceEqual(updatedParams.OrderBy(pair => pair.Key));
+							if (same)
+								return accessDoc.LookupId;
+
                             authRequestDoc.LinkedAuthenticationId = actorId;
                             authRequestDoc.SetExtraParams(updatedParams);
                             return await repository.UpdateIfNotModifiedAsync(authRequestDoc, ()=> accessDoc.LookupId, ()=> accessDoc.LookupId); 
