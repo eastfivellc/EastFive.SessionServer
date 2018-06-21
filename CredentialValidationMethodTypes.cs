@@ -14,5 +14,6 @@
         PMPExtender,
         CSMD,
         PMPAware,
+        Internal,
     }
 }

@@ -22,8 +22,8 @@ namespace EastFive.Security.SessionServer.Api
             HttpRequestMessage request, UrlHelper urlHelper)
         {
             return query.ParseAsync(request,
-                    q => QueryAsync(request, urlHelper),
-                    q => QueryByIntegrationAsync(q.SupportsIntegration.ParamValue(), request, urlHelper));
+                q => QueryAsync(request, urlHelper),
+                q => QueryByIntegrationAsync(q.SupportsIntegration.ParamValue(), request, urlHelper));
         }
 
         [HttpGet]

@@ -11,6 +11,7 @@ namespace EastFive.Security.CredentialProvider.Facebook
     [SessionServer.Attributes.IntegrationName("Facebook")]
     public class FacebookCredentialProvider : IProvideLogin
     {
+        [SessionServer.Attributes.IntegrationName("Facebook")]
         public static Task<TResult> InitializeAsync<TResult>(
             Func<IProvideLogin, TResult> onProvideLogin,
             Func<IProvideAuthorization, TResult> onProvideAuthorization,

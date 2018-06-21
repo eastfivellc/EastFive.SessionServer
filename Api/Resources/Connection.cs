@@ -9,12 +9,12 @@ namespace EastFive.Api.Resources
     public class Connection : ResourceBase
     {
         [JsonProperty(PropertyName = "source")]
-        public WebId Source { get; set; }
+        public Adapter Source { get; set; }
 
         [JsonProperty(PropertyName = "destination")]
-        public WebId Destination { get; set; }
+        public Adapter Destination { get; set; }
 
-        [JsonProperty(PropertyName = "flow")]
-        public string Flow { get; set; }
+        [JsonProperty(PropertyName = "connector")]
+        public Connector Connector { get; set; }
     }
 }

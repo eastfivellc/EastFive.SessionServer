@@ -55,6 +55,7 @@ namespace EastFive.Security.CredentialProvider
                 onConfigurationNotAvailable);
         }
 
+        [SessionServer.Attributes.IntegrationName("Lightspeed")]
         public static async Task<TResult> InitializeAsync<TResult>(
             Func<IProvideAuthorization, TResult> onProvideAuthorization,
             Func<TResult> onProvideNothing,

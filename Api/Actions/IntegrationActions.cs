@@ -2,6 +2,7 @@
 using BlackBarLabs.Extensions;
 using EastFive.Collections.Generic;
 using EastFive.Extensions;
+using EastFive.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -87,8 +88,19 @@ namespace EastFive.Security.SessionServer.Api
                     actingAs, claims,
                 (authenticationRequests) =>
                 {
-                    var response = authenticationRequests.Select(authenticationRequest => request.CreateResponse(HttpStatusCode.OK,
-                        Convert(authenticationRequest, urlHelper))).ToArray();
+                    var response = authenticationRequests
+                        .Append(
+                            new Session()
+                            {
+                                action = AuthenticationActions.link,
+                                authorizationId = actorId,
+                                id = actorId,
+                                method = "account",
+                                name = "Account",
+                            })
+                        .Select(authenticationRequest => 
+                            request.CreateResponse(HttpStatusCode.OK, Convert(authenticationRequest, urlHelper)))
+                        .ToArray();
                     return response;
                 },
                 () => request.CreateResponse(HttpStatusCode.NotFound).AsArray(),
@@ -109,9 +121,11 @@ namespace EastFive.Security.SessionServer.Api
                     :
                     default(Guid),
                 ExtraParams = userParameters
+                    .NullToEmpty()
                     .Select(param => param.Key.PairWithValue(param.Value.Value))
                     .ToDictionary(),  //This should be depricated in favor of UserParameters, eventually.
                 UserParameters = userParameters
+                    .NullToEmpty()
                     .Select(
                         param => param.Key.PairWithValue(
                             new Resources.Integration.CustomParameter
@@ -124,21 +138,16 @@ namespace EastFive.Security.SessionServer.Api
                     .ToDictionary(),
                 LocationAuthentication = authenticationRequest.loginUrl,
                 LocationAuthenticationReturn = authenticationRequest.redirectUrl,
-                ResourceTypes = new Resources.AuthorizationRequest.ResourceType[]
-                {
-                    new Resources.AuthorizationRequest.ResourceType()
-                    {
-                        Name = "Products",
-                        Value = "Product",
-                        Type = new Uri("urn:Product::*"),
-                    },
-                    new Resources.AuthorizationRequest.ResourceType()
-                    {
-                        Name = "Product Properties",
-                        Value = "ProductProperty",
-                        Type = new Uri("urn:ProductProperty::*"),
-                    },
-                },
+                ResourceTypes = authenticationRequest.resourceTypes
+                    .NullToEmpty()
+                    .Select(
+                        resourceType => new Resources.AuthorizationRequest.ResourceType()
+                        {
+                            Name = resourceType.Value,
+                            Value = resourceType.Key,
+                            Type = new Uri($"urn:{resourceType.Key}::*"),
+                        })
+                    .ToArray(),
             };
         }
 

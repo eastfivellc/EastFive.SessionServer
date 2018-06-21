@@ -19,6 +19,7 @@ namespace EastFive.Security.CredentialProvider.Token
             this.dataContext = new DataContext(SessionServer.Configuration.AppSettings.Storage);
         }
 
+        [SessionServer.Attributes.IntegrationName("Token")]
         public static Task<TResult> InitializeAsync<TResult>(
             Func<IProvideAuthorization, TResult> onProvideAuthorization,
             Func<TResult> onProvideNothing,

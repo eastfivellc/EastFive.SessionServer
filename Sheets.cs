@@ -74,15 +74,16 @@ namespace EastFive.Api.Azure
             {
                 return onSuccess(new Dictionary<string, string>(), new Dictionary<string, Type>(), new Dictionary<string, string>()).ToTask();
             }
-        }
 
-        public static Task<TResult> InitializeProviderAsync<TResult>(
-            Func<IProvideAuthorization, TResult> onProvideAuthorization,
-            Func<TResult> onProvideNothing,
-            Func<string, TResult> onFailure)
-        {
-            var provider = new Provider();
-            return onProvideAuthorization(provider).ToTask();
+            [Security.SessionServer.Attributes.IntegrationName("Sheets")]
+            public static Task<TResult> InitializeProviderAsync<TResult>(
+                Func<IProvideAuthorization, TResult> onProvideAuthorization,
+                Func<TResult> onProvideNothing,
+                Func<string, TResult> onFailure)
+            {
+                var provider = new Provider();
+                return onProvideAuthorization(provider).ToTask();
+            }
         }
 
         //internal static async Task<TResult> GetAsync<TResult>(Guid authenticationRequestId, Func<Type, Uri> callbackUrlFunc,

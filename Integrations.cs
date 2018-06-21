@@ -16,15 +16,26 @@ using System.Net;
 using EastFive.Collections.Generic;
 using EastFive.Extensions;
 using EastFive.Linq;
+using EastFive.Security.SessionServer;
+using EastFive.Security;
+using EastFive.Linq.Async;
 
-namespace EastFive.Security.SessionServer
+namespace EastFive.Api.Azure
 {
+    public struct Integration
+    {
+        public string method;
+        public Guid integrationId;
+        public Guid authorizationId;
+        public IDictionary<string, string> parameters;
+    }
+
     public class Integrations
     {
         private Context context;
-        private Persistence.DataContext dataContext;
+        private Security.SessionServer.Persistence.DataContext dataContext;
 
-        internal Integrations(Context context, Persistence.DataContext dataContext)
+        internal Integrations(Context context, Security.SessionServer.Persistence.DataContext dataContext)
         {
             this.dataContext = dataContext;
             this.context = context;
@@ -102,7 +113,23 @@ namespace EastFive.Security.SessionServer
                 });
         }
 
+        [Obsolete("Use method string instead.")]
         public async Task<TResult> CreateOrUpdateAuthenticatedIntegrationAsync<TResult>(Guid actorId, CredentialValidationMethodTypes method,
+           Func<
+               Guid?,
+               IDictionary<string, string>,
+               Func<IDictionary<string, string>, Task<Guid>>,
+               Task<TResult>> onCreatedOrFound)
+        {
+            var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
+            return await this.dataContext.Integrations.CreateOrUpdateAsync(actorId, methodName,
+                (integrationIdMaybe, paramsCurrent, updateAsync) =>
+                {
+                    return onCreatedOrFound(integrationIdMaybe, paramsCurrent, updateAsync);
+                });
+        }
+
+        public async Task<TResult> CreateOrUpdateAuthenticatedIntegrationAsync<TResult>(Guid actorId, string method,
            Func<
                Guid?,
                IDictionary<string, string>,
@@ -115,7 +142,7 @@ namespace EastFive.Security.SessionServer
                     return onCreatedOrFound(integrationIdMaybe, paramsCurrent, updateAsync);
                 });
         }
-        
+
         internal async Task<TResult> GetAsync<TResult>(Guid authenticationRequestId, Func<Type, Uri> callbackUrlFunc,
             Func<Session, TResult> onSuccess,
             Func<TResult> onNotFound,
@@ -169,20 +196,20 @@ namespace EastFive.Security.SessionServer
                         async (authenticationRequestId) =>
                         {
                             var provider = ap.Value;
-                            Enum.TryParse(ap.Key, out CredentialValidationMethodTypes method);
+                            var method = ap.Key;
                             return await await this.dataContext.AuthenticationRequests.FindByIdAsync(authenticationRequestId,
-                                        async (authRequest) =>
+                                async (authRequest) =>
+                                {
+                                    return await provider.UserParametersAsync(actorId, null, null,
+                                        (labels, types, descriptions) =>
                                         {
-                                            return await provider.UserParametersAsync(actorId, null, null,
-                                                (labels, types, descriptions) =>
-                                                {
-                                                    var callbackUrl = callbackUrlFunc(provider.CallbackController);
-                                                    var loginUrl = provider.GetLoginUrl(Guid.Empty, callbackUrl);
-                                                    var authenticationRequest = Convert(authenticationRequestId, ap.Key, AuthenticationActions.access,
-                                                        default(string), authenticationRequestId, loginUrl, default(Uri), authRequest.extraParams, labels, types, descriptions);
-                                                    return authenticationRequest;
-                                                });
-                                        },
+                                            var callbackUrl = callbackUrlFunc(provider.CallbackController);
+                                            var loginUrl = provider.GetLoginUrl(Guid.Empty, callbackUrl);
+                                            var authenticationRequest = Convert(authenticationRequestId, ap.Key, AuthenticationActions.access,
+                                                default(string), authenticationRequestId, loginUrl, default(Uri), authRequest.extraParams, labels, types, descriptions);
+                                            return authenticationRequest;
+                                        });
+                                },
                                         async () =>
                                         {
                                             #region SHIM
@@ -212,45 +239,62 @@ namespace EastFive.Security.SessionServer
             return onSuccess(integrations);
         }
 
-        public async Task<KeyValuePair<string, T>[]> GetActivitiesAsync<T>(Guid actorId)
+        public async Task<KeyValuePair<Integration, T>[]> GetActivitiesAsync<T>(Guid actorId)
         {
+            if (!ServiceConfiguration.integrationActivites.ContainsKey(typeof(T)))
+                return new KeyValuePair<Integration, T>[] { };
+            var activitiesOfTypeT = ServiceConfiguration.integrationActivites[typeof(T)];
+
             var integrations = await dataContext.Integrations.FindAsync(actorId);
-            return ServiceConfiguration.IntegrationActivites
-                .Where(
-                    activity =>
-                    {
-                        var customAttrs = activity.Key.GetCustomAttributes<Attributes.IntegrationNameAttribute>();
-                        if(!customAttrs.Any())
-                        {
-                            // TODO: Throw exception or log warning?
-                            return false;
-                        }
-                        var customAttr = customAttrs.First();
-                        return integrations.ContainsKey(customAttr.Name);
-                    })
-                .Where(
-                    activity =>
-                    {
-                        var responseType = activity.Value.Body.Type;
-                        var isAssignable = typeof(T).IsAssignableFrom(responseType);
-                        return isAssignable;
-                    })
-                .FlatMap(
-                    (activity, next, skip) =>
-                    {
-                        var methodName = activity.Key.GetCustomAttribute<Attributes.IntegrationNameAttribute>().Name;
-                        var integration = integrations[methodName];
-                        var action = (T)activity.Value.Compile().Invoke(actorId, integration.Key, integration.Value,
-                            (obj) => obj.ToTask(),
-                            (obj, why) => obj.ToTask());
-                        if (action.IsDefault())
-                            return skip();
-                        return next(methodName.PairWithValue(action));
-                    },
-                    (IEnumerable<KeyValuePair<string, T>> activies) =>
-                    {
-                        return activies.ToArray();
-                    });
+            var integrationsMatchingActivities = integrations
+                .Where(integration => activitiesOfTypeT.ContainsKey(integration.method))
+                .ToArray();
+            return await integrationsMatchingActivities
+                .Select(
+                    integration => activitiesOfTypeT[integration.method]
+                        .FlatMap(
+                            (invocation, next, skip) =>
+                            {
+                                return (Task<KeyValuePair<Integration, T>[]>)invocation(integration,
+                                    async (obj) => await next(integration.PairWithValue((T)obj)),
+                                    async (why) => await skip());
+                            },
+                            (IEnumerable<KeyValuePair<Integration, T>> integrationsKvp) =>
+                            {
+                                var integrationsKvpArray = integrationsKvp.ToArray();
+                                return integrationsKvpArray.ToTask();
+                            }))
+                .WhenAllAsync()
+                .SelectManyAsync()
+                .ToArrayAsync();
+        }
+
+        public async Task<KeyValuePair<Integration, T>[]> GetActivityAsync<T>(Guid integrationId)
+        {
+            if (!ServiceConfiguration.integrationActivites.ContainsKey(typeof(T)))
+                return new KeyValuePair<Integration, T>[] { };
+            var activitiesOfTypeT = ServiceConfiguration.integrationActivites[typeof(T)];
+
+            return await await dataContext.Integrations.FindAuthorizedAsync(integrationId,
+                async integration =>
+                {
+                    if (!activitiesOfTypeT.ContainsKey(integration.method))
+                        return new KeyValuePair<Integration, T>[] { };
+                    return await activitiesOfTypeT[integration.method]
+                        .FlatMap(
+                            (invocation, next, skip) =>
+                            {
+                                return (Task<KeyValuePair<Integration, T>[]>)invocation(integration,
+                                    async (obj) => await next(integration.PairWithValue((T)obj)),
+                                    async (why) => await skip());
+                            },
+                            (IEnumerable<KeyValuePair<Integration, T>> integrationsKvp) =>
+                            {
+                                var integrationsKvpArray = integrationsKvp.ToArray();
+                                return integrationsKvpArray.ToTask();
+                            });
+                },
+                () => (new KeyValuePair<Integration, T>[] { }).ToTask());
         }
 
         public async Task<TResult> GetAsync<TIntegration, TResult>(Guid actorId,
@@ -436,7 +480,7 @@ namespace EastFive.Security.SessionServer
                                     accessProvider =>
                                     {
                                         return dataContext.Integrations.DeleteAsync(performingActorId,
-                                                accessProvider.GetType().GetCustomAttribute<Attributes.IntegrationNameAttribute>().Name,
+                                                accessProvider.GetType().GetCustomAttribute<Security.SessionServer.Attributes.IntegrationNameAttribute>().Name,
                                             (parames) => true,
                                             () => false);
                                     })
@@ -448,7 +492,7 @@ namespace EastFive.Security.SessionServer
         }
 
         private static Session Convert(
-            Persistence.AuthenticationRequest authenticationRequest,
+            Security.SessionServer.Persistence.AuthenticationRequest authenticationRequest,
             Uri loginUrl,
             IDictionary<string, string> extraParams, 
             IDictionary<string, string> labels, 
@@ -502,7 +546,12 @@ namespace EastFive.Security.SessionServer
                 authorizationId = authorizationId,
                 redirectUrl = redirect,
                 loginUrl = loginUrl,
-                userParams = userParams
+                userParams = userParams,
+                resourceTypes = new Dictionary<string, string>()
+                {
+                    { "ProductProperty", "Product Properties" },
+                    { "Product", "Products" },
+                }
             };
         }
     }

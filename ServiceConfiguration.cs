@@ -21,9 +21,11 @@ namespace EastFive.Security.SessionServer
 {
     public static class ServiceConfiguration
     {
-        public delegate object IntegrationActivityDelegate(Guid authorizationId, Guid integrationId, IDictionary<string, string> parameters,
+        public delegate object IntegrationActivityDelegate(EastFive.Api.Azure.Integration integration,
             Func<object, Task<object>> unlockAsync,
-            Func<object, string, Task<object>> unlockWithIssueAsync);
+            Func<string, Task<object>> unlockWithIssueAsync);
+
+        public delegate EastFive.Azure.Synchronization.Connections SynchronizationActivityDelegate(EastFive.Azure.Synchronization.Synchronizations<object> synchronzation);
 
         internal static Dictionary<CredentialValidationMethodTypes, IProvideAuthorization> credentialProviders =
             default(Dictionary<CredentialValidationMethodTypes, IProvideAuthorization>);
@@ -37,12 +39,9 @@ namespace EastFive.Security.SessionServer
         internal static Dictionary<CredentialValidationMethodTypes, IProvideToken> tokenProviders =
             default(Dictionary<CredentialValidationMethodTypes, IProvideToken>);
 
-        internal static KeyValuePair<Type, Expression<IntegrationActivityDelegate>>[] IntegrationActivites =
-            new KeyValuePair<Type, Expression<IntegrationActivityDelegate>>[] { };
-
-        //internal static Dictionary<CredentialValidationMethodTypes, IProvideAccess> accessProviders =
-        //    default(Dictionary<CredentialValidationMethodTypes, IProvideAccess>);
-
+        internal static IDictionary<Type, IDictionary<string, IntegrationActivityDelegate[]>> integrationActivites =
+            new Dictionary<Type, IDictionary<string, IntegrationActivityDelegate[]>>();
+        
         public static async Task<TResult> InitializeAsync<TResult>(IConfigureIdentityServer configurationManager,
                 HttpConfiguration config,
                 Func<
@@ -50,7 +49,8 @@ namespace EastFive.Security.SessionServer
                     Func<IProvideAuthorization[]>, // onProvideNothing
                     Func<string, IProvideAuthorization[]>, // onFailure
                     Task<IProvideAuthorization[]>> [] initializers,
-                KeyValuePair<Type, Expression<IntegrationActivityDelegate>>[] activities,
+                Expression<IntegrationActivityDelegate>[] activities,
+                Expression<SynchronizationActivityDelegate>[] synchronizations,
             Func<TResult> onSuccess,
             Func<string, TResult> onFailure)
         {
@@ -59,10 +59,8 @@ namespace EastFive.Security.SessionServer
             EastFive.Api.Modules.ControllerModule.AddInstigator(typeof(Context),
                 (httpApp, request, parameterInfo, onCreatedSessionContext) => onCreatedSessionContext(new Context(
                     () => new Persistence.DataContext(Configuration.AppSettings.Storage))));
-
-            //config.AddExternalControllers<SessionServer.Api.Controllers.OpenIdResponseController>();
+            
             AddExternalControllers<Api.Controllers.OpenIdResponseController>(config);
-            //return InitializeAsync(audience, configurationEndpoint, onSuccess, onFailed);
             config.Routes.MapHttpRoute(name: "apple-app-links",
                 routeTemplate: "apple-app-site-association",
                 defaults: new { controller = "AppleAppSiteAssociation", id = RouteParameter.Optional });
@@ -96,11 +94,6 @@ namespace EastFive.Security.SessionServer
                 .ToDictionary(
                     credentialProvider => credentialProvider.Key,
                     credentialProvider => (IProvideLoginManagement)credentialProvider.Value);
-            //accessProviders = credentialProvidersWithoutMethods
-            //    .Where(credentialProvider => typeof(IProvideAccess).IsAssignableFrom(credentialProvider.GetType()))
-            //    .ToDictionary(
-            //        credentialProvider => credentialProvider.Method,
-            //        credentialProvider => (IProvideAccess)credentialProvider);
             tokenProviders = credentialProviders
                 .Where(credentialProvider => typeof(IProvideToken).IsAssignableFrom(credentialProvider.Value.GetType()))
                 .ToDictionary(
@@ -115,7 +108,53 @@ namespace EastFive.Security.SessionServer
             //        entity => entity.FullName.PairWithValue(entity.Open().ToBytes()))
             //    .ToDictionary();
 
-            IntegrationActivites = activities; //.Select(activity => activity.Key.PairWithValue(activity.Value))
+            integrationActivites = activities
+                .Where(activity => activity.Body is System.Linq.Expressions.MethodCallExpression)
+                .SelectMany(
+                    (activity) =>
+                    {
+                        var method = (activity.Body as System.Linq.Expressions.MethodCallExpression).Method;
+                        return method.DeclaringType.GetInterfaces()
+                            .FlatMap(
+                                (conformsTo, nextItem, skipItem) => method.GetCustomAttribute(
+                                    (Attributes.IntegrationNameAttribute integrationNameAttr) => nextItem(
+                                        conformsTo.PairWithValue(integrationNameAttr.Name).PairWithValue(activity.Compile())),
+                                    () => skipItem()),
+                                (IEnumerable<KeyValuePair<KeyValuePair<Type, string>, IntegrationActivityDelegate>> activityKvps) => activityKvps);
+                    })
+                .GroupBy(activityKvp => activityKvp.Key.Key)
+                .Select(
+                    grp => grp.Key.PairWithValue(
+                        (IDictionary<string, IntegrationActivityDelegate[]>)grp
+                            .Select(item => item.Key.Value.PairWithValue(item.Value))
+                            .GroupBy(kvp => kvp.Key)
+                            .Select(grpInner => grpInner.Key.PairWithValue(grpInner.SelectValues().ToArray()))
+                            .ToDictionary()))
+                .ToDictionary();
+            
+            //var synchronizationsDictionary = synchronizations
+            //    .Where(activity => activity.Body is System.Linq.Expressions.MethodCallExpression)
+            //    .SelectMany(
+            //        (activity) =>
+            //        {
+            //            var method = (activity.Body as System.Linq.Expressions.MethodCallExpression).Method;
+            //            return method.DeclaringType.GetInterfaces()
+            //                .FlatMap(
+            //                    (conformsTo, nextItem, skipItem) => method.GetCustomAttribute(
+            //                        (Attributes.IntegrationNameAttribute integrationNameAttr) => nextItem(
+            //                            conformsTo.PairWithValue(integrationNameAttr.Name).PairWithValue(activity.Compile())),
+            //                        () => skipItem()),
+            //                    (IEnumerable<KeyValuePair<KeyValuePair<Type, string>, IntegrationActivityDelegate>> activityKvps) => activityKvps);
+            //        })
+            //    .GroupBy(activityKvp => activityKvp.Key.Key)
+            //    .Select(
+            //        grp => grp.Key.PairWithValue(
+            //            (IDictionary<string, IntegrationActivityDelegate[]>)grp
+            //                .Select(item => item.Key.Value.PairWithValue(item.Value))
+            //                .GroupBy(kvp => kvp.Key)
+            //                .Select(grpInner => grpInner.Key.PairWithValue(grpInner.SelectValues().ToArray()))
+            //                .ToDictionary()))
+            //    .ToDictionary();
 
             return onSuccess();
         }

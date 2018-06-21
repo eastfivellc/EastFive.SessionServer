@@ -29,6 +29,13 @@ namespace EastFive.Security.SessionServer
             this.dataContextCreateFunc = dataContextCreateFunc;
         }
 
+        public static Context LoadFromConfiguration()
+        {
+            var context = new EastFive.Security.SessionServer.Context(
+                () => new EastFive.Security.SessionServer.Persistence.DataContext(Configuration.AppSettings.Storage));
+            return context;
+        }
+
         internal Security.SessionServer.Persistence.DataContext DataContext
         {
             get { return dataContext ?? (dataContext = dataContextCreateFunc.Invoke()); }
@@ -213,13 +220,13 @@ namespace EastFive.Security.SessionServer
             }
         }
         
-        private Integrations integrations;
-        public Integrations Integrations
+        private EastFive.Api.Azure.Integrations integrations;
+        public EastFive.Api.Azure.Integrations Integrations
         {
             get
             {
-                if (default(Integrations) == integrations)
-                    integrations = new Integrations(this, this.DataContext);
+                if (default(EastFive.Api.Azure.Integrations) == integrations)
+                    integrations = new EastFive.Api.Azure.Integrations(this, this.DataContext);
                 return integrations;
             }
         }

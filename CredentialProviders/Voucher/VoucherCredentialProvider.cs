@@ -12,6 +12,7 @@ namespace EastFive.Security.CredentialProvider.Voucher
     [SessionServer.Attributes.IntegrationName("Voucher")]
     public class VoucherCredentialProvider : IProvideAuthorization
     {
+        [SessionServer.Attributes.IntegrationName("Voucher")]
         public static Task<TResult> InitializeAsync<TResult>(
             Func<IProvideAuthorization, TResult> onProvideAuthorization,
             Func<TResult> onProvideNothing,

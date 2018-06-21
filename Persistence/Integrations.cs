@@ -56,12 +56,10 @@ namespace EastFive.Security.SessionServer.Persistence
         }
 
         public async Task<TResult> CreateAuthenticatedAsync<TResult>(Guid integrationId, Guid authenticationId,
-                CredentialValidationMethodTypes method, IDictionary<string, string> paramSet,
+                string methodName, IDictionary<string, string> paramSet,
             Func<TResult> onSuccess,
             Func<TResult> onAlreadyExists)
         {
-            var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
-
             var rollback = new RollbackAsync<TResult>();
 
             var docByMethod = new AccessDocument
@@ -83,10 +81,9 @@ namespace EastFive.Security.SessionServer.Persistence
             return await rollback.ExecuteAsync(onSuccess);
         }
 
-        internal async Task<TResult> CreateOrUpdateAsync<TResult>(Guid actorId, CredentialValidationMethodTypes method,
+        internal async Task<TResult> CreateOrUpdateAsync<TResult>(Guid actorId, string methodName,
             Func<Guid?, IDictionary<string, string>, Func<IDictionary<string, string>, Task<Guid>>, Task<TResult>> onFound)
         {
-            var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
             return await await repository.FindLinkedDocumentAsync(actorId, methodName,
                 accessDoc => accessDoc.LookupId,
                 (AccessDocument accessDoc, AuthenticationRequestDocument authRequestDoc) =>
@@ -105,7 +102,7 @@ namespace EastFive.Security.SessionServer.Persistence
                         async (parameters) =>
                         {
                             var integrationId = Guid.NewGuid();
-                            return await CreateAuthenticatedAsync(integrationId, actorId, method, parameters,
+                            return await CreateAuthenticatedAsync(integrationId, actorId, methodName, parameters,
                                 ()=> integrationId,
                                 "Guid not unique".AsFunctionException<Guid>());
                         });
@@ -113,11 +110,11 @@ namespace EastFive.Security.SessionServer.Persistence
                 async (parentDoc) =>
                 {
                     await repository.DeleteAsync(parentDoc, ()=> true, ()=> false);
-                    return await CreateOrUpdateAsync(actorId, method, onFound);
+                    return await CreateOrUpdateAsync(actorId, methodName, onFound);
                 });
         }
 
-        public async Task<IDictionary<string, KeyValuePair<Guid, IDictionary<string, string>>>> FindAsync(Guid actorId)
+        public async Task<EastFive.Api.Azure.Integration[]> FindAsync(Guid actorId)
         {
             try
             {
@@ -128,15 +125,43 @@ namespace EastFive.Security.SessionServer.Persistence
                         async (accessDoc, next, skip) => await await repository.FindByIdAsync(
                             accessDoc.LookupId,
                                 (AuthenticationRequestDocument integrationDoc) =>
-                                    next(accessDoc.Method.PairWithValue(accessDoc.Id.PairWithValue(integrationDoc.GetExtraParams()))),
+                                    next(
+                                        new EastFive.Api.Azure.Integration
+                                        {
+                                            integrationId = integrationDoc.Id,
+                                            method = integrationDoc.Method,
+                                            parameters = integrationDoc.GetExtraParams(),
+                                            authorizationId = actorId,
+                                        }),
                         () => skip()),
-                    (IEnumerable<KeyValuePair<string, KeyValuePair<Guid, IDictionary<string, string>>>> integrations) =>
-                        integrations.ToDictionary().ToTask());
+                    (IEnumerable<EastFive.Api.Azure.Integration> integrations) =>
+                        integrations.ToArray().ToTask());
             }
             catch(Exception ex)
             {
                 return null;
             }
+        }
+
+        public Task<TResult> FindAuthorizedAsync<TResult>(Guid integrationId,
+            Func<EastFive.Api.Azure.Integration, TResult> onSuccess,
+            Func<TResult> onNotFoundOrUnauthorized)
+        {
+            return repository.FindByIdAsync(integrationId,
+                (AuthenticationRequestDocument integrationDoc) =>
+                {
+                    if (!integrationDoc.LinkedAuthenticationId.HasValue)
+                        return onNotFoundOrUnauthorized();
+                    return onSuccess(
+                        new EastFive.Api.Azure.Integration
+                        {
+                            integrationId = integrationDoc.Id,
+                            method = integrationDoc.Method,
+                            parameters = integrationDoc.GetExtraParams(),
+                            authorizationId = integrationDoc.LinkedAuthenticationId.Value,
+                        });
+                },
+                onNotFoundOrUnauthorized);
         }
 
         public async Task<TResult> FindAsync<TResult>(Guid actorId, string methodName,

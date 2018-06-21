@@ -38,6 +38,7 @@ namespace EastFive.Security.CredentialProvider.Ping
             //return "https://sso.connect.pingidentity.com/sso/TXS/2.0/2/" + pingConnectToken;
         }
 
+        [SessionServer.Attributes.IntegrationName("Ping")]
         public static Task<TResult> InitializeAsync<TResult>(
             Func<IProvideAuthorization, TResult> onProvideAuthorization,
             Func<TResult> onProvideNothing,

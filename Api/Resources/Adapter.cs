@@ -26,7 +26,7 @@ namespace EastFive.Api.Resources
         [JsonProperty(PropertyName = "values")]
         public string[] Values { get; set; }
 
-        [JsonProperty(PropertyName = "method")]
-        public string Method { get; set; }
+        [JsonProperty(PropertyName = "connector")]
+        public WebId[] Connectors { get; set; }
     }
 }

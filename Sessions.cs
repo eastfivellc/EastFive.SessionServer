@@ -29,6 +29,7 @@ namespace EastFive.Security.SessionServer
         public IDictionary<string, CustomParameter> userParams;
         public string refreshToken;
         public AuthenticationActions action;
+        public IDictionary<string, string> resourceTypes;
     }
 
     public struct CustomParameter
@@ -75,16 +76,17 @@ namespace EastFive.Security.SessionServer
                 {
                     var callbackLocation = controllerToLocation(provider.CallbackController);
                     var sessionId = SecureGuid.Generate();
+                    var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
                     var result = await this.dataContext.AuthenticationRequests.CreateAsync(authenticationRequestId,
-                            method, AuthenticationActions.signin, redirectUrl, redirectLogoutUrl,
+                            methodName, AuthenticationActions.signin, redirectUrl, redirectLogoutUrl,
                         () => BlackBarLabs.Security.Tokens.JwtTools.CreateToken(sessionId, callbackLocation, TimeSpan.FromMinutes(30),
                             (token) =>
                             {
                                 var session = new Session()
                                 {
                                     id = authenticationRequestId,
-                                    method = Enum.GetName(typeof(CredentialValidationMethodTypes), method),
-                                    name = method.ToString(),
+                                    method = methodName,
+                                    name = methodName,
                                     action = AuthenticationActions.signin,
                                     loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackLocation),
                                     logoutUrl = provider.GetLogoutUrl(authenticationRequestId, callbackLocation),

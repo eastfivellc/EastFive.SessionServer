@@ -41,14 +41,14 @@ namespace EastFive.Security.SessionServer.Persistence
         }
 
         public async Task<TResult> CreateAsync<TResult>(Guid authenticationRequestId,
-                CredentialValidationMethodTypes method, AuthenticationActions action,
+                string method, AuthenticationActions action,
                 Uri redirectUrl, Uri redirectLogoutUrl,
             Func<TResult> onSuccess,
             Func<TResult> onAlreadyExists)
         {
             var doc = new Documents.AuthenticationRequestDocument
             {
-                Method = Enum.GetName(typeof(CredentialValidationMethodTypes), method),
+                Method = method,
                 Action = Enum.GetName(typeof(AuthenticationActions), action),
                 RedirectUrl = redirectUrl.IsDefault()?
                     default(string)

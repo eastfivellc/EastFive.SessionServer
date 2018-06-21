@@ -65,6 +65,7 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
                 onConfigurationNotAvailable);
         }
 
+        [SessionServer.Attributes.IntegrationName("Password")]
         public static async Task<TResult> InitializeAsync<TResult>(
             Func<IProvideAuthorization, TResult> onProvideAuthorization,
             Func<TResult> onProvideNothing,

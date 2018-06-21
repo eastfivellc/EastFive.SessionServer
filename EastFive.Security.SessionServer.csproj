@@ -194,6 +194,7 @@
     <Compile Include="Api\Controllers\SessionController.cs" />
     <Compile Include="Api\RequestExtensions.cs" />
     <Compile Include="Api\Resources\AccountLink.cs" />
+    <Compile Include="Api\Resources\Connector.cs" />
     <Compile Include="Api\Resources\Connection.cs" />
     <Compile Include="Api\Resources\Adapter.cs" />
     <Compile Include="Api\Resources\Queries\ConnectionQuery.cs" />
@@ -234,6 +235,7 @@
     <Compile Include="CredentialProviders\AzureADB2C\Resources\ODataError.cs" />
     <Compile Include="CredentialProviders\AzureADB2C\Resources\ODataMetadata.cs" />
     <Compile Include="CredentialProviders\AzureADB2C\Resources\User.cs" />
+    <Compile Include="CredentialProviders\InternalProvider.cs" />
     <Compile Include="Exceptions\AgilityPackExtensions.cs" />
     <Compile Include="Health.cs" />
     <Compile Include="Configuration\AppSettings.cs" />
@@ -245,6 +247,7 @@
     <Compile Include="CredentialProviders\SAMLProvider.cs" />
     <Compile Include="CredentialProviders\TokenCredentialProvider.cs" />
     <Compile Include="Persistence\Content.cs" />
+    <Compile Include="Persistence\Documents\LookupDocument.cs" />
     <Compile Include="Persistence\Sheet.cs" />
     <Compile Include="Content.cs" />
     <Compile Include="Sheets.cs" />
@@ -307,6 +310,12 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Authorizations.cs" />
     <Compile Include="ServiceConfiguration.cs" />
+    <Compile Include="Synchronization\Connector.cs" />
+    <Compile Include="Synchronization\ConnectorDocument.cs" />
+    <Compile Include="Synchronization\AdapterDocument.cs" />
+    <Compile Include="Synchronization\Connections.cs" />
+    <Compile Include="Synchronization\IntegrationAdapterLookupDocument.cs" />
+    <Compile Include="Synchronization\Synchronizations.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Api\Views\ActAsUser\Index.cshtml" />

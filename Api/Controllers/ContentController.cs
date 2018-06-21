@@ -15,7 +15,7 @@ namespace EastFive.Api.Azure.Controllers
     {
         [HttpPost]
         public static async Task<HttpResponseMessage> CreateContentAsync(
-            [RequiredAndAvailableInPath]Guid contentId, [Required]ByteArrayContent content,
+            [RequiredAndAvailableInPathAttribute]Guid contentId, [Required]ByteArrayContent content,
             HttpRequestMessage request)
         {
             var contentType = content.Headers.ContentType.MediaType;
@@ -26,7 +26,7 @@ namespace EastFive.Api.Azure.Controllers
         }
 
         [HttpGet]
-        public static async Task<HttpResponseMessage> QueryByContentIdAsync([RequiredAndAvailableInPath]Guid contentId,
+        public static async Task<HttpResponseMessage> QueryByContentIdAsync([RequiredAndAvailableInPathAttribute]Guid contentId,
                 [Optional]int? width, [Optional]int? height, [Optional]bool? fill,
             HttpRequestMessage request, System.Web.Http.Routing.UrlHelper url)
         {

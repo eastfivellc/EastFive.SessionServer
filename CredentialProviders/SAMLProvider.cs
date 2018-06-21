@@ -33,6 +33,7 @@ namespace EastFive.Security.CredentialProvider.SAML
             this.dataContext = new DataContext(SessionServer.Configuration.AppSettings.Storage);
         }
 
+        [SessionServer.Attributes.IntegrationName("SAML")]
         public static Task<TResult> InitializeAsync<TResult>(
             Func<IProvideLogin, TResult> onProvideLogin,
             Func<IProvideAuthorization, TResult> onProvideAuthorization,
@@ -41,9 +42,7 @@ namespace EastFive.Security.CredentialProvider.SAML
         {
             return onProvideAuthorization(new SAMLProvider()).ToTask();
         }
-
-        public CredentialValidationMethodTypes Method => CredentialValidationMethodTypes.SAML;
-
+        
         public async Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> tokens,
             Func<string, Guid?, Guid?, IDictionary<string, string>, TResult> onSuccess,
             Func<Guid?, IDictionary<string, string>, TResult> onUnauthenticated,
