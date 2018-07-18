@@ -22,6 +22,8 @@ namespace EastFive.Security.CredentialProvider
         #region Initialization
 
         public const string accountIdKey = "account_id";
+        public const string integrationIdKey = "integration_id";
+        public const string resourceTypes = "resource_types";
         
         private InternalProvider()
         {
@@ -54,7 +56,7 @@ namespace EastFive.Security.CredentialProvider
 
         #region IProvideAuthorization
         
-        public Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> tokenParameters, 
+        public async Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> tokenParameters, 
             Func<string, Guid?, Guid?, IDictionary<string, string>, TResult> onSuccess,
             Func<Guid?, IDictionary<string, string>, TResult> onUnauthenticated,
             Func<string, TResult> onInvalidCredentials,
@@ -62,7 +64,27 @@ namespace EastFive.Security.CredentialProvider
             Func<string, TResult> onUnspecifiedConfiguration, 
             Func<string, TResult> onFailure)
         {
-            return onSuccess(tokenParameters[InternalProvider.accountIdKey], default(Guid?), default(Guid?), tokenParameters).ToTask();
+            if (!tokenParameters.ContainsKey(InternalProvider.integrationIdKey))
+                return onInvalidCredentials($"Missing {integrationIdKey}");
+            var integrationIdString = tokenParameters[InternalProvider.integrationIdKey];
+            if(!Guid.TryParse(integrationIdString, out Guid integrationId))
+                return onInvalidCredentials($"[{integrationIdString}] is not a UUID");
+
+            return await Context.LoadFromConfiguration().Integrations.GetByIdAsync(integrationId,
+                (authIdMaybe, method) =>
+                {
+                    if (!authIdMaybe.HasValue)
+                        return onInvalidCredentials("Integration was not authorized.");
+                    var subject = integrationIdString;
+                    var stateId = integrationId;
+                    var loginId = integrationId;
+                    var extraParamsWithRedemptionParams = tokenParameters
+                        .Append(InternalProvider.accountIdKey, authIdMaybe.Value.ToString("N"))
+                        .ToDictionary();
+                    return onSuccess(subject, stateId, loginId, extraParamsWithRedemptionParams);
+                },
+                () => onInvalidCredentials($"Could not find integration [{integrationId}]"));
+            // return onSuccess(, default(Guid?), default(Guid?), tokenParameters).ToTask();
         }
         
         #endregion
@@ -71,17 +93,19 @@ namespace EastFive.Security.CredentialProvider
 
         public Type CallbackController => typeof(SessionServer.Api.Controllers.IntegrationController);
 
-        public Uri GetLoginUrl(Guid state, Uri responseControllerLocation)
+        public Uri GetLoginUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
+        {
+            return controllerToLocation(typeof(Api.Controllers.InternalIntegrationController))
+                .AddQueryParameter(Api.Controllers.InternalIntegrationController.StateQueryParameter, state.ToString());
+                //.AddQueryParameter("redirect", responseControllerLocation.AbsoluteUri);
+        }
+
+        public Uri GetLogoutUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
         {
             return default(Uri);
         }
 
-        public Uri GetLogoutUrl(Guid state, Uri responseControllerLocation)
-        {
-            return default(Uri);
-        }
-
-        public Uri GetSignupUrl(Guid state, Uri responseControllerLocation)
+        public Uri GetSignupUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
         {
             return default(Uri);
         }
@@ -95,9 +119,19 @@ namespace EastFive.Security.CredentialProvider
                 TResult> onSuccess)
         {
             return onSuccess(
-                new Dictionary<string, string>() { { "AutoIntegrateProducts", "Automatically Map Products" } },
-                new Dictionary<string, Type>() { { "AutoIntegrateProducts", typeof(bool) } },
-                new Dictionary<string, string>() { { "AutoIntegrateProducts", "When true, the system pick the best match for products when a mapping does not exists." } }).ToTask();
+                    new Dictionary<string, string>()
+                    {
+                        { "AutoIntegrateProducts", "Automatically Map Products" }
+                    },
+                    new Dictionary<string, Type>()
+                    {
+                        { "AutoIntegrateProducts", typeof(bool) }
+                    },
+                    new Dictionary<string, string>()
+                    {
+                        { "AutoIntegrateProducts", "When true, the system pick the best match for products when a mapping does not exists." }
+                    })
+                .ToTask();
         }
 
         #endregion

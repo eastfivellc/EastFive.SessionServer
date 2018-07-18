@@ -33,6 +33,7 @@ namespace EastFive.Security.SessionServer.Api
                             urlHelper.GetLocation<Controllers.OpenIdResponseController>(),
                             authenticationRequest.Method, authenticationRequest.LocationAuthenticationReturn,
                             authenticationRequest.AuthorizationId, actorId, claims,
+                            type => urlHelper.GetLocation(type),
                         (authenticationRequestPopulated) =>
                         {
                             var resource = Convert(authenticationRequestPopulated, urlHelper);

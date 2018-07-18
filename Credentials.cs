@@ -34,8 +34,8 @@ namespace EastFive.Security.SessionServer
         }
 
         internal async Task<TResult> CreateAsync<TResult>(Guid credentialId, Guid authenticationId,
-            CredentialValidationMethodTypes method, string subject,
-            Guid performingActorId, System.Security.Claims.Claim[] claims,
+                string method, string subject,
+                Guid performingActorId, System.Security.Claims.Claim[] claims,
             Func<TResult> onSuccess,
             Func<Guid, TResult> onAlreadyExists,
             Func<TResult> onSubjectAlreadyInUse,
@@ -54,7 +54,7 @@ namespace EastFive.Security.SessionServer
         #region InviteCredential
 
         public async Task<TResult> CreateInviteCredentialAsync<TResult>(Guid sessionId, Guid? stateId,
-            Guid? authorizationId, CredentialValidationMethodTypes method, string subject,
+            Guid? authorizationId, string method, string subject,
             IDictionary<string, string> extraParams, 
             Func<Guid, string, IDictionary<string, string>, Task> saveAuthRequest,
             Uri redirectUrl,

@@ -93,17 +93,17 @@ namespace EastFive.Security.CredentialProvider.SAML
 
         public Type CallbackController => typeof(SessionServer.Api.Controllers.SAMLRedirectController);
 
-        public Uri GetSignupUrl(Guid state, Uri responseControllerLocation)
+        public Uri GetSignupUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
         {
             throw new NotImplementedException();
         }
 
-        public Uri GetLogoutUrl(Guid state, Uri responseControllerLocation)
+        public Uri GetLogoutUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
         {
             throw new NotImplementedException();
         }
 
-        public Uri GetLoginUrl(Guid state, Uri responseControllerLocation)
+        public Uri GetLoginUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
         {
             throw new NotImplementedException();
         }

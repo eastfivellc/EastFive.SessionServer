@@ -22,7 +22,7 @@ namespace EastFive.Security.SessionServer.Persistence
         public Guid actorId;
         public Guid loginId;
         public DateTime? lastSent;
-        public CredentialValidationMethodTypes method;
+        public string method;
         public string subject;
     }
 

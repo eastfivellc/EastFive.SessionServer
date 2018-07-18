@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using BlackBarLabs.Persistence.Azure;
-using EastFive.Persistence.Azure.StorageTables;
+using EastFive.Azure.StorageTables.Driver;
 using EastFive.Security.SessionServer;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;

@@ -23,6 +23,10 @@ namespace EastFive.Api.Resources
 
         public const string CreatedByPropertyName = "created_by";
         [JsonProperty(PropertyName = CreatedByPropertyName)]
-        public Guid CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
+
+        public const string DestinationIntegrationPropertyName = "destination_integration";
+        [JsonProperty(PropertyName = DestinationIntegrationPropertyName)]
+        public WebId DestinationIntegration { get; set; }
     }
 }

@@ -54,7 +54,7 @@ namespace EastFive.Security.SessionServer
                 () => onFailure("Claim is already in use"));
         }
 
-        internal TResult GetCredentialProvider<TResult>(CredentialValidationMethodTypes method,
+        internal TResult GetCredentialProvider<TResult>(string method,
             Func<IProvideAuthorization, TResult> onSuccess,
             Func<TResult> onCredintialSystemNotAvailable,
             Func<string, TResult> onFailure)
@@ -69,19 +69,18 @@ namespace EastFive.Security.SessionServer
             return onSuccess(provider);
         }
 
-        internal static TResult GetLoginProvider<TResult>(CredentialValidationMethodTypes method,
+        internal static TResult GetLoginProvider<TResult>(string method,
             Func<IProvideLogin, TResult> onSuccess,
             Func<TResult> onCredintialSystemNotAvailable,
             Func<string, TResult> onFailure)
         {
             if (ServiceConfiguration.loginProviders.IsDefault())
                 return onFailure("Authentication system not initialized.");
-
-            var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
-            if (!ServiceConfiguration.loginProviders.ContainsKey(methodName))
+            
+            if (!ServiceConfiguration.loginProviders.ContainsKey(method))
                 return onCredintialSystemNotAvailable();
 
-            var provider = ServiceConfiguration.loginProviders[methodName];
+            var provider = ServiceConfiguration.loginProviders[method];
             return onSuccess(provider);
         }
 
@@ -94,21 +93,6 @@ namespace EastFive.Security.SessionServer
                 return onFailure("Authentication system not initialized.");
 
             var methodName = providerType.GetCustomAttribute<Attributes.IntegrationNameAttribute>().Name;
-            if (!ServiceConfiguration.loginProviders.ContainsKey(methodName))
-                return onCredintialSystemNotAvailable();
-
-            var provider = ServiceConfiguration.loginProviders[methodName];
-            return onSuccess(provider);
-        }
-
-        internal static TResult GetLoginProvider<TResult>(string methodName,
-            Func<IProvideLogin, TResult> onSuccess,
-            Func<TResult> onCredintialSystemNotAvailable,
-            Func<string, TResult> onFailure)
-        {
-            if (ServiceConfiguration.loginProviders.IsDefault())
-                return onFailure("Authentication system not initialized.");
-            
             if (!ServiceConfiguration.loginProviders.ContainsKey(methodName))
                 return onCredintialSystemNotAvailable();
 
@@ -148,7 +132,7 @@ namespace EastFive.Security.SessionServer
             return onSuccess(ServiceConfiguration.loginProviders.SelectValues().ToArray());
         }
 
-        internal TResult GetManagementProvider<TResult>(CredentialValidationMethodTypes method,
+        internal TResult GetManagementProvider<TResult>(string method,
             Func<IProvideLoginManagement, TResult> onSuccess,
             Func<TResult> onCredintialSystemNotAvailable,
             Func<string, TResult> onFailure)
@@ -288,7 +272,7 @@ namespace EastFive.Security.SessionServer
                 return health;
             }
         }
-
+        
         #region Authorizations
 
         public delegate bool GetCredentialDelegate(CredentialValidationMethodTypes validationMethod, Uri provider, string userId, string userToken);

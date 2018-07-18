@@ -41,17 +41,17 @@ namespace EastFive.Api.Azure
 
             public Type CallbackController => typeof(EastFive.Api.Azure.Controllers.ContentController);
 
-            public Uri GetLoginUrl(Guid state, Uri responseControllerLocation)
+            public Uri GetLoginUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
             {
                 return new Uri(responseControllerLocation, $"/api/SheetIntegration/?integration={state}");
             }
 
-            public Uri GetLogoutUrl(Guid state, Uri responseControllerLocation)
+            public Uri GetLogoutUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
             {
                 return default(Uri);
             }
 
-            public Uri GetSignupUrl(Guid state, Uri responseControllerLocation)
+            public Uri GetSignupUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
             {
                 return default(Uri);
             }

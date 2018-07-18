@@ -63,7 +63,7 @@ namespace EastFive.Security.SessionServer
         }
         
         public async Task<TResult> CreateLoginAsync<TResult>(Guid authenticationRequestId,
-                CredentialValidationMethodTypes method, Uri redirectUrl, Uri redirectLogoutUrl,
+                string method, Uri redirectUrl, Uri redirectLogoutUrl,
                 Func<Type, Uri> controllerToLocation,
             Func<Session, TResult> onSuccess,
             Func<TResult> onAlreadyExists,
@@ -76,7 +76,7 @@ namespace EastFive.Security.SessionServer
                 {
                     var callbackLocation = controllerToLocation(provider.CallbackController);
                     var sessionId = SecureGuid.Generate();
-                    var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
+                    var methodName = method;
                     var result = await this.dataContext.AuthenticationRequests.CreateAsync(authenticationRequestId,
                             methodName, AuthenticationActions.signin, redirectUrl, redirectLogoutUrl,
                         () => BlackBarLabs.Security.Tokens.JwtTools.CreateToken(sessionId, callbackLocation, TimeSpan.FromMinutes(30),
@@ -88,8 +88,8 @@ namespace EastFive.Security.SessionServer
                                     method = methodName,
                                     name = methodName,
                                     action = AuthenticationActions.signin,
-                                    loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackLocation),
-                                    logoutUrl = provider.GetLogoutUrl(authenticationRequestId, callbackLocation),
+                                    loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackLocation, controllerToLocation),
+                                    logoutUrl = provider.GetLogoutUrl(authenticationRequestId, callbackLocation, controllerToLocation),
                                     redirectUrl = redirectUrl,
                                     redirectLogoutUrl = redirectLogoutUrl,
                                     token = token,
@@ -106,7 +106,7 @@ namespace EastFive.Security.SessionServer
         }
 
         internal async Task<TResult> CreateLoginAsync<TResult>(Guid authenticationRequestId, Guid authenticationId,
-                CredentialValidationMethodTypes method, Uri callbackLocation, IDictionary<string, string> authParams,
+                string method, Uri callbackLocation, IDictionary<string, string> authParams,
             Func<Session, TResult> onSuccess,
             Func<TResult> onAlreadyExists,
             Func<string, TResult> onFailure)
@@ -128,8 +128,8 @@ namespace EastFive.Security.SessionServer
                                         var session = new Session()
                                         {
                                             id = authenticationRequestId,
-                                            method = Enum.GetName(typeof(CredentialValidationMethodTypes), method),
-                                            name = method.ToString(),
+                                            method = method,
+                                            name = method,
                                             action = AuthenticationActions.signin,
                                             token = token,
                                             extraParams = authParams
@@ -186,8 +186,8 @@ namespace EastFive.Security.SessionServer
                         {
                             var authenticationRequest = Convert(authenticationRequestStorage);
                             var callbackUrl = callbackUrlFunc(provider.CallbackController);
-                            authenticationRequest.loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackUrl);
-                            authenticationRequest.logoutUrl = provider.GetLogoutUrl(authenticationRequestId, callbackUrl);
+                            authenticationRequest.loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackUrl, callbackUrlFunc);
+                            authenticationRequest.logoutUrl = provider.GetLogoutUrl(authenticationRequestId, callbackUrl, callbackUrlFunc);
                             return onSuccess(authenticationRequest);
                         },
                         () => onFailure("The credential provider for this request is no longer enabled in this system"),
@@ -197,7 +197,7 @@ namespace EastFive.Security.SessionServer
         }
 
         public async Task<TResult> LookupCredentialMappingAsync<TResult>(
-                CredentialValidationMethodTypes method, string subject, Guid? loginId, Guid sessionId, 
+                string method, string subject, Guid? loginId, Guid sessionId, 
             IDictionary<string, string> extraParams,
             Func<Guid, string, string, IDictionary<string, string>, TResult> onSuccess,
             Func<TResult> alreadyExists,
@@ -234,7 +234,7 @@ namespace EastFive.Security.SessionServer
         
         public async Task<TResult> UpdateWithAuthenticationAsync<TResult>(
                 Guid sessionId,
-                CredentialValidationMethodTypes method,
+                string method,
                 IDictionary<string, string> extraParams,
             Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onLogin,
             Func<Uri, TResult> onLogout,
@@ -293,7 +293,7 @@ namespace EastFive.Security.SessionServer
         }
 
         public async Task<TResult> CreateOrUpdateWithAuthenticationAsync<TResult>(
-                CredentialValidationMethodTypes method,
+                string method,
                 IDictionary<string, string> extraParams,
             Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onLogin,
             Func<Uri, TResult> onLogout,
@@ -356,7 +356,7 @@ namespace EastFive.Security.SessionServer
         }
 
 
-        private async Task<TResult> AuthenticateStateAsync<TResult>(Guid sessionId, Guid? loginId, CredentialValidationMethodTypes method,
+        private async Task<TResult> AuthenticateStateAsync<TResult>(Guid sessionId, Guid? loginId, string method,
                 string subject, IDictionary<string, string> extraParams,
             Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onLogin,
             Func<Uri, TResult> onLogout,
@@ -370,7 +370,7 @@ namespace EastFive.Security.SessionServer
                     if (authenticationRequest.Deleted.HasValue)
                         return onLogout(authenticationRequest.redirectLogout);
 
-                    if (authenticationRequest.method != Enum.GetName(typeof(CredentialValidationMethodTypes), method))
+                    if (authenticationRequest.method != method)
                         return onInvalidToken("The credential's authentication method does not match the callback method");
 
                     if (AuthenticationActions.link == authenticationRequest.action)
@@ -382,14 +382,15 @@ namespace EastFive.Security.SessionServer
                             onNotConfigured,
                             onFailure);
 
-                    //if (AuthenticationActions.access == authenticationRequest.action)
-                    //    return await context.Integrations.UpdateAsync(authenticationRequest,
-                    //            sessionId, sessionId, method, extraParams,
-                    //            saveAuthRequest,
-                    //        onLogin,
-                    //        onInvalidToken,
-                    //        onNotConfigured,
-                    //        onFailure);
+                    if (AuthenticationActions.access == authenticationRequest.action)
+                        return await context.Integrations.UpdateAsync(sessionId,
+                                subject, extraParams,
+                            (redirect) =>
+                            {
+                                return onLogin(sessionId, authenticationRequest.authorizationId.Value, string.Empty, string.Empty, AuthenticationActions.access, extraParams, redirect);
+                            },
+                            () => onFailure("Authentication request was deleted."),
+                            () => onFailure("No authentication on integration"));
 
                     if (authenticationRequest.authorizationId.HasValue)
                         return onInvalidToken("Session's authentication request cannot be re-used.");
@@ -477,7 +478,7 @@ namespace EastFive.Security.SessionServer
                             await markForDeleteAsync();
                             var deletedSession = Convert(session);
                             var callbackLocation = callbackLocationFunc(provider.CallbackController);
-                            deletedSession.logoutUrl = provider.GetLogoutUrl(sessionId, callbackLocation);
+                            deletedSession.logoutUrl = provider.GetLogoutUrl(sessionId, callbackLocation, callbackLocationFunc);
                             return onSuccess(deletedSession);
                         },
                         () => onFailure("Credential system is no longer available").ToTask(),

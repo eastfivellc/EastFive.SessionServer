@@ -33,7 +33,7 @@ namespace EastFive.Security.SessionServer.Api
                     var context = request.GetSessionServerContext();
                     var creationResults = await context.Credentials.CreateAsync(
                             credentialId.Value, authenticationId.Value,
-                            credential.Method, credential.Subject,
+                            Enum.GetName(typeof(CredentialValidationMethodTypes), credential.Method), credential.Subject,
                             performingActorId, claims,
                         () => request.CreateResponse(HttpStatusCode.Created),
                         (credentialIdExisting) => request

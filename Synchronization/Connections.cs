@@ -7,6 +7,7 @@ using EastFive.Text;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net.Http;
 using System.Security.Claims;
 using System.Text;
@@ -57,9 +58,23 @@ namespace EastFive.Azure.Synchronization
         Func<string, TResult> onFailure,
         Func<TResult> onNotSupported);
 
+    public interface IIntegrate
+    {
+        TResult IsResourceTypeSupported<TResult>(string resourceType, string key,
+            Func<BlackBarLabs.Api.Resources.WebId, TResult> onSupportedByController,
+            Func<TResult> onNotSupported);
+    }
+
     public abstract class Connections
     {
         abstract public string ResourceType { get; }
+
+        private IIntegrate service;
+
+        public Connections(IIntegrate service)
+        {
+            this.service = service;
+        }
 
         public Task<Adapter[]> SaveAdaptersAsync(Guid integrationId, Adapter[] adapters)
         {
@@ -68,10 +83,13 @@ namespace EastFive.Azure.Synchronization
                 .Select(
                     adapter => Persistence.AdapterDocument.FindOrCreateAsync(adapter.key,
                         integrationId, resourceType,
-                        async (adapterInternalStorage, saveAsync) =>
+                        async (created, adapterInternalStorage, saveAsync) =>
                         {
+                            adapterInternalStorage.key = adapter.key; // SHIM?
                             adapterInternalStorage.name = adapter.name;
                             adapterInternalStorage.identifiers = adapter.identifiers;
+                            adapterInternalStorage.integrationId = integrationId;
+                            adapterInternalStorage.resourceType = resourceType;
 
                             // Update identifiers internally if there is no externally mapped resource
                             var adapterId = await saveAsync(adapterInternalStorage);
@@ -199,8 +217,7 @@ namespace EastFive.Azure.Synchronization
                         return onMatch(connections);
                     });
         }
-
-
+        
         public static Task<TResult> FindAdapterByIdAsync<TResult>(Guid synchronizationId,
             Func<EastFive.Azure.Synchronization.Adapter, TResult> onFound,
             Func<TResult> onNotFound)
@@ -241,35 +258,49 @@ namespace EastFive.Azure.Synchronization
             return await await Persistence.AdapterDocument.FindByIdAsync(relatedAdapterId,
                 relatedAdapter =>
                 {
-                    return relatedAdapter.connectorIds
-                        .First(
-                            async (connectorId, next) => await await Persistence.ConnectorDocument.FindByIdWithAdapterRemoteAsync(connectorId,
-                                (connector, remoteAdapter) => remoteAdapter.integrationId == integrationId? 
-                                    onFound(remoteAdapter.AsArray()).ToTask()
-                                    : 
-                                    next(),
-                                () => next()),
-                            () => Persistence.AdapterDocument.FindAllAsync(integrationId, relatedAdapter.resourceType,
-                                    (syncs) =>
-                                    {
-                                        var orderedSynchronizationsExternalToInternal = syncs
-                                            .NullToEmpty()
-                                            .Where(sync => !sync.connectorIds.Any())
-                                            .OrderBy(sync => relatedAdapter.name.SmithWaterman(sync.name))
-                                            .ToArray();
-                                        return onFound(orderedSynchronizationsExternalToInternal);
-                                    }));
+                    //return relatedAdapter.connectorIds
+                    //    .First(
+                    //        async (connectorId, next) => await await Persistence.ConnectorDocument.FindByIdWithAdapterRemoteAsync(connectorId,
+                    //            (connector, remoteAdapter) => remoteAdapter.integrationId == integrationId? 
+                    //                onFound(remoteAdapter.AsArray()).ToTask()
+                    //                : 
+                    //                next(),
+                    //            () => next()),
+                    //        () => 
+                    return Persistence.AdapterDocument.FindAllAsync(integrationId, relatedAdapter.resourceType,
+                        (syncs) =>
+                        {
+                            var orderedSynchronizationsExternalToInternal = syncs
+                                .NullToEmpty()
+                                // TODO: Check for only the connections that match the adapter's integration. .Where(sync => !sync.connectorIds.Any())
+                                .OrderBy(sync => relatedAdapter.name.SmithWaterman(sync.name))
+                                .ToArray();
+                            return onFound(orderedSynchronizationsExternalToInternal);
+                        });
                 },
                 onReferenceNotFound.AsAsyncFunc());
         }
 
-        public abstract Task<TResult> SynchronizeAsync<TResult>(
-            Guid actorId, Guid integrationIdInternal, Guid integrationIdExternal,
-            Func<IEnumerable<Connection>, TResult> onMatch,
-            Func<string, TResult> onFailure);
+        public static async Task<TResult> FindAdapterByKeyAsync<TResult>(string key, Guid integrationId, string resourceType,
+                System.Security.Claims.Claim[] claims,
+            Func<Adapter, TResult> onFound,
+            Func<TResult> onReferenceNotFound,
+            Func<TResult> onUnauthorized)
+        {
+            if(Guid.TryParse(key, out Guid keyGuid))
+            {
+                key = keyGuid.ToString("N");
+            }
+            return await Persistence.AdapterDocument.FindByKeyAsync(key, integrationId, resourceType,
+                relatedAdapter =>
+                {
+                    return onFound(relatedAdapter);
+                },
+                onReferenceNotFound);
+        }
 
         public abstract Task<TResult> GetAdaptersAsync<TResult>(
-            Guid actorId, Guid integrationId,
+            Guid integrationId,
             Func<IEnumerable<Adapter>, TResult> onMatch,
             Func<string, TResult> onFailure);
 

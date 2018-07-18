@@ -110,17 +110,17 @@ namespace EastFive.Security.CredentialProvider.Ping
 
         #region IProvideLogin
         
-        public Uri GetLogoutUrl(Guid state, Uri responseControllerLocation)
+        public Uri GetLogoutUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
         {
             return default(Uri);
         }
 
-        public Uri GetLoginUrl(Guid state, Uri responseControllerLocation)
+        public Uri GetLoginUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
         {
             return default(Uri);
         }
 
-        public Uri GetSignupUrl(Guid state, Uri responseControllerLocation)
+        public Uri GetSignupUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
         {
             return default(Uri);
         }

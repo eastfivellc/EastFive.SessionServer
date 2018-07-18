@@ -169,7 +169,13 @@
     <Compile Include="Api\Actions\PasswordCredentialActions.cs" />
     <Compile Include="Api\Actions\InviteCredentialActions.cs" />
     <Compile Include="Api\Constants.cs" />
+    <Compile Include="Api\Controllers\AdapterController.cs" />
+    <Compile Include="Api\Controllers\ConnectionController.cs" />
+    <Compile Include="Api\Controllers\ConnectorController.cs" />
     <Compile Include="Api\Controllers\ContentController.cs" />
+    <Compile Include="Api\Controllers\InternalIntegrationController.cs" />
+    <Compile Include="Api\Controllers\InternalIntegrationResponseController.cs" />
+    <Compile Include="Api\Controllers\ManifestController.cs" />
     <Compile Include="Api\Controllers\SheetIntegrationController.cs" />
     <Compile Include="Api\Controllers\SpaServeController.cs" />
     <Compile Include="Api\Controllers\DiagnosticsController.cs" />
@@ -197,6 +203,7 @@
     <Compile Include="Api\Resources\Connector.cs" />
     <Compile Include="Api\Resources\Connection.cs" />
     <Compile Include="Api\Resources\Adapter.cs" />
+    <Compile Include="Api\Resources\Manifest.cs" />
     <Compile Include="Api\Resources\Queries\ConnectionQuery.cs" />
     <Compile Include="Api\Resources\Queries\AdapterQuery.cs" />
     <Compile Include="Api\Resources\UserInfo.cs" />

@@ -11,46 +11,93 @@ namespace EastFive.Azure.Synchronization
 {
     public static class Connectors
     {
-        public static async Task<TResult> CreateConnectorAsync<TResult>(Guid connectorId, Guid sourceId, Guid? destination,
-                Connector.SynchronizationMethod flow, Guid createdBy,
+        public static async Task<TResult> CreateConnectorAsync<TResult>(Guid connectorId, Guid sourceId, Guid? destinationAdapterIdMaybe,
+                Connector.SynchronizationMethod flow, Guid? destinationIntegrationMaybe,
                 Guid performingAsActorId, Claim[] claims,
             Func<TResult> onCreated,
+            Func<Connection, TResult> onCreatedAndModified,
             Func<TResult> onAlreadyExists,
+            Func<Guid, TResult> onRelationshipAlreadyExists,
             Func<Guid, TResult> onAdapterDoesNotExist,
             Func<string, TResult> onFailure)
         {
-            if (!destination.HasValue)
-            {
-                //EastFive.Azure.Synchronization.A
-            }
-            return await Persistence.ConnectorDocument.CreateAsync(connectorId,
-                    sourceId, destination.Value, createdBy, flow,
-                () =>
+            return await await Persistence.AdapterDocument.FindByIdAsync(sourceId,
+                async sourceAdapter =>
                 {
+                    Func<Guid, Adapter?, Task<TResult>> createConnector =
+                        async (destinationAdapterId, destinationAdapterMaybe) => await await Persistence.ConnectorDocument.CreateAsync(connectorId,
+                            sourceId, destinationAdapterId, flow,
+                            async () =>
+                            {
+                                if (!destinationAdapterMaybe.HasValue)
+                                    return await onCreated().ToTask();
 
+                                var connector = new Connector()
+                                {
+                                    connectorId = connectorId,
+                                    adapterExternalId = destinationAdapterId,
+                                    adapterInternalId = sourceId,
+                                    createdBy = sourceId,
+                                    synchronizationMethod = flow,
+                                };
+                                var connection = Convert(sourceAdapter, connector, destinationAdapterMaybe.Value);
+                                return onCreatedAndModified(connection);
+                            },
+                            onAlreadyExists.AsAsyncFunc(),
+                            async (callback) => onRelationshipAlreadyExists(await callback()),
+                            onAdapterDoesNotExist.AsAsyncFunc());
+
+                    if (destinationAdapterIdMaybe.HasValue)
+                        return await createConnector(destinationAdapterIdMaybe.Value, default(Adapter?));
+
+                    if (!destinationIntegrationMaybe.HasValue)
+                        return onFailure("Destination integration must be specified to create a new destination.");
+                    return await Persistence.AdapterDocument.FindOrCreateAsync($"TODO:{Guid.NewGuid()}", destinationIntegrationMaybe.Value, sourceAdapter.resourceType,
+                            async (created, destinationAdapter, saveAsync) =>
+                            {
+                                if (!created)
+                                    return onAlreadyExists();
+                                var destinationAdapterId = await saveAsync(destinationAdapter);
+                                return await createConnector(destinationAdapterId, destinationAdapter);
+                            });
+                },
+                () => onAdapterDoesNotExist(sourceId).ToTask());
+            
+        }
+
+        public static async Task<TResult> UpdateConnectorAsync<TResult>(Guid connectorId,
+                Connector.SynchronizationMethod flow,
+                Guid performingAsActorId, Claim[] claims,
+            Func<TResult> onCreated,
+            Func<TResult> onAdapterDoesNotExist,
+            Func<string, TResult> onFailure)
+        {
+            return await Persistence.ConnectorDocument.UpdateAsync(connectorId,
+                async (connector, saveAsync) =>
+                {
+                    await saveAsync(flow);
                     return onCreated();
                 },
-                onAlreadyExists,
                 onAdapterDoesNotExist);
         }
 
         public static Task<TResult> FindByIdAsync<TResult>(Guid connectorId,
                 Guid performingAsAuthorization, System.Security.Claims.Claim[] claims,
-            Func<Connector, TResult> onFound,
+            Func<Connector, Guid, TResult> onFound,
             Func<TResult> onNotFound,
             Func<TResult> onUnauthorized)
         {
             return Persistence.ConnectorDocument.FindByIdAsync(connectorId,
-                (connector) =>
+                (connector, destinationIntegrationId) =>
                 {
-                    return onFound(connector);
+                    return onFound(connector, destinationIntegrationId);
                 },
                 onNotFound);
         }
 
         public static Task<TResult> FindByAdapterAsync<TResult>(Guid adapterId,
                 Guid performingAsAuthorization, System.Security.Claims.Claim[] claims,
-            Func<Connector[], TResult> onFound,
+            Func<KeyValuePair<Connector, Guid>[], TResult> onFound,
             Func<TResult> onAdapterNotFound,
             Func<TResult> onUnauthorized)
         {
@@ -74,34 +121,40 @@ namespace EastFive.Azure.Synchronization
                     return onFound(
                         connectorAdapters
                             .Select(
-                                connectorAdapter => new Connection()
-                                {
-                                    connector = new Connector()
-                                    {
-                                        connectorId = connectorAdapter.Key.connectorId,
-                                        adapterInternalId = adapter.adapterId,
-                                        adapterExternalId = connectorAdapter.Key.adapterInternalId == adapter.adapterId?
-                                            connectorAdapter.Key.adapterExternalId
-                                            :
-                                            connectorAdapter.Key.adapterInternalId,
-                                        synchronizationMethod = connectorAdapter.Key.adapterInternalId == adapter.adapterId ?
-                                            connectorAdapter.Key.synchronizationMethod
-                                            :
-                                            connectorAdapter.Key.synchronizationMethod == Connector.SynchronizationMethod.useExternal? 
-                                                Connector.SynchronizationMethod.useInternal
-                                                :
-                                                connectorAdapter.Key.synchronizationMethod == Connector.SynchronizationMethod.useInternal?
-                                                    Connector.SynchronizationMethod.useExternal
-                                                    :
-                                                    connectorAdapter.Key.synchronizationMethod,
-                                        createdBy = connectorAdapter.Key.createdBy,
-                                    },
-                                    adapterInternal = adapter,
-                                    adapterExternal = connectorAdapter.Value,
-                                })
+                                connectorAdapter => 
+                                    Convert(adapter, connectorAdapter.Key, connectorAdapter.Value))
                             .ToArray());
                 },
                 onAdapterNotFound);
+        }
+
+        private static Connection Convert(Adapter source, Connector connector, Adapter remote)
+        {
+            return new Connection()
+            {
+                connector = new Connector()
+                {
+                    connectorId = connector.connectorId,
+                    adapterInternalId = source.adapterId,
+                    adapterExternalId = connector.adapterInternalId == source.adapterId ?
+                                            connector.adapterExternalId
+                                            :
+                                            connector.adapterInternalId,
+                    synchronizationMethod = connector.adapterInternalId == source.adapterId ?
+                                            connector.synchronizationMethod
+                                            :
+                                            connector.synchronizationMethod == Connector.SynchronizationMethod.useExternal ?
+                                                Connector.SynchronizationMethod.useInternal
+                                                :
+                                                connector.synchronizationMethod == Connector.SynchronizationMethod.useInternal ?
+                                                    Connector.SynchronizationMethod.useExternal
+                                                    :
+                                                    connector.synchronizationMethod,
+                    createdBy = connector.createdBy,
+                },
+                adapterInternal = source,
+                adapterExternal = remote,
+            };
         }
 
         public static Task<TResult> DeleteByIdAsync<TResult>(Guid connectorId,

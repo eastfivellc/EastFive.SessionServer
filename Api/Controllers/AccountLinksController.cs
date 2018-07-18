@@ -49,7 +49,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                     .CreateResponseValidationFailure(q, qry => qry.redirect_uri)
                     .ToActionResult();
             
-            var response = await Context.GetLoginProvider(CredentialValidationMethodTypes.Password,
+            var response = await Context.GetLoginProvider(Enum.GetName(typeof(CredentialValidationMethodTypes), CredentialValidationMethodTypes.Password),
                 async (loginProvider) =>
                 {
                     var callbackUrl = this.Url.GetLocation<OpenIdResponseController>(
@@ -59,7 +59,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                             .First());
                     var authReqId = Guid.NewGuid();
                     return await context.Sessions.CreateLoginAsync(authReqId,
-                        CredentialValidationMethodTypes.Password, redirectUrl, redirectUrl,
+                        Enum.GetName(typeof(CredentialValidationMethodTypes), CredentialValidationMethodTypes.Password), redirectUrl, redirectUrl,
                         (type) => Url.GetLocation(type),
                         (authRequest) =>
                         {
@@ -67,7 +67,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                                 new Resources.AccountLink
                                 {
                                     Login = authRequest.loginUrl,
-                                    Signup = loginProvider.GetSignupUrl(authReqId, callbackUrl),
+                                    Signup = loginProvider.GetSignupUrl(authReqId, callbackUrl, type => this.Url.GetLocation(type)),
                                     Logout = authRequest.logoutUrl,
                                 });
                         },

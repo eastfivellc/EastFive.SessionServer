@@ -45,6 +45,7 @@ namespace EastFive.Api.Azure
                 Uri callbackLocation,
                 string method, Uri redirectUrl,
                 Guid authenticationId, Guid actorId, System.Security.Claims.Claim[] claims,
+                Func<Type, Uri> typeToUrl,
             Func<Session, TResult> onSuccess,
             Func<TResult> onAlreadyExists,
             Func<string, TResult> onUnauthorized,
@@ -69,8 +70,8 @@ namespace EastFive.Api.Azure
                                     //method = method,
                                     name = method.ToString(),
                                     action = AuthenticationActions.access,
-                                    loginUrl = provider.GetLoginUrl(integrationId, callbackLocation),
-                                    logoutUrl = provider.GetLogoutUrl(integrationId, callbackLocation),
+                                    loginUrl = provider.GetLoginUrl(integrationId, callbackLocation, typeToUrl),
+                                    logoutUrl = provider.GetLogoutUrl(integrationId, callbackLocation, typeToUrl),
                                     redirectUrl = redirectUrl,
                                     authorizationId = authenticationId,
                                     token = token,
@@ -155,12 +156,12 @@ namespace EastFive.Api.Azure
                         async (provider) =>
                         {
                             var extraParams = authenticationRequestStorage.extraParams;
-                            return await provider.UserParametersAsync(authenticationRequestStorage.authorizationId.Value, null, extraParams,
-                                (labels, types, descriptions) =>
+                            return await await provider.UserParametersAsync(authenticationRequestStorage.authorizationId.Value, null, extraParams,
+                                async (labels, types, descriptions) =>
                                 {
                                     var callbackUrl = callbackUrlFunc(provider.CallbackController);
-                                    var loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackUrl);
-                                    var authenticationRequest = Convert(authenticationRequestStorage, loginUrl, extraParams, labels, types, descriptions);
+                                    var loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackUrl, callbackUrlFunc);
+                                    var authenticationRequest = await Convert(authenticationRequestStorage, loginUrl, extraParams, labels, types, descriptions);
                                     return onSuccess(authenticationRequest);
                                 });
                         },
@@ -176,6 +177,27 @@ namespace EastFive.Api.Azure
         {
             return this.dataContext.AuthenticationRequests.FindByIdAsync(authenticationRequestId,
                 (authenticationRequestStorage) => onSuccess(authenticationRequestStorage.authorizationId, authenticationRequestStorage.method),
+                () => onNotFound());
+        }
+
+        public Task<TResult> GetAuthenticatedByIdAsync<TResult>(Guid authenticationRequestId,
+            Func<Integration, TResult> onSuccess,
+            Func<TResult> onNotFound)
+        {
+            return this.dataContext.AuthenticationRequests.FindByIdAsync(authenticationRequestId,
+                (authenticationRequestStorage) =>
+                {
+                    if (!authenticationRequestStorage.authorizationId.HasValue)
+                        return onNotFound();
+                    return onSuccess(
+                        new Integration
+                        {
+                            authorizationId = authenticationRequestStorage.authorizationId.Value,
+                            integrationId = authenticationRequestId,
+                            method = authenticationRequestStorage.method,
+                            parameters = authenticationRequestStorage.extraParams,
+                        });
+                },
                 () => onNotFound());
         }
 
@@ -200,36 +222,36 @@ namespace EastFive.Api.Azure
                             return await await this.dataContext.AuthenticationRequests.FindByIdAsync(authenticationRequestId,
                                 async (authRequest) =>
                                 {
-                                    return await provider.UserParametersAsync(actorId, null, null,
-                                        (labels, types, descriptions) =>
+                                    return await await provider.UserParametersAsync(actorId, null, null,
+                                        async (labels, types, descriptions) =>
                                         {
                                             var callbackUrl = callbackUrlFunc(provider.CallbackController);
-                                            var loginUrl = provider.GetLoginUrl(Guid.Empty, callbackUrl);
-                                            var authenticationRequest = Convert(authenticationRequestId, ap.Key, AuthenticationActions.access,
+                                            var loginUrl = provider.GetLoginUrl(Guid.Empty, callbackUrl, callbackUrlFunc);
+                                            var authenticationRequest = await Convert(authenticationRequestId, ap.Key, AuthenticationActions.access,
                                                 default(string), authenticationRequestId, loginUrl, default(Uri), authRequest.extraParams, labels, types, descriptions);
                                             return authenticationRequest;
                                         });
                                 },
+                                async () =>
+                                {
+                                    #region SHIM
+                                    var integrationId = authenticationRequestId;
+                                    return await await this.dataContext.AuthenticationRequests.CreateAsync(integrationId, method, AuthenticationActions.link, default(Uri), default(Uri),
                                         async () =>
                                         {
-                                            #region SHIM
-                                            var integrationId = authenticationRequestId;
-                                            return await await this.dataContext.AuthenticationRequests.CreateAsync(integrationId, method, AuthenticationActions.link, default(Uri), default(Uri),
-                                                async () =>
+                                            return await await provider.UserParametersAsync(actorId, null, null,
+                                                async (labels, types, descriptions) =>
                                                 {
-                                                    return await provider.UserParametersAsync(actorId, null, null,
-                                                        (labels, types, descriptions) =>
-                                                        {
-                                                            var callbackUrl = callbackUrlFunc(provider.CallbackController);
-                                                            var loginUrl = provider.GetLoginUrl(Guid.Empty, callbackUrl);
-                                                            var authenticationRequest = Convert(authenticationRequestId, ap.Key, AuthenticationActions.access,
-                                                                default(string), authenticationRequestId, loginUrl, default(Uri), default(IDictionary<string, string>), labels, types, descriptions);
-                                                            return authenticationRequest;
-                                                        });
-                                                },
-                                                "Guid not unique".AsFunctionException<Task<Session>>());
-                                            #endregion
-                                        });
+                                                    var callbackUrl = callbackUrlFunc(provider.CallbackController);
+                                                    var loginUrl = provider.GetLoginUrl(Guid.Empty, callbackUrl, callbackUrlFunc);
+                                                    var authenticationRequest = await Convert(authenticationRequestId, ap.Key, AuthenticationActions.access,
+                                                        default(string), authenticationRequestId, loginUrl, default(Uri), default(IDictionary<string, string>), labels, types, descriptions);
+                                                    return authenticationRequest;
+                                                });
+                                        },
+                                        "Guid not unique".AsFunctionException<Task<Session>>());
+                                    #endregion
+                                });
                             
                         },
                         () => default(Session?).ToTask()))
@@ -269,32 +291,40 @@ namespace EastFive.Api.Azure
                 .ToArrayAsync();
         }
 
-        public async Task<KeyValuePair<Integration, T>[]> GetActivityAsync<T>(Guid integrationId)
+        public async Task<KeyValuePair<Integration, T[]>> GetActivityAsync<T>(Guid integrationId)
         {
-            if (!ServiceConfiguration.integrationActivites.ContainsKey(typeof(T)))
-                return new KeyValuePair<Integration, T>[] { };
-            var activitiesOfTypeT = ServiceConfiguration.integrationActivites[typeof(T)];
+            var activities = await GetActivityAsync(integrationId, typeof(T));
+            return activities.Key.PairWithValue(activities.Value
+                .Select(activity => (T)activity)
+                .ToArray());
+        }
+
+        public async Task<KeyValuePair<Integration, object[]>> GetActivityAsync(Guid integrationId, Type typeofT)
+        {
+            if (!ServiceConfiguration.integrationActivites.ContainsKey(typeofT))
+                return new KeyValuePair<Integration, object[]> { };
+            var activitiesOfTypeT = ServiceConfiguration.integrationActivites[typeofT];
 
             return await await dataContext.Integrations.FindAuthorizedAsync(integrationId,
                 async integration =>
                 {
                     if (!activitiesOfTypeT.ContainsKey(integration.method))
-                        return new KeyValuePair<Integration, T>[] { };
+                        return new KeyValuePair<Integration, object[]> { };
                     return await activitiesOfTypeT[integration.method]
                         .FlatMap(
                             (invocation, next, skip) =>
                             {
-                                return (Task<KeyValuePair<Integration, T>[]>)invocation(integration,
-                                    async (obj) => await next(integration.PairWithValue((T)obj)),
+                                return (Task<KeyValuePair<Integration, object[]>>)invocation(integration,
+                                    async (obj) => await next(obj),
                                     async (why) => await skip());
                             },
-                            (IEnumerable<KeyValuePair<Integration, T>> integrationsKvp) =>
+                            (IEnumerable<object> activities) =>
                             {
-                                var integrationsKvpArray = integrationsKvp.ToArray();
-                                return integrationsKvpArray.ToTask();
+                                var activitiesArray = activities.ToArray();
+                                return integration.PairWithValue(activitiesArray).ToTask();
                             });
                 },
-                () => (new KeyValuePair<Integration, T>[] { }).ToTask());
+                () => (new KeyValuePair<Integration, object[]> { }).ToTask());
         }
 
         public async Task<TResult> GetAsync<TIntegration, TResult>(Guid actorId,
@@ -326,19 +356,19 @@ namespace EastFive.Api.Azure
         public Task<TResult> UpdateAsync<TResult>(Guid authenticationRequestId,
               string token, IDictionary<string, string> updatedUserParameters,
           Func<Uri, TResult> onUpdated,
-          Func<TResult> onLookupCredentialNotFound,
+          Func<TResult> onAutheticationRequestNotFound,
           Func<TResult> onUnauthenticatedAuthenticationRequest)
         {
             return dataContext.AuthenticationRequests.UpdateAsync(authenticationRequestId,
                 async (authRequestStorage, saveAsync) =>
                 {
                     if (!authRequestStorage.authorizationId.HasValue)
-                        return onLookupCredentialNotFound();
+                        return onUnauthenticatedAuthenticationRequest();
 
                     await saveAsync(authRequestStorage.authorizationId.Value, token, updatedUserParameters);
                     return onUpdated(authRequestStorage.redirect);
                 },
-                onLookupCredentialNotFound);
+                onAutheticationRequestNotFound);
         }
 
         public Task<TResult> UpdateAsync<TResult>(Guid authenticationRequestId, Guid actingAsUser, System.Security.Claims.Claim[] claims,
@@ -357,7 +387,7 @@ namespace EastFive.Api.Azure
                 {
                     if (!authRequestStorage.authorizationId.HasValue)
                     {
-                        Enum.TryParse(authRequestStorage.method, out CredentialValidationMethodTypes method);
+                        var method = authRequestStorage.method;
                         return context.Sessions.UpdateWithAuthenticationAsync(authenticationRequestId, method, updatedUserParameters,
                             onLogin,
                             onLogout,
@@ -446,21 +476,24 @@ namespace EastFive.Api.Azure
             return await await this.dataContext.AuthenticationRequests.DeleteByIdAsync(accessId,
                 async (integration, deleteAsync) =>
                 {
-                    if(!integration.authorizationId.HasValue)
-                        return await Library.configurationManager.RemoveIntegrationAsync(Convert(integration, default(Uri), default(Dictionary<string, string>),
-                                default(Dictionary<string, string>), default(Dictionary<string, Type>), default(Dictionary<string, string>)), request,
+                    var integrationDeleted = await Convert(integration, default(Uri), default(Dictionary<string, string>),
+                                   default(Dictionary<string, string>), default(Dictionary<string, Type>), default(Dictionary<string, string>));
+                    if (!integration.authorizationId.HasValue)
+                    {
+                        
+                        return await Library.configurationManager.RemoveIntegrationAsync(integrationDeleted, request,
                             async (response) =>
                             {
                                 await deleteAsync();
                                 return onSuccess(response);
                             },
                             () => onSuccess(request.CreateResponse(HttpStatusCode.InternalServerError).AddReason("failure")).ToTask());
+                    }
                     
                     return await dataContext.Integrations.DeleteAsync(integration.authorizationId.Value, integration.method,
                         async (parames) =>
                         {
-                            return await await Library.configurationManager.RemoveIntegrationAsync(Convert(integration, default(Uri), default(Dictionary<string, string>),
-                                    default(Dictionary<string, string>), default(Dictionary<string, Type>), default(Dictionary<string, string>)), request,
+                            return await await Library.configurationManager.RemoveIntegrationAsync(integrationDeleted, request,
                                 async (response) =>
                                 {
                                     await deleteAsync();
@@ -491,7 +524,7 @@ namespace EastFive.Api.Azure
                 });
         }
 
-        private static Session Convert(
+        private static Task<Session> Convert(
             Security.SessionServer.Persistence.AuthenticationRequest authenticationRequest,
             Uri loginUrl,
             IDictionary<string, string> extraParams, 
@@ -499,11 +532,11 @@ namespace EastFive.Api.Azure
             IDictionary<string, Type> types, 
             IDictionary<string, string> descriptions)
         {
-            return Convert(authenticationRequest.id, Enum.GetName(typeof(CredentialValidationMethodTypes), authenticationRequest.method), authenticationRequest.action, authenticationRequest.token, 
+            return Convert(authenticationRequest.id, authenticationRequest.method, authenticationRequest.action, authenticationRequest.token, 
                 authenticationRequest.authorizationId.Value, loginUrl, authenticationRequest.redirect, extraParams, labels, types, descriptions);
         }
 
-        private static Session Convert(
+        private async static Task<Session> Convert(
             Guid authenticationRequestStorageId,
             string methodName,
             AuthenticationActions action,
@@ -535,7 +568,11 @@ namespace EastFive.Api.Azure
                         }).PairWithKey(key);
                     })
                 .ToDictionary();
-            
+
+            var resourceTypes = await ServiceConfiguration.IntegrationResourceTypesAsync(authenticationRequestStorageId,
+                (resourceTypesInner) => resourceTypesInner,
+                () => new string[] { });
+
             return new Session
             {
                 id = authenticationRequestStorageId,
@@ -547,11 +584,9 @@ namespace EastFive.Api.Azure
                 redirectUrl = redirect,
                 loginUrl = loginUrl,
                 userParams = userParams,
-                resourceTypes = new Dictionary<string, string>()
-                {
-                    { "ProductProperty", "Product Properties" },
-                    { "Product", "Products" },
-                }
+                resourceTypes = resourceTypes
+                    .Select(resourceType => resourceType.PairWithValue(resourceType))
+                    .ToDictionary(),
             };
         }
     }

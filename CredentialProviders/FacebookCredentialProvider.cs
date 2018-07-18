@@ -57,17 +57,17 @@ namespace EastFive.Security.CredentialProvider.Facebook
 
         #region IProvideLogin
         
-        public Uri GetLoginUrl(Guid state, Uri responseControllerLocation)
+        public Uri GetLoginUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
         {
             throw new NotImplementedException();
         }
 
-        public Uri GetSignupUrl(Guid state, Uri responseControllerLocation)
+        public Uri GetSignupUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
         {
             throw new NotImplementedException();
         }
 
-        public Uri GetLogoutUrl(Guid state, Uri responseControllerLocation)
+        public Uri GetLogoutUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
         {
             throw new NotImplementedException();
         }

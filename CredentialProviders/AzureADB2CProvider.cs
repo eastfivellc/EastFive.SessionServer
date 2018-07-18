@@ -164,17 +164,17 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
         public Type CallbackController => typeof(SessionServer.Api.Controllers.OpenIdResponseController);
             //typeof(SessionServer.Api.Controllers.AADB2CResponseController);
 
-        public Uri GetLoginUrl(Guid state, Uri responseLocation)
+        public Uri GetLoginUrl(Guid state, Uri responseLocation, Func<Type, Uri> controllerToLocation)
         {
             return GetUrl(this.loginEndpoint, state, responseLocation);
         }
 
-        public Uri GetLogoutUrl(Guid state, Uri responseLocation)
+        public Uri GetLogoutUrl(Guid state, Uri responseLocation, Func<Type, Uri> controllerToLocation)
         {
             return GetUrl(this.logoutEndpoint, state, responseLocation);
         }
 
-        public Uri GetSignupUrl(Guid state, Uri callbackLocation)
+        public Uri GetSignupUrl(Guid state, Uri callbackLocation, Func<Type, Uri> controllerToLocation)
         {
             return GetUrl(this.signupEndpoint, state, callbackLocation);
         }

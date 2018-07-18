@@ -20,11 +20,11 @@ namespace EastFive.Security.SessionServer.Persistence
         }
         
         public async Task<TResult> LookupCredentialMappingAsync<TResult>(
-                CredentialValidationMethodTypes method, string subject, Guid? loginId,
+                string method, string subject, Guid? loginId,
             Func<Guid, TResult> onSuccess,
             Func<TResult> onNotExist)
         {
-            var partitionKey = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
+            var partitionKey = method;
             return await await repository.FindLinkedDocumentAsync(subject, partitionKey,
                 (Azure.Documents.CredentialMappingLookupDocument document) => document.CredentialMappingId,
                 (Azure.Documents.CredentialMappingLookupDocument lookupDoc, Documents.CredentialMappingDocument mappingDoc) =>
@@ -66,7 +66,7 @@ namespace EastFive.Security.SessionServer.Persistence
                             {
                                 actorId = doc.ActorId,
                                 loginId = doc.Id,
-                                method = CredentialValidationMethodTypes.Password,
+                                method = Enum.GetName(typeof(CredentialValidationMethodTypes), CredentialValidationMethodTypes.Password),
                                 id = Guid.NewGuid(),
                                 subject = doc.Id.ToString(),
                             }));
@@ -83,17 +83,16 @@ namespace EastFive.Security.SessionServer.Persistence
         }
         
         internal async Task<TResult> CreateCredentialMappingAsync<TResult>(Guid credentialMappingId,
-                CredentialValidationMethodTypes method, string subjectId, Guid actorId,
+                string method, string subjectId, Guid actorId,
             Func<TResult> onSuccess,
             Func<TResult> onAlreadyExists,
             Func<TResult> onTokenAlreadyInUse)
         {
             var rollback = new RollbackAsync<TResult>();
-
-            var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
+            
             var credentialMappingDoc = new Documents.CredentialMappingDocument()
             {
-                Method = methodName,
+                Method = method,
                 Subject = subjectId,
                 ActorId = actorId,
             };
@@ -102,10 +101,10 @@ namespace EastFive.Security.SessionServer.Persistence
             var lookupDocument = new Azure.Documents.CredentialMappingLookupDocument()
             {
                 CredentialMappingId = credentialMappingId,
-                Method = methodName,
+                Method = method,
                 Subject = subjectId,
             };
-            rollback.AddTaskCreate(subjectId, methodName, lookupDocument, onTokenAlreadyInUse, this.repository);
+            rollback.AddTaskCreate(subjectId, method, lookupDocument, onTokenAlreadyInUse, this.repository);
             
             rollback.AddTaskCreateOrUpdate(actorId,
                 (Documents.ActorMappingsDocument authDoc) => authDoc.AddInviteId(credentialMappingId),
@@ -329,7 +328,7 @@ namespace EastFive.Security.SessionServer.Persistence
             {
                 id = mappingDoc.Id,
                 actorId = mappingDoc.ActorId,
-                method =  mappingDoc.Method.AsEnum<CredentialValidationMethodTypes>(),
+                method =  mappingDoc.Method,
                 subject = mappingDoc.Subject,
                 loginId = loginId
             };

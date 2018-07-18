@@ -17,6 +17,7 @@ using EastFive;
 using EastFive.Linq;
 using BlackBarLabs.Persistence.Azure.StorageTables;
 using System.Runtime.Serialization;
+using BlackBarLabs.Linq.Async;
 
 namespace EastFive.Azure.Synchronization.Persistence
 {
@@ -56,9 +57,10 @@ namespace EastFive.Azure.Synchronization.Persistence
         }
 
         public static Task<TResult> CreateAsync<TResult>(Guid connectorId,
-                Guid adapterInternalId, Guid adapterExternalId, Guid createdBy, Connector.SynchronizationMethod method,
+                Guid adapterInternalId, Guid adapterExternalId, Connector.SynchronizationMethod method,
             Func<TResult> onCreated,
             Func<TResult> onAlreadyExists,
+            Func<Func<Task<Guid>>, TResult> onRelationshipAlreadyExists,
             Func<Guid, TResult> onAdapterDoesNotExist)
         {
             return AzureStorageRepository.Connection(
@@ -69,7 +71,6 @@ namespace EastFive.Azure.Synchronization.Persistence
                     rollback.AddTaskCreate(connectorId,
                         new ConnectorDocument()
                         {
-                            CreatedBy = createdBy,
                             LocalAdapter = adapterInternalId,
                             RemoteAdapter = adapterExternalId,
                             Method = Enum.GetName(typeof(Connector.SynchronizationMethod), method),
@@ -81,7 +82,10 @@ namespace EastFive.Azure.Synchronization.Persistence
                         {
                             Lookup = connectorId,
                         },
-                        onAlreadyExists,
+                        () => onRelationshipAlreadyExists(
+                            () => azureStorageRepository.FindByIdAsync(lookupId,
+                                (EastFive.Persistence.Azure.Documents.LookupDocument lookupDoc) => lookupDoc.Lookup,
+                                () => default(Guid))),
                         azureStorageRepository);
                     rollback.AddTaskUpdate<Guid[], TResult, AdapterDocument>(adapterInternalId,
                         (adapterDoc, updated, noChange, onReject) =>
@@ -111,29 +115,75 @@ namespace EastFive.Azure.Synchronization.Persistence
                 });
         }
 
+
+        public static Task<TResult> UpdateAsync<TResult>(Guid connectorId,
+            Func<Connector, Func<Connector.SynchronizationMethod, Task>, Task<TResult>> onUpdated,
+            Func<TResult> onConnectorDoesNotExist)
+        {
+            return AzureStorageRepository.Connection(
+                azureStorageRepository =>
+                {
+                    return azureStorageRepository.UpdateAsync<ConnectorDocument, TResult>(connectorId,
+                        (connectorDoc, saveAsync) =>
+                        {
+                            return onUpdated(Convert(connectorDoc),
+                                async (method) =>
+                                {
+                                    connectorDoc.Method = Enum.GetName(typeof(Connector.SynchronizationMethod), method);
+                                    await saveAsync(connectorDoc);
+                                });
+                        },
+                        () => onConnectorDoesNotExist());
+                });
+        }
+
         internal static Task<TResult> FindByIdAsync<TResult>(Guid connectorId, 
-            Func<Connector, TResult> onFound,
+            Func<Connector, Guid, TResult> onFound,
             Func<TResult> onNotFound)
         {
             return AzureStorageRepository.Connection(
-                azureStorageRepository => azureStorageRepository.FindByIdAsync(connectorId,
-                (ConnectorDocument adapterDoc) =>
-                {
-                    return onFound(Convert(adapterDoc));
-                },
-                onNotFound));
+                azureStorageRepository =>
+                    azureStorageRepository.FindLinkedDocumentAsync(connectorId,
+                        (ConnectorDocument connectorDoc) => connectorDoc.RemoteAdapter,
+                        (ConnectorDocument adapterDoc, AdapterDocument remoteAdapterDoc) =>
+                        {
+                            return onFound(Convert(adapterDoc), remoteAdapterDoc.IntegrationId);
+                        },
+                        onNotFound,
+                        (parentDoc) => onNotFound()));
         }
 
         internal static Task<TResult> FindByAdapterAsync<TResult>(Guid adapterId,
-            Func<Adapter, Connector[], TResult> onFound,
+            Func<Adapter, KeyValuePair<Connector, Guid>[], TResult> onFound,
             Func<TResult> onAdapterNotFound)
         {
             return AzureStorageRepository.Connection(
-                azureStorageRepository => azureStorageRepository.FindLinkedDocumentsAsync(adapterId,
-                    (adapterDoc) => adapterDoc.GetConnectorIds(),
-                    (AdapterDocument adapterDoc, ConnectorDocument[] connectorDocs) =>
-                        onFound(AdapterDocument.Convert(adapterDoc), connectorDocs.Select(Convert).ToArray()),
-                    onAdapterNotFound));
+                async repo => await await repo.FindByIdAsync(adapterId,
+                    async (AdapterDocument adapterDoc) =>
+                    {
+                        var connectorIds = adapterDoc.GetConnectorIds();
+                        var connections = await connectorIds
+                            .Select(
+                                connectorId => FindByIdAsync(connectorId,
+                                    (connector, externalIntegrationId) => connector.PairWithValue(externalIntegrationId),
+                                    () => default(KeyValuePair<Connector, Guid>?)))
+                            .WhenAllAsync()
+                            .SelectWhereHasValueAsync()
+                            .ToArrayAsync();
+                        if(connections.Length < connectorIds.Length)
+                        {
+                            var updatedConnectorIds = connections
+                                .Select(connection => connection.Key.connectorId)
+                                .ToArray();
+                            adapterDoc.SetConnectorIds(updatedConnectorIds);
+                            bool didUpdatedAdapter = await repo.UpdateIfNotModifiedAsync(adapterDoc,
+                                () => true,
+                                () => false);
+                        }
+                        var adapter = AdapterDocument.Convert(adapterDoc);
+                        return onFound(adapter, connections);
+                    },
+                    onAdapterNotFound.AsAsyncFunc()));
         }
 
         internal static Task<TResult> FindByAdapterWithConnectionAsync<TResult>(Guid adapterId,
@@ -147,11 +197,15 @@ namespace EastFive.Azure.Synchronization.Persistence
                         await connectorDocs
                             .FlatMap(
                                 async (connectorDoc, next, skip) =>
-                                    await await AdapterDocument.FindByIdAsync(connectorDoc.RemoteAdapter,
+                                    await await AdapterDocument.FindByIdAsync(
+                                            connectorDoc.LocalAdapter == adapterId?
+                                                connectorDoc.RemoteAdapter
+                                                :
+                                                connectorDoc.LocalAdapter,
                                         adapter => next(Convert(connectorDoc).PairWithValue(adapter)),
                                         () => skip()),
-                                    (IEnumerable<KeyValuePair<Connector, Adapter>> asdf) =>
-                                        onFound(AdapterDocument.Convert(adapterDoc), asdf.ToArray()).ToTask()),
+                                    (IEnumerable<KeyValuePair<Connector, Adapter>> connectedAdapters) =>
+                                        onFound(AdapterDocument.Convert(adapterDoc), connectedAdapters.ToArray()).ToTask()),
                     onAdapterNotFound.AsAsyncFunc()));
         }
 
@@ -206,13 +260,29 @@ namespace EastFive.Azure.Synchronization.Persistence
             Func<TResult> onNotFound)
         {
             return AzureStorageRepository.Connection(
-                azureStorageRepository =>
+                connection =>
                 {
-                    return azureStorageRepository.DeleteIfAsync<ConnectorDocument, TResult>(connectorId,
+                    return connection.DeleteIfAsync<ConnectorDocument, TResult>(connectorId,
                         async (syncDoc, deleteConnectorDocAsync) =>
                         {
+                            var updatedLocalTask = connection.UpdateAsync<AdapterDocument, bool>(syncDoc.LocalAdapter,
+                                async (adapterDoc, saveAdapterAsync) =>
+                                {
+                                    if (adapterDoc.RemoveConnectorId(connectorId))
+                                        await saveAdapterAsync(adapterDoc);
+                                    return true;
+                                },
+                                () => false);
+                            var updatedRemoteTask = connection.UpdateAsync<AdapterDocument, bool>(syncDoc.RemoteAdapter,
+                                async (adapterDoc, saveAdapterAsync) =>
+                                {
+                                    if (adapterDoc.RemoveConnectorId(connectorId))
+                                        await saveAdapterAsync(adapterDoc);
+                                    return true;
+                                },
+                                () => false);
                             var lookupId = GetId(syncDoc.LocalAdapter, syncDoc.RemoteAdapter);
-                            var deleteLookupTask = azureStorageRepository.DeleteIfAsync<EastFive.Persistence.Azure.Documents.LookupDocument, bool>(lookupId,
+                            var deleteLookupTask = connection.DeleteIfAsync<EastFive.Persistence.Azure.Documents.LookupDocument, bool>(lookupId,
                                 async (lookupDoc, deleteLookupDocAsync) =>
                                 {
                                     await deleteLookupDocAsync();
@@ -221,6 +291,8 @@ namespace EastFive.Azure.Synchronization.Persistence
                                 () => false);
                             await deleteConnectorDocAsync();
                             bool deleted = await deleteLookupTask;
+                            bool updatedLocal = await updatedLocalTask;
+                            bool updatedRemote = await updatedRemoteTask;
                             return onDeleted(syncDoc.LocalAdapter, syncDoc.RemoteAdapter);
                         },
                         onNotFound);

@@ -52,7 +52,7 @@ namespace EastFive.Security.SessionServer
         }
 
         public virtual async Task<TResult> GetRedirectUriAsync<TResult>(Context context,
-                CredentialValidationMethodTypes validationType,
+                string validationType,
                 AuthenticationActions action,
                 Guid requestId,
                 Guid? authorizationId,

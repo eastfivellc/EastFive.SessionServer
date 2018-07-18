@@ -231,7 +231,7 @@ namespace EastFive.Security.CredentialProvider
 
         public Type CallbackController => typeof(SessionServer.Api.Controllers.OAuthResponseLightspeedController);
 
-        public Uri GetLoginUrl(Guid state, Uri responseControllerLocation)
+        public Uri GetLoginUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
         {
             // response_type -- Ask for ‘code’ which will give you a temporary token that you can then use to get an access token.
             // https://cloud.merchantos.com/oauth/authorize.php?response_type=code&client_id={client_id}&scope={scope}&state={state}
@@ -241,14 +241,14 @@ namespace EastFive.Security.CredentialProvider
             return new Uri(url);
         }
 
-        public Uri GetLogoutUrl(Guid state, Uri responseControllerLocation)
+        public Uri GetLogoutUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
         {
             return responseControllerLocation
                 .AddQuery(LightspeedProvider.stateKey, state.ToString("N"))
                 .AddQuery("method", CredentialValidationMethodTypes.Lightspeed.ToString());
         }
 
-        public Uri GetSignupUrl(Guid state, Uri responseControllerLocation)
+        public Uri GetSignupUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
         {
             return default(Uri);
         }

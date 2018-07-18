@@ -19,7 +19,7 @@ namespace EastFive.Api.Controllers
     {
         [HttpGet]
         public async static Task<HttpResponseMessage> IntegrationUploadAsync(EastFive.Security.SessionServer.Context context,
-                [RequiredAndAvailableInPathAttribute]Guid integration, HttpRequestMessage request, System.Web.Http.Routing.UrlHelper url,
+                [QueryDefaultParameter][Required]Guid integration, HttpRequestMessage request, System.Web.Http.Routing.UrlHelper url,
             ViewFileResponse onLoadUploadPage)
         {
             return await onLoadUploadPage("SheetIntegration/UploadSheet.cshtml", null).ToTask();

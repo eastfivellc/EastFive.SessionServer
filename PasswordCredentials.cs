@@ -38,7 +38,7 @@ namespace EastFive.Security.SessionServer
             this.dataContext = dataContext;
             this.context = context;
             // TODO: Refactor this class so it works with any Management Provider
-            context.GetManagementProvider(CredentialValidationMethodTypes.Password,
+            context.GetManagementProvider(Enum.GetName(typeof(CredentialValidationMethodTypes), CredentialValidationMethodTypes.Password),
                 (identityService) =>
                 {
                     this.managmentProvider = identityService;
@@ -86,7 +86,7 @@ namespace EastFive.Security.SessionServer
                                 async (landingPage) =>
                                 {
                                     return await await context.Sessions.CreateLoginAsync(Guid.NewGuid(),
-                                        CredentialValidationMethodTypes.Password, landingPage, landingPage,
+                                        Enum.GetName(typeof(CredentialValidationMethodTypes), CredentialValidationMethodTypes.Password), landingPage, landingPage,
                                         (type) => callbackUrl,
                                         async (authenticationRequest) =>
                                         {
