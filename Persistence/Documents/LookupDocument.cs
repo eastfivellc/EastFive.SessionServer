@@ -90,13 +90,13 @@ namespace EastFive.Azure.Persistence.Documents
             }
         }
 
-        internal bool RemoveSynchronizationDocumentId(Guid synchronizationDocumentId)
+        internal bool RemoveLookupDocumentId(Guid lookupDocumentId)
         {
-            var synchronizationDocumentIds = GetLookupDocumentIds();
-            if (!synchronizationDocumentIds.Contains(synchronizationDocumentId))
+            var lookupDocumentIds = GetLookupDocumentIds();
+            if (!lookupDocumentIds.Contains(lookupDocumentId))
                 return false;
-            SetLookupDocumentIds(synchronizationDocumentIds
-                .Where(synchDocId => synchDocId != synchronizationDocumentId)
+            SetLookupDocumentIds(lookupDocumentIds
+                .Where(docId => docId != lookupDocumentId)
                 .Distinct());
             return true;
         }

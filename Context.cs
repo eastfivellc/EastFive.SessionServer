@@ -204,13 +204,13 @@ namespace EastFive.Security.SessionServer
             }
         }
         
-        private EastFive.Api.Azure.Integrations integrations;
-        public EastFive.Api.Azure.Integrations Integrations
+        private EastFive.Azure.Integrations integrations;
+        public EastFive.Azure.Integrations Integrations
         {
             get
             {
-                if (default(EastFive.Api.Azure.Integrations) == integrations)
-                    integrations = new EastFive.Api.Azure.Integrations(this, this.DataContext);
+                if (default(EastFive.Azure.Integrations) == integrations)
+                    integrations = new EastFive.Azure.Integrations(this, this.DataContext);
                 return integrations;
             }
         }

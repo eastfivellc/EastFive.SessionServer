@@ -12,26 +12,23 @@ using EastFive.Api.Controllers;
 using BlackBarLabs.Extensions;
 using EastFive.Linq;
 using EastFive.Extensions;
+using System.Collections.Generic;
+using System.Reflection;
 
 namespace EastFive.Api.Azure.Controllers
 {
     [FunctionViewController(Route = "Manifest")]
     public static class ManifestController
     {
-        //public async Task<IHttpActionResult> Get(
-        //    [FromUri]Resources.Manifest[] query)
-        //{
-        //    return await this.Request.GetPossibleMultipartResponseAsync(query,
-        //        (manifest) => () => manifest.Query(Request, Url));
-        //}
-
         [EastFive.Api.HttpGet]
-        public static Task<HttpResponseMessage> FindByIdAsync(
-                HttpRequestMessage request, UrlHelper url,
+        public static Task<HttpResponseMessage> FindAsync(
+                HttpApplication application, HttpRequestMessage request, UrlHelper url,
             ContentResponse onFound,
-            NotFoundResponse onNotFound,
-            UnauthorizedResponse onUnauthorized)
+            ViewFileResponse onHtml)
         {
+            if (request.Headers.Accept.Where(accept => accept.MediaType.ToLower().Contains("html")).Any())
+                return HtmlContent(application, request, url, onHtml);
+
             LocateControllers();
             var endpoints = ManifestController.lookup
                 .Select(
@@ -51,7 +48,73 @@ namespace EastFive.Api.Azure.Controllers
             return request.CreateResponse(System.Net.HttpStatusCode.OK, manifest).ToTask();
         }
 
+        public static Task<HttpResponseMessage> HtmlContent(
+                HttpApplication httpApp, HttpRequestMessage request, UrlHelper url,
+            ViewFileResponse onHtml)
+        {
+            var lookups = httpApp
+                .GetLookups();
+            var manifest = new EastFive.Api.Resources.Manifest(lookups);
+            return onHtml("Manifest/Manifest.cshtml", manifest).ToTask();
 
+//            var htmlBody = lookups
+//                .Select(lookup => $"<div><h3>{lookup.Key}</h3>{GetRouteHtml(lookup.Key, lookup.Value)}</div>")
+//                .Join("");
+//            var html =
+//@"@model System.Guid
+//@{
+//    Layout = null;
+//}
+//<!DOCTYPE html>
+//<html lang=" + "\"en\"><body>" + htmlBody + "</body></html>";
+//            return onHtml(
+//                html, Guid.NewGuid()).ToTask();
+        }
+
+        public static string GetRouteHtml(string route, KeyValuePair<HttpMethod, MethodInfo[]>[] methods)
+        {
+            var html = methods
+                .Select(methodKvp => $"<div><h4>{methodKvp.Key}</h4>{GetMethodHtml(methodKvp.Key.Method, methodKvp.Value)}</div>")
+                .Join("");
+            return html;
+        }
+
+        public static string GetMethodHtml(string httpVerb, MethodInfo[] methods)
+        {
+            var html = methods
+                .Select(
+                    method =>
+                    {
+                        var parameterHtml = method
+                            .GetParameters()
+                            .Where(methodParam => methodParam.ContainsCustomAttribute<QueryValidationAttribute>(true))
+                            .Select(
+                                methodParam =>
+                                {
+                                    var validator = methodParam.GetCustomAttribute<QueryValidationAttribute>();
+                                    var lookupName = validator.Name.IsNullOrWhiteSpace() ?
+                                        methodParam.Name.ToLower()
+                                        :
+                                        validator.Name.ToLower();
+                                    var required = methodParam.ContainsCustomAttribute<PropertyAttribute>() ||
+                                        methodParam.ContainsCustomAttribute<RequiredAttribute>();
+
+                                    return CSharpInvocationHtml(lookupName, required, methodParam.ParameterType);
+                                    
+                                })
+                            .Join(",");
+                        return $"<span class=\"method,csharp\">{method.Name}({parameterHtml})</span>";
+                    })
+                .Join("");
+            return html;
+        }
+
+        public static string CSharpInvocationHtml(string name, bool required, Type parameterType)
+        {
+            var requiredString = required ? "[Required]" : "[Optional]";
+            return $"<span>[{requiredString}]{parameterType.Name} <span>{name}</span></span>";
+        }
+        
         #region Load Controllers
 
         private static object lookupLock = new object();

@@ -20,7 +20,7 @@ using EastFive.Security.SessionServer;
 using EastFive.Security;
 using EastFive.Linq.Async;
 
-namespace EastFive.Api.Azure
+namespace EastFive.Azure
 {
     public struct Integration
     {
@@ -55,28 +55,28 @@ namespace EastFive.Api.Azure
         {
             if (!await Library.configurationManager.CanAdministerCredentialAsync(authenticationId, actorId, claims))
                 return onUnauthorized($"Provided token does not permit access to link {authenticationId} to a login");
-            return await Context.GetLoginProvider(method,
+            return await Context.GetLoginProvider<Task<TResult>>(method,
                 async (provider) =>
                 {
                     var sessionId = SecureGuid.Generate();
                     return await BlackBarLabs.Security.Tokens.JwtTools.CreateToken<Task<TResult>>(sessionId, callbackLocation, TimeSpan.FromMinutes(30),
-                        async (token) => await await this.dataContext.AuthenticationRequests.CreateAsync(integrationId,
+                        async (token) => await await this.dataContext.AuthenticationRequests.CreateAsync<Task<TResult>>(integrationId,
                                 method, AuthenticationActions.access, authenticationId, token, redirectUrl, redirectUrl,
                             () => dataContext.Integrations.CreateUnauthenticatedAsync(integrationId, authenticationId, method,
-                            () => onSuccess(
-                                new Session()
-                                {
-                                    id = integrationId,
-                                    //method = method,
-                                    name = method.ToString(),
-                                    action = AuthenticationActions.access,
-                                    loginUrl = provider.GetLoginUrl(integrationId, callbackLocation, typeToUrl),
-                                    logoutUrl = provider.GetLogoutUrl(integrationId, callbackLocation, typeToUrl),
-                                    redirectUrl = redirectUrl,
-                                    authorizationId = authenticationId,
-                                    token = token,
-                                }),
-                            onAlreadyExists),
+                                () => onSuccess(
+                                    new Session()
+                                    {
+                                        id = integrationId,
+                                        //method = method,
+                                        name = method.ToString(),
+                                        action = AuthenticationActions.access,
+                                        loginUrl = provider.GetLoginUrl(integrationId, callbackLocation, typeToUrl),
+                                        logoutUrl = provider.GetLogoutUrl(integrationId, callbackLocation, typeToUrl),
+                                        redirectUrl = redirectUrl,
+                                        authorizationId = authenticationId,
+                                        token = token,
+                                    }),
+                                onAlreadyExists),
                         onAlreadyExists.AsAsyncFunc()),
                         why => onFailure(why).ToTask(),
                         (param, why) => onFailure($"Invalid configuration for {param}:{why}").ToTask());
@@ -258,6 +258,43 @@ namespace EastFive.Api.Azure
                 .WhenAllAsync()
                 .SelectWhereHasValueAsync()
                 .ToArrayAsync();
+            return onSuccess(integrations);
+        }
+
+        internal async Task<TResult> GetAllAsync<TResult>(
+                Func<Type, Uri> callbackUrlFunc,
+                Guid actingAs, System.Security.Claims.Claim[] claims,
+            Func<Session[], TResult> onSuccess,
+            Func<TResult> onNotFound,
+            Func<TResult> onUnathorized,
+            Func<string, TResult> onFailure)
+        {
+            var accesses = await this.dataContext.Integrations.FindAllAsync();
+            var integrations = await accesses
+                .FlatMap(
+                    async (accessKvp, next, skip) =>
+                    {
+                        var access = accessKvp.Key;
+                        if (!await Library.configurationManager.CanAdministerCredentialAsync(access.authorizationId, actingAs, claims))
+                            return await skip();
+                        var session = new Session
+                        {
+                            authorizationId = access.authorizationId,
+                            extraParams = access.parameters, // TODO: Only if super admin!!
+                            method = access.method,
+                            name = access.method,
+                        };
+                        if (!accessKvp.Value.HasValue)
+                            return await next(session);
+
+                        var authRequest = accessKvp.Value.Value;
+                        session.id = authRequest.id;
+                        session.action = authRequest.action;
+                        //session.extraParams = authRequest.extraParams;
+                        session.token = authRequest.token;
+                        return await next(session);
+                    },
+                    (IEnumerable<Session> sessions) => sessions.ToArray().ToTask());
             return onSuccess(integrations);
         }
 
@@ -505,7 +542,7 @@ namespace EastFive.Api.Azure
                 },
                 async () =>
                 {
-                    var x = await context.GetLoginProviders(
+                    var x = await context.GetLoginProviders<Task<bool[]>>(
                         async (accessProviders) =>
                         {
                             return await accessProviders

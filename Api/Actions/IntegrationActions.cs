@@ -59,7 +59,8 @@ namespace EastFive.Security.SessionServer.Api
             return request.GetActorIdClaimsAsync(
                 (actingAs, claims) => query.ParseAsync(request,
                     q => QueryByIdAsync(q.Id.ParamSingle(), actingAs, claims, request, urlHelper),
-                    q => QueryByActorAsync(q.ActorId.ParamSingle(), actingAs, claims, request, urlHelper)));
+                    q => QueryByActorAsync(q.ActorId.ParamSingle(), actingAs, claims, request, urlHelper),
+                    q => QueryAllAsync(actingAs, claims, request, urlHelper)));
         }
 
         private static async Task<HttpResponseMessage> QueryByIdAsync(Guid authenticationRequestId,
@@ -109,6 +110,27 @@ namespace EastFive.Security.SessionServer.Api
                 (why) => request.CreateResponseUnexpectedFailure(why).AsArray());
         }
 
+        private static async Task<HttpResponseMessage[]> QueryAllAsync(
+                Guid performingAsActor, System.Security.Claims.Claim[] claims,
+            HttpRequestMessage request, UrlHelper urlHelper)
+        {
+            var context = request.GetSessionServerContext();
+            return await context.Integrations.GetAllAsync(
+                    (controllerType) => urlHelper.GetLocation(controllerType),
+                    performingAsActor, claims,
+                (authenticationRequests) =>
+                {
+                    var response = authenticationRequests
+                        .Select(authenticationRequest =>
+                            request.CreateResponse(HttpStatusCode.OK, Convert(authenticationRequest, urlHelper)))
+                        .ToArray();
+                    return response;
+                },
+                () => request.CreateResponse(HttpStatusCode.NotFound).AsArray(),
+                () => request.CreateResponse(HttpStatusCode.Unauthorized).AsArray(),
+                (why) => request.CreateResponseUnexpectedFailure(why).AsArray());
+        }
+
         private static Resources.Integration Convert(Session authenticationRequest, UrlHelper urlHelper)
         {
             var userParameters = (Dictionary<string, EastFive.Security.SessionServer.CustomParameter>) authenticationRequest.userParams ?? new Dictionary<string, EastFive.Security.SessionServer.CustomParameter>();
@@ -121,10 +143,9 @@ namespace EastFive.Security.SessionServer.Api
                     authenticationRequest.authorizationId.Value
                     :
                     default(Guid),
-                ExtraParams = userParameters
+                ExtraParams = authenticationRequest.extraParams
                     .NullToEmpty()
-                    .Select(param => param.Key.PairWithValue(param.Value.Value))
-                    .ToDictionary(),  //This should be depricated in favor of UserParameters, eventually.
+                    .ToDictionary(),
                 UserParameters = userParameters
                     .NullToEmpty()
                     .Select(

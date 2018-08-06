@@ -52,13 +52,13 @@ namespace EastFive.Security.SessionServer.Persistence
             }
         }
 
-        private Integrations integrations = null;
-        public Integrations Integrations
+        private EastFive.Azure.Persistence.Persistence.Integrations integrations = null;
+        public EastFive.Azure.Persistence.Persistence.Integrations Integrations
         {
             get
             {
-                if (default(Integrations) == integrations)
-                    integrations = new Integrations(this.AzureStorageRepository);
+                if (default(EastFive.Azure.Persistence.Persistence.Integrations) == integrations)
+                    integrations = new EastFive.Azure.Persistence.Persistence.Integrations(this.AzureStorageRepository, this);
                 return integrations;
             }
         }

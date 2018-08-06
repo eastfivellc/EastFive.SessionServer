@@ -80,7 +80,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 });
 
             var context = Context.LoadFromConfiguration();
-            var response = await await context.Sessions.CreateOrUpdateWithAuthenticationAsync<Task<TResult>>(
+            var response = await await context.Sessions.CreateOrUpdateWithAuthenticationAsync(
                     method, values,
                 async (sessionId, authorizationId, jwtToken, refreshToken, action, extraParams, redirectUrl) =>
                 {

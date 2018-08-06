@@ -177,7 +177,7 @@ namespace EastFive.Security.SessionServer.Persistence
                 () => onNotFound());
         }
 
-        private static AuthenticationRequest Convert(Documents.AuthenticationRequestDocument document)
+        internal static AuthenticationRequest Convert(Documents.AuthenticationRequestDocument document)
         {
             return new AuthenticationRequest
             {

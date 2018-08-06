@@ -21,9 +21,8 @@ namespace EastFive.Azure.Synchronization
 {
     public static class Synchronizations
     {
-     
         internal static async Task<TResult> GetServicesAsync<TResult>(Guid actorId,
-            Func<KeyValuePair<Api.Azure.Integration, Connections>[], Task<TResult>> onSuccess)
+            Func<KeyValuePair<EastFive.Azure.Integration, Connections>[], Task<TResult>> onSuccess)
         {
             var context = Context.LoadFromConfiguration();
             var integrations = await context.Integrations.GetActivitiesAsync<Connections>(actorId);
@@ -42,7 +41,7 @@ namespace EastFive.Azure.Synchronization
             return GetServicesAsync(actorId,
                 (serviceKvps) =>
                 {
-                    return serviceKvps.SelectReduce<KeyValuePair<Api.Azure.Integration, Connections>, EastFive.Azure.Synchronization.Connection[], Task<TResult>>(
+                    return serviceKvps.SelectReduce<KeyValuePair<EastFive.Azure.Integration, Connections>, EastFive.Azure.Synchronization.Connection[], Task<TResult>>(
                         async (serviceKvp, next) =>
                         {
                             //var service = serviceKvp.Value;

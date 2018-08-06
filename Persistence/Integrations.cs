@@ -19,16 +19,20 @@ using EastFive.Serialization;
 using Microsoft.WindowsAzure.Storage.Table;
 using EastFive.Collections.Generic;
 using EastFive.Linq;
+using EastFive.Security.SessionServer;
+using EastFive.Extensions;
 
-namespace EastFive.Security.SessionServer.Persistence
+namespace EastFive.Azure.Persistence.Persistence
 {
     public class Integrations
     {
         private AzureStorageRepository repository;
+        private Security.SessionServer.Persistence.DataContext dataContext;
 
-        public Integrations(AzureStorageRepository repository)
+        public Integrations(AzureStorageRepository repository, Security.SessionServer.Persistence.DataContext dataContext)
         {
             this.repository = repository;
+            this.dataContext = dataContext;
         }
 
         public async Task<TResult> CreateUnauthenticatedAsync<TResult>(Guid integrationId, Guid accountId, 
@@ -120,7 +124,7 @@ namespace EastFive.Security.SessionServer.Persistence
                 });
         }
 
-        public async Task<EastFive.Api.Azure.Integration[]> FindAsync(Guid actorId)
+        public async Task<EastFive.Azure.Integration[]> FindAsync(Guid actorId)
         {
             try
             {
@@ -132,7 +136,7 @@ namespace EastFive.Security.SessionServer.Persistence
                             accessDoc.LookupId,
                                 (AuthenticationRequestDocument integrationDoc) =>
                                     next(
-                                        new EastFive.Api.Azure.Integration
+                                        new EastFive.Azure.Integration
                                         {
                                             integrationId = integrationDoc.Id,
                                             method = integrationDoc.Method,
@@ -140,17 +144,79 @@ namespace EastFive.Security.SessionServer.Persistence
                                             authorizationId = actorId,
                                         }),
                         () => skip()),
-                    (IEnumerable<EastFive.Api.Azure.Integration> integrations) =>
+                    (IEnumerable<EastFive.Azure.Integration> integrations) =>
                         integrations.ToArray().ToTask());
             }
-            catch(Exception ex)
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+
+        public async Task<KeyValuePair<EastFive.Azure.Integration, Security.SessionServer.Persistence.AuthenticationRequest?>[]> FindAllAsync()
+        {
+            try
+            {
+                return await await repository.FindAllAsync(
+                    async (AccessDocument[] accessDocs) =>
+                    {
+                        return await accessDocs
+                            .FlatMap(
+                                async (accessDoc, next, skip) =>
+                                {
+                                    var integration = new EastFive.Azure.Integration
+                                    {
+                                        integrationId = accessDoc.Id,
+                                        method = accessDoc.Method,
+                                        parameters = accessDoc.GetExtraParams(),
+                                    };
+                                    return await await this.dataContext.AuthenticationRequests.FindByIdAsync(accessDoc.LookupId,
+                                        (authorization) => next(integration.PairWithValue(authorization.AsOptional())),
+                                        () => next(integration.PairWithValue(default(Security.SessionServer.Persistence.AuthenticationRequest?))));
+                                },
+                                async (IEnumerable<KeyValuePair<EastFive.Azure.Integration, Security.SessionServer.Persistence.AuthenticationRequest?>> integrations) =>
+                                {
+                                    bool[] x = await integrations
+                                        .Select(
+                                            async integration =>
+                                            {
+                                                if (!integration.Value.HasValue)
+                                                    return false;
+                                                var authorizationRequest = integration.Value.Value;
+                                                if (!authorizationRequest.authorizationId.HasValue)
+                                                    return false;
+                                                if (!integration.Key.parameters.ContainsKey(Security.CredentialProvider.LightspeedProvider.accountIdKey))
+                                                    return false;
+                                                return await this.dataContext.CredentialMappings.CreateCredentialMappingAsync(
+                                                        Guid.NewGuid(), integration.Key.method, 
+                                                        integration.Key.parameters[Security.CredentialProvider.LightspeedProvider.accountIdKey],
+                                                        authorizationRequest.authorizationId.Value,
+                                                    () =>
+                                                    {
+                                                        return true;
+                                                    },
+                                                    () =>
+                                                    {
+                                                        return false;
+                                                    },
+                                                    () =>
+                                                    {
+                                                        return false;
+                                                    });
+                                            })
+                                        .WhenAllAsync();
+                                    return integrations.ToArray();
+                                });
+                    });
+            }
+            catch (Exception ex)
             {
                 return null;
             }
         }
 
         public Task<TResult> FindAuthorizedAsync<TResult>(Guid integrationId,
-            Func<EastFive.Api.Azure.Integration, TResult> onSuccess,
+            Func<EastFive.Azure.Integration, TResult> onSuccess,
             Func<TResult> onNotFoundOrUnauthorized)
         {
             return repository.FindByIdAsync(integrationId,
@@ -159,7 +225,7 @@ namespace EastFive.Security.SessionServer.Persistence
                     if (!integrationDoc.LinkedAuthenticationId.HasValue)
                         return onNotFoundOrUnauthorized();
                     return onSuccess(
-                        new EastFive.Api.Azure.Integration
+                        new EastFive.Azure.Integration
                         {
                             integrationId = integrationDoc.Id,
                             method = integrationDoc.Method,

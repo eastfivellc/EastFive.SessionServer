@@ -22,7 +22,7 @@ namespace EastFive.Security.SessionServer
 {
     public static class ServiceConfiguration
     {
-        public delegate object IntegrationActivityDelegate(EastFive.Api.Azure.Integration integration,
+        public delegate object IntegrationActivityDelegate(EastFive.Azure.Integration integration,
             Func<object, Task<object>> unlockAsync,
             Func<string, Task<object>> unlockWithIssueAsync);
 
@@ -58,9 +58,7 @@ namespace EastFive.Security.SessionServer
         {
             Library.configurationManager = configurationManager;
             
-            EastFive.Api.Modules.ControllerModule.AddInstigator(typeof(Context),
-                (httpApp, request, parameterInfo, onCreatedSessionContext) => onCreatedSessionContext(new Context(
-                    () => new Persistence.DataContext(Configuration.AppSettings.Storage))));
+            
             
             AddExternalControllers<Api.Controllers.OpenIdResponseController>(config);
             config.Routes.MapHttpRoute(name: "apple-app-links",
@@ -166,19 +164,9 @@ namespace EastFive.Security.SessionServer
             
             return onSuccess();
         }
-
-        internal static TResult ResourceControllerLookup<TResult>(string resourceType,
-            Func<Type, TResult> onFound, Func<TResult> onNotFound)
-        {
-            throw new NotImplementedException();
-            //if(!ServiceConfiguration.connectionTypeLookup.ContainsKey(resourceType))
-            //    return onNotFound();
-
-            //return onFound(connectionTypeLookup[resourceType]);
-        }
-
+        
         internal static async Task<TResult> ConnectionsAsync<TResult>(Guid integrationId, string resourceType,
-            Func<EastFive.Api.Azure.Integration, Azure.Synchronization.Connections[], TResult> onFound,
+            Func<EastFive.Azure.Integration, Azure.Synchronization.Connections[], TResult> onFound,
             Func<TResult> onNotFound)
         {
             var context = Context.LoadFromConfiguration();
@@ -189,7 +177,6 @@ namespace EastFive.Security.SessionServer
                         return onFound(integration, new Azure.Synchronization.Connections[] { });
                     var connectionInitializerss = connections[resourceType];
                     
-                    var actorId = integration.authorizationId;
                     return await connectionInitializerss
                         .FlatMap(
                             async (connectionInitializersKvp, next, skip) =>
