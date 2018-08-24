@@ -282,37 +282,57 @@ namespace EastFive.Security.SessionServer
             return await await this.context.Credentials.GetAllAccountIdAsync(
                 async credentialMappings =>
                 {
-                    var lookups = await credentialMappings
+                    var mappings = await credentialMappings
                         .WhereAsync(info => Library.configurationManager.CanAdministerCredentialAsync(info.actorId, actorPerforming, claims))
                         .SelectAsync(
                             async credentialMapping =>
                             {
-                                var mapping = new LoginInfo
+                                return new LoginInfo
                                 {
                                     AccountEnabled = true,
                                     ActorId = credentialMapping.actorId,
                                     LoginId = credentialMapping.loginId,
                                     Method = method,
-                                };
-                                if (!ServiceConfiguration.managementProviders.ContainsKey(credentialMapping.method) || default(Guid) == credentialMapping.loginId)
-                                    return mapping;
-
-                                var provider = ServiceConfiguration.managementProviders[credentialMapping.method];
-                                return await provider.GetAuthorizationAsync(credentialMapping.loginId,
-                                    un => 
-                                    {
-                                        mapping.AccountEnabled = un.accountEnabled;
-                                        mapping.Username = un.userName;
-                                        mapping.DisplayName = un.displayName;
-                                        mapping.Email = un.GetEmail(email => email, () => "");
-                                        return mapping;
-                                    },
-                                    () => mapping,
-                                    (why) => mapping,
-                                    () => mapping,
-                                    (why) => mapping);
+                                }.PairWithValue(credentialMapping.method);
                             })
-                        .WhenAllAsync(5);
+                        .WhenAllAsync();
+                    var pairs = await mappings
+                        .Select(x => x.Value)
+                        .Distinct()
+                        .Select(async m =>
+                        {
+                            if (!ServiceConfiguration.managementProviders.ContainsKey(m))
+                                return m.PairWithValue(new SessionServer.LoginInfo[] { });
+
+                            // AADB2C fails when it is called too often so now make one call to get it all
+                            var provider = ServiceConfiguration.managementProviders[m];
+                            return m.PairWithValue(await provider.GetAllAuthorizationsAsync(
+                                infos => infos,
+                                (why) => new SessionServer.LoginInfo[] { },
+                                () => new SessionServer.LoginInfo[] { },
+                                (why) => new SessionServer.LoginInfo[] { }));
+                        })
+                        .WhenAllAsync();
+                    var lookups = mappings
+                        .Select(mapping =>
+                        {
+                            if (default(Guid) == mapping.Key.LoginId)
+                                return mapping.Key;
+                            var users = pairs.First(x => x.Key == mapping.Value).Value;
+                            var user = users.Where(x => x.loginId == mapping.Key.LoginId).ToArray();
+                            var map = mapping.Key;
+                            if (user.Length == 0)
+                            {
+                                map.AccountEnabled = false;
+                                return map;
+                            }
+                            map.AccountEnabled = user[0].accountEnabled;
+                            map.Username = user[0].userName;
+                            map.DisplayName = user[0].displayName;
+                            map.Email = user[0].GetEmail(email => email, () => "");
+                            return map;
+                        })
+                        .ToArray();
                     return onSuccess(lookups);
                 });
         }
@@ -331,6 +351,8 @@ namespace EastFive.Security.SessionServer
                 {
                     DiscriminatedDelegate<Guid, TResult, Task<TResult>> resultSuccess =
                         (success, fail) => success(loginId);
+                    DiscriminatedDelegate<Guid, TResult, Task<TResult>> resultNotFound =
+                        (success, fail) => fail(onNotFound());
                     var failureMessage = "";
                     DiscriminatedDelegate<Guid, TResult, Task<TResult>> resultFailure =
                         (success, fail) => fail(onFailure(failureMessage));
@@ -396,7 +418,7 @@ namespace EastFive.Security.SessionServer
                                         return resultFailureConfig.ToTask();
                                     });
                             },
-                            () => resultFailure.ToTask(),
+                            () => resultNotFound.ToTask(),
                             (why) => resultFailure.ToTask(),
                             () => resultFailure.ToTask(),
                             (why) => resultFailure.ToTask());
