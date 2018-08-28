@@ -37,8 +37,8 @@ namespace EastFive.Azure.Api.Resources
         [JsonProperty(PropertyName = ConfirmedWhenPropertyName)]
         public DateTime? ConfirmedWhen { get; set; }
 
-        public const string ConfirmedNextPropertyName = "confirmed_next";
-        [JsonProperty(PropertyName = ConfirmedNextPropertyName)]
-        public WebId ConfirmedNext { get; set; }
+        public const string PreviousPropertyName = "previous";
+        [JsonProperty(PropertyName = PreviousPropertyName)]
+        public WebId Previous { get; set; }
     }
 }

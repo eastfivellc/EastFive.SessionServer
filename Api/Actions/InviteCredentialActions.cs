@@ -81,7 +81,8 @@ namespace EastFive.Security.SessionServer.Api
                     var context = request.GetSessionServerContext();
                     var creationResults = await context.Credentials.SendEmailInviteAsync(
                         credential.Id.UUID, actorId.Value, credential.Email,
-                        performingActorId, claims.ToArray(),
+                        // TODO: Pass in application instead of null
+                        null, performingActorId, claims.ToArray(),
                         (inviteId, token) => url.GetLocation<Controllers.InviteCredentialController>().SetQueryParam("token", token.ToString("N")),
                         () => request.CreateResponse(HttpStatusCode.Created),
                         () => request.CreateResponse(HttpStatusCode.Conflict)

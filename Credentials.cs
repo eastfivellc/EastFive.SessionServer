@@ -83,7 +83,7 @@ namespace EastFive.Security.SessionServer
         }
 
         public async Task<TResult> SendEmailInviteAsync<TResult>(Guid inviteId, Guid actorId, string email,
-                Guid performingActorId, System.Security.Claims.Claim[] claims,
+                Azure.Application application, Guid performingActorId, System.Security.Claims.Claim[] claims,
                 Func<Guid, Guid, Uri> getRedirectLink,
             Func<TResult> success,
             Func<TResult> inviteAlreadyExists,
@@ -104,9 +104,8 @@ namespace EastFive.Security.SessionServer
                     var templateName = ConfigurationManager.AppSettings[Configuration.EmailTemplateDefinitions.InviteNewAccount];
                     if (string.IsNullOrEmpty(templateName))
                         return onFailed($"Email template setting not found.  Expected template value for key {Configuration.EmailTemplateDefinitions.InviteNewAccount}");
-
-                    var mailService = Web.Services.ServiceConfiguration.SendMessageService();
-                    var resultMail = await mailService.SendEmailMessageAsync(templateName, 
+                    
+                    var resultMail = await application.SendMessageService.SendEmailMessageAsync(templateName, 
                         email, string.Empty,
                         "newaccounts@orderowl.com", "New Account Services",
                         "New Order Owl Account",
