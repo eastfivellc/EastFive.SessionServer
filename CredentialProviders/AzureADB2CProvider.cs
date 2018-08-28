@@ -239,7 +239,8 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
                     displayName = displayName,
                     forceChangePassword = forceChange
                 }),
-                (why) => onServiceNotAvailable(why));
+                onNotFound,
+                onFailure);
         }
 
         public async Task<TResult> GetAllAuthorizationsAsync<TResult>(
@@ -257,11 +258,13 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
                             new LoginInfo
                             {
                                 loginId = tuple.Item1,
-                                userName = tuple.Item2,
-                                isEmail = tuple.Item3,
-                                otherMail = tuple.Item4,
-                                forceChange = tuple.Item5,
-                                accountEnabled = tuple.Item6,
+                                userName = tuple.Item3,
+                                isEmail = tuple.Item4,
+                                otherMail = tuple.Item5,
+                                forceChange = tuple.Item6,
+                                accountEnabled = tuple.Item7,
+                                displayName = tuple.Item2,
+                                forceChangePassword = tuple.Item6
                             }))
                         .ToArray();
                 },

@@ -41,7 +41,7 @@ namespace EastFive.Azure
         public static async Task<TResult> CreateAsync<TResult>(Guid processId,
                 Guid processStageId, Guid resourceId, DateTime createdOn,
                 KeyValuePair<string, Guid>[] resourceIds,
-                Guid? confirmedNext, DateTime? confirmedWhen, Guid? confirmedBy,
+                Guid? previousStepId, DateTime? confirmedWhen, Guid? confirmedBy,
                 EastFive.Api.Controllers.Security security,
             Func<TResult> onCreated,
             Func<TResult> onAlreadyExists,
@@ -87,7 +87,7 @@ namespace EastFive.Azure
                                                         processStageId, stage.ownerId,
                                                         resourceId, resourceType, createdOn,
                                                         procStageResources,
-                                                        confirmedNext, confirmedWhen, confirmedBy,
+                                                        previousStepId, confirmedWhen, confirmedBy,
                                                     onCreated,
                                                     onAlreadyExists);
                                     });
@@ -122,6 +122,56 @@ namespace EastFive.Azure
                     return onFound(processStages);
                 },
                 onResourceNotFound);
+        }
+
+        internal static Task<TResult> UpdateAsync<TResult>(Guid processId,
+            Guid? confirmedById, DateTime? confirmedWhen, 
+            KeyValuePair<string, Guid>[] resources, EastFive.Api.Controllers.Security security,
+            Func<TResult> onUpdated, 
+            Func<TResult> onNotFound,
+            Func<TResult> onUnauthorized,
+            Func<string, TResult> onFailure)
+        {
+            return Persistence.ProcessDocument.UpdateAsync(processId,
+                async (process, saveAsync) =>
+                {
+                    return await await Persistence.ProcessStageDocument.FindByIdAsync(process.processStageId,
+                        async processStage => await await Persistence.ProcessStageTypeDocument.FindByIdAsync(processStage.processStageTypeId,
+                            processStageType =>
+                            {
+                                process.confirmedBy = confirmedById;
+                                process.confirmedWhen = confirmedWhen;
+                                return resources
+                                    .FlatMap(
+                                        (resourceKvp, nextProcessStageResource, skip, tail) => processStageType.resourceKeys
+                                            .First(
+                                                (kvp, next) => kvp.Key == resourceKvp.Key ?
+                                                    nextProcessStageResource(
+                                                        new Process.ProcessStageResource()
+                                                        {
+                                                            key = resourceKvp.Key,
+                                                            resourceId = resourceKvp.Value,
+                                                            type = kvp.Value,
+                                                        })
+                                                    :
+                                                    next(),
+                                                () => tail(onFailure($"Resource key ${resourceKvp.Key} is not valid for this stage.").ToTask())),
+                                        async (IEnumerable<Process.ProcessStageResource> psrs) =>
+                                        {
+                                            var procStageResources = psrs.ToArray();
+                                            if (procStageResources.Length != processStageType.resourceKeys.Length)
+                                                if (confirmedWhen.HasValue || process.confirmedWhen.HasValue)
+                                                    return onFailure($"Cannot confirm resource without `{processStageType.resourceKeys.SelectKeys().Except(procStageResources.Select(psr => psr.key)).Join(",")}`");
+                                            process.resources = procStageResources;
+                                            await saveAsync(process);
+                                            return onUpdated();
+                                        });
+                            },
+                            () => onFailure($"Process stage is no longer valid `{process.processStageId}` => `{processStage.processStageTypeId}`").ToTask()),
+                        () => onFailure($"Process is no longer valid `{processId}` => `{process.processStageId}`").ToTask());
+                },
+                onNotFound);
+            
         }
 
         public static Task<TResult> DeleteByIdAsync<TResult>(Guid processStageId, EastFive.Api.Controllers.Security security,

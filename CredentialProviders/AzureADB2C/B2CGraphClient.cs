@@ -1,42 +1,192 @@
 ﻿using BlackBarLabs.Extensions;
-using BlackBarLabs.Linq;
+using EastFive.Extensions;
 using EastFive.Linq;
-using Microsoft.Azure;
 using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace EastFive.AzureADB2C
 {
     public class B2CGraphClient
     {
-        private string clientId { get; set; }
-        private string clientSecret { get; set; }
-        private string tenant { get; set; }
-
-        private AuthenticationContext authContext;
-        private ClientCredential credential;
+        private readonly string tenant;
+        private readonly HttpClient http;
         
         private B2CGraphClient(string clientId, string clientSecret, string tenant)
         {
-            // The client_id, client_secret, and tenant are pulled in from the App.config file
-            this.clientId = clientId;
-            this.clientSecret = clientSecret;
             this.tenant = tenant;
+            var wrh = new WebRequestHandler()
+            {
+                ReadWriteTimeout = (int)TimeSpan.FromMinutes(5).TotalMilliseconds
+            };
+            this.http = new HttpClient(
+                new HttpRetryHandler(5, 2, 
+                    new RefreshTokenMessageHandler(
+                    // The AuthenticationContext is ADAL's primary class, in which you indicate the directory to use.
+                    Globals.aadInstance + tenant,
+                    Globals.aadGraphResourceId,
+                    // The ClientCredential is where you pass in your client_id and client_secret, which are 
+                    // provided to Azure AD in order to receive an access_token using the app's identity.
+                    clientId,
+                    clientSecret,
+                    wrh)))
+            {
+                Timeout = new TimeSpan(0, 5, 0)
+            };
+        }
 
-            // The AuthenticationContext is ADAL's primary class, in which you indicate the direcotry to use.
-            this.authContext = new AuthenticationContext("https://login.microsoftonline.com/" + tenant);
+        private class HttpRetryHandler : DelegatingHandler
+        {
+            private readonly int attempts;
+            private readonly int delaySeconds;
 
-            // The ClientCredential is where you pass in your client_id and client_secret, which are 
-            // provided to Azure AD in order to receive an access_token using the app's identity.
-            this.credential = new ClientCredential(clientId,  clientSecret);
+            public HttpRetryHandler(int attempts, int delaySeconds, HttpMessageHandler innerHandler = default(HttpMessageHandler))
+                : base()
+            {
+                this.InnerHandler = innerHandler.IsDefaultOrNull() ? new HttpClientHandler() : innerHandler;
+                this.attempts = attempts;
+                this.delaySeconds = delaySeconds;
+            }
+
+            private async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken, int attemptsRemaining, int delaySeconds)
+            {
+                try
+                {
+                    --attemptsRemaining;
+                    return await base.SendAsync(request, cancellationToken);
+                }
+                catch (TaskCanceledException e)
+                {
+                    if (attemptsRemaining > 0)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+                        return await SendAsync(await CloneAsync(request), cancellationToken, attemptsRemaining, delaySeconds * 2);
+                    }
+                    throw e;
+                }
+                catch (HttpRequestException e)
+                {
+                    Exception inner = e;
+                    while (inner.InnerException != null) inner = inner.InnerException;
+                    if (inner.Message.Contains("remote name could not be resolved") && attemptsRemaining > 0)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+                        return await SendAsync(await CloneAsync(request), cancellationToken, attemptsRemaining, delaySeconds * 2);
+                    }
+                    throw e;
+                }
+            }
+
+            private async Task<HttpContent> CloneAsync(HttpContent content)
+            {
+                if (content == null)
+                    return null;
+
+                var ms = new MemoryStream();
+                await content.CopyToAsync(ms);
+                ms.Position = 0;
+                var clone = new StreamContent(ms);
+                content.Headers.ToList().ForEach(x => clone.Headers.Add(x.Key, x.Value));
+                return clone;
+            }
+
+            private async Task<HttpRequestMessage> CloneAsync(HttpRequestMessage request)
+            {
+                var clone = new HttpRequestMessage(request.Method, request.RequestUri)
+                {
+                    Content = await CloneAsync(request.Content),
+                    Version = request.Version
+                };
+                request.Properties.ToList().ForEach(x => clone.Properties.Add(x));
+                request.Headers.ToList().ForEach(x => clone.Headers.TryAddWithoutValidation(x.Key, x.Value));
+                return request;
+            }
+
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            {
+                return SendAsync(request, cancellationToken, attempts, delaySeconds);
+            }
+        }
+
+        private class RefreshTokenMessageHandler : EastFive.Net.Http.RefreshTokenMessageHandler
+        {
+            private readonly string authority;
+            private readonly string tokenResource;
+            private readonly string clientId;
+            private readonly string clientSecret;
+            private readonly TimeSpan expireBuffer = TimeSpan.FromMinutes(5);
+            private readonly SemaphoreSlim cache = new SemaphoreSlim(1, 1);
+
+            private Int64 expiresUtc;
+            private string accessToken;
+
+            public RefreshTokenMessageHandler(string authority, string tokenResource, string clientId, string clientSecret, HttpMessageHandler innerHandler = default(HttpMessageHandler))
+                : base(innerHandler)
+            {
+                this.authority = authority;
+                this.tokenResource = tokenResource;
+                this.clientId = clientId;
+                this.clientSecret = clientSecret;
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                    cache.Dispose();
+
+                base.Dispose(disposing);
+            }
+
+            protected override string AccessToken => accessToken;
+
+            protected override async Task<bool> NeedsRefreshAsync(HttpResponseMessage response)
+            {
+                return await base.NeedsRefreshAsync(response) || !IsTokenValid();
+            }
+
+            private bool IsTokenValid()
+            {
+                return DateTime.UtcNow.Ticks < Interlocked.Read(ref expiresUtc);
+            }
+
+            protected override async Task<TResult> RefreshTokenAsync<TResult>(Func<string, TResult> onSuccess, Func<string, TResult> onFailure)
+            {
+                if (IsTokenValid())
+                    return onSuccess(this.accessToken);
+
+                await cache.WaitAsync();
+                if (IsTokenValid())
+                {
+                    cache.Release();
+                    return onSuccess(this.accessToken);
+                }
+
+                AuthenticationResult result = null;
+                try
+                {
+                    var authContext = new AuthenticationContext(authority, true);
+                    var credential = new ClientCredential(clientId, clientSecret);
+                    result = await authContext.AcquireTokenAsync(tokenResource, credential);
+                    string accessToken = result.AccessToken;
+                    long expiresUtc = result.ExpiresOn.Ticks - expireBuffer.Ticks;
+                    Interlocked.Exchange(ref this.accessToken, accessToken);
+                    Interlocked.Exchange(ref this.expiresUtc, expiresUtc);
+                    cache.Release();
+                    return onSuccess(accessToken);
+                }
+                catch (Exception e)
+                {
+                    cache.Release();
+                    return onFailure(e.Message);
+                }
+            }
         }
 
         internal static TResult LoadFromConfig<TResult>(
@@ -69,77 +219,96 @@ namespace EastFive.AzureADB2C
                    onConfigurationNotAvailable);
         }
 
-        public async Task<TResult> GetUserByObjectId<TResult>(string objectId,
+        public Task<TResult> GetUserByObjectId<TResult>(string objectId,
             Func<string, string, bool, string, bool, bool, TResult> onSuccess,
+            Func<TResult> onNotFound,
             Func<string, TResult> onFailure)
         {
-            try
-            {
-                var userResult = await SendGraphGetRequest("/users/" + objectId, null);
-                var user = JsonConvert.DeserializeObject<Resources.User>(userResult);
-                var signinName = default(string);
-                var displayName = default(string);
-                var isEmail = default(bool);
-                var otherMail = default(string);
-                if (default(Resources.User.SignInName[]) != user.SignInNames &&
-                    user.SignInNames.Length > 0)
+            return SendGraphGetRequest("/users/" + objectId, null, 
+                (userResult) =>
                 {
-                    displayName = user.DisplayName;
-                    signinName = user.SignInNames[0].Value;
-                    isEmail = String.Compare(user.SignInNames[0].Type, "emailAddress") == 0;
-                    otherMail = user.OtherMails?.FirstOrDefault();
-                }
-                var forceChange = default(Resources.User.PasswordProfileResource) != user.PasswordProfile
-                    ? user.PasswordProfile.ForceChangePasswordNextLogin
-                    : default(bool);
+                    try
+                    {
+                        var user = JsonConvert.DeserializeObject<Resources.User>(userResult);
+                        var signinName = default(string);
+                        var displayName = default(string);
+                        var isEmail = default(bool);
+                        var otherMail = default(string);
+                        if (default(Resources.User.SignInName[]) != user.SignInNames &&
+                            user.SignInNames.Length > 0)
+                        {
+                            displayName = user.DisplayName;
+                            signinName = user.SignInNames[0].Value;
+                            isEmail = String.Compare(user.SignInNames[0].Type, "emailAddress") == 0;
+                            otherMail = user.OtherMails?.FirstOrDefault();
+                        }
+                        var forceChange = default(Resources.User.PasswordProfileResource) != user.PasswordProfile
+                            ? user.PasswordProfile.ForceChangePasswordNextLogin
+                            : default(bool);
 
-                return onSuccess(displayName, signinName, isEmail, otherMail, forceChange, user.AccountEnabled);
-            }
-            catch (Exception e)
-            {
-                return onFailure(e.Message);
-            }
+                        return onSuccess(displayName, signinName, isEmail, otherMail, forceChange, user.AccountEnabled);
+                    }
+                    catch(Exception e)
+                    {
+                        return onFailure(e.Message);
+                    }
+                },
+                (statusCode, reasonPhrase, error) =>
+                {
+                    if (error?.OdataError?.Code == "Request_ResourceNotFound")
+                        return onNotFound();
+                    return onFailure(error?.OdataError?.Message?.Value ?? reasonPhrase);
+                });
         }
 
         public async Task<TResult> GetUserByUserIdAsync<TResult>(string userId,
             Func<Guid, bool, bool, bool, TResult> onSuccess,
             Func<string, TResult> onFailure)
         {
-            var userResult = await SendGraphGetRequest("/users/", 
-                $"$filter=signInNames/any(x:x/value eq '{userId}')");
-            var userData = JsonConvert.DeserializeObject<Resources.ODataMetadata<Resources.User[]>>(userResult);
-            if (default(Resources.ODataMetadata<Resources.User[]>) == userData)
-                return onFailure("Could not parse result data");
-            var users = userData.Value.NullToEmpty().ToArray();
-            if (users.Length < 1)
-                return onFailure("User not found");
-            var user = ParseUser(users[0]);
-            if (null == user)
-                return onFailure("Could not parse user");
-            return onSuccess(user.Item1, user.Item3, user.Item5, user.Item6);
+            return await SendGraphGetRequest("/users/", 
+                $"$filter=signInNames/any(x:x/value eq '{userId}')",
+                (userResult) =>
+                {
+                    var userData = JsonConvert.DeserializeObject<Resources.ODataMetadata<Resources.User[]>>(userResult);
+                    if (default(Resources.ODataMetadata<Resources.User[]>) == userData)
+                        return onFailure("Could not parse result data");
+                    var users = userData.Value.NullToEmpty().ToArray();
+                    if (users.Length < 1)
+                        return onFailure("User not found");
+                    var user = ParseUser(users[0]);
+                    if (null == user)
+                        return onFailure("Could not parse user");
+                    return onSuccess(user.Item1, user.Item4, user.Item6, user.Item6);
+                },
+                (statusCode, reasonPhrase, error) =>
+                {
+                    return onFailure(error?.OdataError?.Message?.Value ?? reasonPhrase);
+                });
         }
 
-        private Tuple<Guid, string, bool, string, bool, bool> ParseUser(Resources.User user)
+        private Tuple<Guid, string, string, bool, string, bool, bool> ParseUser(Resources.User user)
         {
             Guid loginId;
             if (!Guid.TryParse(user.ObjectId, out loginId))
-                return default(Tuple<Guid, string, bool, string, bool, bool>);
+                return default(Tuple<Guid, string, string, bool, string, bool, bool>);
+            var displayName = string.Empty;
             var isEmail = false;
             var userName = string.Empty;
             var otherMail = default(string);
             if (default(Resources.User.SignInName[]) != user.SignInNames &&
                 user.SignInNames.Length > 0)
             {
+                displayName = user.DisplayName;
                 isEmail = String.Compare(user.SignInNames[0].Type, "emailAddress") == 0;
                 userName = user.SignInNames[0].Value;
                 otherMail = user.OtherMails?.FirstOrDefault();
             }
             var forceChange = default(Resources.User.PasswordProfileResource) != user.PasswordProfile && user.PasswordProfile.ForceChangePasswordNextLogin;
-            return new Tuple<Guid, string, bool, string, bool, bool>(loginId,userName,isEmail,otherMail,forceChange,user.AccountEnabled);
+            return new Tuple<Guid, string, string, bool, string, bool, bool>(loginId,displayName,userName,isEmail,otherMail,forceChange,user.AccountEnabled);
         }
 
         public async Task<TResult> GetAllUsersAsync<TResult>(
-            Action<Tuple<Guid,string,bool,string,bool,bool>[]> onSegment,
+            Action<Tuple<Guid,string,string,bool,string,bool,bool>[]> onSegment,
             Func<TResult> onSuccess,
             Func<string,TResult> onFailure)
         {
@@ -147,7 +316,9 @@ namespace EastFive.AzureADB2C
             var query = string.Empty;
             do
             {
-                var userResponse = await SendGraphGetRequest("/users", query);
+                var userResponse = await SendGraphGetRequest("/users", query,
+                    (resp) => resp,
+                    (statusCode, reasonPhrase, error) => string.Empty);
                 var userPayload = JsonConvert.DeserializeObject<Resources.ODataMetadata<Resources.User[]>>(userResponse);
                 if (null == userPayload)
                     return onFailure("Could not parse result data");
@@ -171,7 +342,9 @@ namespace EastFive.AzureADB2C
 
         public async Task<string> GetAllUsers(string query)
         {
-            return await SendGraphGetRequest("/users", query);
+            return await SendGraphGetRequest("/users", query,
+                (result) => result,
+                (statusCode, reasonPhrase, error) => throw new WebException("Error Calling the Graph API: \n" + JsonConvert.SerializeObject(error, Formatting.Indented)));
         }
 
         public async Task<TResult> CreateUser<TResult>(string displayName,
@@ -291,32 +464,35 @@ namespace EastFive.AzureADB2C
 
         public async Task<string> GetExtensions(string appObjectId)
         {
-            return await SendGraphGetRequest("/applications/" + appObjectId + "/extensionProperties", null);
+            return await SendGraphGetRequest("/applications/" + appObjectId + "/extensionProperties", null,
+                (result) => result,
+                (statusCode, reasonPhrase, error) => throw new WebException("Error Calling the Graph API: \n" + JsonConvert.SerializeObject(error, Formatting.Indented)));
         }
 
         public async Task<string> GetApplications(string query)
         {
-            return await SendGraphGetRequest("/applications", query);
+            return await SendGraphGetRequest("/applications", query,
+                (result) => result,
+                (statusCode, reasonPhrase, error) => throw new WebException("Error Calling the Graph API: \n" + JsonConvert.SerializeObject(error, Formatting.Indented)));
         }
 
         private async Task<string> SendGraphDeleteRequest(string api)
         {
             // NOTE: This client uses ADAL v2, not ADAL v4
-            AuthenticationResult result = await authContext.AcquireTokenAsync(Globals.aadGraphResourceId, credential);
-            HttpClient http = new HttpClient();
             string url = Globals.aadGraphEndpoint + tenant + api + "?" + Globals.aadGraphVersion;
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Delete, url);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", result.AccessToken);
-            HttpResponseMessage response = await http.SendAsync(request);
-
-            if (!response.IsSuccessStatusCode)
+            using (HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Delete, url))
             {
-                string error = await response.Content.ReadAsStringAsync();
-                object formatted = JsonConvert.DeserializeObject(error);
-                throw new WebException("Error Calling the Graph API: \n" + JsonConvert.SerializeObject(formatted, Formatting.Indented));
+                using (HttpResponseMessage response = await http.SendAsync(request))
+                {
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        string error = await response.Content.ReadAsStringAsync();
+                        object formatted = JsonConvert.DeserializeObject(error);
+                        throw new WebException("Error Calling the Graph API: \n" + JsonConvert.SerializeObject(formatted, Formatting.Indented));
+                    }
+                    return await response.Content.ReadAsStringAsync();
+                }
             }
-
-            return await response.Content.ReadAsStringAsync();
         }
 
         private async Task<TResult> SendGraphPatchRequest<TResult>(string api, string json,
@@ -324,83 +500,71 @@ namespace EastFive.AzureADB2C
             Func<string,TResult> onFailure)
         {
             // NOTE: This client uses ADAL v2, not ADAL v4
-            AuthenticationResult result = await authContext.AcquireTokenAsync(Globals.aadGraphResourceId, credential);
-            HttpClient http = new HttpClient();
             string url = Globals.aadGraphEndpoint + tenant + api + "?" + Globals.aadGraphVersion;
 
-            HttpRequestMessage request = new HttpRequestMessage(new HttpMethod("PATCH"), url);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", result.AccessToken);
-            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
-            HttpResponseMessage response = await http.SendAsync(request);
-
-            if (!response.IsSuccessStatusCode)
+            using (HttpRequestMessage request = new HttpRequestMessage(new HttpMethod("PATCH"), url))
             {
-                string error = await response.Content.ReadAsStringAsync();
-                object formatted = JsonConvert.DeserializeObject(error);
-                return onFailure(error);
+                request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+                using (HttpResponseMessage response = await http.SendAsync(request))
+                {
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        string error = await response.Content.ReadAsStringAsync();
+                        object formatted = JsonConvert.DeserializeObject(error);
+                        return onFailure(error);
+                    }
+                    return onSuccess(await response.Content.ReadAsStringAsync());
+                }
             }
-
-            return onSuccess(await response.Content.ReadAsStringAsync());
         }
 
         private async Task<TResult> SendGraphPostRequest<TResult>(string api, string json,
             Func<string, TResult> onSuccess,
             Func<HttpStatusCode, string, Resources.ODataError, TResult> onFailed)
         {
-            AuthenticationResult result = await authContext.AcquireTokenAsync(Globals.aadGraphResourceId, credential);
-            HttpClient http = new HttpClient();
             string url = Globals.aadGraphEndpoint + tenant + api + "?" + Globals.aadGraphVersion;
-            
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, url);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", result.AccessToken);
-            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
-            HttpResponseMessage response = await http.SendAsync(request);
 
-            if (!response.IsSuccessStatusCode)
+            using (HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, url))
             {
-                string error = await response.Content.ReadAsStringAsync();
-                var issue = JsonConvert.DeserializeObject<Resources.ODataError>(error);
-                return onFailed(response.StatusCode, response.ReasonPhrase, issue);
+                request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+                using (HttpResponseMessage response = await http.SendAsync(request))
+                {
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        string error = await response.Content.ReadAsStringAsync();
+                        var issue = JsonConvert.DeserializeObject<Resources.ODataError>(error);
+                        return onFailed(response.StatusCode, response.ReasonPhrase, issue);
+                    }
+                    var contents = await response.Content.ReadAsStringAsync();
+                    return onSuccess(contents);
+                }
             }
-            
-            var contents = await response.Content.ReadAsStringAsync();
-            return onSuccess(contents);
         }
 
-        public async Task<string> SendGraphGetRequest(string api, string query)
+        public async Task<TResult> SendGraphGetRequest<TResult>(string api, string query,
+            Func<string, TResult> onSuccess,
+            Func<HttpStatusCode, string, Resources.ODataError, TResult> onFailed)
         {
-            // First, use ADAL to acquire a token using the app's identity (the credential)
-            // The first parameter is the resource we want an access_token for; in this case, the Graph API.
-            AuthenticationResult result = null;
-            try
-            {
-                result = await authContext.AcquireTokenAsync("https://graph.windows.net", credential);
-            } catch(Exception ex)
-            {
-                ex.GetType();
-            }
-
-            // For B2C user managment, be sure to use the 1.6 Graph API version.
-            HttpClient http = new HttpClient();
-            string url = "https://graph.windows.net/" + tenant + api + "?" + "api-version=1.6";
+            string url = Globals.aadGraphEndpoint + tenant + api + "?" + Globals.aadGraphVersion;
             if (!string.IsNullOrEmpty(query))
             {
                 url += "&" + query;
             }
 
-            // Append the access token for the Graph API to the Authorization header of the request, using the Bearer scheme.
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", result.AccessToken);
-            HttpResponseMessage response = await http.SendAsync(request);
-
-            if (!response.IsSuccessStatusCode)
+            using (HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url))
             {
-                string error = await response.Content.ReadAsStringAsync();
-                object formatted = JsonConvert.DeserializeObject(error);
-                throw new WebException("Error Calling the Graph API: \n" + JsonConvert.SerializeObject(formatted, Formatting.Indented));
+                using (HttpResponseMessage response = await http.SendAsync(request))
+                {
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        string error = await response.Content.ReadAsStringAsync();
+                        var issue = JsonConvert.DeserializeObject<Resources.ODataError>(error);
+                        return onFailed(response.StatusCode, response.ReasonPhrase, issue);
+                    }
+                    var contents = await response.Content.ReadAsStringAsync();
+                    return onSuccess(contents);
+                }
             }
-
-            return await response.Content.ReadAsStringAsync();
         }
     }
 }

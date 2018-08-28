@@ -57,7 +57,7 @@ namespace EastFive.Azure.Api.Controllers
                     :
                     default(WebId),
                 ConfirmedWhen = process.confirmedWhen,
-                ConfirmedNext = urlHelper.GetWebId<ProcessStepController>(process.previousStep),
+                Previous = urlHelper.GetWebId<ProcessStepController>(process.previousStep),
                 Resources = process.resources
                     .Select(resource => httpApplication.GetResourceLink(process.resourceType, resource.resourceId, urlHelper))
                     .ToArray(),
@@ -72,10 +72,10 @@ namespace EastFive.Azure.Api.Controllers
         [EastFive.Api.HttpPost(Type = typeof(Api.Resources.ProcessStep), MatchAllBodyParameters = false)]
         public static Task<HttpResponseMessage> CreateAsync(
                 [Property(Name = Resources.ProcessStep.IdPropertyName)]Guid processId,
+                [PropertyOptional(Name = Resources.ProcessStep.PreviousPropertyName)]Guid? previousStepId,
                 [Property(Name = Resources.ProcessStep.ResourcePropertyName)]Guid resourceId,
                 [Property(Name = Resources.ProcessStep.StagePropertyName)]Guid processStageId,
                 [Property(Name = Resources.ProcessStep.CreatedOnPropertyName)]DateTime createdOn,
-                [PropertyOptional(Name = Resources.ProcessStep.ConfirmedNextPropertyName)]Guid? confirmedNextId,
                 [PropertyOptional(Name = Resources.ProcessStep.ConfirmedByPropertyName)]Guid? confirmedById,
                 [PropertyOptional(Name = Resources.ProcessStep.ConfirmedWhenPropertyName)]DateTime? confirmedWhen,
                 [PropertyOptional(Name = Resources.ProcessStep.ResourceKeysPropertyName)]string [] resourceKeys,
@@ -89,7 +89,7 @@ namespace EastFive.Azure.Api.Controllers
         {
             return Processes.CreateAsync(processId, processStageId, resourceId, createdOn,
                     resourceKeys.NullToEmpty().Zip(resources.NullToEmpty(), (k,id) => k.PairWithValue(id)).ToArray(),
-                    confirmedNextId, confirmedWhen, confirmedById,
+                    previousStepId, confirmedWhen, confirmedById,
                     security,
                 () => onCreated(),
                 () => onAlreadyExists(),
@@ -99,8 +99,7 @@ namespace EastFive.Azure.Api.Controllers
         
         [EastFive.Api.HttpPatch(Type = typeof(Resources.ProcessStep), MatchAllBodyParameters = false)]
         public static Task<HttpResponseMessage> UpdateConnectorAsync(
-                [Property(Name = Resources.ProcessStep.IdPropertyName)]Guid id,
-                [PropertyOptional(Name = Resources.ProcessStep.ConfirmedNextPropertyName)]Guid? confirmedNextId,
+                [Property(Name = Resources.ProcessStep.IdPropertyName)]Guid processId,
                 [PropertyOptional(Name = Resources.ProcessStep.ConfirmedByPropertyName)]Guid? confirmedById,
                 [PropertyOptional(Name = Resources.ProcessStep.ConfirmedWhenPropertyName)]DateTime? confirmedWhen,
                 [PropertyOptional(Name = Resources.ProcessStep.ResourceKeysPropertyName)]string[] resourceKeys,
@@ -111,7 +110,15 @@ namespace EastFive.Azure.Api.Controllers
             UnauthorizedResponse onUnauthorized,
             GeneralConflictResponse onFailure)
         {
-            throw new NotImplementedException();
+            return Processes.UpdateAsync(processId,
+                    confirmedById, confirmedWhen,
+                    resourceKeys.NullToEmpty().Zip(resources.NullToEmpty(), (k, id) => k.PairWithValue(id)).ToArray(),
+                    security,
+                () => onUpdated(),
+                () => onNotFound(),
+                () => onUnauthorized(),
+                (why) => onFailure(why));
+
             //return Connectors.UpdateConnectorAsync(id,
             //        Flow, security.performingAsActorId, security.claims,
             //    () => onUpdated(),

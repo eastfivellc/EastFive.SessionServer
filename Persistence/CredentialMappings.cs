@@ -58,7 +58,7 @@ namespace EastFive.Security.SessionServer.Persistence
         public async Task<TResult> FindAllCredentialMappingAsync<TResult>(
             Func<CredentialMapping[], TResult> onSuccess)
         {
-            var actorCredMappings = await repository.FindAllAsync(
+            var actorCredMappingsTask = repository.FindAllAsync(
                 (Documents.LoginActorLookupDocument[] docs) =>
                     docs
                         .Select(
@@ -71,10 +71,10 @@ namespace EastFive.Security.SessionServer.Persistence
                                 subject = doc.Id.ToString(),
                             }));
 
-            return await repository.FindAllAsync(
-                (Documents.CredentialMappingDocument[] docs) =>
+            return await await repository.FindAllAsync(
+                async (Documents.CredentialMappingDocument[] docs) =>
                     onSuccess(docs.Select(doc => Convert(doc))
-                        .Concat(actorCredMappings)
+                        .Concat(await actorCredMappingsTask)
                         .GroupBy(
                             x => new { x.actorId, x.subject, x.method, x.loginId})  // this makes the returned array distinct on the important fields since we've joined two tables
                         .Select(g => g.First())
