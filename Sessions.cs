@@ -334,7 +334,7 @@ namespace EastFive.Security.SessionServer
                                         "Guid not unique for creating authentication started from external system".AsFunctionException<TResult>(),
                                         onFailure);
                                 },
-                                () => onInvalidToken("The token does not map to a user in this system.").ToTask());
+                                () => onInvalidToken($"The token does not map to a user in this system. [{subject}]").ToTask());
                         },
                         async (stateId, extraParamsWithRedemptionParams) =>
                         {
@@ -351,7 +351,7 @@ namespace EastFive.Security.SessionServer
                         onNotConfigured.AsAsyncFunc(),
                         onFailure.AsAsyncFunc());
                 },
-                () => systemOffline("The requested credential system is not enabled for this deployment").ToTask(),
+                () => systemOffline($"The requested credential system is not enabled for this deployment. [{method}]").ToTask(),
                 (why) => onNotConfigured(why).ToTask());
         }
 
@@ -371,7 +371,7 @@ namespace EastFive.Security.SessionServer
                         return onLogout(authenticationRequest.redirectLogout);
 
                     if (authenticationRequest.method != method)
-                        return onInvalidToken("The credential's authentication method does not match the callback method");
+                        return onInvalidToken($"The credential's authentication method does not match the callback method. [{sessionId}]");
 
                     if (AuthenticationActions.link == authenticationRequest.action)
                         return await context.Invites.CreateInviteCredentialAsync(sessionId, sessionId,
@@ -389,11 +389,11 @@ namespace EastFive.Security.SessionServer
                             {
                                 return onLogin(sessionId, authenticationRequest.authorizationId.Value, string.Empty, string.Empty, AuthenticationActions.access, extraParams, redirect);
                             },
-                            () => onFailure("Authentication request was deleted."),
-                            () => onFailure("No authentication on integration"));
+                            () => onFailure($"Authentication request was deleted. [{sessionId}]"),
+                            () => onFailure($"No authentication on integration. [{sessionId}]"));
 
                     if (authenticationRequest.authorizationId.HasValue)
-                        return onInvalidToken("Session's authentication request cannot be re-used.");
+                        return onInvalidToken($"Session's authentication request cannot be re-used. [{sessionId}]");
 
                     return await await dataContext.CredentialMappings.LookupCredentialMappingAsync(method, subject, loginId,
                         async (authenticationId) =>
@@ -407,9 +407,9 @@ namespace EastFive.Security.SessionServer
                                 },
                                 onNotConfigured.AsAsyncFunc());
                         },
-                        () => onInvalidToken("The token does not match a user in this system.").ToTask());
+                        () => onInvalidToken($"The token does not match a user in this system. [{subject}]").ToTask());
                 },
-                () => onInvalidToken("The token does not match an Authentication request"));
+                () => onInvalidToken($"The token does not match an Authentication request. [{sessionId}]"));
         }
 
         private static TResult GenerateToken<TResult>(Guid sessionId, Guid? actorId, IDictionary<string, string> claims,
