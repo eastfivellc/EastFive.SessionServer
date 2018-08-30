@@ -14,7 +14,7 @@ using BlackBarLabs.Extensions;
 using EastFive.Security.CredentialProvider.AzureADB2C;
 using System.Web.Http.Routing;
 
-namespace EastFive.Security.SessionServer.Api.Controllers
+namespace EastFive.Api.Azure.Credentials.Controllers
 {
     // /api/OAuthResponseLightspeed?code=d6ac033707089b1a727711631c277323b7c7905a&state=331d23d2cc204a1b9a7eeb1420000333
     public class OAuthResponseLightspeedController : ResponseController

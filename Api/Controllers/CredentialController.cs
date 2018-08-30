@@ -1,4 +1,6 @@
 ﻿using BlackBarLabs.Api;
+using EastFive.Api.Azure.Controllers;
+using EastFive.Security.SessionServer.Api;
 using EastFive.Security.SessionServer.Api.Resources;
 using System.Linq;
 using System.Net;
@@ -7,12 +9,12 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Routing;
 
-namespace EastFive.Security.SessionServer.Api.Controllers
+namespace EastFive.Api.Azure.Credentials.Controllers
 {
     [RoutePrefix("aadb2c")]
     public class CredentialController : BaseController
     {
-        public IHttpActionResult Post([FromBody]Resources.Credential model)
+        public IHttpActionResult Post([FromBody]Credential model)
         {
             return new HttpActionResult(() => model.CreateAsync(this.Request, this.Url));
         }

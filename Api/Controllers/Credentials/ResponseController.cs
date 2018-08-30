@@ -14,16 +14,18 @@ using EastFive.Security.SessionServer.Exceptions;
 using System.Web.Http;
 using Microsoft.ApplicationInsights;
 using EastFive.Extensions;
+using EastFive.Azure.Api;
+using EastFive.Security.SessionServer;
 
-namespace EastFive.Security.SessionServer.Api.Controllers
+namespace EastFive.Api.Azure.Credentials.Controllers
 {
     public class ResponseResult
     {
-        public CredentialValidationMethodTypes method { get; set; }
+        public Credentials.CredentialValidationMethodTypes method { get; set; }
     }
 
     [RoutePrefix("aadb2c")]
-    public class ResponseController : BaseController
+    public class ResponseController : Azure.Controllers.BaseController
     {
         public virtual async Task<IHttpActionResult> Get([FromUri]ResponseResult result)
         {
@@ -33,11 +35,14 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                     .ToActionResult();
             
             var kvps = Request.GetQueryNameValuePairs();
-            return await ProcessRequestAsync(Enum.GetName(typeof(CredentialValidationMethodTypes), result.method), kvps.ToDictionary(),
-                location => Redirect(location),
-                (code, body, reason) => this.Request.CreateResponse(code, body)
+
+            return await Request.GetApplication(
+                httpApp => ProcessRequestAsync(httpApp as Application, Enum.GetName(typeof(CredentialValidationMethodTypes), result.method), kvps.ToDictionary(),
+                    location => Redirect(location),
+                    (code, body, reason) => this.Request.CreateResponse(code, body)
                         .AddReason(reason)
-                        .ToActionResult());
+                        .ToActionResult()),
+                () => this.Request.CreateResponse(HttpStatusCode.OK, "Application is not an EastFive.Azure application.").ToActionResult().ToTask());
         }
 
         public virtual async Task<IHttpActionResult> Post([FromUri]ResponseResult result)
@@ -58,14 +63,18 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                         .Select(async v => v.Key.PairWithValue(await v.Value.ReadAsStringAsync()))),
                     () => (new KeyValuePair<string, string>()).AsArray().ToTask()));
             var allrequestParams = kvps.Concat(bodyValues).ToDictionary();
-            return await ProcessRequestAsync(Enum.GetName(typeof(CredentialValidationMethodTypes), result.method), allrequestParams,
-                location => Redirect(location),
-                (code, body, reason) => this.Request.CreateResponse(code, body)
-                        .AddReason(reason)
-                        .ToActionResult());
-        }
 
-        protected static async Task<TResult> ProcessRequestAsync<TResult>(string method, IDictionary<string, string> values,
+
+            return await Request.GetApplication(
+                httpApp => ProcessRequestAsync(httpApp as Application, Enum.GetName(typeof(CredentialValidationMethodTypes), result.method), allrequestParams,
+                    location => Redirect(location),
+                    (code, body, reason) => this.Request.CreateResponse(code, body)
+                        .AddReason(reason)
+                        .ToActionResult()),
+                () => this.Request.CreateResponse(HttpStatusCode.OK, "Application is not an EastFive.Azure application.").ToActionResult().ToTask());
+        }
+        
+        public static async Task<TResult> ProcessRequestAsync<TResult>(Application application, string method, IDictionary<string, string> values,
             Func<Uri, TResult> onRedirect,
             Func<HttpStatusCode, string, string, TResult> onResponse)
         {
@@ -80,6 +89,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 });
 
             var context = Context.LoadFromConfiguration();
+
             var response = await await context.Sessions.CreateOrUpdateWithAuthenticationAsync(
                     method, values,
                 async (sessionId, authorizationId, jwtToken, refreshToken, action, extraParams, redirectUrl) =>

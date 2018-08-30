@@ -4,7 +4,7 @@ using System.Runtime.Serialization;
 using BlackBarLabs.Api.Resources;
 using Newtonsoft.Json;
 
-namespace EastFive.Security.SessionServer.Api.Resources.Queries
+namespace EastFive.Api.Azure.Credentials.Resources.Queries
 {
     [DataContract]
     public class ActAsUserQuery : BlackBarLabs.Api.ResourceQueryBase

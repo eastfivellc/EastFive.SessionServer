@@ -54,21 +54,6 @@ namespace EastFive.Security.SessionServer
                 () => onFailure("Claim is already in use"));
         }
 
-        internal TResult GetCredentialProvider<TResult>(string method,
-            Func<IProvideAuthorization, TResult> onSuccess,
-            Func<TResult> onCredintialSystemNotAvailable,
-            Func<string, TResult> onFailure)
-        {
-            if (ServiceConfiguration.credentialProviders.IsDefault())
-                return onFailure("Authentication system not initialized.");
-
-            if (!ServiceConfiguration.credentialProviders.ContainsKey(method))
-                return Context.GetLoginProvider(method, onSuccess, onCredintialSystemNotAvailable, onFailure);
-
-            var provider = ServiceConfiguration.credentialProviders[method];
-            return onSuccess(provider);
-        }
-
         internal static TResult GetLoginProvider<TResult>(string method,
             Func<IProvideLogin, TResult> onSuccess,
             Func<TResult> onCredintialSystemNotAvailable,

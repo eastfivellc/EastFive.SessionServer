@@ -1,4 +1,4 @@
-﻿namespace EastFive.Security.SessionServer
+﻿namespace EastFive.Api.Azure.Credentials
 {
     public enum CredentialValidationMethodTypes
     {

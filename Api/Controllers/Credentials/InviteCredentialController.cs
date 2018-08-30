@@ -10,8 +10,10 @@ using BlackBarLabs;
 using System;
 using EastFive.Api.Services;
 using BlackBarLabs.Extensions;
+using EastFive.Api.Azure.Controllers;
+using EastFive.Security.SessionServer.Api.Resources.Queries;
 
-namespace EastFive.Security.SessionServer.Api.Controllers
+namespace EastFive.Api.Azure.Credentials.Controllers
 {
     [RoutePrefix("api")]
     public class InviteCredentialController : BaseController

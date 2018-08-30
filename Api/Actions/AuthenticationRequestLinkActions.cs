@@ -12,8 +12,11 @@ using BlackBarLabs.Extensions;
 using EastFive.Api.Services;
 using EastFive.Security.SessionServer.Configuration;
 using EastFive.Api;
+using EastFive.Security.SessionServer;
+using EastFive.Security.SessionServer.Api.Controllers;
+using EastFive.Security;
 
-namespace EastFive.Security.SessionServer.Api
+namespace EastFive.Api.Azure.Credentials
 {
     [FunctionViewController(Route = "AuthenticationRequestLink")]
     public static class AuthenticationRequestLinkActions
@@ -60,7 +63,7 @@ namespace EastFive.Security.SessionServer.Api
         {
             return new Resources.AuthenticationRequestLink
             {
-                Id = urlHelper.GetWebId<Controllers.SessionController>(SecureGuid.Generate()),
+                Id = urlHelper.GetWebId<SessionController>(SecureGuid.Generate()),
                 Method = method,
                 Name = method.ToString(),
                 SecureId = SecureGuid.Generate(),

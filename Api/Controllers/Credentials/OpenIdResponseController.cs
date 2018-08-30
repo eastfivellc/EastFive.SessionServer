@@ -14,7 +14,7 @@ using BlackBarLabs.Extensions;
 using EastFive.Security.CredentialProvider.AzureADB2C;
 using EastFive.Extensions;
 
-namespace EastFive.Security.SessionServer.Api.Controllers
+namespace EastFive.Api.Azure.Credentials.Controllers
 {
     public class OpenIdConnectResult
     {

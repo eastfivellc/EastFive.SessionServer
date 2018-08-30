@@ -6,10 +6,10 @@ using System.Web.Http;
 using System.Web.Http.Routing;
 
 using BlackBarLabs.Api;
-
+using EastFive.Api.Azure.Controllers;
 using EastFive.Security.SessionServer.Api.Resources;
 
-namespace EastFive.Security.SessionServer.Api.Controllers
+namespace EastFive.Api.Azure.Credentials.Controllers
 {
     [RoutePrefix("aadb2c")]
     public class AuthenticationRequestLinkController : BaseController

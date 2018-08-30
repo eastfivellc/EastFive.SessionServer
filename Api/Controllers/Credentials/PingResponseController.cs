@@ -20,8 +20,10 @@ using Microsoft.ApplicationInsights;
 using EastFive.Security.SessionServer.Configuration;
 using EastFive.Security.SessionServer.Exceptions;
 using EastFive.Extensions;
+using EastFive.Api.Controllers;
+using EastFive.Collections.Generic;
 
-namespace EastFive.Security.SessionServer.Api.Controllers
+namespace EastFive.Api.Azure.Credentials.Controllers
 {
     public class PingRequest
     {
@@ -31,9 +33,15 @@ namespace EastFive.Security.SessionServer.Api.Controllers
     }
     
     [RoutePrefix("aadb2c")]
-    public class PingResponseController : ResponseController
+    [FunctionViewController]
+    public class PingResponseController
     {
-        public override Task<IHttpActionResult> Get([FromUri]ResponseResult query)
+        [HttpGet]
+        public static Task<HttpResponseMessage> Get(
+            [Required(Name ="tokenid")]string tokenId,
+            [Required(Name = "agentid")]string agentId,
+            Application application, HttpRequestMessage request,
+            RedirectResponse redirectResponse)
         {
             //The way this works...
             //1.  User clicks Third Party Applications\AffirmHealth over in Athena.
@@ -51,10 +59,11 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             //return ((IHttpActionResult)(new HttpActionResult(() => Request.CreateResponse(HttpStatusCode.OK).ToTask()))).ToTask();
             // return ParsePingResponseAsync(query.tokenid, query.agentid);
 
-            if (query.IsDefault())
-                query = new ResponseResult();
-            query.method = CredentialValidationMethodTypes.Ping;
-            return base.Get(query);
+            return ResponseController.ProcessRequestAsync(application,
+                Enum.GetName(typeof(CredentialValidationMethodTypes), CredentialValidationMethodTypes.Ping),
+                request.GetQueryNameValuePairs().ToDictionary(),
+                (redirect) => redirectResponse(redirect),
+                (httpStatusCode, message, reason) => request.CreateResponse(httpStatusCode, message).AddReason(reason));
         }
     }
 }

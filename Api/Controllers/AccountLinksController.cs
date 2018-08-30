@@ -12,7 +12,7 @@ using BlackBarLabs;
 using BlackBarLabs.Extensions;
 using EastFive.Api.Services;
 
-namespace EastFive.Security.SessionServer.Api.Controllers
+namespace EastFive.Api.Azure.Credentials.Controllers
 {
 
     public class AccountLinksQuery
@@ -25,7 +25,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
     }
 
     [RoutePrefix("aadb2c")]
-    public class AccountLinksController : BaseController
+    public class AccountLinksController : Azure.Controllers.BaseController
     {
         [HttpGet]
         public async Task<IHttpActionResult> Get([FromUri]AccountLinksQuery q)

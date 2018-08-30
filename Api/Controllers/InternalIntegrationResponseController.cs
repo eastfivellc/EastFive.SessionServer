@@ -23,15 +23,15 @@ using EastFive.Extensions;
 using EastFive.Security.SessionServer.Api.Controllers;
 using EastFive.Collections.Generic;
 
-namespace EastFive.Api.Azure.Controllers
+namespace EastFive.Api.Azure.Credentials.Controllers
 {
     [FunctionViewController(Route = "InternalIntegrationResponse")]
     public class InternalIntegrationResponseController : ResponseController
     {
-        public override async Task<IHttpActionResult> Get([FromUri]ResponseResult query)
+        public override async Task<IHttpActionResult> Get(Application application, [FromUri]ResponseResult query)
         {
             var kvps = Request.GetQueryNameValuePairs();
-            var action = await ProcessRequestAsync(Security.CredentialProvider.InternalProvider.IntegrationName, kvps.ToDictionary(),
+            var action = await ProcessRequestAsync(applicationm, Security.CredentialProvider.InternalProvider.IntegrationName, kvps.ToDictionary(),
                 (location) => Redirect(location),
                 (code, body, reason) =>
                     this.Request

@@ -5,10 +5,11 @@ using BlackBarLabs.Api;
 using System.Web.Mvc;
 using System.Net.Http;
 using BlackBarLabs.Extensions;
+using EastFive.Security.SessionServer.Api;
 
-namespace EastFive.Security.SessionServer.Api.Controllers
+namespace EastFive.Api.Azure.Credentials.Controllers
 {
-    public class ActAsUserController : BaseController
+    public class ActAsUserController : Azure.Controllers.BaseController
     {
         public IHttpActionResult Get([FromUri]Resources.Queries.ActAsUserQuery query)
         {
@@ -28,7 +29,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                         responseAllowed.Content = new StringContent(String.Empty);
                         responseAllowed.Content.Headers.Add("Access-Control-Expose-Headers", "Allow");
 
-                        return Library.configurationManager.CanActAsUsersAsync(actorId, claims,
+                        return Security.SessionServer.Library.configurationManager.CanActAsUsersAsync(actorId, claims,
                             () =>
                             {
                                 responseAllowed.Content.Headers.Allow.Add(HttpMethod.Get.Method);

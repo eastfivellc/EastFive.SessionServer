@@ -18,8 +18,9 @@ using EastFive.Linq.Async;
 using BlackBarLabs.Linq.Async;
 using EastFive.Linq;
 using BlackBarLabs.Linq;
+using EastFive.Security.SessionServer;
 
-namespace EastFive.Security.SessionServer.Api
+namespace EastFive.Api.Azure.Credentials
 {
     public static class ActAsUserActions
     {
@@ -124,7 +125,7 @@ namespace EastFive.Security.SessionServer.Api
             var context = request.GetSessionServerContext();
             var authenticationRequestId = Guid.NewGuid();
             var redirectUrl = new Uri(redirectString);
-            var method = ServiceConfiguration.credentialProviders.First().Value.GetType().GetCustomAttribute<Attributes.IntegrationNameAttribute>().Name;
+            var method = Security.SessionServer.ServiceConfiguration.credentialProviders.First().Value.GetType().GetCustomAttribute<Security.SessionServer.Attributes.IntegrationNameAttribute>().Name;
             return await await context.Sessions.CreateLoginAsync(authenticationRequestId, actorId,
                     method, redirectUrl, new Dictionary<string, string>(),
                 async (session) =>

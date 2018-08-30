@@ -5,13 +5,14 @@ using System.Security.Claims;
 using System.Collections.Generic;
 using EastFive.Security.SessionServer;
 using BlackBarLabs.Extensions;
+using EastFive.Api.Azure.Credentials;
 
-namespace EastFive.Security.CredentialProvider.Facebook
+namespace EastFive.Api.Azure.Credentials
 {
-    [SessionServer.Attributes.IntegrationName("Facebook")]
+    [Security.SessionServer.Attributes.IntegrationName("Facebook")]
     public class FacebookCredentialProvider : IProvideLogin
     {
-        [SessionServer.Attributes.IntegrationName("Facebook")]
+        [Security.SessionServer.Attributes.IntegrationName("Facebook")]
         public static Task<TResult> InitializeAsync<TResult>(
             Func<IProvideLogin, TResult> onProvideLogin,
             Func<IProvideAuthorization, TResult> onProvideAuthorization,
@@ -23,7 +24,7 @@ namespace EastFive.Security.CredentialProvider.Facebook
 
         public CredentialValidationMethodTypes Method => CredentialValidationMethodTypes.Facebook;
 
-        public Type CallbackController => typeof(SessionServer.Api.Controllers.ResponseController);
+        public Type CallbackController => typeof(Controllers.ResponseController);
 
         public async Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> extraParams,
             Func<string, Guid?, Guid?, IDictionary<string, string>, TResult> onSuccess,

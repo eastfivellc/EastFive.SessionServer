@@ -10,31 +10,33 @@ using BlackBarLabs;
 using System;
 using EastFive.Api.Services;
 using BlackBarLabs.Extensions;
+using EastFive.Api.Azure.Controllers;
+using EastFive.Security.SessionServer.Api.Resources.Queries;
 
-namespace EastFive.Security.SessionServer.Api.Controllers
+namespace EastFive.Api.Azure.Credentials.Controllers
 {
     [RoutePrefix("api")]
     public class TokenCredentialController : BaseController
     {
         #region Get
 
-        public IHttpActionResult Get([FromUri]Resources.Queries.TokenCredentialQuery model)
+        public IHttpActionResult Get([FromUri]TokenCredentialQuery model)
         {
             return new HttpActionResult(() => model.QueryAsync(this.Request, this.Url));
         }
 
         #endregion
 
-        public IHttpActionResult Post([FromBody]Resources.TokenCredential model)
+        public IHttpActionResult Post([FromBody]TokenCredential model)
         {
             return new HttpActionResult(() => model.CreateAsync(this.Request, this.Url));
         }
-        public IHttpActionResult Put([FromBody]Resources.TokenCredential model)
+        public IHttpActionResult Put([FromBody]TokenCredential model)
         {
             return new HttpActionResult(() => model.UpdateAsync(this.Request, this.Url));
         }
 
-        public IHttpActionResult Delete([FromBody]Resources.Queries.TokenCredentialQuery model)
+        public IHttpActionResult Delete([FromBody]TokenCredentialQuery model)
         {
             return new HttpActionResult(() => model.DeleteAsync(this.Request, this.Url));
         }

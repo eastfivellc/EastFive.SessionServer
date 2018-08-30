@@ -4,7 +4,7 @@ using System.Runtime.Serialization;
 using BlackBarLabs.Api.Resources;
 using Newtonsoft.Json;
 
-namespace EastFive.Security.SessionServer.Api.Resources
+namespace EastFive.Api.Azure.Credentials.Resources
 {
     [DataContract]
     public class UserInfo : BlackBarLabs.Api.ResourceBase

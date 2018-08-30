@@ -13,14 +13,17 @@ using System.Web.Http.Routing;
 using BlackBarLabs;
 using EastFive.Api.Services;
 using EastFive.Security.SessionServer.Configuration;
+using EastFive.Api.Azure.Credentials.Resources.Queries;
+using EastFive.Security.SessionServer;
+using EastFive.Security.SessionServer.Api.Resources;
 
-namespace EastFive.Security.SessionServer.Api
+namespace EastFive.Api.Azure.Credentials
 {
     public static class InviteCredentialActions
     {
         #region Queries
         
-        public static async Task<HttpResponseMessage> QueryAsync(this Resources.Queries.InviteCredentialQuery query,
+        public static async Task<HttpResponseMessage> QueryAsync(this InviteCredentialQuery query,
             HttpRequestMessage request, UrlHelper urlHelper)
         {
             return await query.ParseAsync(request,

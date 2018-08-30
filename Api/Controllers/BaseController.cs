@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http.Controllers;
 
-namespace EastFive.Security.SessionServer.Api.Controllers
+namespace EastFive.Api.Azure.Controllers
 {
     public class BaseController : BlackBarLabs.Api.Controllers.BaseController
     {
