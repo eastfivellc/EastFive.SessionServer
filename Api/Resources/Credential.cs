@@ -4,7 +4,7 @@ using System.Runtime.Serialization;
 using BlackBarLabs.Api.Resources;
 using Newtonsoft.Json;
 
-namespace EastFive.Api.Azure.Credentials.Api.Resources
+namespace EastFive.Api.Azure.Credentials.Resources
 {
     [DataContract]
     public class Credential : BlackBarLabs.Api.ResourceBase

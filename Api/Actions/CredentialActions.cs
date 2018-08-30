@@ -11,7 +11,7 @@ using BlackBarLabs.Api;
 using BlackBarLabs.Extensions;
 using EastFive.Api.Services;
 using EastFive.Security.SessionServer.Configuration;
-using EastFive.Api.Azure.Credentials.Api.Resources;
+using EastFive.Api.Azure.Credentials.Resources;
 using EastFive.Security.SessionServer;
 
 namespace EastFive.Api.Azure.Credentials
