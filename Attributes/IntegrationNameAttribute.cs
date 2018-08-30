@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EastFive.Security.SessionServer.Attributes
+namespace EastFive.Api.Azure.Credentials.Attributes
 {
     public class IntegrationNameAttribute : Attribute
     {

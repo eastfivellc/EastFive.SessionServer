@@ -14,7 +14,6 @@ using EastFive.Security.SessionServer.Exceptions;
 using System.Web.Http;
 using Microsoft.ApplicationInsights;
 using EastFive.Extensions;
-using EastFive.Azure.Api;
 using EastFive.Security.SessionServer;
 
 namespace EastFive.Api.Azure.Credentials.Controllers
@@ -38,7 +37,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
 
             return await Request.GetApplication(
                 httpApp => ProcessRequestAsync(httpApp as Application, Enum.GetName(typeof(CredentialValidationMethodTypes), result.method), kvps.ToDictionary(),
-                    location => Redirect(location),
+                    (location, why) => Redirect(location),
                     (code, body, reason) => this.Request.CreateResponse(code, body)
                         .AddReason(reason)
                         .ToActionResult()),
@@ -64,10 +63,9 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                     () => (new KeyValuePair<string, string>()).AsArray().ToTask()));
             var allrequestParams = kvps.Concat(bodyValues).ToDictionary();
 
-
             return await Request.GetApplication(
                 httpApp => ProcessRequestAsync(httpApp as Application, Enum.GetName(typeof(CredentialValidationMethodTypes), result.method), allrequestParams,
-                    location => Redirect(location),
+                    (location, why) => Redirect(location),
                     (code, body, reason) => this.Request.CreateResponse(code, body)
                         .AddReason(reason)
                         .ToActionResult()),
@@ -75,10 +73,10 @@ namespace EastFive.Api.Azure.Credentials.Controllers
         }
         
         public static async Task<TResult> ProcessRequestAsync<TResult>(Application application, string method, IDictionary<string, string> values,
-            Func<Uri, TResult> onRedirect,
+            Func<Uri, string, TResult> onRedirect,
             Func<HttpStatusCode, string, string, TResult> onResponse)
         {
-            var telemetry = Web.Configuration.Settings.GetString(SessionServer.Configuration.AppSettings.ApplicationInsightsKey,
+            var telemetry = Web.Configuration.Settings.GetString(Security.SessionServer.Configuration.AppSettings.ApplicationInsightsKey,
                 (applicationInsightsKey) =>
                 {
                     return new TelemetryClient { InstrumentationKey = applicationInsightsKey };
@@ -91,23 +89,23 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             var context = Context.LoadFromConfiguration();
 
             var response = await await context.Sessions.CreateOrUpdateWithAuthenticationAsync(
-                    method, values,
+                    application, method, values,
                 async (sessionId, authorizationId, jwtToken, refreshToken, action, extraParams, redirectUrl) =>
                 {
                     telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Created Authentication.  Creating response.");
                     var resp = await CreateResponse(context, method, action, sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUrl, onRedirect, onResponse, telemetry);
                     return resp;
                 },
-                (location) =>
+                (location, reason) =>
                 {
                     telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - location: {location.AbsolutePath}");
                     if (location.IsDefaultOrNull())
-                        return Web.Configuration.Settings.GetUri(SessionServer.Configuration.AppSettings.LandingPage,
-                            (redirect) => onRedirect(location),
+                        return Web.Configuration.Settings.GetUri(Security.SessionServer.Configuration.AppSettings.LandingPage,
+                            (redirect) => onRedirect(location, reason),
                             (why) => onResponse(HttpStatusCode.BadRequest, why, $"Location was null")).ToTask();
                     if (location.Query.IsNullOrWhiteSpace())
                         location = location.SetQueryParam("cache", Guid.NewGuid().ToString("N"));
-                    return onRedirect(location).ToTask();
+                    return onRedirect(location, reason).ToTask();
                 },
                 (why) =>
                 {
@@ -146,7 +144,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             string method, AuthenticationActions action,
             Guid sessionId, Guid? authorizationId, string jwtToken, string refreshToken,
             IDictionary<string, string> extraParams, Uri redirectUrl,
-            Func<Uri, TResult> onRedirect,
+            Func<Uri, string, TResult> onRedirect,
             Func<HttpStatusCode, string, string, TResult> onResponse,
             TelemetryClient telemetry)
         {
@@ -158,7 +156,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                 {
                     telemetry.TrackEvent($"CreateResponse - redirectUrlSelected1: {redirectUrlSelected.AbsolutePath}");
                     telemetry.TrackEvent($"CreateResponse - redirectUrlSelected2: {redirectUrlSelected.AbsoluteUri}");
-                    return onRedirect(redirectUrlSelected);
+                    return onRedirect(redirectUrlSelected, null);
                 },
                 (paramName, why) =>
                 {

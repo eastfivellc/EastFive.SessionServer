@@ -1,4 +1,5 @@
 ﻿using BlackBarLabs.Extensions;
+using EastFive.Api.Azure.Controllers;
 using EastFive.Api.Controllers;
 using EastFive.Collections.Generic;
 using EastFive.Linq;
@@ -33,7 +34,7 @@ namespace EastFive.Azure
             Func<string, TResult> onFailure)
         {
             // TODO: Security
-            return Api.Controllers.ProcessStageGroupController.stages.First(
+            return ProcessStageGroupController.stages.First(
                 async (stageGroup, nextStageGroup) =>
                 {
                     if (stageGroup.Id.UUID != processStageGroupId)

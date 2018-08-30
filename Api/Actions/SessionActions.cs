@@ -10,8 +10,9 @@ using System.Web.Http;
 
 using BlackBarLabs.Api;
 using System.Web.Http.Routing;
+using EastFive.Security.SessionServer;
 
-namespace EastFive.Security.SessionServer.Api
+namespace EastFive.Api.Azure.Credentials
 {
     public static class SessionActions
     {
@@ -87,30 +88,35 @@ namespace EastFive.Security.SessionServer.Api
             };
         }
 
-        public static async Task<HttpResponseMessage> UpdateAsync(this Api.Resources.Session resource,
+        public static Task<HttpResponseMessage> UpdateAsync(this Resources.Session resource,
             HttpRequestMessage request)
         {
             var context = request.GetSessionServerContext();
             // Can't update a session that does not exist
             var method = resource.Method;
-            var session = await context.Sessions.UpdateWithAuthenticationAsync(resource.Id.ToGuid().Value,
-                method, resource.ResponseToken,
-                (sessionId, authId, token, refreshToken, actions, extraParams, redirect) =>
+            return request.GetApplication(
+                async application =>
                 {
-                    resource.AuthorizationId = authId;
-                    resource.HeaderName = EastFive.Api.Configuration.SecurityDefinitions.AuthorizationHeader;
-                    resource.Token = token;
-                    resource.RefreshToken = refreshToken;
-                    resource.ExtraParams = extraParams;
-                    return request.CreateResponse(HttpStatusCode.Accepted, resource);
+                    var session = await context.Sessions.UpdateWithAuthenticationAsync(resource.Id.ToGuid().Value,
+                        application as Application, method, resource.ResponseToken,
+                        (sessionId, authId, token, refreshToken, actions, extraParams, redirect) =>
+                        {
+                            resource.AuthorizationId = authId;
+                            resource.HeaderName = EastFive.Api.Configuration.SecurityDefinitions.AuthorizationHeader;
+                            resource.Token = token;
+                            resource.RefreshToken = refreshToken;
+                            resource.ExtraParams = extraParams;
+                            return request.CreateResponse(HttpStatusCode.Accepted, resource);
+                        },
+                        (location, why) => request.CreateRedirectResponse(location).AddReason(why),
+                        (why) => request.CreateResponse(HttpStatusCode.NotFound).AddReason(why),
+                        () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("User in token is not connected to this system"),
+                        (why) => request.CreateResponse(HttpStatusCode.BadGateway).AddReason(why),
+                        (why) => request.CreateResponseConfiguration(string.Empty, why),
+                        (why) => request.CreateResponseUnexpectedFailure(why));
+                    return session;
                 },
-                (location) => request.CreateRedirectResponse(location),
-                (why) => request.CreateResponse(HttpStatusCode.NotFound).AddReason(why),
-                () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("User in token is not connected to this system"),
-                (why) => request.CreateResponse(HttpStatusCode.BadGateway).AddReason(why),
-                (why) => request.CreateResponseConfiguration(string.Empty, why),
-                (why) => request.CreateResponseUnexpectedFailure(why));
-            return session;
+                () => throw new NotImplementedException());
         }
 
         public static async Task<HttpResponseMessage> DeleteAsync(this Resources.Queries.SessionQuery query,

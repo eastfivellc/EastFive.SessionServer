@@ -1,6 +1,8 @@
 ﻿using BlackBarLabs;
 using BlackBarLabs.Extensions;
 using BlackBarLabs.Linq;
+using EastFive.Api.Azure.Credentials.Attributes;
+using EastFive.Api.Azure.Credentials.Controllers;
 using EastFive.Collections.Generic;
 using EastFive.Security.SessionServer;
 using System;
@@ -12,9 +14,9 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EastFive.Security.CredentialProvider
+namespace EastFive.Api.Azure.Credentials
 {
-    [SessionServer.Attributes.IntegrationName(InternalProvider.IntegrationName)]
+    [IntegrationName(InternalProvider.IntegrationName)]
     public class InternalProvider : IProvideLogin
     {
         public const string IntegrationName = "Internal";
@@ -33,7 +35,7 @@ namespace EastFive.Security.CredentialProvider
             Func<InternalProvider, TResult> onLoaded,
             Func<string, TResult> onConfigurationNotAvailable)
         {
-            return Web.Configuration.Settings.GetString(SessionServer.Configuration.AppSettings.OAuth.Lightspeed.ClientKey,
+            return Web.Configuration.Settings.GetString(Security.SessionServer.Configuration.AppSettings.OAuth.Lightspeed.ClientKey,
                 (clientKey) =>
                 {
                     return onLoaded(new InternalProvider());
@@ -41,7 +43,7 @@ namespace EastFive.Security.CredentialProvider
                 onConfigurationNotAvailable);
         }
 
-        [SessionServer.Attributes.IntegrationName(IntegrationName)]
+        [Attributes.IntegrationName(IntegrationName)]
         public static async Task<TResult> InitializeAsync<TResult>(
             Func<IProvideAuthorization, TResult> onProvideAuthorization,
             Func<TResult> onProvideNothing,
@@ -91,12 +93,12 @@ namespace EastFive.Security.CredentialProvider
 
         #region IProvideLogin
 
-        public Type CallbackController => typeof(SessionServer.Api.Controllers.IntegrationController);
+        public Type CallbackController => typeof(IntegrationController);
 
         public Uri GetLoginUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
         {
-            return controllerToLocation(typeof(Api.Controllers.InternalIntegrationController))
-                .AddQueryParameter(Api.Controllers.InternalIntegrationController.StateQueryParameter, state.ToString());
+            return controllerToLocation(typeof(EastFive.Api.Controllers.InternalIntegrationController))
+                .AddQueryParameter(EastFive.Api.Controllers.InternalIntegrationController.StateQueryParameter, state.ToString());
                 //.AddQueryParameter("redirect", responseControllerLocation.AbsoluteUri);
         }
 

@@ -22,36 +22,25 @@ using EastFive.Security.SessionServer.Exceptions;
 using EastFive.Extensions;
 using EastFive.Security.SessionServer.Api.Controllers;
 using EastFive.Collections.Generic;
+using EastFive.Api.Controllers;
 
 namespace EastFive.Api.Azure.Credentials.Controllers
 {
     [FunctionViewController(Route = "InternalIntegrationResponse")]
-    public class InternalIntegrationResponseController : ResponseController
+    public static class InternalIntegrationResponseController
     {
-        public override async Task<IHttpActionResult> Get(Application application, [FromUri]ResponseResult query)
-        {
-            var kvps = Request.GetQueryNameValuePairs();
-            var action = await ProcessRequestAsync(applicationm, Security.CredentialProvider.InternalProvider.IntegrationName, kvps.ToDictionary(),
-                (location) => Redirect(location),
-                (code, body, reason) =>
-                    this.Request
-                        .CreateResponse(code, body)
-                        .AddReason(reason)
-                        .ToActionResult());
-            return action;
-        }
-
         [HttpGet]
-        public static async Task<HttpResponseMessage> GetResponse([QueryDefaultParameter][Required]Guid integrationId, [Required]string resourceTypes,
-            HttpRequestMessage request, Api.Controllers.RedirectResponse onRedirect)
+        public static async Task<HttpResponseMessage> GetResponse(Application application, 
+            [QueryDefaultParameter][Required]Guid integrationId, [Required]string resourceTypes,
+            HttpRequestMessage request, RedirectResponse onRedirect)
         {
             var extraParams = new Dictionary<string, string>()
             {
-                { Security.CredentialProvider.InternalProvider.integrationIdKey, integrationId.ToString() },
-                { Security.CredentialProvider.InternalProvider.resourceTypes, resourceTypes },
+                { InternalProvider.integrationIdKey, integrationId.ToString() },
+                { InternalProvider.resourceTypes, resourceTypes },
             };
-            return await ProcessRequestAsync(Security.CredentialProvider.InternalProvider.IntegrationName, extraParams,
-                (location) => onRedirect(location),
+            return await ResponseController.ProcessRequestAsync(application, InternalProvider.IntegrationName, extraParams,
+                (location, why) => onRedirect(location, why),
                 (code, body, reason) =>
                     request
                         .CreateResponse(code, body)

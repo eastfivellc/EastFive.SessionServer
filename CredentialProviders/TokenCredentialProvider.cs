@@ -7,19 +7,19 @@ using EastFive.Security.SessionServer.Persistence;
 using EastFive.Api.Services;
 using EastFive.Security.SessionServer;
 
-namespace EastFive.Security.CredentialProvider.Token
+namespace EastFive.Api.Azure.Credentials
 {
-    [SessionServer.Attributes.IntegrationName("Token")]
+    [Attributes.IntegrationName("Token")]
     public class TokenCredentialProvider : IProvideAuthorization, IProvideLoginManagement
     {
-        private SessionServer.Persistence.DataContext dataContext;
+        private Security.SessionServer.Persistence.DataContext dataContext;
 
         public TokenCredentialProvider()
         {
-            this.dataContext = new DataContext(SessionServer.Configuration.AppSettings.Storage);
+            this.dataContext = new DataContext(Security.SessionServer.Configuration.AppSettings.Storage);
         }
 
-        [SessionServer.Attributes.IntegrationName("Token")]
+        [Attributes.IntegrationName("Token")]
         public static Task<TResult> InitializeAsync<TResult>(
             Func<IProvideAuthorization, TResult> onProvideAuthorization,
             Func<TResult> onProvideNothing,
@@ -30,7 +30,7 @@ namespace EastFive.Security.CredentialProvider.Token
 
         public CredentialValidationMethodTypes Method => CredentialValidationMethodTypes.Token;
 
-        public Type CallbackController => typeof(SessionServer.Api.Controllers.TokenController);
+        public Type CallbackController => typeof(Controllers.TokenController);
 
         public Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> extraParams,
             Func<string, Guid?, Guid?, IDictionary<string, string>, TResult> onSuccess,

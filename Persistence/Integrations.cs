@@ -21,6 +21,7 @@ using EastFive.Collections.Generic;
 using EastFive.Linq;
 using EastFive.Security.SessionServer;
 using EastFive.Extensions;
+using EastFive.Api.Azure.Credentials;
 
 namespace EastFive.Azure.Persistence.Persistence
 {
@@ -185,11 +186,11 @@ namespace EastFive.Azure.Persistence.Persistence
                                                 var authorizationRequest = integration.Value.Value;
                                                 if (!authorizationRequest.authorizationId.HasValue)
                                                     return false;
-                                                if (!integration.Key.parameters.ContainsKey(Security.CredentialProvider.LightspeedProvider.accountIdKey))
+                                                if (!integration.Key.parameters.ContainsKey(LightspeedProvider.accountIdKey))
                                                     return false;
                                                 return await this.dataContext.CredentialMappings.CreateCredentialMappingAsync(
                                                         Guid.NewGuid(), integration.Key.method, 
-                                                        integration.Key.parameters[Security.CredentialProvider.LightspeedProvider.accountIdKey],
+                                                        integration.Key.parameters[LightspeedProvider.accountIdKey],
                                                         authorizationRequest.authorizationId.Value,
                                                     () =>
                                                     {
@@ -274,14 +275,14 @@ namespace EastFive.Azure.Persistence.Persistence
         }
 
         public async Task<TResult> DeleteAsync<TResult>(Guid accessId,
-            Func<CredentialValidationMethodTypes, IDictionary<string, string>, TResult> onDeleted,
+            Func<Api.Azure.Credentials.CredentialValidationMethodTypes, IDictionary<string, string>, TResult> onDeleted,
             Func<TResult> actorNotFound)
         {
             var results = await repository.DeleteIfAsync<AccessDocument, TResult>(accessId,
                 async (doc, deleteAsync) =>
                 {
                     await deleteAsync();
-                    Enum.TryParse(doc.Method, out CredentialValidationMethodTypes method);
+                    Enum.TryParse(doc.Method, out Api.Azure.Credentials.CredentialValidationMethodTypes method);
                     return await repository.DeleteIfAsync<AccessDocument, TResult>(doc.LookupId, doc.Method,
                         async (lookupDoc, deleteLookupAsync) =>
                         {

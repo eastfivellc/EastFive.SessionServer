@@ -7,12 +7,12 @@ using EastFive.Security.SessionServer.Persistence;
 using EastFive.Api.Services;
 using EastFive.Security.SessionServer;
 
-namespace EastFive.Security.CredentialProvider.Voucher
+namespace EastFive.Api.Azure.Credentials
 {
-    [SessionServer.Attributes.IntegrationName("Voucher")]
+    [Attributes.IntegrationName("Voucher")]
     public class VoucherCredentialProvider : IProvideAuthorization
     {
-        [SessionServer.Attributes.IntegrationName("Voucher")]
+        [Attributes.IntegrationName("Voucher")]
         public static Task<TResult> InitializeAsync<TResult>(
             Func<IProvideAuthorization, TResult> onProvideAuthorization,
             Func<TResult> onProvideNothing,
@@ -23,7 +23,7 @@ namespace EastFive.Security.CredentialProvider.Voucher
 
         public CredentialValidationMethodTypes Method => CredentialValidationMethodTypes.SAML;
 
-        public Type CallbackController => typeof(SessionServer.Api.Controllers.TokenController);
+        public Type CallbackController => typeof(Controllers.TokenController);
 
         public Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> extraParams,
             Func<string, Guid?, Guid?, IDictionary<string, string>, TResult> onSuccess,
@@ -39,7 +39,7 @@ namespace EastFive.Security.CredentialProvider.Voucher
             //    return invalidCredentials("ProviderId given does not match trustred ProviderId");
 
             var token = extraParams["token"]; // TODO: Figure out real value (token is placeholder)
-            return Utilities.ValidateToken(token,
+            return Security.CredentialProvider.Voucher.Utilities.ValidateToken(token,
                 (stateId) =>
                 {
                     return onSuccess(stateId.ToString("N"), stateId, default(Guid?), null);

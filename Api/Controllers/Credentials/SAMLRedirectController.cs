@@ -15,11 +15,12 @@ using BlackBarLabs.Extensions;
 using System.Xml.Linq;
 using Newtonsoft.Json;
 using System.Dynamic;
-using EastFive.Security.CredentialProvider.SAML;
 using EastFive.Collections.Generic;
 using EastFive.Linq;
+using EastFive.Api.Azure.Controllers;
+using EastFive.Security.SessionServer;
 
-namespace EastFive.Security.SessionServer.Api.Controllers
+namespace EastFive.Api.Azure.Credentials.Controllers
 {
     // aadb2c/SAMLRedirect?tokenid=ID7ee36a406286079a7237b23dd7647d95b8d42ddbcde4fbe8030000015d5790a407&agentid=e924bba8
     [RoutePrefix("aadb2c")]
@@ -76,19 +77,22 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 {
                     var context = Request.GetSessionServerContext();
                     return await await context.Sessions.UpdateWithAuthenticationAsync<Task<IHttpActionResult>>(Guid.NewGuid(),
-                        Enum.GetName(typeof(CredentialValidationMethodTypes), CredentialValidationMethodTypes.SAML), tokens,
+                        null, Enum.GetName(typeof(CredentialValidationMethodTypes), CredentialValidationMethodTypes.SAML), tokens,
                         (sessionId, authorizationId, token, refreshToken, action, extraParams, redirectUri) =>
                         {
                             var config = Library.configurationManager;
                             var redirectResponse = config.GetRedirectUriAsync<IHttpActionResult>(context,
                                 Enum.GetName(typeof(CredentialValidationMethodTypes), CredentialValidationMethodTypes.SAML), action,
                                 sessionId, authorizationId, token, refreshToken, extraParams, redirectUri,
-                                (redirectUrl) => Redirect(redirectUrl),
+                                (redirectUrl) => Request.CreateRedirectResponse(redirectUrl).ToActionResult(),
                                 (paramName, why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult(),
                                 (why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult());
                             return redirectResponse;
                         },
-                        (location) => ((IHttpActionResult)Redirect(location)).ToTask(),
+                        (location, why) => Request.CreateRedirectResponse(location)
+                                    .AddReason(why)
+                                    .ToActionResult()
+                                    .ToTask(),
                         (why) => this.Request.CreateResponse(HttpStatusCode.BadRequest)
                                     .AddReason($"Invalid token:{why}")
                                     .ToActionResult()

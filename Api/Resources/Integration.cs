@@ -4,7 +4,7 @@ using System.Runtime.Serialization;
 
 using Newtonsoft.Json;
 
-namespace EastFive.Security.SessionServer.Api.Resources
+namespace EastFive.Api.Azure.Credentials.Resources
 {
     [DataContract]
     public class Integration : AuthorizationRequest

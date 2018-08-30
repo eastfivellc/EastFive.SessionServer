@@ -20,9 +20,9 @@ using System.Security.Claims;
 using EastFive.Security.SessionServer;
 using System.Collections;
 
-namespace EastFive.Security.CredentialProvider.Ping
+namespace EastFive.Api.Azure.Credentials
 {
-    [SessionServer.Attributes.IntegrationName("Ping")]
+    [Attributes.IntegrationName("Ping")]
     public class PingProvider : IProvideLogin
     {
         public const string TokenId = "tokenid";
@@ -38,7 +38,7 @@ namespace EastFive.Security.CredentialProvider.Ping
             //return "https://sso.connect.pingidentity.com/sso/TXS/2.0/2/" + pingConnectToken;
         }
 
-        [SessionServer.Attributes.IntegrationName("Ping")]
+        [Attributes.IntegrationName("Ping")]
         public static Task<TResult> InitializeAsync<TResult>(
             Func<IProvideAuthorization, TResult> onProvideAuthorization,
             Func<TResult> onProvideNothing,
@@ -49,7 +49,7 @@ namespace EastFive.Security.CredentialProvider.Ping
 
         public CredentialValidationMethodTypes Method => CredentialValidationMethodTypes.Ping;
 
-        public Type CallbackController => typeof(SessionServer.Api.Controllers.PingResponseController);
+        public Type CallbackController => typeof(Controllers.PingResponseController);
 
         public async Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> extraParams,
             Func<string, Guid?, Guid?, IDictionary<string, string>, TResult> onSuccess,
@@ -65,10 +65,10 @@ namespace EastFive.Security.CredentialProvider.Ping
                 return onInvalidCredentials("AgentId was not provided");
             var tokenId = extraParams[PingProvider.TokenId];
             var agentId = extraParams[PingProvider.AgentId];
-            return await Web.Configuration.Settings.GetString<Task<TResult>>(SessionServer.Configuration.AppSettings.PingIdentityAthenaRestApiKey,
+            return await Web.Configuration.Settings.GetString<Task<TResult>>(Security.SessionServer.Configuration.AppSettings.PingIdentityAthenaRestApiKey,
                 async (restApiKey) =>
                 {
-                    return await Web.Configuration.Settings.GetString(SessionServer.Configuration.AppSettings.PingIdentityAthenaRestAuthUsername,
+                    return await Web.Configuration.Settings.GetString(Security.SessionServer.Configuration.AppSettings.PingIdentityAthenaRestAuthUsername,
                         async (restAuthUsername) =>
                         {
                             using (var httpClient = new HttpClient())
@@ -99,7 +99,7 @@ namespace EastFive.Security.CredentialProvider.Ping
                                 }
                                 else
                                 {
-                                    return onFailure(content);
+                                    return onFailure($"{content} TokenId: {tokenId}, AgentId: {agentId}");
                                 }
                             }
                         },

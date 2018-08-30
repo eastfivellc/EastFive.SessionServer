@@ -8,10 +8,12 @@ using System.Web;
 using System.IdentityModel.Tokens.Jwt;
 using EastFive.Security.SessionServer;
 using BlackBarLabs.Extensions;
+using EastFive.Api.Azure.Credentials;
+using EastFive.Api.Azure.Credentials.Attributes;
 
-namespace EastFive.Security.CredentialProvider.AzureADB2C
+namespace EastFive.Api.Azure.Credentials
 {
-    [SessionServer.Attributes.IntegrationName("Password")]
+    [IntegrationName("Password")]
     public class AzureADB2CProvider : IProvideLogin, IProvideLoginManagement
     {
         #region Setup
@@ -40,13 +42,13 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
             Func<AzureADB2CProvider, TResult> onLoaded,
             Func<string, TResult> onConfigurationNotAvailable)
         {
-            return Web.Configuration.Settings.GetString(SessionServer.Configuration.AppSettings.AADB2CAudience,
+            return Web.Configuration.Settings.GetString(Security.SessionServer.Configuration.AppSettings.AADB2CAudience,
                 (audience) =>
                 {
-                    return Web.Configuration.Settings.GetUri(SessionServer.Configuration.AppSettings.AADB2CSigninConfiguration,
+                    return Web.Configuration.Settings.GetUri(Security.SessionServer.Configuration.AppSettings.AADB2CSigninConfiguration,
                         (signinConfiguration) =>
                         {
-                            return Web.Configuration.Settings.GetUri(SessionServer.Configuration.AppSettings.AADB2CSignupConfiguration,
+                            return Web.Configuration.Settings.GetUri(Security.SessionServer.Configuration.AppSettings.AADB2CSignupConfiguration,
                                 (signupConfiguration) =>
                                 {
                                     return EastFive.AzureADB2C.B2CGraphClient.LoadFromConfig(
@@ -65,7 +67,7 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
                 onConfigurationNotAvailable);
         }
 
-        [SessionServer.Attributes.IntegrationName("Password")]
+        [IntegrationName("Password")]
         public static async Task<TResult> InitializeAsync<TResult>(
             Func<IProvideAuthorization, TResult> onProvideAuthorization,
             Func<TResult> onProvideNothing,
@@ -161,7 +163,7 @@ namespace EastFive.Security.CredentialProvider.AzureADB2C
 
         #region IProvideLogin
 
-        public Type CallbackController => typeof(SessionServer.Api.Controllers.OpenIdResponseController);
+        public Type CallbackController => typeof(Controllers.OpenIdResponseController);
             //typeof(SessionServer.Api.Controllers.AADB2CResponseController);
 
         public Uri GetLoginUrl(Guid state, Uri responseLocation, Func<Type, Uri> controllerToLocation)

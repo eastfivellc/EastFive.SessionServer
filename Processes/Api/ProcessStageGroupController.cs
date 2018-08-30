@@ -16,9 +16,9 @@ using EastFive.Api;
 using EastFive.Azure.Synchronization;
 
 using BlackBarLabs.Extensions;
-using EastFive.Azure.Api.Resources;
+using EastFive.Azure;
 
-namespace EastFive.Azure.Api.Controllers
+namespace EastFive.Api.Azure.Controllers
 {
     [FunctionViewController(Route = "ProcessStageGroup")]
     public class ProcessStageGroupController

@@ -15,7 +15,7 @@ using BlackBarLabs.Api.Resources;
 using System.Web.Http.Routing;
 using EastFive.Security.SessionServer;
 using EastFive.Extensions;
-using EastFive.Security.SessionServer.Attributes;
+using EastFive.Api.Azure.Credentials.Attributes;
 
 namespace EastFive.Api.Azure
 {
@@ -92,6 +92,21 @@ namespace EastFive.Api.Azure
             return onSuccess(provider);
         }
         
+        internal TResult GetLoginProvider<TResult>(Type providerType,
+            Func<IProvideLogin, TResult> onSuccess,
+            Func<TResult> onCredintialSystemNotAvailable,
+            Func<string, TResult> onFailure)
+        {
+            this.InitializationWait();
+
+            var methodName = providerType.GetCustomAttribute<IntegrationNameAttribute>().Name;
+            if (!ServiceConfiguration.loginProviders.ContainsKey(methodName))
+                return onCredintialSystemNotAvailable();
+
+            var provider = ServiceConfiguration.loginProviders[methodName];
+            return onSuccess(provider);
+        }
+
         protected void AddProvider(Func<Func<object, object[]>, Func<object[]>, Func<string, object[]>, Task<object[]>> initializeAsync)
         {
             var initializersTask = initializationChain;
@@ -132,7 +147,7 @@ namespace EastFive.Api.Azure
             Func<TResult> onNoMonitoring)
         {
             StoreMonitoringDelegate callback = (monitorRecordId, authenticationId, when, method, controllerName, queryString) =>
-                Api.Monitoring.MonitoringDocument.CreateAsync(monitorRecordId, authenticationId,
+                EastFive.Api.Azure.Monitoring.MonitoringDocument.CreateAsync(monitorRecordId, authenticationId,
                         when, method, controllerName, queryString, 
                         AzureContext.DataContext.AzureStorageRepository,
                         () => true);

@@ -11,6 +11,7 @@ using BlackBarLabs.Api;
 using BlackBarLabs.Extensions;
 using EastFive.Api.Services;
 using EastFive.Security.SessionServer.Configuration;
+using EastFive.Api.Azure.Credentials.Controllers;
 
 namespace EastFive.Security.SessionServer.Api
 {
@@ -36,7 +37,7 @@ namespace EastFive.Security.SessionServer.Api
                 return request.CreateResponse(HttpStatusCode.Conflict).AddReason("Actor is null");
 
             var context = request.GetSessionServerContext();
-            var callbackUrl = url.GetLocation<Controllers.OpenIdResponseController>();
+            var callbackUrl = url.GetLocation<OpenIdResponseController>();
             
             var creationResults = await context.PasswordCredentials.CreatePasswordCredentialsAsync(
                 credential.Id.UUID, actorId.Value,
@@ -133,11 +134,11 @@ namespace EastFive.Security.SessionServer.Api
                     .AddReason(why).AsEnumerable().ToArray());
         }
 
-        private static Resources.PasswordCredential Convert(PasswordCredential passwordCredential, UrlHelper urlHelper)
+        private static Resources.PasswordCredential Convert(EastFive.Api.Azure.Credentials.PasswordCredential passwordCredential, UrlHelper urlHelper)
         {
             return new Resources.PasswordCredential
             {
-                Id = urlHelper.GetWebId<Controllers.PasswordCredentialController>(passwordCredential.id),
+                Id = urlHelper.GetWebId<PasswordCredentialController>(passwordCredential.id),
                 Actor = passwordCredential.actorId,
                 UserId = passwordCredential.userId,
                 IsEmail = passwordCredential.isEmail,

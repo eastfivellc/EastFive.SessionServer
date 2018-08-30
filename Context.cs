@@ -15,6 +15,7 @@ using BlackBarLabs.Api;
 using EastFive.Collections.Generic;
 using EastFive.Extensions;
 using EastFive.Serialization;
+using EastFive.Api.Azure.Credentials;
 
 namespace EastFive.Security.SessionServer
 {
@@ -69,21 +70,6 @@ namespace EastFive.Security.SessionServer
             return onSuccess(provider);
         }
 
-        internal static TResult GetLoginProvider<TResult>(Type providerType,
-            Func<IProvideLogin, TResult> onSuccess,
-            Func<TResult> onCredintialSystemNotAvailable,
-            Func<string, TResult> onFailure)
-        {
-            if (ServiceConfiguration.loginProviders.IsDefault())
-                return onFailure("Authentication system not initialized.");
-
-            var methodName = providerType.GetCustomAttribute<Attributes.IntegrationNameAttribute>().Name;
-            if (!ServiceConfiguration.loginProviders.ContainsKey(methodName))
-                return onCredintialSystemNotAvailable();
-
-            var provider = ServiceConfiguration.loginProviders[methodName];
-            return onSuccess(provider);
-        }
 
         //internal TResult GetAccessProvider<TResult>(CredentialValidationMethodTypes method,
         //    Func<IProvideAccess, TResult> onSuccess,

@@ -17,8 +17,10 @@ using EastFive.Azure.Synchronization;
 using BlackBarLabs.Api;
 using BlackBarLabs.Extensions;
 using BlackBarLabs.Api.Resources;
+using EastFive.Api.Azure;
+using EastFive.Azure;
 
-namespace EastFive.Azure.Api.Controllers
+namespace EastFive.Api.Azure.Controllers
 {
     [FunctionViewController(Route = "ProcessStep")]
     public class ProcessStepController
@@ -69,7 +71,7 @@ namespace EastFive.Azure.Api.Controllers
 
         #endregion
 
-        [EastFive.Api.HttpPost(Type = typeof(Api.Resources.ProcessStep), MatchAllBodyParameters = false)]
+        [EastFive.Api.HttpPost(Type = typeof(Resources.ProcessStep), MatchAllBodyParameters = false)]
         public static Task<HttpResponseMessage> CreateAsync(
                 [Property(Name = Resources.ProcessStep.IdPropertyName)]Guid processId,
                 [PropertyOptional(Name = Resources.ProcessStep.PreviousPropertyName)]Guid? previousStepId,
@@ -87,7 +89,7 @@ namespace EastFive.Azure.Api.Controllers
             UnauthorizedResponse onUnauthorized,
             GeneralConflictResponse onFailure)
         {
-            return Processes.CreateAsync(processId, processStageId, resourceId, createdOn,
+            return EastFive.Azure.Processes.CreateAsync(processId, processStageId, resourceId, createdOn,
                     resourceKeys.NullToEmpty().Zip(resources.NullToEmpty(), (k,id) => k.PairWithValue(id)).ToArray(),
                     previousStepId, confirmedWhen, confirmedById,
                     security,

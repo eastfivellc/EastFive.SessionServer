@@ -4,12 +4,11 @@ using System.Runtime.Serialization;
 using BlackBarLabs.Api.Resources;
 using Newtonsoft.Json;
 
-namespace EastFive.Security.SessionServer.Api.Resources.Queries
+namespace EastFive.Api.Azure.Credentials.Resources.Queries
 {
     [DataContract]
     public class IntegrationQuery : BlackBarLabs.Api.ResourceQueryBase
     {
-
         [JsonProperty(PropertyName = "actor_id")]
         public WebIdQuery ActorId { get; set; }
     }

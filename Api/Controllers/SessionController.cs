@@ -6,8 +6,9 @@ using BlackBarLabs.Api;
 using System.Net.Http;
 using System.Net;
 using BlackBarLabs.Extensions;
+using EastFive.Api.Azure.Controllers;
 
-namespace EastFive.Security.SessionServer.Api.Controllers
+namespace EastFive.Api.Azure.Credentials.Controllers
 {
     public class SessionController : BaseController
     {   

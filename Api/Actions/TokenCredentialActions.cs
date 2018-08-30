@@ -14,8 +14,11 @@ using BlackBarLabs;
 using EastFive.Api.Services;
 using System.Configuration;
 using System.Collections.Generic;
+using EastFive.Api.Azure.Credentials;
+using EastFive.Api.Azure.Credentials.Controllers;
+using EastFive.Security.SessionServer;
 
-namespace EastFive.Security.SessionServer.Api
+namespace EastFive.Api.Azure.Credentials
 {
     public static class TokenCredentialActions
     {
@@ -92,7 +95,7 @@ namespace EastFive.Security.SessionServer.Api
         {
             return new Resources.TokenCredential
             {
-                Id = urlHelper.GetWebId<Controllers.InviteCredentialController>(invite.id),
+                Id = urlHelper.GetWebId<InviteCredentialController>(invite.id),
                 Actor = Library.configurationManager.GetActorLink(invite.actorId, urlHelper),
                 Email = invite.email,
                 LastEmailSent = invite.lastSent,
@@ -117,7 +120,7 @@ namespace EastFive.Security.SessionServer.Api
                     var creationResults = await context.Credentials.CreateTokenCredentialAsync(
                             credentialId.Value, actorId.Value, credential.Email,
                             loggedInActorId, claims,
-                            (inviteId, token) => url.GetLocation<Controllers.TokenCredentialController>().SetQueryParam("token", token.ToString("N")),
+                            (inviteId, token) => url.GetLocation<TokenCredentialController>().SetQueryParam("token", token.ToString("N")),
                         () => request.CreateResponse(HttpStatusCode.Created),
                         () => request.CreateResponse(HttpStatusCode.Conflict)
                             .AddReason($"TokenCredential resource with ID [{credentialId.Value}] already exists"),
@@ -141,7 +144,7 @@ namespace EastFive.Security.SessionServer.Api
             var creationResults = await context.Credentials.UpdateTokenCredentialAsync(
                 credential.Id.UUID, credential.Email, credential.LastEmailSent,
                 claims.ToArray(),
-                (inviteId, token) => url.GetLocation<Controllers.TokenCredentialController>()
+                (inviteId, token) => url.GetLocation<TokenCredentialController>()
                     .SetQueryParam("token", token.ToString("N")),
                 () => request.CreateResponse(HttpStatusCode.Accepted),
                 () => request.CreateResponse(HttpStatusCode.NotModified),

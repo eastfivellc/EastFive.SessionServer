@@ -14,7 +14,7 @@ using EastFive.Security.SessionServer;
 using EastFive.Extensions;
 using System.Collections.Generic;
 
-namespace EastFive.Azure.Api.Resources
+namespace EastFive.Api.Azure.Resources
 {
     [DataContract]
     [FunctionViewController(Route = "ProcessStage")]
@@ -74,7 +74,7 @@ namespace EastFive.Azure.Api.Resources
             NotFoundResponse onNotFound,
             UnauthorizedResponse onUnauthorized)
         {
-            return ProcessStages.FindByIdAsync(id, security,
+            return EastFive.Azure.ProcessStages.FindByIdAsync(id, security,
                 (processStage) =>
                     onFound(GetResource(processStage, url)),
                 () => onNotFound(),
@@ -89,7 +89,7 @@ namespace EastFive.Azure.Api.Resources
             ReferencedDocumentNotFoundResponse onResourceNotFound,
             UnauthorizedResponse onUnauthorized)
         {
-            return await await ProcessStages.FindByResourceAsync(resourceId, security,
+            return await await EastFive.Azure.ProcessStages.FindByResourceAsync(resourceId, security,
                 (processStages) => onMultipart(processStages.Select(ps => GetResource(ps, url))),
                 () => onResourceNotFound().ToTask(),
                 () => onUnauthorized().ToTask());
@@ -106,14 +106,14 @@ namespace EastFive.Azure.Api.Resources
             ReferencedDocumentNotFoundResponse onResourceNotFound,
             UnauthorizedResponse onUnauthorized)
         {
-            return await await ProcessStages.FindStartByActorAndResourceTypeAsync(ownerId, resourceType,
+            return await await EastFive.Azure.ProcessStages.FindStartByActorAndResourceTypeAsync(ownerId, resourceType,
                     security,
                 (processStages) => onMultipart(processStages.Select(ps => GetResource(ps, url))),
                 () => onResourceNotFound().ToTask(),
                 () => onUnauthorized().ToTask());
         }
 
-        internal static Resources.ProcessStage GetResource(Azure.ProcessStage processStage, UrlHelper url)
+        internal static Resources.ProcessStage GetResource(EastFive.Azure.ProcessStage processStage, UrlHelper url)
         {
             return new Resources.ProcessStage
             {
@@ -228,7 +228,7 @@ namespace EastFive.Azure.Api.Resources
             UnauthorizedResponse onUnauthorized,
             GeneralConflictResponse onFailure)
         {
-            return ProcessStages.UpdateAsync(processStageId,
+            return EastFive.Azure.ProcessStages.UpdateAsync(processStageId,
                     processStageTypeId, title,
                     viewableIds, completableIds, editableIds,
                     confirmables.IsDefaultOrNull() ?
@@ -254,7 +254,7 @@ namespace EastFive.Azure.Api.Resources
             ContentResponse onOption)
         {
             return onOption(GetResource(
-                new Azure.ProcessStage()
+                new EastFive.Azure.ProcessStage()
                 {
                     processStageId = Guid.NewGuid(),
                     processStageTypeId = Guid.NewGuid(),

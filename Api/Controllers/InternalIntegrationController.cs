@@ -1,6 +1,7 @@
 ﻿using BlackBarLabs.Api;
 using BlackBarLabs.Extensions;
 using EastFive.Api;
+using EastFive.Api.Azure.Credentials.Controllers;
 using EastFive.Collections.Generic;
 using EastFive.Security.SessionServer;
 using EastFive.Serialization;
@@ -30,6 +31,7 @@ namespace EastFive.Api.Controllers
         [HttpPost(MatchAllParameters = false)]
         public async static Task<HttpResponseMessage> XlsPostAsync(EastFive.Security.SessionServer.Context context,
                 [Required]Guid integration, [Required]IDictionary<string, bool> resourceTypes,
+                Azure.Application application,
                 HttpRequestMessage request, System.Web.Http.Routing.UrlHelper url,
             RedirectResponse onSuccess,
             NotFoundResponse onNotFound,
@@ -40,8 +42,8 @@ namespace EastFive.Api.Controllers
                 url.GetLocation(
                     integration, resourceTypesList,
                     (integrationId, resTypesList) =>
-                        Azure.Controllers.InternalIntegrationResponseController
-                            .GetResponse(integrationId, resTypesList, request, location => onSuccess(location))));
+                        InternalIntegrationResponseController
+                            .GetResponse(application, integrationId, resTypesList, request, (location,why) => onSuccess(location,why))), null);
         }
     }
 }

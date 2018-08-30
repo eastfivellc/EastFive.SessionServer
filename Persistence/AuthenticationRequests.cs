@@ -91,14 +91,14 @@ namespace EastFive.Security.SessionServer.Persistence
         }
 
         public async Task<TResult> CreateAsync<TResult>(Guid authenticationRequestId,
-                CredentialValidationMethodTypes method, AuthenticationActions action,
+                EastFive.Api.Azure.Credentials.CredentialValidationMethodTypes method, AuthenticationActions action,
                 Guid actorLinkId, string token, Uri redirectUrl, Uri redirectLogoutUrl,
             Func<TResult> onSuccess,
             Func<TResult> onAlreadyExists)
         {
             var doc = new Documents.AuthenticationRequestDocument
             {
-                Method = Enum.GetName(typeof(CredentialValidationMethodTypes), method),
+                Method = Enum.GetName(typeof(EastFive.Api.Azure.Credentials.CredentialValidationMethodTypes), method),
                 Action = Enum.GetName(typeof(AuthenticationActions), action),
                 LinkedAuthenticationId = actorLinkId,
                 Token = token,

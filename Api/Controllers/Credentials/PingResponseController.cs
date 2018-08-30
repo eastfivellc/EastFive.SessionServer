@@ -62,7 +62,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             return ResponseController.ProcessRequestAsync(application,
                 Enum.GetName(typeof(CredentialValidationMethodTypes), CredentialValidationMethodTypes.Ping),
                 request.GetQueryNameValuePairs().ToDictionary(),
-                (redirect) => redirectResponse(redirect),
+                (redirect, why) => redirectResponse(redirect, why),
                 (httpStatusCode, message, reason) => request.CreateResponse(httpStatusCode, message).AddReason(reason));
         }
     }

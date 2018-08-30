@@ -18,7 +18,7 @@ using BlackBarLabs.Api;
 using BlackBarLabs.Extensions;
 using EastFive.Security.SessionServer;
 
-namespace EastFive.Azure.Api.Controllers
+namespace EastFive.Api.Azure.Controllers
 {
     public class ProcessStageController
     {

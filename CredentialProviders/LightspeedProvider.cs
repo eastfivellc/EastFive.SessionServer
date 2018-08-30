@@ -1,6 +1,7 @@
 ﻿using BlackBarLabs;
 using BlackBarLabs.Extensions;
 using BlackBarLabs.Linq;
+using EastFive.Api.Azure.Credentials.Attributes;
 using EastFive.Collections.Generic;
 using EastFive.Security.SessionServer;
 using System;
@@ -12,9 +13,9 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EastFive.Security.CredentialProvider
+namespace EastFive.Api.Azure.Credentials
 {
-    [SessionServer.Attributes.IntegrationName("Lightspeed")]
+    [IntegrationName("Lightspeed")]
     public class LightspeedProvider : IProvideLogin
     {
         #region Initialization
@@ -41,10 +42,10 @@ namespace EastFive.Security.CredentialProvider
             Func<LightspeedProvider, TResult> onLoaded,
             Func<string, TResult> onConfigurationNotAvailable)
         {
-            return Web.Configuration.Settings.GetString(SessionServer.Configuration.AppSettings.OAuth.Lightspeed.ClientKey,
+            return Web.Configuration.Settings.GetString(Security.SessionServer.Configuration.AppSettings.OAuth.Lightspeed.ClientKey,
                 (clientKey) =>
                 {
-                    return Web.Configuration.Settings.GetString(SessionServer.Configuration.AppSettings.OAuth.Lightspeed.ClientSecret,
+                    return Web.Configuration.Settings.GetString(Security.SessionServer.Configuration.AppSettings.OAuth.Lightspeed.ClientSecret,
                         (clientSecret) =>
                         {
                             var provider = new LightspeedProvider(clientKey, clientSecret);
@@ -55,7 +56,7 @@ namespace EastFive.Security.CredentialProvider
                 onConfigurationNotAvailable);
         }
 
-        [SessionServer.Attributes.IntegrationName("Lightspeed")]
+        [IntegrationName("Lightspeed")]
         public static async Task<TResult> InitializeAsync<TResult>(
             Func<IProvideAuthorization, TResult> onProvideAuthorization,
             Func<TResult> onProvideNothing,
@@ -229,7 +230,7 @@ namespace EastFive.Security.CredentialProvider
 
         #region IProvideLogin
 
-        public Type CallbackController => typeof(SessionServer.Api.Controllers.OAuthResponseLightspeedController);
+        public Type CallbackController => typeof(Controllers.OAuthResponseLightspeedController);
 
         public Uri GetLoginUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
         {

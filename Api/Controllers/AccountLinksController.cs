@@ -11,6 +11,7 @@ using System.Web.Http;
 using BlackBarLabs;
 using BlackBarLabs.Extensions;
 using EastFive.Api.Services;
+using EastFive.Security.SessionServer;
 
 namespace EastFive.Api.Azure.Credentials.Controllers
 {
@@ -64,7 +65,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                         (authRequest) =>
                         {
                             return this.Request.CreateResponse(System.Net.HttpStatusCode.OK,
-                                new Resources.AccountLink
+                                new Security.SessionServer.Api.Resources.AccountLink
                                 {
                                     Login = authRequest.loginUrl,
                                     Signup = loginProvider.GetSignupUrl(authReqId, callbackUrl, type => this.Url.GetLocation(type)),

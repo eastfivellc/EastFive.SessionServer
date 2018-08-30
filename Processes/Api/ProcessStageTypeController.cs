@@ -16,10 +16,10 @@ using EastFive.Api;
 using EastFive.Azure.Synchronization;
 
 using BlackBarLabs.Extensions;
-using EastFive.Azure.Api.Resources;
 using BlackBarLabs.Api;
+using EastFive.Azure;
 
-namespace EastFive.Azure.Api.Controllers
+namespace EastFive.Api.Azure.Controllers
 {
     [FunctionViewController(Route = "ProcessStageType")]
     public class ProcessStageTypeController
@@ -91,7 +91,7 @@ namespace EastFive.Azure.Api.Controllers
 
         #endregion
 
-        [EastFive.Api.HttpPost(Type = typeof(Api.Resources.ProcessStageType), MatchAllBodyParameters = false)]
+        [EastFive.Api.HttpPost(Type = typeof(Resources.ProcessStageType), MatchAllBodyParameters = false)]
         public static Task<HttpResponseMessage> CreateAsync(
                 [Property(Name = Resources.ProcessStageType.IdPropertyName)]Guid processStageTypeId,
                 [Property(Name = Resources.ProcessStageType.OwnerPropertyName)]Guid ownerId,

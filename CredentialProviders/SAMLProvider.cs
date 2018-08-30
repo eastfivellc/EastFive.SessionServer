@@ -15,10 +15,11 @@ using EastFive.Security.SessionServer.Persistence;
 using EastFive.Api.Services;
 using System.Security.Claims;
 using EastFive.Security.SessionServer;
+using EastFive.Api.Azure.Credentials.Attributes;
 
-namespace EastFive.Security.CredentialProvider.SAML
+namespace EastFive.Api.Azure.Credentials
 {
-    [SessionServer.Attributes.IntegrationName("SAML")]
+    [IntegrationName("SAML")]
     public class SAMLProvider : IProvideLogin
     {
         private DataContext dataContext;
@@ -30,10 +31,10 @@ namespace EastFive.Security.CredentialProvider.SAML
 
         public SAMLProvider()
         {
-            this.dataContext = new DataContext(SessionServer.Configuration.AppSettings.Storage);
+            this.dataContext = new DataContext(Security.SessionServer.Configuration.AppSettings.Storage);
         }
 
-        [SessionServer.Attributes.IntegrationName("SAML")]
+        [IntegrationName("SAML")]
         public static Task<TResult> InitializeAsync<TResult>(
             Func<IProvideLogin, TResult> onProvideLogin,
             Func<IProvideAuthorization, TResult> onProvideAuthorization,
@@ -51,7 +52,7 @@ namespace EastFive.Security.CredentialProvider.SAML
             Func<string, TResult> onUnspecifiedConfiguration,
             Func<string, TResult> onFailure)
         {
-            return await EastFive.Web.Configuration.Settings.GetBase64Bytes(AppSettings.SAMLCertificate,
+            return await EastFive.Web.Configuration.Settings.GetBase64Bytes(EastFive.Security.AppSettings.SAMLCertificate,
                 async (certBuffer) =>
                 {
                     var certificate = new X509Certificate2(certBuffer);
@@ -63,7 +64,7 @@ namespace EastFive.Security.CredentialProvider.SAML
                     {
                         var nameId = tokens[SAMLProvider.SamlNameIDKey];
 
-                        return EastFive.Web.Configuration.Settings.GetString(AppSettings.SAMLLoginIdAttributeName,
+                        return EastFive.Web.Configuration.Settings.GetString(EastFive.Security.AppSettings.SAMLLoginIdAttributeName,
                             (attributeName) =>
                             {
                                 //var attributes = assertion.Attributes
@@ -91,7 +92,7 @@ namespace EastFive.Security.CredentialProvider.SAML
 
         #region IProvideLogin
 
-        public Type CallbackController => typeof(SessionServer.Api.Controllers.SAMLRedirectController);
+        public Type CallbackController => typeof(Controllers.SAMLRedirectController);
 
         public Uri GetSignupUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
         {

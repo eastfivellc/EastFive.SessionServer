@@ -19,6 +19,7 @@ using EastFive.Linq;
 using EastFive.Security.SessionServer;
 using EastFive.Security;
 using EastFive.Linq.Async;
+using EastFive.Api.Azure.Credentials.Attributes;
 
 namespace EastFive.Azure
 {
@@ -115,14 +116,14 @@ namespace EastFive.Azure
         }
 
         [Obsolete("Use method string instead.")]
-        public async Task<TResult> CreateOrUpdateAuthenticatedIntegrationAsync<TResult>(Guid actorId, CredentialValidationMethodTypes method,
+        public async Task<TResult> CreateOrUpdateAuthenticatedIntegrationAsync<TResult>(Guid actorId, Api.Azure.Credentials.CredentialValidationMethodTypes method,
            Func<
                Guid?,
                IDictionary<string, string>,
                Func<IDictionary<string, string>, Task<Guid>>,
                Task<TResult>> onCreatedOrFound)
         {
-            var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), method);
+            var methodName = Enum.GetName(typeof(Api.Azure.Credentials.CredentialValidationMethodTypes), method);
             return await this.dataContext.Integrations.CreateOrUpdateAsync(actorId, methodName,
                 (integrationIdMaybe, paramsCurrent, updateAsync) =>
                 {
@@ -408,11 +409,12 @@ namespace EastFive.Azure
                 onAutheticationRequestNotFound);
         }
 
-        public Task<TResult> UpdateAsync<TResult>(Guid authenticationRequestId, Guid actingAsUser, System.Security.Claims.Claim[] claims,
+        public Task<TResult> UpdateAsync<TResult>(Guid authenticationRequestId, Guid actingAsUser,
+                System.Security.Claims.Claim[] claims, Api.Azure.Application application,
               IDictionary<string, string> updatedUserParameters,
           Func<TResult> onUpdated,
           Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onLogin,
-          Func<Uri, TResult> onLogout,
+          Func<Uri, string, TResult> onLogout,
           Func<string, TResult> onInvalidToken,
           Func<TResult> onLookupCredentialNotFound,
           Func<string, TResult> onSystemOffline,
@@ -425,7 +427,8 @@ namespace EastFive.Azure
                     if (!authRequestStorage.authorizationId.HasValue)
                     {
                         var method = authRequestStorage.method;
-                        return context.Sessions.UpdateWithAuthenticationAsync(authenticationRequestId, method, updatedUserParameters,
+                        return context.Sessions.UpdateWithAuthenticationAsync(authenticationRequestId,
+                                application, method, updatedUserParameters,
                             onLogin,
                             onLogout,
                             onInvalidToken,
@@ -550,7 +553,7 @@ namespace EastFive.Azure
                                     accessProvider =>
                                     {
                                         return dataContext.Integrations.DeleteAsync(performingActorId,
-                                                accessProvider.GetType().GetCustomAttribute<Security.SessionServer.Attributes.IntegrationNameAttribute>().Name,
+                                                accessProvider.GetType().GetCustomAttribute<IntegrationNameAttribute>().Name,
                                             (parames) => true,
                                             () => false);
                                     })

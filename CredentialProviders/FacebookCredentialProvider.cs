@@ -5,14 +5,14 @@ using System.Security.Claims;
 using System.Collections.Generic;
 using EastFive.Security.SessionServer;
 using BlackBarLabs.Extensions;
-using EastFive.Api.Azure.Credentials;
+using EastFive.Api.Azure.Credentials.Attributes;
 
 namespace EastFive.Api.Azure.Credentials
 {
-    [Security.SessionServer.Attributes.IntegrationName("Facebook")]
+    [IntegrationName("Facebook")]
     public class FacebookCredentialProvider : IProvideLogin
     {
-        [Security.SessionServer.Attributes.IntegrationName("Facebook")]
+        [IntegrationName("Facebook")]
         public static Task<TResult> InitializeAsync<TResult>(
             Func<IProvideLogin, TResult> onProvideLogin,
             Func<IProvideAuthorization, TResult> onProvideAuthorization,

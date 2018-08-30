@@ -13,7 +13,7 @@ using System.Collections.Generic;
 using EastFive.Security.SessionServer.Exceptions;
 using System.Linq;
 
-namespace EastFive.Security.SessionServer.Api.Controllers
+namespace EastFive.Api.Azure.Controllers
 {
     public class SpaServeController : BaseController
     { 

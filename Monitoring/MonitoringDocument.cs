@@ -7,7 +7,7 @@ using BlackBarLabs.Web;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 
-namespace EastFive.Azure.Api.Monitoring
+namespace EastFive.Api.Azure.Monitoring
 {
     [Serializable]
     [DataContract]

@@ -11,7 +11,6 @@ using BlackBarLabs;
 using BlackBarLabs.Api;
 using EastFive.Api.Services;
 using BlackBarLabs.Extensions;
-using EastFive.Security.CredentialProvider.AzureADB2C;
 using System.Web.Http.Routing;
 
 namespace EastFive.Api.Azure.Credentials.Controllers

@@ -4,7 +4,7 @@ using System;
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
 
-namespace EastFive.Azure.Api.Resources
+namespace EastFive.Api.Azure.Resources
 {
     [DataContract]
     public class ProcessStageType : ResourceBase

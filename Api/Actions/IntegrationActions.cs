@@ -3,6 +3,7 @@ using BlackBarLabs.Extensions;
 using EastFive.Collections.Generic;
 using EastFive.Extensions;
 using EastFive.Linq;
+using EastFive.Security.SessionServer;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +12,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http.Routing;
 
-namespace EastFive.Security.SessionServer.Api
+namespace EastFive.Api.Azure.Credentials
 {
     public static class IntegrationActions
     {
@@ -173,7 +174,7 @@ namespace EastFive.Security.SessionServer.Api
             };
         }
 
-        public static async Task<HttpResponseMessage> UpdateAsync(this Api.Resources.Integration resource,
+        public static async Task<HttpResponseMessage> UpdateAsync(this Resources.Integration resource,
             HttpRequestMessage request)
         {
             return await request.GetActorIdClaimsAsync(
@@ -181,9 +182,13 @@ namespace EastFive.Security.SessionServer.Api
                 {
                     var context = request.GetSessionServerContext();
 
+                    var application = request.GetApplication(
+                        app => app as Application,
+                        () => null);
+
                     // Can't update a session that does not exist
                     var session = await context.Integrations.UpdateAsync(resource.Id.ToGuid().Value,
-                        actingAs, claims, 
+                        actingAs, claims, application,
                         resource.UserParameters
                             .ToDictionary(
                                 userParam => userParam.Key,
@@ -194,7 +199,7 @@ namespace EastFive.Security.SessionServer.Api
                             resource.AuthorizationId = authId;
                             return request.CreateResponse(HttpStatusCode.Accepted, resource);
                         },
-                        (logoutRedirect) => request.CreateRedirectResponse(logoutRedirect),
+                        (logoutRedirect, why) => request.CreateRedirectResponse(logoutRedirect).AddReason(why),
                         (why) => request.CreateResponse(HttpStatusCode.NotFound).AddReason(why),
                         () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("User in token is not connected to this system"),
                         (why) => request.CreateResponse(HttpStatusCode.BadGateway).AddReason(why),

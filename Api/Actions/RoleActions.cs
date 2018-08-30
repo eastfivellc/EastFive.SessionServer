@@ -10,8 +10,9 @@ using BlackBarLabs;
 using EastFive;
 using BlackBarLabs.Extensions;
 using EastFive.Security.SessionServer.Api.Controllers;
+using EastFive.Security.SessionServer;
 
-namespace EastFive.Security.SessionServer.Api
+namespace EastFive.Api.Azure
 {
     public static class RoleActions
     {
@@ -32,7 +33,7 @@ namespace EastFive.Security.SessionServer.Api
                 () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("Actor does not exists"));
         }
 
-        public static async Task<HttpResponseMessage> GetAsync(this Resources.RoleQuery query, HttpRequestMessage request, UrlHelper url)
+        public static async Task<HttpResponseMessage> GetAsync(this Resources.Queries.RoleQuery query, HttpRequestMessage request, UrlHelper url)
         {
             return await query.ParseAsync(request,
                 (q) => QueryById(q.Id.ParamSingle(), request, url),
@@ -55,7 +56,7 @@ namespace EastFive.Security.SessionServer.Api
                 {
                     var roleResource = new Resources.Role()
                     {
-                        Id = url.GetWebId<RoleController>(role.id),
+                        Id = url.GetWebId<Controllers.RoleController>(role.id),
                         Actor = Library.configurationManager.GetActorLink(role.actorId, url),
                         Name = role.name,
                     };
@@ -74,7 +75,7 @@ namespace EastFive.Security.SessionServer.Api
                     {
                         var resourceRole = new Resources.Role()
                         {
-                            Id = url.GetWebId<RoleController>(role.id),
+                            Id = url.GetWebId<Controllers.RoleController>(role.id),
                             Actor = Library.configurationManager.GetActorLink(role.actorId, url),
                             Name = role.name,
                         };
@@ -97,7 +98,7 @@ namespace EastFive.Security.SessionServer.Api
                 () => request.CreateResponse(HttpStatusCode.NotFound));
         }
 
-        public async static Task<HttpResponseMessage> DeleteAsync(this Resources.RoleQuery query, HttpRequestMessage request, UrlHelper url)
+        public async static Task<HttpResponseMessage> DeleteAsync(this Resources.Queries.RoleQuery query, HttpRequestMessage request, UrlHelper url)
         {
             return await query.ParseAsync(request,
                 (q) => DeleteById(q.Id.ParamSingle(), request, url));

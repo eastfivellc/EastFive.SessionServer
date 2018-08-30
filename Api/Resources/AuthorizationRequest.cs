@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 
-namespace EastFive.Security.SessionServer.Api.Resources
+namespace EastFive.Api.Azure.Credentials.Resources
 {
     [DataContract]
     public class AuthorizationRequest : BlackBarLabs.Api.ResourceBase

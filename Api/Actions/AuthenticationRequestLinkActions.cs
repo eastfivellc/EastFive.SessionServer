@@ -63,7 +63,7 @@ namespace EastFive.Api.Azure.Credentials
         {
             return new Resources.AuthenticationRequestLink
             {
-                Id = urlHelper.GetWebId<SessionController>(SecureGuid.Generate()),
+                Id = urlHelper.GetWebId<Controllers.SessionController>(SecureGuid.Generate()),
                 Method = method,
                 Name = method.ToString(),
                 SecureId = SecureGuid.Generate(),

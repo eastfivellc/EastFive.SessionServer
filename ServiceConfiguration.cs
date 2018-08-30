@@ -17,6 +17,8 @@ using System.IO.Compression;
 using EastFive.Collections.Generic;
 using System.Linq.Expressions;
 using BlackBarLabs.Api.Resources;
+using EastFive.Api.Azure.Credentials.Attributes;
+using EastFive.Api.Azure.Credentials.Controllers;
 
 namespace EastFive.Security.SessionServer
 {
@@ -60,7 +62,7 @@ namespace EastFive.Security.SessionServer
             
             
             
-            AddExternalControllers<Api.Controllers.OpenIdResponseController>(config);
+            AddExternalControllers<OpenIdResponseController>(config);
             config.Routes.MapHttpRoute(name: "apple-app-links",
                 routeTemplate: "apple-app-site-association",
                 defaults: new { controller = "AppleAppSiteAssociation", id = RouteParameter.Optional });
@@ -79,14 +81,14 @@ namespace EastFive.Security.SessionServer
                 .ToDictionary(
                     credentialProvider =>
                     {
-                        var methodName = credentialProvider.GetType().GetCustomAttribute<Attributes.IntegrationNameAttribute>().Name;
+                        var methodName = credentialProvider.GetType().GetCustomAttribute<IntegrationNameAttribute>().Name;
                         return methodName;
                     },
                     credentialProvider => credentialProvider);
             loginProviders = credentialProvidersWithoutMethods
                 .Where(credentialProvider => typeof(IProvideLogin).IsAssignableFrom(credentialProvider.GetType()))
                 .ToDictionary(
-                    credentialProvider => credentialProvider.GetType().GetCustomAttribute<Attributes.IntegrationNameAttribute>().Name,
+                    credentialProvider => credentialProvider.GetType().GetCustomAttribute<IntegrationNameAttribute>().Name,
                     credentialProvider => (IProvideLogin)credentialProvider);
             managementProviders = credentialProviders
                 .Where(credentialProvider => typeof(IProvideLoginManagement).IsAssignableFrom(credentialProvider.Value.GetType()))
@@ -111,7 +113,7 @@ namespace EastFive.Security.SessionServer
                         return method.DeclaringType.GetInterfaces()
                             .FlatMap(
                                 (conformsTo, nextItem, skipItem) => method.GetCustomAttribute(
-                                    (Attributes.IntegrationNameAttribute integrationNameAttr) => nextItem(
+                                    (IntegrationNameAttribute integrationNameAttr) => nextItem(
                                         conformsTo.PairWithValue(integrationNameAttr.Name).PairWithValue(activity.Compile())),
                                     () => skipItem()),
                                 (IEnumerable<KeyValuePair<KeyValuePair<Type, string>, IntegrationActivityDelegate>> activityKvps) => activityKvps);
@@ -134,7 +136,7 @@ namespace EastFive.Security.SessionServer
                         var method = (activity.Body as System.Linq.Expressions.MethodCallExpression).Method;
                         var paramType = method.GetParameters().First().ParameterType;
                         return method.GetCustomAttribute(
-                            (Attributes.IntegrationNameAttribute integrationNameAttr) => 
+                            (IntegrationNameAttribute integrationNameAttr) => 
                                         next(integrationNameAttr.Name.PairWithValue(paramType).PairWithValue(activity.Compile())),
                             () => skip());
                     },

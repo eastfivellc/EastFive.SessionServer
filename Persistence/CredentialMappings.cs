@@ -8,6 +8,7 @@ using BlackBarLabs.Persistence;
 using System.Linq;
 using EastFive.Linq;
 using System.Collections.Generic;
+using EastFive.Api.Azure.Credentials;
 
 namespace EastFive.Security.SessionServer.Persistence
 {

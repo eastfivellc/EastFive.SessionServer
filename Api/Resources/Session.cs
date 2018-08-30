@@ -1,10 +1,11 @@
 ﻿using BlackBarLabs.Extensions;
+using EastFive.Security.SessionServer.Api.Resources;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 
-namespace EastFive.Security.SessionServer.Api.Resources
+namespace EastFive.Api.Azure.Credentials.Resources
 {
     [DataContract]
     public class Session : AuthorizationRequest

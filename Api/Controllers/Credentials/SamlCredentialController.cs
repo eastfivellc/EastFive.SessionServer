@@ -10,7 +10,7 @@ using System.Web.Http.Routing;
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
     [RoutePrefix("aadb2c")]
-    public class SamlCredentialController : BaseController
+    public class SamlCredentialController : EastFive.Api.Azure.Controllers.BaseController
     {
         public IHttpActionResult Post([FromBody]Resources.SamlCredential model)
         {

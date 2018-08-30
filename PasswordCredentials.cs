@@ -13,8 +13,9 @@ using BlackBarLabs.Linq.Async;
 using EastFive.Linq.Async;
 using EastFive.Extensions;
 using System.Web.Security;
+using EastFive.Security.SessionServer;
 
-namespace EastFive.Security.SessionServer
+namespace EastFive.Api.Azure.Credentials
 {
     public struct PasswordCredential
     {
@@ -30,10 +31,10 @@ namespace EastFive.Security.SessionServer
     public class PasswordCredentials
     {
         private Context context;
-        private Persistence.DataContext dataContext;
+        private Security.SessionServer.Persistence.DataContext dataContext;
         private IProvideLoginManagement managmentProvider;
 
-        internal PasswordCredentials(Context context, Persistence.DataContext dataContext)
+        internal PasswordCredentials(Context context, Security.SessionServer.Persistence.DataContext dataContext)
         {
             this.dataContext = dataContext;
             this.context = context;
@@ -82,7 +83,7 @@ namespace EastFive.Security.SessionServer
                             if (!isEmail || !emailLastSent.HasValue)
                                 return onSuccess();
 
-                            return await Web.Configuration.Settings.GetUri(Configuration.AppSettings.LandingPage,
+                            return await Web.Configuration.Settings.GetUri(EastFive.Security.SessionServer.Configuration.AppSettings.LandingPage,
                                 async (landingPage) =>
                                 {
                                     return await await context.Sessions.CreateLoginAsync(Guid.NewGuid(),
@@ -266,7 +267,7 @@ namespace EastFive.Security.SessionServer
             public Guid ActorId;
             public bool AccountEnabled;
             public IDictionary<string, string> Tokens;
-            public CredentialValidationMethodTypes Method;
+            public EastFive.Api.Azure.Credentials.CredentialValidationMethodTypes Method;
             public string DisplayName;
         }
        
@@ -278,7 +279,7 @@ namespace EastFive.Security.SessionServer
                 return onNoTokenProviders();
 
             var tokenProvider = ServiceConfiguration.credentialProviders.First().Value;
-            Enum.TryParse(tokenProvider.GetType().GetCustomAttribute<Attributes.IntegrationNameAttribute>().Name, out CredentialValidationMethodTypes method);
+            Enum.TryParse(tokenProvider.GetType().GetCustomAttribute<Attributes.IntegrationNameAttribute>().Name, out EastFive.Api.Azure.Credentials.CredentialValidationMethodTypes method);
             return await await this.context.Credentials.GetAllAccountIdAsync(
                 async credentialMappings =>
                 {
@@ -302,15 +303,15 @@ namespace EastFive.Security.SessionServer
                         .Select(async m =>
                         {
                             if (!ServiceConfiguration.managementProviders.ContainsKey(m))
-                                return m.PairWithValue(new SessionServer.LoginInfo[] { });
+                                return m.PairWithValue(new Security.SessionServer.LoginInfo[] { });
 
                             // AADB2C fails when it is called too often so now make one call to get it all
                             var provider = ServiceConfiguration.managementProviders[m];
                             return m.PairWithValue(await provider.GetAllAuthorizationsAsync(
                                 infos => infos,
-                                (why) => new SessionServer.LoginInfo[] { },
-                                () => new SessionServer.LoginInfo[] { },
-                                (why) => new SessionServer.LoginInfo[] { }));
+                                (why) => new Security.SessionServer.LoginInfo[] { },
+                                () => new Security.SessionServer.LoginInfo[] { },
+                                (why) => new Security.SessionServer.LoginInfo[] { }));
                         })
                         .WhenAllAsync();
                     var lookups = mappings
@@ -386,7 +387,7 @@ namespace EastFive.Security.SessionServer
                                     return resultFailure;
                                 }
 
-                                return await Web.Configuration.Settings.GetUri(Configuration.AppSettings.LandingPage,
+                                return await Web.Configuration.Settings.GetUri(Security.SessionServer.Configuration.AppSettings.LandingPage,
                                     async (landingPage) =>
                                     {
                                         if (string.IsNullOrWhiteSpace(password))
@@ -484,10 +485,10 @@ namespace EastFive.Security.SessionServer
             Func<TResult> onServiceNotAvailable,
             Func<string, TResult> onFailure)
         {
-            return EastFive.Web.Configuration.Settings.GetString(Configuration.EmailTemplateDefinitions.InvitePassword,
-                templateName => EastFive.Web.Configuration.Settings.GetString(Configuration.EmailTemplateDefinitions.InviteFromAddress,
-                    fromAddress => EastFive.Web.Configuration.Settings.GetString(Configuration.EmailTemplateDefinitions.InviteFromName,
-                        fromName => EastFive.Web.Configuration.Settings.GetString(Configuration.EmailTemplateDefinitions.InviteSubject,
+            return EastFive.Web.Configuration.Settings.GetString(Security.SessionServer.Configuration.EmailTemplateDefinitions.InvitePassword,
+                templateName => EastFive.Web.Configuration.Settings.GetString(Security.SessionServer.Configuration.EmailTemplateDefinitions.InviteFromAddress,
+                    fromAddress => EastFive.Web.Configuration.Settings.GetString(Security.SessionServer.Configuration.EmailTemplateDefinitions.InviteFromName,
+                        fromName => EastFive.Web.Configuration.Settings.GetString(Security.SessionServer.Configuration.EmailTemplateDefinitions.InviteSubject,
                             subject => Web.Services.ServiceConfiguration.SendMessageService()
                                 .SendEmailMessageAsync(templateName,
                                     emailAddress, string.Empty,

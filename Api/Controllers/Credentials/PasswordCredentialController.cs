@@ -1,5 +1,6 @@
 ﻿using BlackBarLabs.Api;
 using EastFive.Api.Azure.Controllers;
+using EastFive.Security.SessionServer.Api;
 using EastFive.Security.SessionServer.Api.Resources;
 using EastFive.Security.SessionServer.Api.Resources.Queries;
 using System.Linq;
@@ -14,17 +15,17 @@ namespace EastFive.Api.Azure.Credentials.Controllers
     [RoutePrefix("aadb2c")]
     public class PasswordCredentialController : BaseController
     {
-        public IHttpActionResult Post([FromBody]PasswordCredential model)
+        public IHttpActionResult Post([FromBody]Security.SessionServer.Api.Resources.PasswordCredential model)
         {
             return new HttpActionResult(() => model.CreateAsync(this.Request, this.Url));
         }
         
-        public IHttpActionResult Put([FromBody]PasswordCredential model)
+        public IHttpActionResult Put([FromBody]Security.SessionServer.Api.Resources.PasswordCredential model)
         {
             return new HttpActionResult(() => model.PutAsync(this.Request, this.Url));
         }
 
-        public IHttpActionResult Delete([FromBody]PasswordCredentialQuery model)
+        public IHttpActionResult Delete([FromBody]Security.SessionServer.Api.Resources.Queries.PasswordCredentialQuery model)
         {
             return new HttpActionResult(() => model.DeleteAsync(this.Request, this.Url));
         }

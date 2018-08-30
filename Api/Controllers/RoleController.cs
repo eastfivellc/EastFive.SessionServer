@@ -2,12 +2,14 @@
 using System.Threading.Tasks;
 using System.Web.Http;
 using BlackBarLabs.Api;
+using EastFive.Api.Azure.Controllers;
+using EastFive.Security.SessionServer.Api.Resources;
 
-namespace EastFive.Security.SessionServer.Api.Controllers
+namespace EastFive.Api.Azure.Controllers
 {
     public class RoleController : BaseController
     {
-        public IHttpActionResult Get([FromUri]Resources.RoleQuery query)
+        public IHttpActionResult Get([FromUri]Resources.Queries.RoleQuery query)
         {
             return this.ActionResult(() => query.GetAsync(this.Request, this.Url));
         }
@@ -23,7 +25,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             return callback.ToActionResult();
         }
         
-        public IHttpActionResult Delete([FromBody]Resources.RoleQuery role)
+        public IHttpActionResult Delete([FromBody]Resources.Queries.RoleQuery role)
         {
             HttpActionDelegate callback = () => role.DeleteAsync(this.Request, this.Url);
             return callback.ToActionResult();

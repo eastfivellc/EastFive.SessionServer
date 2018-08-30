@@ -1,5 +1,6 @@
 ﻿using BlackBarLabs.Api;
 using EastFive.Api.Azure.Controllers;
+using EastFive.Api.Azure.Credentials.Api.Resources;
 using EastFive.Security.SessionServer.Api;
 using EastFive.Security.SessionServer.Api.Resources;
 using System.Linq;

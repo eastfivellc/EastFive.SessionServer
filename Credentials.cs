@@ -83,7 +83,7 @@ namespace EastFive.Security.SessionServer
         }
 
         public async Task<TResult> SendEmailInviteAsync<TResult>(Guid inviteId, Guid actorId, string email,
-                Azure.Api.Application application, Guid performingActorId, System.Security.Claims.Claim[] claims,
+                EastFive.Api.Azure.Application application, Guid performingActorId, System.Security.Claims.Claim[] claims,
                 Func<Guid, Guid, Uri> getRedirectLink,
             Func<TResult> success,
             Func<TResult> inviteAlreadyExists,

@@ -19,7 +19,7 @@ using EastFive.Linq;
 using System.IO;
 using EastFive.Security.SessionServer;
 
-namespace EastFive.Api.Azure
+namespace EastFive.Api.Azure.Credentials
 {
     public static class Sheets
     {
@@ -33,7 +33,7 @@ namespace EastFive.Api.Azure
                 onAlreadyExists);
         }
 
-        [Security.SessionServer.Attributes.IntegrationName("Sheets")]
+        [Attributes.IntegrationName("Sheets")]
         public class Provider : IProvideAuthorization, IProvideLogin
         {
             public const string resourceTypesKey = "resource_types";
@@ -75,7 +75,7 @@ namespace EastFive.Api.Azure
                 return onSuccess(new Dictionary<string, string>(), new Dictionary<string, Type>(), new Dictionary<string, string>()).ToTask();
             }
 
-            [Security.SessionServer.Attributes.IntegrationName("Sheets")]
+            [Attributes.IntegrationName("Sheets")]
             public static Task<TResult> InitializeProviderAsync<TResult>(
                 Func<IProvideAuthorization, TResult> onProvideAuthorization,
                 Func<TResult> onProvideNothing,

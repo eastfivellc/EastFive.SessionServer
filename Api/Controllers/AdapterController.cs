@@ -20,6 +20,7 @@ using BlackBarLabs.Extensions;
 using EastFive.Security.SessionServer.Api.Controllers;
 using EastFive.Api;
 using EastFive.Security.SessionServer;
+using EastFive.Api.Azure.Credentials.Controllers;
 
 namespace EastFive.Api.Controllers
 {

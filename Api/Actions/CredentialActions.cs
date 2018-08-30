@@ -11,12 +11,14 @@ using BlackBarLabs.Api;
 using BlackBarLabs.Extensions;
 using EastFive.Api.Services;
 using EastFive.Security.SessionServer.Configuration;
+using EastFive.Api.Azure.Credentials.Api.Resources;
+using EastFive.Security.SessionServer;
 
-namespace EastFive.Security.SessionServer.Api
+namespace EastFive.Api.Azure.Credentials
 {
     public static class CredentialActions
     {
-        public static async Task<HttpResponseMessage> CreateAsync(this Resources.Credential credential,
+        public static async Task<HttpResponseMessage> CreateAsync(this Credential credential,
             HttpRequestMessage request, UrlHelper url)
         {
             return await request.GetActorIdClaimsAsync(

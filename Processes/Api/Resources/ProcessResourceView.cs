@@ -11,8 +11,9 @@ using EastFive.Api.Controllers;
 using System.Linq;
 using BlackBarLabs.Extensions;
 using System.Web.Http.Routing;
+using EastFive.Api.Azure;
 
-namespace EastFive.Azure.Api.Resources
+namespace EastFive.Api.Azure.Resources
 {
     [DataContract]
     [FunctionViewController(
@@ -96,21 +97,21 @@ namespace EastFive.Azure.Api.Resources
 
         [EastFive.Api.HttpGet]
         public static async Task<HttpResponseMessage> FindByResourceAsync(
-                [EastFive.Api.Required(Name = Resources.ProcessResourceView.ActorPropertyName)]Guid actorId,
+                [EastFive.Api.Required(Name = ActorPropertyName)]Guid actorId,
                 [EastFive.Api.Required(Name = Resources.ProcessStageType.ResourceTypePropertyName)]Type resourceType,
                 EastFive.Api.Controllers.Security security, Application application, UrlHelper url,
             [Display(Name = "Found")]MultipartAcceptArrayResponseAsync onMultipart,
             ReferencedDocumentNotFoundResponse onResourceNotFound,
             UnauthorizedResponse onUnauthorized)
         {
-            return await await ProcessResourceViews.FindByResourceAsync(actorId, resourceType,
+            return await await EastFive.Azure.ProcessResourceViews.FindByResourceAsync(actorId, resourceType,
                     security,
                 (views) => onMultipart(views.Select(ps => GetResource(ps, application, url))),
                 () => onResourceNotFound().ToTask(),
                 () => onUnauthorized().ToTask());
         }
 
-        internal static Resources.ProcessResourceView GetResource(Azure.ProcessResourceView view, Application application, UrlHelper url)
+        internal static Resources.ProcessResourceView GetResource(EastFive.Azure.ProcessResourceView view, Application application, UrlHelper url)
         {
             return new Resources.ProcessResourceView
             {
@@ -136,7 +137,7 @@ namespace EastFive.Azure.Api.Resources
                     .ToArray(),
 
                 NextStages = view.nextStages
-                    .Select(nextStageId => url.GetWebId<ProcessStage>(nextStageId.processStageId))
+                    .Select(nextStageId => url.GetWebId<Resources.ProcessStage>(nextStageId.processStageId))
                     .ToArray(),
                 Editable = view.editable,
                 Completable = view.completable,
@@ -152,12 +153,12 @@ namespace EastFive.Azure.Api.Resources
         {
             return onOption(
                 GetResource(
-                    new Azure.ProcessResourceView()
+                    new EastFive.Azure.ProcessResourceView()
                     {
                         processViewId = Guid.NewGuid(),
                         actorId = Guid.NewGuid(),
                         resourceId = Guid.NewGuid(),
-                        resourceType = typeof(Process),
+                        resourceType = typeof(EastFive.Azure.Process),
 
                         currentProcessStepId = Guid.NewGuid(),
                         titles = new string[] { "Step 1", "Step 2", "Step 1", "Step 3" },
@@ -177,21 +178,21 @@ namespace EastFive.Azure.Api.Resources
                             },
 
                         displayResources = new string[] { "process", "process" },
-                        resourcesProvided = new Process.ProcessStageResource[]
+                        resourcesProvided = new EastFive.Azure.Process.ProcessStageResource[]
                         {
-                            new Process.ProcessStageResource
+                            new EastFive.Azure.Process.ProcessStageResource
                             {
 
                             },
-                            new Process.ProcessStageResource
+                            new EastFive.Azure.Process.ProcessStageResource
                             {
 
                             },
                         },
 
-                        nextStages = new Azure.ProcessStage[]
+                        nextStages = new EastFive.Azure.ProcessStage[]
                         {
-                            new Azure.ProcessStage
+                            new EastFive.Azure.ProcessStage
                             {
                                 processStageId = Guid.NewGuid(),
                             }

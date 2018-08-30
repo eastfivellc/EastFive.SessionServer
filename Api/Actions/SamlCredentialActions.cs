@@ -11,6 +11,7 @@ using BlackBarLabs.Api;
 using BlackBarLabs.Extensions;
 using EastFive.Api.Services;
 using EastFive.Security.SessionServer.Configuration;
+using EastFive.Api.Azure.Credentials.Controllers;
 
 namespace EastFive.Security.SessionServer.Api
 {
@@ -136,11 +137,11 @@ namespace EastFive.Security.SessionServer.Api
                 (why) => request.CreateResponse(HttpStatusCode.ServiceUnavailable).AddReason(why).AsEnumerable().ToArray());
         }
 
-        private static Resources.SamlCredential Convert(PasswordCredential passwordCredential, UrlHelper urlHelper)
+        private static Resources.SamlCredential Convert(EastFive.Api.Azure.Credentials.PasswordCredential passwordCredential, UrlHelper urlHelper)
         {
             return new Resources.SamlCredential
             {
-                Id = urlHelper.GetWebId<Controllers.PasswordCredentialController>(passwordCredential.id),
+                Id = urlHelper.GetWebId<PasswordCredentialController>(passwordCredential.id),
                 Actor = passwordCredential.actorId,
                 UserId = passwordCredential.userId,
             };

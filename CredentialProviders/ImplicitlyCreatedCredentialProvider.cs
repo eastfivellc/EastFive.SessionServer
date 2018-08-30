@@ -7,13 +7,14 @@ using BlackBarLabs.Extensions;
 using System.Security.Claims;
 using EastFive.Security.CredentialProvider.ImplicitCreation;
 using System.Collections.Generic;
+using EastFive.Security.SessionServer;
 
-namespace EastFive.Security.SessionServer.CredentialProvider.ImplicitCreation
+namespace EastFive.Api.Azure.Credentials
 {
-    [SessionServer.Attributes.IntegrationName("Implicit")]
+    [Attributes.IntegrationName("Implicit")]
     public class ImplicitlyCreatedCredentialProvider : IProvideLoginManagement, IProvideAuthorization
     {
-        [SessionServer.Attributes.IntegrationName("Implicit")]
+        [Attributes.IntegrationName("Implicit")]
         public static Task<TResult> InitializeAsync<TResult>(
             Func<IProvideLogin, TResult> onProvideLogin,
             Func<IProvideAuthorization, TResult> onProvideAuthorization,
@@ -23,7 +24,7 @@ namespace EastFive.Security.SessionServer.CredentialProvider.ImplicitCreation
             return onProvideNothing().ToTask();
         }
         
-        public Type CallbackController => typeof(Api.Controllers.TokenController);
+        public Type CallbackController => typeof(Controllers.TokenController);
 
         public Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> extraParams,
             Func<string, Guid?, Guid?, IDictionary<string, string>, TResult> onSuccess,
@@ -98,7 +99,7 @@ namespace EastFive.Security.SessionServer.CredentialProvider.ImplicitCreation
 
             // Create or fetch the document with that key
 
-            const string connectionStringKeyName = Configuration.AppSettings.Storage;
+            const string connectionStringKeyName = EastFive.Security.SessionServer.Configuration.AppSettings.Storage;
             var context = new BlackBarLabs.Persistence.Azure.DataStores(connectionStringKeyName);
             var result = await context.AzureStorageRepository.DeleteIfAsync<CredentialsDocument, TResult>(authId,
                 async (document, delete) =>
