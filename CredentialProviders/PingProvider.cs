@@ -99,7 +99,7 @@ namespace EastFive.Security.CredentialProvider.Ping
                                 }
                                 else
                                 {
-                                    return onFailure(content);
+                                    return onFailure($"{content} TokenId: {tokenId}, AgentId: {agentId}");
                                 }
                             }
                         },

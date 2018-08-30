@@ -32,7 +32,9 @@ namespace EastFive.Api.Azure.Controllers
         {
             var kvps = Request.GetQueryNameValuePairs();
             var action = await ProcessRequestAsync(Security.CredentialProvider.InternalProvider.IntegrationName, kvps.ToDictionary(),
-                (location) => Redirect(location),
+                (location, why) => Request.CreateRedirectResponse(location)
+                        .AddReason(why)
+                        .ToActionResult(),
                 (code, body, reason) =>
                     this.Request
                         .CreateResponse(code, body)
@@ -51,7 +53,7 @@ namespace EastFive.Api.Azure.Controllers
                 { Security.CredentialProvider.InternalProvider.resourceTypes, resourceTypes },
             };
             return await ProcessRequestAsync(Security.CredentialProvider.InternalProvider.IntegrationName, extraParams,
-                (location) => onRedirect(location),
+                (location, why) => onRedirect(location, why),
                 (code, body, reason) =>
                     request
                         .CreateResponse(code, body)

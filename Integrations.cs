@@ -412,7 +412,7 @@ namespace EastFive.Azure
               IDictionary<string, string> updatedUserParameters,
           Func<TResult> onUpdated,
           Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onLogin,
-          Func<Uri, TResult> onLogout,
+          Func<Uri, string, TResult> onLogout,
           Func<string, TResult> onInvalidToken,
           Func<TResult> onLookupCredentialNotFound,
           Func<string, TResult> onSystemOffline,

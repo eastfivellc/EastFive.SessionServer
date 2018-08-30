@@ -34,10 +34,12 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             
             var kvps = Request.GetQueryNameValuePairs();
             return await ProcessRequestAsync(Enum.GetName(typeof(CredentialValidationMethodTypes), result.method), kvps.ToDictionary(),
-                location => Redirect(location),
+                (location, why) => this.Request.CreateRedirectResponse(location)
+                        .AddReason(why)
+                        .ToActionResult(),
                 (code, body, reason) => this.Request.CreateResponse(code, body)
-                        .AddReason(reason)
-                        .ToActionResult());
+                            .AddReason(reason)
+                            .ToActionResult());
         }
 
         public virtual async Task<IHttpActionResult> Post([FromUri]ResponseResult result)
@@ -59,14 +61,16 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                     () => (new KeyValuePair<string, string>()).AsArray().ToTask()));
             var allrequestParams = kvps.Concat(bodyValues).ToDictionary();
             return await ProcessRequestAsync(Enum.GetName(typeof(CredentialValidationMethodTypes), result.method), allrequestParams,
-                location => Redirect(location),
+                (location,why) => this.Request.CreateRedirectResponse(location)
+                        .AddReason(why)
+                        .ToActionResult(),
                 (code, body, reason) => this.Request.CreateResponse(code, body)
                         .AddReason(reason)
                         .ToActionResult());
         }
 
         protected static async Task<TResult> ProcessRequestAsync<TResult>(string method, IDictionary<string, string> values,
-            Func<Uri, TResult> onRedirect,
+            Func<Uri, string, TResult> onRedirect,
             Func<HttpStatusCode, string, string, TResult> onResponse)
         {
             var telemetry = Web.Configuration.Settings.GetString(SessionServer.Configuration.AppSettings.ApplicationInsightsKey,
@@ -88,16 +92,16 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                     var resp = await CreateResponse(context, method, action, sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUrl, onRedirect, onResponse, telemetry);
                     return resp;
                 },
-                (location) =>
+                (location, reason) =>
                 {
                     telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - location: {location.AbsolutePath}");
                     if (location.IsDefaultOrNull())
                         return Web.Configuration.Settings.GetUri(SessionServer.Configuration.AppSettings.LandingPage,
-                            (redirect) => onRedirect(location),
+                            (redirect) => onRedirect(location, reason),
                             (why) => onResponse(HttpStatusCode.BadRequest, why, $"Location was null")).ToTask();
                     if (location.Query.IsNullOrWhiteSpace())
                         location = location.SetQueryParam("cache", Guid.NewGuid().ToString("N"));
-                    return onRedirect(location).ToTask();
+                    return onRedirect(location, reason).ToTask();
                 },
                 (why) =>
                 {
@@ -136,7 +140,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             string method, AuthenticationActions action,
             Guid sessionId, Guid? authorizationId, string jwtToken, string refreshToken,
             IDictionary<string, string> extraParams, Uri redirectUrl,
-            Func<Uri, TResult> onRedirect,
+            Func<Uri, string, TResult> onRedirect,
             Func<HttpStatusCode, string, string, TResult> onResponse,
             TelemetryClient telemetry)
         {
@@ -148,7 +152,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 {
                     telemetry.TrackEvent($"CreateResponse - redirectUrlSelected1: {redirectUrlSelected.AbsolutePath}");
                     telemetry.TrackEvent($"CreateResponse - redirectUrlSelected2: {redirectUrlSelected.AbsoluteUri}");
-                    return onRedirect(redirectUrlSelected);
+                    return onRedirect(redirectUrlSelected, null);
                 },
                 (paramName, why) =>
                 {

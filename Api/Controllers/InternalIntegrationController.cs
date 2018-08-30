@@ -41,7 +41,7 @@ namespace EastFive.Api.Controllers
                     integration, resourceTypesList,
                     (integrationId, resTypesList) =>
                         Azure.Controllers.InternalIntegrationResponseController
-                            .GetResponse(integrationId, resTypesList, request, location => onSuccess(location))));
+                            .GetResponse(integrationId, resTypesList, request, (location,why) => onSuccess(location,why))), null);
         }
     }
 }

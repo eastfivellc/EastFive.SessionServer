@@ -83,12 +83,15 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                             var redirectResponse = config.GetRedirectUriAsync<IHttpActionResult>(context,
                                 Enum.GetName(typeof(CredentialValidationMethodTypes), CredentialValidationMethodTypes.SAML), action,
                                 sessionId, authorizationId, token, refreshToken, extraParams, redirectUri,
-                                (redirectUrl) => Redirect(redirectUrl),
+                                (redirectUrl) => Request.CreateRedirectResponse(redirectUrl).ToActionResult(),
                                 (paramName, why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult(),
                                 (why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult());
                             return redirectResponse;
                         },
-                        (location) => ((IHttpActionResult)Redirect(location)).ToTask(),
+                        (location, why) => Request.CreateRedirectResponse(location)
+                                    .AddReason(why)
+                                    .ToActionResult()
+                                    .ToTask(),
                         (why) => this.Request.CreateResponse(HttpStatusCode.BadRequest)
                                     .AddReason($"Invalid token:{why}")
                                     .ToActionResult()

@@ -104,7 +104,7 @@ namespace EastFive.Security.SessionServer.Api
                     resource.ExtraParams = extraParams;
                     return request.CreateResponse(HttpStatusCode.Accepted, resource);
                 },
-                (location) => request.CreateRedirectResponse(location),
+                (location, why) => request.CreateRedirectResponse(location).AddReason(why),
                 (why) => request.CreateResponse(HttpStatusCode.NotFound).AddReason(why),
                 () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("User in token is not connected to this system"),
                 (why) => request.CreateResponse(HttpStatusCode.BadGateway).AddReason(why),
