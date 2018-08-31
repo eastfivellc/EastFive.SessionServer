@@ -36,7 +36,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             var kvps = Request.GetQueryNameValuePairs();
 
             return await Request.GetApplication(
-                httpApp => ProcessRequestAsync(httpApp as Application, Enum.GetName(typeof(CredentialValidationMethodTypes), result.method), kvps.ToDictionary(),
+                httpApp => ProcessRequestAsync(httpApp as AzureApplication, Enum.GetName(typeof(CredentialValidationMethodTypes), result.method), kvps.ToDictionary(),
                     (location, why) => Redirect(location),
                     (code, body, reason) => this.Request.CreateResponse(code, body)
                         .AddReason(reason)
@@ -64,7 +64,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             var allrequestParams = kvps.Concat(bodyValues).ToDictionary();
 
             return await Request.GetApplication(
-                httpApp => ProcessRequestAsync(httpApp as Application, Enum.GetName(typeof(CredentialValidationMethodTypes), result.method), allrequestParams,
+                httpApp => ProcessRequestAsync(httpApp as AzureApplication, Enum.GetName(typeof(CredentialValidationMethodTypes), result.method), allrequestParams,
                     (location, why) => Redirect(location),
                     (code, body, reason) => this.Request.CreateResponse(code, body)
                         .AddReason(reason)
@@ -72,7 +72,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                 () => this.Request.CreateResponse(HttpStatusCode.OK, "Application is not an EastFive.Azure application.").ToActionResult().ToTask());
         }
         
-        public static async Task<TResult> ProcessRequestAsync<TResult>(Application application, string method, IDictionary<string, string> values,
+        public static async Task<TResult> ProcessRequestAsync<TResult>(AzureApplication application, string method, IDictionary<string, string> values,
             Func<Uri, string, TResult> onRedirect,
             Func<HttpStatusCode, string, string, TResult> onResponse)
         {

@@ -30,7 +30,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
     public static class InternalIntegrationResponseController
     {
         [HttpGet]
-        public static async Task<HttpResponseMessage> GetResponse(Application application, 
+        public static async Task<HttpResponseMessage> GetResponse(AzureApplication application, 
             [QueryDefaultParameter][Required]Guid integrationId, [Required]string resourceTypes,
             HttpRequestMessage request, RedirectResponse onRedirect)
         {

@@ -183,7 +183,7 @@ namespace EastFive.Api.Azure.Credentials
                     var context = request.GetSessionServerContext();
 
                     var application = request.GetApplication(
-                        app => app as Application,
+                        app => app as AzureApplication,
                         () => null);
 
                     // Can't update a session that does not exist

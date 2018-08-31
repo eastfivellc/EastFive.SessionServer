@@ -99,7 +99,7 @@ namespace EastFive.Api.Azure.Resources
         public static async Task<HttpResponseMessage> FindByResourceAsync(
                 [EastFive.Api.Required(Name = ActorPropertyName)]Guid actorId,
                 [EastFive.Api.Required(Name = Resources.ProcessStageType.ResourceTypePropertyName)]Type resourceType,
-                EastFive.Api.Controllers.Security security, Application application, UrlHelper url,
+                EastFive.Api.Controllers.Security security, AzureApplication application, UrlHelper url,
             [Display(Name = "Found")]MultipartAcceptArrayResponseAsync onMultipart,
             ReferencedDocumentNotFoundResponse onResourceNotFound,
             UnauthorizedResponse onUnauthorized)
@@ -111,7 +111,7 @@ namespace EastFive.Api.Azure.Resources
                 () => onUnauthorized().ToTask());
         }
 
-        internal static Resources.ProcessResourceView GetResource(EastFive.Azure.ProcessResourceView view, Application application, UrlHelper url)
+        internal static Resources.ProcessResourceView GetResource(EastFive.Azure.ProcessResourceView view, AzureApplication application, UrlHelper url)
         {
             return new Resources.ProcessResourceView
             {
@@ -148,7 +148,7 @@ namespace EastFive.Api.Azure.Resources
 
 
         [EastFive.Api.HttpOptions(MatchAllBodyParameters = false)]
-        public static HttpResponseMessage Options(HttpRequestMessage request, Application application, UrlHelper url,
+        public static HttpResponseMessage Options(HttpRequestMessage request, AzureApplication application, UrlHelper url,
             ContentResponse onOption)
         {
             return onOption(

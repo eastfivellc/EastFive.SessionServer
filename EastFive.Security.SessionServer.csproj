@@ -178,6 +178,7 @@
     <Compile Include="Api\Controllers\InternalIntegrationResponseController.cs" />
     <Compile Include="Api\Controllers\ManifestController.cs" />
     <Compile Include="Application.cs" />
+    <Compile Include="Modules\SpaHandler.cs" />
     <Compile Include="Monitoring\MonitoringDocument.cs" />
     <Compile Include="Processes\Api\ProcessStageGroupController.cs" />
     <Compile Include="Processes\Api\ProcessStepController.cs" />

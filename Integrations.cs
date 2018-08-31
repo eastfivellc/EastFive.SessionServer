@@ -410,7 +410,7 @@ namespace EastFive.Azure
         }
 
         public Task<TResult> UpdateAsync<TResult>(Guid authenticationRequestId, Guid actingAsUser,
-                System.Security.Claims.Claim[] claims, Api.Azure.Application application,
+                System.Security.Claims.Claim[] claims, Api.Azure.AzureApplication application,
               IDictionary<string, string> updatedUserParameters,
           Func<TResult> onUpdated,
           Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onLogin,

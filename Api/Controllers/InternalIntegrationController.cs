@@ -31,7 +31,7 @@ namespace EastFive.Api.Controllers
         [HttpPost(MatchAllParameters = false)]
         public async static Task<HttpResponseMessage> XlsPostAsync(EastFive.Security.SessionServer.Context context,
                 [Required]Guid integration, [Required]IDictionary<string, bool> resourceTypes,
-                Azure.Application application,
+                Azure.AzureApplication application,
                 HttpRequestMessage request, System.Web.Http.Routing.UrlHelper url,
             RedirectResponse onSuccess,
             NotFoundResponse onNotFound,

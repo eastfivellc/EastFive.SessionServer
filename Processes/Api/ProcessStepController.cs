@@ -31,7 +31,7 @@ namespace EastFive.Api.Azure.Controllers
         [EastFive.Api.HttpGet]
         public static Task<HttpResponseMessage> FindByIdAsync(
                 [QueryDefaultParameter][Required(Name = Resources.ProcessStep.IdPropertyName)]Guid id,
-                Application httpApplication, EastFive.Api.Controllers.Security security, UrlHelper url,
+                AzureApplication httpApplication, EastFive.Api.Controllers.Security security, UrlHelper url,
             ContentResponse onFound,
             NotFoundResponse onNotFound,
             UnauthorizedResponse onUnauthorized)
@@ -43,7 +43,7 @@ namespace EastFive.Api.Azure.Controllers
                 () => onUnauthorized());
         }
 
-        internal static Resources.ProcessStep GetResource(Process process, Application httpApplication, UrlHelper urlHelper)
+        internal static Resources.ProcessStep GetResource(Process process, AzureApplication httpApplication, UrlHelper urlHelper)
         {
             return new Resources.ProcessStep
             {
@@ -143,7 +143,7 @@ namespace EastFive.Api.Azure.Controllers
         }
 
         [EastFive.Api.HttpOptions(MatchAllBodyParameters = false)]
-        public static HttpResponseMessage Options(HttpRequestMessage request, UrlHelper url, Application application,
+        public static HttpResponseMessage Options(HttpRequestMessage request, UrlHelper url, AzureApplication application,
             ContentResponse onOption)
         {
             return onOption(

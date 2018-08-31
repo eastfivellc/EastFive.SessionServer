@@ -101,7 +101,7 @@ namespace EastFive.Api.Azure.Resources
                 [Required(Name = Resources.ProcessStage.TypePropertyName)]Type resourceType,
                 [Required(Name = "processstage." + Resources.ProcessStage.ConfirmablePropertyName + "." + Resources.ProcessStage.ConfirmableResource.ProcessStageNextPropertyName)]
                     EastFive.Api.Controllers.WebIdNone nextStage,
-                Application application, EastFive.Api.Controllers.Security security, UrlHelper url,
+                AzureApplication application, EastFive.Api.Controllers.Security security, UrlHelper url,
             MultipartAcceptArrayResponseAsync onMultipart,
             ReferencedDocumentNotFoundResponse onResourceNotFound,
             UnauthorizedResponse onUnauthorized)

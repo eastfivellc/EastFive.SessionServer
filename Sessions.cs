@@ -235,7 +235,7 @@ namespace EastFive.Security.SessionServer
         
         public async Task<TResult> UpdateWithAuthenticationAsync<TResult>(
                 Guid sessionId,
-                Application application, string method,
+                AzureApplication application, string method,
                 IDictionary<string, string> extraParams,
             Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onLogin,
             Func<Uri, string, TResult> onLogout,
@@ -294,7 +294,7 @@ namespace EastFive.Security.SessionServer
         }
 
         public async Task<TResult> CreateOrUpdateWithAuthenticationAsync<TResult>(
-                Application application, string method,
+                AzureApplication application, string method,
                 IDictionary<string, string> extraParams,
             Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onLogin,
             Func<Uri, string, TResult> onLogout,

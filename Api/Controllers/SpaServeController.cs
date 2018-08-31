@@ -6,7 +6,6 @@ using System.Web.Mvc;
 using System.Net.Http;
 using BlackBarLabs.Extensions;
 using System.Net;
-using EastFive.Security.SessionServer.Modules;
 using HtmlAgilityPack;
 using System.IO;
 using System.Collections.Generic;
@@ -20,7 +19,8 @@ namespace EastFive.Api.Azure.Controllers
         public IHttpActionResult Get([FromUri]string id)
         {
 
-            var indexFile = SpaHandlerModule.indexHTML;
+            //var indexFile = SpaHandlerModule.indexHTML;
+            var indexFile = Modules.SpaHandler.indexHTML;
 
             var doc = new HtmlDocument();
             //doc.LoadHtml(indexFile.ToString());

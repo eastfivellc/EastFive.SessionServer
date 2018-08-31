@@ -98,7 +98,7 @@ namespace EastFive.Api.Azure.Credentials
                 async application =>
                 {
                     var session = await context.Sessions.UpdateWithAuthenticationAsync(resource.Id.ToGuid().Value,
-                        application as Application, method, resource.ResponseToken,
+                        application as AzureApplication, method, resource.ResponseToken,
                         (sessionId, authId, token, refreshToken, actions, extraParams, redirect) =>
                         {
                             resource.AuthorizationId = authId;

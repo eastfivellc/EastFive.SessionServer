@@ -16,22 +16,35 @@ using System.Web.Http.Routing;
 using EastFive.Security.SessionServer;
 using EastFive.Extensions;
 using EastFive.Api.Azure.Credentials.Attributes;
+using System.Web.Http;
+using Microsoft.ApplicationInsights;
 
 namespace EastFive.Api.Azure
 {
-    public class Application : EastFive.Api.HttpApplication
+    public class AzureApplication : EastFive.Api.HttpApplication
     {
-        public Application()
+        public TelemetryClient Telemetry { get; private set; }
+
+        public AzureApplication()
             : base()
         {
+            Telemetry = EastFive.Web.Configuration.Settings.GetString(Security.SessionServer.Constants.AppSettingKeys.ApplicationInsightsKey,
+                (applicationInsightsKey) => new TelemetryClient { InstrumentationKey = applicationInsightsKey },
+                (why) => new TelemetryClient());
+
             this.AddInstigator(typeof(Security.SessionServer.Context),
                 (httpApp, request, parameterInfo, onCreatedSessionContext) => onCreatedSessionContext(this.AzureContext));
-
         }
 
         protected override void Application_Start()
         {
             base.Application_Start();
+        }
+
+        protected override void Configure(HttpConfiguration config)
+        {
+            base.Configure(config);
+            config.MessageHandlers.Add(new Api.Azure.Modules.SpaHandler(config));
         }
 
         Task<object[]> initializationChain = (new object[] { }).ToTask();

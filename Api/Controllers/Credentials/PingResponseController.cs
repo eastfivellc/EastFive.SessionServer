@@ -40,7 +40,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
         public static Task<HttpResponseMessage> Get(
             [Required(Name ="tokenid")]string tokenId,
             [Required(Name = "agentid")]string agentId,
-            Application application, HttpRequestMessage request,
+            AzureApplication application, HttpRequestMessage request,
             RedirectResponse redirectResponse)
         {
             //The way this works...
