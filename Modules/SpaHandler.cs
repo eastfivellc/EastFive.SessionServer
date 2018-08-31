@@ -90,14 +90,14 @@ namespace EastFive.Api.Azure.Modules
         }
 
         
-        protected override async Task<HttpResponseMessage> SendAsync(EastFive.Api.HttpApplication httpApp, HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override async Task<HttpResponseMessage> SendAsync(EastFive.Api.HttpApplication httpApp, HttpRequestMessage request, CancellationToken cancellationToken, Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> continuation)
         {
             var context = httpApp.Context;
             string filePath = context.Request.FilePath;
             string fileName = VirtualPathUtility.GetFileName(filePath);
 
             if (!(httpApp is AzureApplication))
-                return await base.SendAsync(request, cancellationToken);
+                return await continuation(request, cancellationToken);
 
             if (lookupSpaFile.IsDefault())
                 ExtractSpaFiles(httpApp as AzureApplication, context.Request);
@@ -121,7 +121,7 @@ namespace EastFive.Api.Azure.Modules
                     .Any())
                 return request.CreateHtmlResponse(Security.SessionServer.Properties.Resources.indexPage);
 
-            return await base.SendAsync(request, cancellationToken);
+            return await continuation(request, cancellationToken);
         }
     }
 }
