@@ -61,8 +61,14 @@ namespace EastFive.Api.Azure
             default(Dictionary<string, IProvideLoginManagement>);
         internal Dictionary<string, IProvideLoginManagement> CredentialManagementProviders { get; private set; }
 
+        protected virtual void PreInit()
+        {
+
+        }
+
         protected override async Task<Initialized> InitializeAsync()
         {
+            PreInit();
             var initializers = await initializationChain;
             
             var credentialProviders = initializers
