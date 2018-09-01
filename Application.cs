@@ -44,7 +44,7 @@ namespace EastFive.Api.Azure
         protected override void Configure(HttpConfiguration config)
         {
             base.Configure(config);
-            config.MessageHandlers.Add(new Api.Azure.Modules.SpaHandler(config));
+            config.MessageHandlers.Add(new Api.Azure.Modules.SpaHandler(this, config));
         }
 
         Task<object[]> initializationChain = (new object[] { }).ToTask();
@@ -61,8 +61,14 @@ namespace EastFive.Api.Azure
             default(Dictionary<string, IProvideLoginManagement>);
         internal Dictionary<string, IProvideLoginManagement> CredentialManagementProviders { get; private set; }
 
+        protected virtual void PreInit()
+        {
+
+        }
+
         protected override async Task<Initialized> InitializeAsync()
         {
+            PreInit();
             var initializers = await initializationChain;
             
             var credentialProviders = initializers

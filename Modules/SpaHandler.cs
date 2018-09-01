@@ -27,7 +27,7 @@ namespace EastFive.Api.Azure.Modules
         static internal byte[] indexHTML;
         private string[] firstSegments;
 
-        public SpaHandler(System.Web.Http.HttpConfiguration config)
+        public SpaHandler(AzureApplication httpApp, System.Web.Http.HttpConfiguration config)
             : base(config)
         {
             // TODO: A better job of matching that just grabbing the first segment
@@ -38,9 +38,11 @@ namespace EastFive.Api.Azure.Modules
                 .Select(
                     route => route.Url.Split(new char[] { '/' }).First())
                 .ToArray();
+
+            ExtractSpaFiles(httpApp);
         }
         
-        private void ExtractSpaFiles(AzureApplication application, HttpRequest request)
+        private void ExtractSpaFiles(AzureApplication application)
         {
             var spaZipPath = System.Web.Hosting.HostingEnvironment.MapPath("~/Content/Spa.zip");
             if (!System.IO.File.Exists(spaZipPath))
@@ -98,10 +100,7 @@ namespace EastFive.Api.Azure.Modules
 
             if (!(httpApp is AzureApplication))
                 return await continuation(request, cancellationToken);
-
-            if (lookupSpaFile.IsDefault())
-                ExtractSpaFiles(httpApp as AzureApplication, context.Request);
-
+            
             if (lookupSpaFile.ContainsKey(fileName))
                 return request.CreateContentResponse(lookupSpaFile[fileName],
                     fileName.EndsWith(".js")?
