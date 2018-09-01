@@ -33,7 +33,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
     }
     
     [RoutePrefix("aadb2c")]
-    [FunctionViewController]
+    [FunctionViewController(Route="PingResponse")]
     public class PingResponseController
     {
         [HttpGet]
