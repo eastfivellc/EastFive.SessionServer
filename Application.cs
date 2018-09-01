@@ -44,7 +44,7 @@ namespace EastFive.Api.Azure
         protected override void Configure(HttpConfiguration config)
         {
             base.Configure(config);
-            config.MessageHandlers.Add(new Api.Azure.Modules.SpaHandler(config));
+            config.MessageHandlers.Add(new Api.Azure.Modules.SpaHandler(this, config));
         }
 
         Task<object[]> initializationChain = (new object[] { }).ToTask();
