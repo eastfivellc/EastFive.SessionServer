@@ -46,9 +46,7 @@ namespace EastFive.Api.Azure
             base.Configure(config);
             config.MessageHandlers.Add(new Api.Azure.Modules.SpaHandler(this, config));
         }
-
-        Task<object[]> initializationChain = (new object[] { }).ToTask();
-
+        
         private Dictionary<string, IProvideAuthorization> authorizationProviders =
             default(Dictionary<string, IProvideAuthorization>);
         internal Dictionary<string, IProvideAuthorization> AuthorizationProviders { get; private set; }
@@ -61,16 +59,33 @@ namespace EastFive.Api.Azure
             default(Dictionary<string, IProvideLoginManagement>);
         internal Dictionary<string, IProvideLoginManagement> CredentialManagementProviders { get; private set; }
 
-        protected virtual void PreInit()
+        protected delegate void AddProviderDelegate<TResult>(Func<Func<object, TResult>, Func<TResult>, Func<string, TResult>, Task<TResult>> initializeAsync);
+
+        protected virtual void AddProviders<TResult>(AddProviderDelegate<TResult> callback)
         {
 
         }
 
         protected override async Task<Initialized> InitializeAsync()
         {
-            PreInit();
-            var initializers = await initializationChain;
-            
+            var initializersTask = (new object[] { }).ToTask();
+            AddProviders<object[]>(
+                (providerInitializer) =>
+                {
+                    initializersTask = Task.Run<object[]>(
+                        async () =>
+                        {
+                            var initializersPrevious = await initializersTask;
+                            return await providerInitializer(
+                                initializer => initializersPrevious.Append(initializer).ToArray(),
+                                () => initializersPrevious,
+                                (why) => initializersPrevious);
+
+                        },
+                        System.Threading.CancellationToken.None);
+                });
+            var initializers = await initializersTask;
+
             var credentialProviders = initializers
                 .Where(
                     initializer => initializer.GetType().ContainsCustomAttribute<IntegrationNameAttribute>())
@@ -140,17 +155,7 @@ namespace EastFive.Api.Azure
 
         protected void AddProvider(Func<Func<object, object[]>, Func<object[]>, Func<string, object[]>, Task<object[]>> initializeAsync)
         {
-            var initializersTask = initializationChain;
-            initializationChain = Task.Run<object[]>(
-                async () =>
-                    {
-                        var initializers = await initializersTask;
-                        return await initializeAsync(
-                            initializer => initializers.Append(initializer).ToArray(),
-                            () => initializers,
-                            (why) => initializers);
-                    },
-                System.Threading.CancellationToken.None);
+            
 
         }
 
