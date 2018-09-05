@@ -101,12 +101,24 @@ namespace EastFive.Api.Azure
             return await base.InitializeAsync();
         }
 
+        internal virtual async Task<Func<bool, string, Task>> LogAuthorizationRequestAsync(string method, 
+            IDictionary<string, string> values)
+        {
+            return (success, message) =>
+            {
+                return 1.ToTask();
+            };
+        }
+
         internal TResult GetAuthorizationProvider<TResult>(string method,
             Func<IProvideAuthorization, TResult> onSuccess,
             Func<TResult> onCredintialSystemNotAvailable,
             Func<string, TResult> onFailure)
         {
             this.InitializationWait();
+            if (!authorizationProviders.ContainsKey(method))
+                return onCredintialSystemNotAvailable();
+
             var provider = authorizationProviders[method];
             return onSuccess(provider);
         }
@@ -140,6 +152,13 @@ namespace EastFive.Api.Azure
                     },
                 System.Threading.CancellationToken.None);
 
+        }
+
+        internal virtual Task<TResult> OnUnmappedUserAsync<TResult>(string method, string subject, 
+            Func<Guid, TResult> onCreatedMapping,
+            Func<TResult> onNoChange)
+        {
+            return onNoChange().ToTask();
         }
 
         public virtual Web.Services.ISendMessageService SendMessageService { get => Web.Services.ServiceConfiguration.SendMessageService(); }

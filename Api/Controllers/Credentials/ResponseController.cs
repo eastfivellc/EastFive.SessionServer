@@ -76,66 +76,81 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             Func<Uri, string, TResult> onRedirect,
             Func<HttpStatusCode, string, string, TResult> onResponse)
         {
-            var telemetry = Web.Configuration.Settings.GetString(Security.SessionServer.Configuration.AppSettings.ApplicationInsightsKey,
-                (applicationInsightsKey) =>
-                {
-                    return new TelemetryClient { InstrumentationKey = applicationInsightsKey };
-                },
-                (why) =>
-                {
-                    return new TelemetryClient();
-                });
+            var saveAuthLogTask = application.LogAuthorizationRequestAsync(method, values);
 
-            var context = Context.LoadFromConfiguration();
+            var telemetry = application.Telemetry;
+            var context = application.AzureContext;
 
-            var response = await await context.Sessions.CreateOrUpdateWithAuthenticationAsync(
+            var response = await await context.Sessions.CreateOrUpdateWithAuthenticationAsync<Task<TResult>>(
                     application, method, values,
                 async (sessionId, authorizationId, jwtToken, refreshToken, action, extraParams, redirectUrl) =>
                 {
+                    var saveAuthLogAsync = await saveAuthLogTask;
+                    var updatingAuthLogTask = saveAuthLogAsync(true, $"Login:{authorizationId}/{sessionId}[{action}]");
                     telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Created Authentication.  Creating response.");
-                    var resp = await CreateResponse(context, method, action, sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUrl, onRedirect, onResponse, telemetry);
-                    return resp;
+                    var resp = CreateResponse(context, method, action, sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUrl, onRedirect, onResponse, telemetry);
+                    await updatingAuthLogTask;
+                    return await resp;
                 },
-                (location, reason) =>
+                async (location, reason) =>
                 {
+                    var saveAuthLogAsync = await saveAuthLogTask;
+                    await saveAuthLogAsync(true, $"Logout:{location} -- {reason}");
                     telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - location: {location.AbsolutePath}");
                     if (location.IsDefaultOrNull())
                         return Web.Configuration.Settings.GetUri(Security.SessionServer.Configuration.AppSettings.LandingPage,
                             (redirect) => onRedirect(location, reason),
-                            (why) => onResponse(HttpStatusCode.BadRequest, why, $"Location was null")).ToTask();
+                            (why) => onResponse(HttpStatusCode.BadRequest, why, $"Location was null"));
                     if (location.Query.IsNullOrWhiteSpace())
                         location = location.SetQueryParam("cache", Guid.NewGuid().ToString("N"));
-                    return onRedirect(location, reason).ToTask();
+                    return onRedirect(location, reason);
                 },
-                (why) =>
+                async (subject, createMappingAsync) =>
+                {
+                    return await application.OnUnmappedUserAsync(method, subject,
+                        async (authId) =>
+                        {
+                            await createMappingAsync(authId);
+                            return await ProcessRequestAsync(application, method, values, onRedirect, onResponse);
+                        },
+                        () =>
+                        {
+                            var message = "Token is not connected to a user in this system";
+                            telemetry.TrackException(new ResponseException(message));
+                            return onResponse(HttpStatusCode.Conflict, message, message).ToTask();
+                        });
+                },
+                async (why) =>
                 {
                     var message = $"Invalid token:{why}";
+                    var saveAuthLogAsync = await saveAuthLogTask;
+                    await saveAuthLogAsync(false, message);
                     telemetry.TrackException(new ResponseException());
-                    return onResponse(HttpStatusCode.BadRequest, message, $"Invalid token:{why}").ToTask();
+                    return onResponse(HttpStatusCode.BadRequest, message, $"Invalid token:{why}");
                 },
-                () =>
-                {
-                    var message = "Token is not connected to a user in this system";
-                    telemetry.TrackException(new ResponseException(message));
-                    return onResponse(HttpStatusCode.Conflict, message, message).ToTask();
-                },
-                (why) =>
+                async (why) =>
                 {
                     var message = $"Cannot create session because service is unavailable: {why}";
+                    var saveAuthLogAsync = await saveAuthLogTask;
+                    await saveAuthLogAsync(false, message);
                     telemetry.TrackException(new ResponseException(message));
-                    return onResponse(HttpStatusCode.ServiceUnavailable, message, why).ToTask();
+                    return onResponse(HttpStatusCode.ServiceUnavailable, message, why);
                 },
-                (why) =>
+                async (why) =>
                 {
                     var message = $"Cannot create session because service is unavailable: {why}";
+                    var saveAuthLogAsync = await saveAuthLogTask;
+                    await saveAuthLogAsync(false, message);
                     telemetry.TrackException(new ResponseException(message));
-                    return onResponse(HttpStatusCode.ServiceUnavailable, message, why).ToTask();
+                    return onResponse(HttpStatusCode.ServiceUnavailable, message, why);
                 },
-                (why) =>
+                async (why) =>
                 {
                     var message = $"General failure: {why}";
+                    var saveAuthLogAsync = await saveAuthLogTask;
+                    await saveAuthLogAsync(false, message);
                     telemetry.TrackException(new ResponseException(message));
-                    return onResponse(HttpStatusCode.Conflict, message, why).ToTask();
+                    return onResponse(HttpStatusCode.Conflict, message, why);
                 });
             return response;
         }
