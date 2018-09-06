@@ -89,7 +89,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                                 (why) => Request.CreateResponse(HttpStatusCode.BadRequest).AddReason(why).ToActionResult());
                             return redirectResponse;
                         },
-                        (location, why) => Request.CreateRedirectResponse(location)
+                        (location, why, paramsExtra) => Request.CreateRedirectResponse(location)
                                     .AddReason(why)
                                     .ToActionResult()
                                     .ToTask(),

@@ -117,10 +117,10 @@ namespace EastFive.Api.Azure
             return await base.InitializeAsync();
         }
 
-        internal virtual async Task<Func<bool, string, Task>> LogAuthorizationRequestAsync(string method, 
+        internal virtual async Task<Func<bool, string, IDictionary<string, string>, Task>> LogAuthorizationRequestAsync(string method, 
             IDictionary<string, string> values)
         {
-            return (success, message) =>
+            return (success, message, extraParameters) =>
             {
                 return 1.ToTask();
             };

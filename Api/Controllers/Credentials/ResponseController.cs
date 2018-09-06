@@ -86,16 +86,16 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                 async (sessionId, authorizationId, jwtToken, refreshToken, action, extraParams, redirectUrl) =>
                 {
                     var saveAuthLogAsync = await saveAuthLogTask;
-                    var updatingAuthLogTask = saveAuthLogAsync(true, $"Login:{authorizationId}/{sessionId}[{action}]");
+                    var updatingAuthLogTask = saveAuthLogAsync(true, $"Login:{authorizationId}/{sessionId}[{action}]", extraParams);
                     telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Created Authentication.  Creating response.");
                     var resp = CreateResponse(context, method, action, sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUrl, onRedirect, onResponse, telemetry);
                     await updatingAuthLogTask;
                     return await resp;
                 },
-                async (location, reason) =>
+                async (location, reason, extraParams) =>
                 {
                     var saveAuthLogAsync = await saveAuthLogTask;
-                    await saveAuthLogAsync(true, $"Logout:{location} -- {reason}");
+                    await saveAuthLogAsync(true, $"Logout:{location} -- {reason}", extraParams);
                     telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - location: {location.AbsolutePath}");
                     if (location.IsDefaultOrNull())
                         return Web.Configuration.Settings.GetUri(Security.SessionServer.Configuration.AppSettings.LandingPage,
@@ -107,11 +107,33 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                 },
                 async (subject, credentialProvider, extraParams, createMappingAsync) =>
                 {
-                    return await application.OnUnmappedUserAsync(method, credentialProvider, subject, values,
-                        async (authId) =>
+                    telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Token is not connected to a user in this system.");
+                    var saveAuthLogAsync = await saveAuthLogTask;
+                    var updatingAuthLogTask = saveAuthLogAsync(true, $"Login:{subject}/{credentialProvider.GetType().FullName}", extraParams);
+                    return await application.OnUnmappedUserAsync<Task<TResult>>(method, credentialProvider, subject, values,
+                        async (authorizationId) =>
                         {
-                            await createMappingAsync(authId);
-                            return await ProcessRequestAsync(application, method, values, onRedirect, onResponse);
+                            await updatingAuthLogTask;
+                            telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Creating Authentication.");
+                            updatingAuthLogTask = saveAuthLogAsync(true, $"New user mapping requested:{subject}/{credentialProvider.GetType().FullName}[{authorizationId}]", extraParams);
+                            return await await createMappingAsync(authorizationId,
+                                async (sessionId, jwtToken, refreshToken, action, redirectUrl) =>
+                                {
+                                    await updatingAuthLogTask;
+                                    await saveAuthLogAsync(true, $"New user mapping requested:{subject}/{credentialProvider.GetType().FullName}[{authorizationId}]", extraParams);
+                                    telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Created Authentication.  Creating response.");
+                                    var resp = CreateResponse(context, method, action, sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUrl, onRedirect, onResponse, telemetry);
+                                    await updatingAuthLogTask;
+                                    return resp;
+                                },
+                                async (why) =>
+                                {
+                                    await updatingAuthLogTask;
+                                    await saveAuthLogAsync(true, $"Failure to create user mapping requested:{subject}/{credentialProvider.GetType().FullName}[{authorizationId}]: {why}", extraParams);
+                                    var message = $"Failure to connect token to a user in this system: {why}";
+                                    telemetry.TrackException(new ResponseException(message));
+                                    return onResponse(HttpStatusCode.Conflict, message, message);
+                                });
                         },
                         () =>
                         {
@@ -124,7 +146,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                 {
                     var message = $"Invalid token:{why}";
                     var saveAuthLogAsync = await saveAuthLogTask;
-                    await saveAuthLogAsync(false, message);
+                    await saveAuthLogAsync(false, message, values);
                     telemetry.TrackException(new ResponseException());
                     return onResponse(HttpStatusCode.BadRequest, message, $"Invalid token:{why}");
                 },
@@ -132,7 +154,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                 {
                     var message = $"Cannot create session because service is unavailable: {why}";
                     var saveAuthLogAsync = await saveAuthLogTask;
-                    await saveAuthLogAsync(false, message);
+                    await saveAuthLogAsync(false, message, values);
                     telemetry.TrackException(new ResponseException(message));
                     return onResponse(HttpStatusCode.ServiceUnavailable, message, why);
                 },
@@ -140,7 +162,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                 {
                     var message = $"Cannot create session because service is unavailable: {why}";
                     var saveAuthLogAsync = await saveAuthLogTask;
-                    await saveAuthLogAsync(false, message);
+                    await saveAuthLogAsync(false, message, values);
                     telemetry.TrackException(new ResponseException(message));
                     return onResponse(HttpStatusCode.ServiceUnavailable, message, why);
                 },
@@ -148,7 +170,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                 {
                     var message = $"General failure: {why}";
                     var saveAuthLogAsync = await saveAuthLogTask;
-                    await saveAuthLogAsync(false, message);
+                    await saveAuthLogAsync(false, message, values);
                     telemetry.TrackException(new ResponseException(message));
                     return onResponse(HttpStatusCode.Conflict, message, why);
                 });

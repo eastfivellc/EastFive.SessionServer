@@ -238,7 +238,7 @@ namespace EastFive.Security.SessionServer
                 AzureApplication application, string method,
                 IDictionary<string, string> extraParams,
             Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onLogin,
-            Func<Uri, string, TResult> onLogout,
+            Func<Uri, string, IDictionary<string, string>, TResult> onLogout,
             Func<string, TResult> onInvalidToken,
             Func<TResult> lookupCredentialNotFound,
             Func<string, TResult> systemOffline,
@@ -278,11 +278,11 @@ namespace EastFive.Security.SessionServer
                         async (stateId, extraParamsWithRedemptionParams) =>
                         {
                             if (!stateId.HasValue)
-                                onLogout(default(Uri), "State id missing.");
+                                onLogout(default(Uri), "State id missing.", extraParamsWithRedemptionParams);
 
                             return await dataContext.AuthenticationRequests.FindByIdAsync(stateId.Value,
-                                (authRequest) => onLogout(authRequest.redirectLogout, $"Not authenticated. [{stateId.Value}]"),
-                                () => onLogout(default(Uri), $"Authentication request not found. [{stateId.Value}]"));
+                                (authRequest) => onLogout(authRequest.redirectLogout, $"Not authenticated. [{stateId.Value}]", extraParamsWithRedemptionParams),
+                                () => onLogout(default(Uri), $"Authentication request not found. [{stateId.Value}]", extraParamsWithRedemptionParams));
                         },
                         onInvalidToken.AsAsyncFunc(),
                         systemOffline.AsAsyncFunc(),
@@ -297,8 +297,14 @@ namespace EastFive.Security.SessionServer
                 AzureApplication application, string method,
                 IDictionary<string, string> extraParams,
             Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onLogin,
-            Func<Uri, string, TResult> onLogout,
-            Func<string, IProvideAuthorization, IDictionary<string, string>, Func<Guid, Task>, Task<TResult>> lookupCredentialNotFound,
+            Func<Uri, string, IDictionary<string, string>, TResult> onLogout,
+            Func<string, IProvideAuthorization, IDictionary<string, string>,
+                Func<
+                    Guid,
+                    Func<Guid, string, string, AuthenticationActions, Uri, Task<TResult>>,
+                    Func<string, TResult>,
+                    Task<TResult>>,
+                Task<TResult>> lookupCredentialNotFound,
             Func<string, TResult> onInvalidToken,
             Func<string, TResult> systemOffline,
             Func<string, TResult> onNotConfigured,
@@ -335,25 +341,33 @@ namespace EastFive.Security.SessionServer
                                         "Guid not unique for creating authentication started from external system".AsFunctionException<TResult>(),
                                         onFailure);
                                 },
-                                () => lookupCredentialNotFound(subject, provider,
-                                    (authId) =>
+                                () => lookupCredentialNotFound(subject, provider, extraParamsWithRedemptionParams,
+                                    async (authenticationId, onCreatedLogin, onFailureToCreateLogin) =>
                                     {
-                                        return dataContext.CredentialMappings.CreateCredentialMappingAsync(
-                                            Guid.NewGuid(), method, subject, authId,
-                                            () => true,
-                                            () => false,
-                                            () => false);
+                                        var sessionId = Guid.NewGuid();
+                                        var authorizationId = Guid.NewGuid();
+                                        return await await dataContext.CredentialMappings.CreateCredentialMappingAsync<Task<TResult>>(
+                                            sessionId, method, subject, authenticationId,
+                                            async () =>
+                                            {
+                                                return await await this.CreateLoginAsync<Task<TResult>>(authorizationId, authenticationId, method, default(Uri), extraParamsWithRedemptionParams,
+                                                    (session) => onCreatedLogin(sessionId, session.token, session.refreshToken, AuthenticationActions.signin, session.redirectUrl),
+                                                    "Guid not unique for creating authentication started from external system".AsFunctionException<Task<TResult>>(),
+                                                    onFailureToCreateLogin.AsAsyncFunc());
+                                            },
+                                            () => "Guid not unique for creating authentication started from external system".AsFunctionException<Task<TResult>>()(),
+                                            () => onFailureToCreateLogin("Token is already in use.").ToTask());
                                     }));
                         },
                         async (stateId, extraParamsWithRedemptionParams) =>
                         {
                             telemetry.TrackEvent("Sessions.CreateOrUpdateWithAuthenticationAsync:  Not Authenticated");
                             if (!stateId.HasValue)
-                                onLogout(default(Uri), "State id missing.");
+                                onLogout(default(Uri), "State id missing.", extraParamsWithRedemptionParams);
 
                             return await dataContext.AuthenticationRequests.FindByIdAsync(stateId.Value,
-                                (authRequest) => onLogout(authRequest.redirectLogout, $"Not authenticated. [{stateId.Value}]"),
-                                () => onLogout(default(Uri), $"Authentication request not found. [{stateId.Value}]"));
+                                (authRequest) => onLogout(authRequest.redirectLogout, $"Not authenticated. [{stateId.Value}]", extraParamsWithRedemptionParams),
+                                () => onLogout(default(Uri), $"Authentication request not found. [{stateId.Value}]", extraParamsWithRedemptionParams));
                         },
                         onInvalidToken.AsAsyncFunc(),
                         systemOffline.AsAsyncFunc(),
@@ -368,7 +382,7 @@ namespace EastFive.Security.SessionServer
         private async Task<TResult> AuthenticateStateAsync<TResult>(Guid sessionId, Guid? loginId, string method,
                 string subject, IDictionary<string, string> extraParams,
             Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onLogin,
-            Func<Uri, string, TResult> onLogout,
+            Func<Uri, string, IDictionary<string, string>, TResult> onLogout,
             Func<string, TResult> onInvalidToken,
             Func<string, TResult> onNotConfigured,
             Func<string, TResult> onFailure)
@@ -377,7 +391,7 @@ namespace EastFive.Security.SessionServer
                 async (authenticationRequest, saveAuthRequest) =>
                 {
                     if (authenticationRequest.Deleted.HasValue)
-                        return onLogout(authenticationRequest.redirectLogout, $"Authentication request deleted. [{sessionId}]");
+                        return onLogout(authenticationRequest.redirectLogout, $"Authentication request deleted. [{sessionId}]", extraParams);
 
                     if (authenticationRequest.method != method)
                         return onInvalidToken($"The credential's authentication method does not match the callback method. [{sessionId}]");
