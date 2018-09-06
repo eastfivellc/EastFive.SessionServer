@@ -298,7 +298,7 @@ namespace EastFive.Security.SessionServer
                 IDictionary<string, string> extraParams,
             Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onLogin,
             Func<Uri, string, TResult> onLogout,
-            Func<string, Func<Guid, Task>, Task<TResult>> lookupCredentialNotFound,
+            Func<string, IProvideAuthorization, IDictionary<string, string>, Func<Guid, Task>, Task<TResult>> lookupCredentialNotFound,
             Func<string, TResult> onInvalidToken,
             Func<string, TResult> systemOffline,
             Func<string, TResult> onNotConfigured,
@@ -335,7 +335,7 @@ namespace EastFive.Security.SessionServer
                                         "Guid not unique for creating authentication started from external system".AsFunctionException<TResult>(),
                                         onFailure);
                                 },
-                                () => lookupCredentialNotFound(subject,
+                                () => lookupCredentialNotFound(subject, provider,
                                     (authId) =>
                                     {
                                         return dataContext.CredentialMappings.CreateCredentialMappingAsync(

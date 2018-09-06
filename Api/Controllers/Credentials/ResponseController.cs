@@ -105,9 +105,9 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                         location = location.SetQueryParam("cache", Guid.NewGuid().ToString("N"));
                     return onRedirect(location, reason);
                 },
-                async (subject, createMappingAsync) =>
+                async (subject, credentialProvider, extraParams, createMappingAsync) =>
                 {
-                    return await application.OnUnmappedUserAsync(method, subject,
+                    return await application.OnUnmappedUserAsync(method, credentialProvider, subject, values,
                         async (authId) =>
                         {
                             await createMappingAsync(authId);

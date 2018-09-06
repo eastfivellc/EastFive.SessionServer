@@ -18,6 +18,9 @@ using EastFive.Extensions;
 using EastFive.Api.Azure.Credentials.Attributes;
 using System.Web.Http;
 using Microsoft.ApplicationInsights;
+using BlackBarLabs;
+using EastFive.Linq.Async;
+using BlackBarLabs.Linq.Async;
 
 namespace EastFive.Api.Azure
 {
@@ -68,23 +71,21 @@ namespace EastFive.Api.Azure
 
         protected override async Task<Initialized> InitializeAsync()
         {
-            var initializersTask = (new object[] { }).ToTask();
+            var initializersTasks = new Task<object[]>[] { };
             AddProviders<object[]>(
                 (providerInitializer) =>
                 {
-                    initializersTask = Task.Run<object[]>(
-                        async () =>
-                        {
-                            var initializersPrevious = await initializersTask;
-                            return await providerInitializer(
-                                initializer => initializersPrevious.Append(initializer).ToArray(),
-                                () => initializersPrevious,
-                                (why) => initializersPrevious);
+                    var temp = providerInitializer(
+                        initializer => new[] { initializer },
+                        () => new object[] { },
+                        (why) => new object[] { });
 
-                        },
-                        System.Threading.CancellationToken.None);
+                    initializersTasks = initializersTasks.Append(temp).ToArray();
                 });
-            var initializers = await initializersTask;
+            var initializers = await initializersTasks
+                    .WhenAllAsync()
+                    .SelectManyAsync()
+                    .ToArrayAsync();
 
             var credentialProviders = initializers
                 .Where(
@@ -159,7 +160,7 @@ namespace EastFive.Api.Azure
 
         }
 
-        internal virtual Task<TResult> OnUnmappedUserAsync<TResult>(string method, string subject, 
+        public virtual Task<TResult> OnUnmappedUserAsync<TResult>(string method, IProvideAuthorization provider, string subject, IDictionary<string, string> extraParameters, 
             Func<Guid, TResult> onCreatedMapping,
             Func<TResult> onNoChange)
         {
