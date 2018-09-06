@@ -176,6 +176,54 @@ namespace EastFive.Api.Azure
             return Security.SessionServer.Library.configurationManager.GetActorLink(actorId, url);
         }
 
+        public virtual async Task<TResult> GetRedirectUriAsync<TResult>(
+                string validationType,
+                AuthenticationActions action,
+                Guid requestId,
+                Guid? authorizationId,
+                string token, string refreshToken,
+                IDictionary<string, string> authParams,
+                Uri redirectUriFromPost,
+            Func<Uri, TResult> onSuccess,
+            Func<string, string, TResult> onInvalidParameter,
+            Func<string, TResult> onFailure)
+        {
+            if (!redirectUriFromPost.IsDefault())
+            {
+                var redirectUrl = SetRedirectParameters(redirectUriFromPost, requestId, authorizationId, token, refreshToken);
+                return onSuccess(redirectUrl);
+            }
+
+            if (null != authParams && authParams.ContainsKey(Security.SessionServer.Configuration.AuthorizationParameters.RedirectUri))
+            {
+                Uri redirectUri;
+                var redirectUriString = authParams[Security.SessionServer.Configuration.AuthorizationParameters.RedirectUri];
+                if (!Uri.TryCreate(redirectUriString, UriKind.Absolute, out redirectUri))
+                    return onInvalidParameter("REDIRECT", $"BAD URL in redirect call:{redirectUriString}");
+                var redirectUrl = SetRedirectParameters(redirectUri, requestId, authorizationId, token, refreshToken);
+                return onSuccess(redirectUrl);
+            }
+
+            return await EastFive.Web.Configuration.Settings.GetUri(
+                EastFive.Security.SessionServer.Configuration.AppSettings.LandingPage,
+                (redirectUri) =>
+                {
+                    var redirectUrl = SetRedirectParameters(redirectUri, requestId, authorizationId, token, refreshToken);
+                    return onSuccess(redirectUrl);
+                },
+                (why) => onFailure(why)).ToTask();
+        }
+
+        protected Uri SetRedirectParameters(Uri redirectUri, Guid requestId, Guid? authorizationId, string token, string refreshToken)
+        {
+            var redirectUrl = redirectUri
+                //.SetQueryParam(parameterAuthorizationId, authorizationId.Value.ToString("N"))
+                //.SetQueryParam(parameterToken, token)
+                //.SetQueryParam(parameterRefreshToken, refreshToken)
+                .SetQueryParam("request_id", requestId.ToString());
+            return redirectUrl;
+        }
+
         public Security.SessionServer.Context AzureContext
         {
             get
