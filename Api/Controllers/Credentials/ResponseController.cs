@@ -110,7 +110,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                     telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Token is not connected to a user in this system.");
                     var saveAuthLogAsync = await saveAuthLogTask;
                     var updatingAuthLogTask = saveAuthLogAsync(true, $"Login:{subject}/{credentialProvider.GetType().FullName}", extraParams);
-                    return await application.OnUnmappedUserAsync<Task<TResult>>(method, credentialProvider, subject, values,
+                    return await application.OnUnmappedUserAsync<Task<TResult>>(method, credentialProvider, subject, extraParams,
                         async (authorizationId) =>
                         {
                             await updatingAuthLogTask;
