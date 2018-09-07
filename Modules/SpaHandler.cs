@@ -16,6 +16,7 @@ using EastFive.Api;
 using System.Net.Http;
 using System.Threading;
 using BlackBarLabs.Api;
+using EastFive.Linq;
 
 namespace EastFive.Api.Azure.Modules
 {
@@ -38,6 +39,8 @@ namespace EastFive.Api.Azure.Modules
                 .Select(
                     route => route.Url.Split(new char[] { '/' }).First())
                 .ToArray();
+
+            firstSegments = firstSegments.Append("view").ToArray();
 
             ExtractSpaFiles(httpApp);
         }
