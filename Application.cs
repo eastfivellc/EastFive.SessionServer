@@ -160,7 +160,7 @@ namespace EastFive.Api.Azure
 
         }
 
-        public virtual Task<TResult> OnUnmappedUserAsync<TResult>(string method, IProvideAuthorization provider, string subject, IDictionary<string, string> extraParameters, 
+        public virtual Task<TResult> OnUnmappedUserAsync<TResult>(string method, IProvideAuthorization authorizationProvider, string subject, IDictionary<string, string> extraParameters, 
             Func<Guid, TResult> onCreatedMapping,
             Func<TResult> onNoChange)
         {
