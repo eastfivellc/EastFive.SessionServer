@@ -177,6 +177,7 @@ namespace EastFive.Api.Azure
         }
 
         public virtual async Task<TResult> GetRedirectUriAsync<TResult>(
+                IProvideAuthorization authorizationProvider,
                 string validationType,
                 AuthenticationActions action,
                 Guid requestId,
@@ -188,6 +189,15 @@ namespace EastFive.Api.Azure
             Func<string, string, TResult> onInvalidParameter,
             Func<string, TResult> onFailure)
         {
+            if(authorizationProvider is Credentials.IProvideRedirection)
+            {
+                return await (authorizationProvider as Credentials.IProvideRedirection).GetRedirectUriAsync(this, authorizationId, requestId, token, refreshToken,
+                    authParams,
+                    (redirectUri) => onSuccess(this.SetRedirectParameters(redirectUri, requestId, authorizationId, token, refreshToken)),
+                    onInvalidParameter,
+                    onFailure);
+            }
+
             if (!redirectUriFromPost.IsDefault())
             {
                 var redirectUrl = SetRedirectParameters(redirectUriFromPost, requestId, authorizationId, token, refreshToken);
