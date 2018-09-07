@@ -296,8 +296,8 @@ namespace EastFive.Security.SessionServer
         public async Task<TResult> CreateOrUpdateWithAuthenticationAsync<TResult>(
                 AzureApplication application, string method,
                 IDictionary<string, string> extraParams,
-            Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onLogin,
-            Func<Uri, string, IDictionary<string, string>, TResult> onLogout,
+            Func<Guid, Guid, string, string, AuthenticationActions, IProvideAuthorization, IDictionary<string, string>, Uri, TResult> onLogin,
+            Func<Uri, string, IProvideAuthorization, IDictionary<string, string>, TResult> onLogout,
             Func<string, IProvideAuthorization, IDictionary<string, string>,
                 Func<
                     Guid,
@@ -322,8 +322,9 @@ namespace EastFive.Security.SessionServer
                             {
                                 telemetry.TrackEvent($"Sessions.CreateOrUpdateWithAuthenticationAsync:  StateId: {stateId.Value.ToString()}");
                                 return await AuthenticateStateAsync(stateId.Value, loginId, method, subject, extraParamsWithRedemptionParams,
-                                    onLogin,
-                                    onLogout,
+                                    (authorizationId, authenticationId, token, refreshToken, action, extraParamsAuthenticated, redirectUrl) =>
+                                        onLogin(authorizationId, authenticationId, token, refreshToken, action, provider, extraParamsAuthenticated, redirectUrl),
+                                    (redirectUrl, reason, extraParamsAuthenticated) => onLogout(redirectUrl, reason, provider, extraParamsAuthenticated),
                                     onInvalidToken,
                                     onNotConfigured,
                                     onFailure);
@@ -336,7 +337,7 @@ namespace EastFive.Security.SessionServer
                                     telemetry.TrackEvent($"Sessions.CreateOrUpdateWithAuthenticationAsync:  Called from external login system.  AuthenticationId: {authenticationId.ToString()}");
                                     var authorizationId = Guid.NewGuid();
                                     return this.CreateLoginAsync(authorizationId, authenticationId, method, default(Uri), extraParamsWithRedemptionParams,
-                                        (session) => onLogin(authorizationId, authenticationId, session.token, session.refreshToken, AuthenticationActions.signin, session.extraParams,
+                                        (session) => onLogin(authorizationId, authenticationId, session.token, session.refreshToken, AuthenticationActions.signin, provider, session.extraParams,
                                                 default(Uri)),
                                         "Guid not unique for creating authentication started from external system".AsFunctionException<TResult>(),
                                         onFailure);
@@ -363,11 +364,11 @@ namespace EastFive.Security.SessionServer
                         {
                             telemetry.TrackEvent("Sessions.CreateOrUpdateWithAuthenticationAsync:  Not Authenticated");
                             if (!stateId.HasValue)
-                                onLogout(default(Uri), "State id missing.", extraParamsWithRedemptionParams);
+                                onLogout(default(Uri), "State id missing.", provider, extraParamsWithRedemptionParams);
 
                             return await dataContext.AuthenticationRequests.FindByIdAsync(stateId.Value,
-                                (authRequest) => onLogout(authRequest.redirectLogout, $"Not authenticated. [{stateId.Value}]", extraParamsWithRedemptionParams),
-                                () => onLogout(default(Uri), $"Authentication request not found. [{stateId.Value}]", extraParamsWithRedemptionParams));
+                                (authRequest) => onLogout(authRequest.redirectLogout, $"Not authenticated. [{stateId.Value}]", provider, extraParamsWithRedemptionParams),
+                                () => onLogout(default(Uri), $"Authentication request not found. [{stateId.Value}]", provider, extraParamsWithRedemptionParams));
                         },
                         onInvalidToken.AsAsyncFunc(),
                         systemOffline.AsAsyncFunc(),
