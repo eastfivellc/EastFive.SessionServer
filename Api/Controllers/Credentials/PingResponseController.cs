@@ -56,8 +56,8 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             //Then, switch the uncommented/commented lines back and run the server in debug.
             //Send the token via Postman to debug and see any errors that might come back from Ping.
 
-            //return ((IHttpActionResult)(new HttpActionResult(() => Request.CreateResponse(HttpStatusCode.OK).ToTask()))).ToTask();
-            // return ParsePingResponseAsync(query.tokenid, query.agentid);
+            //return request.CreateResponse(HttpStatusCode.OK).ToTask();
+            //return ParsePingResponseAsync(query.tokenid, query.agentid);
 
             return ResponseController.ProcessRequestAsync(application,
                 Enum.GetName(typeof(CredentialValidationMethodTypes), CredentialValidationMethodTypes.Ping),
