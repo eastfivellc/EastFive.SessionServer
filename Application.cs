@@ -184,6 +184,7 @@ namespace EastFive.Api.Azure
                 Guid? authorizationId,
                 string token, string refreshToken,
                 IDictionary<string, string> authParams,
+                Uri baseUri,
                 Uri redirectUriFromPost,
             Func<Uri, TResult> onSuccess,
             Func<string, string, TResult> onInvalidParameter,
@@ -193,7 +194,7 @@ namespace EastFive.Api.Azure
             {
                 return await (authorizationProvider as Credentials.IProvideRedirection).GetRedirectUriAsync(this, authorizationId, requestId, token, refreshToken,
                     authParams,
-                    (redirectUri) => onSuccess(this.SetRedirectParameters(redirectUri, requestId, authorizationId, token, refreshToken)),
+                    (redirectUri) => onSuccess(this.SetRedirectParameters(new Uri(baseUri, redirectUri), requestId, authorizationId, token, refreshToken)),
                     onInvalidParameter,
                     onFailure);
             }

@@ -36,7 +36,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             var kvps = Request.GetQueryNameValuePairs();
 
             return await Request.GetApplication(
-                httpApp => ProcessRequestAsync(httpApp as AzureApplication, Enum.GetName(typeof(CredentialValidationMethodTypes), result.method), kvps.ToDictionary(),
+                httpApp => ProcessRequestAsync(httpApp as AzureApplication, Enum.GetName(typeof(CredentialValidationMethodTypes), result.method), this.Request.RequestUri, kvps.ToDictionary(),
                     (location, why) => Redirect(location),
                     (code, body, reason) => this.Request.CreateResponse(code, body)
                         .AddReason(reason)
@@ -64,7 +64,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             var allrequestParams = kvps.Concat(bodyValues).ToDictionary();
 
             return await Request.GetApplication(
-                httpApp => ProcessRequestAsync(httpApp as AzureApplication, Enum.GetName(typeof(CredentialValidationMethodTypes), result.method), allrequestParams,
+                httpApp => ProcessRequestAsync(httpApp as AzureApplication, Enum.GetName(typeof(CredentialValidationMethodTypes), result.method), this.Request.RequestUri, allrequestParams,
                     (location, why) => Redirect(location),
                     (code, body, reason) => this.Request.CreateResponse(code, body)
                         .AddReason(reason)
@@ -72,7 +72,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                 () => this.Request.CreateResponse(HttpStatusCode.OK, "Application is not an EastFive.Azure application.").ToActionResult().ToTask());
         }
         
-        public static async Task<TResult> ProcessRequestAsync<TResult>(AzureApplication application, string method, IDictionary<string, string> values,
+        public static async Task<TResult> ProcessRequestAsync<TResult>(AzureApplication application, string method, Uri baseUri, IDictionary<string, string> values,
             Func<Uri, string, TResult> onRedirect,
             Func<HttpStatusCode, string, string, TResult> onResponse)
         {
@@ -88,7 +88,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                     var saveAuthLogAsync = await saveAuthLogTask;
                     var updatingAuthLogTask = saveAuthLogAsync(true, $"Login:{authorizationId}/{sessionId}[{action}]", extraParams);
                     telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Created Authentication.  Creating response.");
-                    var resp = CreateResponse(application, provider, method, action, sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUrl, onRedirect, onResponse, telemetry);
+                    var resp = CreateResponse(application, provider, method, action, sessionId, authorizationId, jwtToken, refreshToken, extraParams, baseUri, redirectUrl, onRedirect, onResponse, telemetry);
                     await updatingAuthLogTask;
                     return await resp;
                 },
@@ -122,7 +122,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                                     await updatingAuthLogTask;
                                     await saveAuthLogAsync(true, $"New user mapping requested:{subject}/{credentialProvider.GetType().FullName}[{authorizationId}]", extraParams);
                                     telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Created Authentication.  Creating response.");
-                                    var resp = CreateResponse(application, credentialProvider, method, action, sessionId, authorizationId, jwtToken, refreshToken, extraParams, redirectUrl, onRedirect, onResponse, telemetry);
+                                    var resp = CreateResponse(application, credentialProvider, method, action, sessionId, authorizationId, jwtToken, refreshToken, extraParams, baseUri, redirectUrl, onRedirect, onResponse, telemetry);
                                     await updatingAuthLogTask;
                                     return resp;
                                 },
@@ -180,7 +180,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
         private static async Task<TResult> CreateResponse<TResult>(AzureApplication application, IProvideAuthorization authorizationProvider,
             string method, AuthenticationActions action,
             Guid sessionId, Guid? authorizationId, string jwtToken, string refreshToken,
-            IDictionary<string, string> extraParams, Uri redirectUrl,
+            IDictionary<string, string> extraParams, Uri baseUri, Uri redirectUrl,
             Func<Uri, string, TResult> onRedirect,
             Func<HttpStatusCode, string, string, TResult> onResponse,
             TelemetryClient telemetry)
@@ -188,6 +188,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             var redirectResponse = await application.GetRedirectUriAsync(authorizationProvider,
                     method, action,
                     sessionId, authorizationId, jwtToken, refreshToken, extraParams,
+                    baseUri,
                     redirectUrl,
                 (redirectUrlSelected) =>
                 {
