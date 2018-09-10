@@ -16,6 +16,7 @@ using EastFive.Api;
 using System.Net.Http;
 using System.Threading;
 using BlackBarLabs.Api;
+using EastFive.Linq;
 
 namespace EastFive.Api.Azure.Modules
 {
@@ -38,6 +39,8 @@ namespace EastFive.Api.Azure.Modules
                 .Select(
                     route => route.Url.Split(new char[] { '/' }).First())
                 .ToArray();
+
+            firstSegments = firstSegments.Append("view").ToArray();
 
             ExtractSpaFiles(httpApp);
         }
@@ -118,7 +121,7 @@ namespace EastFive.Api.Azure.Modules
             if (!firstSegments
                     .Where(firstSegment => requestStart.StartsWith($"/{firstSegment}"))
                     .Any())
-                return request.CreateHtmlResponse(Security.SessionServer.Properties.Resources.indexPage);
+                return request.CreateHtmlResponse(EastFive.Api.Azure.Properties.Resources.indexPage);
 
             return await continuation(request, cancellationToken);
         }

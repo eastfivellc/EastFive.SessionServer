@@ -199,7 +199,7 @@ namespace EastFive.Api.Azure.Credentials
                             resource.AuthorizationId = authId;
                             return request.CreateResponse(HttpStatusCode.Accepted, resource);
                         },
-                        (logoutRedirect, why) => request.CreateRedirectResponse(logoutRedirect).AddReason(why),
+                        (logoutRedirect, why, extraParams) => request.CreateRedirectResponse(logoutRedirect).AddReason(why),
                         (why) => request.CreateResponse(HttpStatusCode.NotFound).AddReason(why),
                         () => request.CreateResponse(HttpStatusCode.Conflict).AddReason("User in token is not connected to this system"),
                         (why) => request.CreateResponse(HttpStatusCode.BadGateway).AddReason(why),

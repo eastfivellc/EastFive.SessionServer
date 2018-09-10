@@ -39,7 +39,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                 { InternalProvider.integrationIdKey, integrationId.ToString() },
                 { InternalProvider.resourceTypes, resourceTypes },
             };
-            return await ResponseController.ProcessRequestAsync(application, InternalProvider.IntegrationName, extraParams,
+            return await ResponseController.ProcessRequestAsync(application, InternalProvider.IntegrationName, request.RequestUri, extraParams,
                 (location, why) => onRedirect(location, why),
                 (code, body, reason) =>
                     request

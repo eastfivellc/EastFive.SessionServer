@@ -7,7 +7,7 @@
     <ProjectGuid>{E2F3FCFB-89C8-47B3-B3D2-AE35E52A84FA}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>EastFive.Security.SessionServer</RootNamespace>
+    <RootNamespace>EastFive.Api.Azure</RootNamespace>
     <AssemblyName>EastFive.Security.SessionServer</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -178,6 +178,9 @@
     <Compile Include="Api\Controllers\InternalIntegrationResponseController.cs" />
     <Compile Include="Api\Controllers\ManifestController.cs" />
     <Compile Include="Application.cs" />
+    <Compile Include="Credentials\NoActionAuthorizationRequestManager.cs" />
+    <Compile Include="Credentials\IManageAuthorizationRequests.cs" />
+    <Compile Include="IProvideRedirection.cs" />
     <Compile Include="Modules\SpaHandler.cs" />
     <Compile Include="Monitoring\MonitoringDocument.cs" />
     <Compile Include="Processes\Api\ProcessStageGroupController.cs" />
@@ -262,7 +265,7 @@
     <Compile Include="Configuration\ClaimsDefinitions.cs" />
     <Compile Include="Configuration\EmailTemplateDefinitions.cs" />
     <Compile Include="CredentialProviders\LightspeedProvider.cs" />
-    <Compile Include="CredentialProviders\PingProvider.cs" />
+    <Compile Include="CredentialProviders\Voucher\PingProvider.cs" />
     <Compile Include="CredentialProviders\SAMLProvider.cs" />
     <Compile Include="CredentialProviders\TokenCredentialProvider.cs" />
     <Compile Include="Persistence\Content.cs" />

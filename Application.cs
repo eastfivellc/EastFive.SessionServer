@@ -18,6 +18,9 @@ using EastFive.Extensions;
 using EastFive.Api.Azure.Credentials.Attributes;
 using System.Web.Http;
 using Microsoft.ApplicationInsights;
+using BlackBarLabs;
+using EastFive.Linq.Async;
+using BlackBarLabs.Linq.Async;
 
 namespace EastFive.Api.Azure
 {
@@ -46,9 +49,7 @@ namespace EastFive.Api.Azure
             base.Configure(config);
             config.MessageHandlers.Add(new Api.Azure.Modules.SpaHandler(this, config));
         }
-
-        Task<object[]> initializationChain = (new object[] { }).ToTask();
-
+        
         private Dictionary<string, IProvideAuthorization> authorizationProviders =
             default(Dictionary<string, IProvideAuthorization>);
         internal Dictionary<string, IProvideAuthorization> AuthorizationProviders { get; private set; }
@@ -61,16 +62,31 @@ namespace EastFive.Api.Azure
             default(Dictionary<string, IProvideLoginManagement>);
         internal Dictionary<string, IProvideLoginManagement> CredentialManagementProviders { get; private set; }
 
-        protected virtual void PreInit()
+        protected delegate void AddProviderDelegate<TResult>(Func<Func<object, TResult>, Func<TResult>, Func<string, TResult>, Task<TResult>> initializeAsync);
+
+        protected virtual void AddProviders<TResult>(AddProviderDelegate<TResult> callback)
         {
 
         }
 
         protected override async Task<Initialized> InitializeAsync()
         {
-            PreInit();
-            var initializers = await initializationChain;
-            
+            var initializersTasks = new Task<object[]>[] { };
+            AddProviders<object[]>(
+                (providerInitializer) =>
+                {
+                    var temp = providerInitializer(
+                        initializer => new[] { initializer },
+                        () => new object[] { },
+                        (why) => new object[] { });
+
+                    initializersTasks = initializersTasks.Append(temp).ToArray();
+                });
+            var initializers = await initializersTasks
+                    .WhenAllAsync()
+                    .SelectManyAsync()
+                    .ToArrayAsync();
+
             var credentialProviders = initializers
                 .Where(
                     initializer => initializer.GetType().ContainsCustomAttribute<IntegrationNameAttribute>())
@@ -101,13 +117,12 @@ namespace EastFive.Api.Azure
             return await base.InitializeAsync();
         }
 
-        internal virtual async Task<Func<bool, string, Task>> LogAuthorizationRequestAsync(string method, 
-            IDictionary<string, string> values)
+        internal virtual Credentials.IManageAuthorizationRequests AuthorizationRequestManager
         {
-            return (success, message) =>
+            get
             {
-                return 1.ToTask();
-            };
+                return new Credentials.NoActionAuthorizationRequestManager();
+            }
         }
 
         internal TResult GetAuthorizationProvider<TResult>(string method,
@@ -137,24 +152,8 @@ namespace EastFive.Api.Azure
             var provider = ServiceConfiguration.loginProviders[methodName];
             return onSuccess(provider);
         }
-
-        protected void AddProvider(Func<Func<object, object[]>, Func<object[]>, Func<string, object[]>, Task<object[]>> initializeAsync)
-        {
-            var initializersTask = initializationChain;
-            initializationChain = Task.Run<object[]>(
-                async () =>
-                    {
-                        var initializers = await initializersTask;
-                        return await initializeAsync(
-                            initializer => initializers.Append(initializer).ToArray(),
-                            () => initializers,
-                            (why) => initializers);
-                    },
-                System.Threading.CancellationToken.None);
-
-        }
-
-        internal virtual Task<TResult> OnUnmappedUserAsync<TResult>(string method, string subject, 
+        
+        public virtual Task<TResult> OnUnmappedUserAsync<TResult>(string method, IProvideAuthorization authorizationProvider, string subject, IDictionary<string, string> extraParameters, 
             Func<Guid, TResult> onCreatedMapping,
             Func<TResult> onNoChange)
         {
@@ -168,6 +167,65 @@ namespace EastFive.Api.Azure
         internal virtual WebId GetActorLink(Guid actorId, UrlHelper url)
         {
             return Security.SessionServer.Library.configurationManager.GetActorLink(actorId, url);
+        }
+
+        public virtual async Task<TResult> GetRedirectUriAsync<TResult>(
+                IProvideAuthorization authorizationProvider,
+                string validationType,
+                AuthenticationActions action,
+                Guid requestId,
+                Guid? authorizationId,
+                string token, string refreshToken,
+                IDictionary<string, string> authParams,
+                Uri baseUri,
+                Uri redirectUriFromPost,
+            Func<Uri, TResult> onSuccess,
+            Func<string, string, TResult> onInvalidParameter,
+            Func<string, TResult> onFailure)
+        {
+            if(authorizationProvider is Credentials.IProvideRedirection)
+            {
+                return await (authorizationProvider as Credentials.IProvideRedirection).GetRedirectUriAsync(this, authorizationId, requestId, token, refreshToken,
+                    authParams,
+                    (redirectUri) => onSuccess(this.SetRedirectParameters(new Uri(baseUri, redirectUri), requestId, authorizationId, token, refreshToken)),
+                    onInvalidParameter,
+                    onFailure);
+            }
+
+            if (!redirectUriFromPost.IsDefault())
+            {
+                var redirectUrl = SetRedirectParameters(redirectUriFromPost, requestId, authorizationId, token, refreshToken);
+                return onSuccess(redirectUrl);
+            }
+
+            if (null != authParams && authParams.ContainsKey(Security.SessionServer.Configuration.AuthorizationParameters.RedirectUri))
+            {
+                Uri redirectUri;
+                var redirectUriString = authParams[Security.SessionServer.Configuration.AuthorizationParameters.RedirectUri];
+                if (!Uri.TryCreate(redirectUriString, UriKind.Absolute, out redirectUri))
+                    return onInvalidParameter("REDIRECT", $"BAD URL in redirect call:{redirectUriString}");
+                var redirectUrl = SetRedirectParameters(redirectUri, requestId, authorizationId, token, refreshToken);
+                return onSuccess(redirectUrl);
+            }
+
+            return await EastFive.Web.Configuration.Settings.GetUri(
+                EastFive.Security.SessionServer.Configuration.AppSettings.LandingPage,
+                (redirectUri) =>
+                {
+                    var redirectUrl = SetRedirectParameters(redirectUri, requestId, authorizationId, token, refreshToken);
+                    return onSuccess(redirectUrl);
+                },
+                (why) => onFailure(why)).ToTask();
+        }
+
+        protected Uri SetRedirectParameters(Uri redirectUri, Guid requestId, Guid? authorizationId, string token, string refreshToken)
+        {
+            var redirectUrl = redirectUri
+                //.SetQueryParam(parameterAuthorizationId, authorizationId.Value.ToString("N"))
+                //.SetQueryParam(parameterToken, token)
+                //.SetQueryParam(parameterRefreshToken, refreshToken)
+                .SetQueryParam("request_id", requestId.ToString());
+            return redirectUrl;
         }
 
         public Security.SessionServer.Context AzureContext
