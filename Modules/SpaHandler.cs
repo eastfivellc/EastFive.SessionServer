@@ -40,8 +40,6 @@ namespace EastFive.Api.Azure.Modules
                     route => route.Url.Split(new char[] { '/' }).First())
                 .ToArray();
 
-            firstSegments = firstSegments.Append("view").ToArray();
-
             ExtractSpaFiles(httpApp);
         }
         
