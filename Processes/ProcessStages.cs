@@ -30,35 +30,38 @@ namespace EastFive.Azure
     {
         public static Task<TResult> CreateAsync<TResult>(Guid processStageId, Guid actorId,
                 Guid processStageTypeId, string title,
-                KeyValuePair<Guid[], Guid>[] confirmableActorIdsNexts, Guid[] editableActorIds, Guid[] viewableActorIds,
+                Guid[] viewableActorIds, Guid[] editableActorIds, Guid [] completableActorIds,
+                KeyValuePair<Guid[], Guid>[] confirmableActorIdsNexts,
                 EastFive.Api.Controllers.Security security,
             Func<TResult> onCreated,
             Func<TResult> onAlreadyExists,
             Func<TResult> onTypeDoesNotExist,
-            Func<Guid, TResult> onStageDoesNotExist,
-            Func<Guid, TResult> onActorDoesNotExist,
+            Func<Guid, TResult> onConfirmationStageDoesNotExist,
+            Func<TResult> onActorDoesNotExist,
             Func<string, TResult> onFailure)
         {
             // TODO: Security
             return ProcessStages.CreateAsync(processStageId, actorId,
                     processStageTypeId, title,
-                    confirmableActorIdsNexts, editableActorIds, viewableActorIds,
+                    viewableActorIds, editableActorIds, completableActorIds,
+                    confirmableActorIdsNexts,
                 onCreated,
                 onAlreadyExists,
                 onTypeDoesNotExist,
-                onStageDoesNotExist, 
+                onConfirmationStageDoesNotExist, 
                 onActorDoesNotExist, 
                 onFailure);
         }
 
         public async static Task<TResult> CreateAsync<TResult>(Guid processStageId, Guid actorId,
                 Guid processStageTypeId, string title,
-                KeyValuePair<Guid[], Guid>[] confirmableActorIdsNexts, Guid[] editableActorIds, Guid[] viewableActorIds,
+                Guid[] viewableActorIds, Guid[] editableActorIds, Guid[] completableActorIds,
+                KeyValuePair<Guid[], Guid>[] confirmableActorIdsNexts,
             Func<TResult> onCreated,
             Func<TResult> onAlreadyExists,
             Func<TResult> onTypeDoesNotExist,
             Func<Guid, TResult> onStageDoesNotExist,
-            Func<Guid, TResult> onActorDoesNotExist,
+            Func<TResult> onActorDoesNotExist,
             Func<string, TResult> onFailure)
         {
             return await await ProcessStageTypes.FindIdAsync(processStageTypeId,

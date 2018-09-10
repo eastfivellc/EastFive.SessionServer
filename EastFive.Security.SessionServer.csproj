@@ -182,7 +182,6 @@
     <Compile Include="Monitoring\MonitoringDocument.cs" />
     <Compile Include="Processes\Api\ProcessStageGroupController.cs" />
     <Compile Include="Processes\Api\ProcessStepController.cs" />
-    <Compile Include="Processes\Api\ProcessStageController.cs" />
     <Compile Include="Processes\Api\ProcessStageTypeController.cs" />
     <Compile Include="Api\Controllers\SheetIntegrationController.cs" />
     <Compile Include="Api\Controllers\SpaServeController.cs" />
