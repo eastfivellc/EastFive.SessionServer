@@ -48,9 +48,7 @@ namespace EastFive.Api.Azure.Controllers
             return new Resources.ProcessStep
             {
                 Id = urlHelper.GetWebId<ProcessStepController>(process.processId),
-
-                Stage = urlHelper.GetWebId<ProcessStageController>(process.processStageId),
-
+                Stage = urlHelper.GetWebId<EastFive.Api.Azure.Resources.ProcessStage>(process.processStageId),
                 Resource = httpApplication.GetResourceLink(process.resourceType, process.resourceId, urlHelper),
                 CreatedOn = process.createdOn,
 
@@ -85,7 +83,7 @@ namespace EastFive.Api.Azure.Controllers
                 EastFive.Api.Controllers.Security security, UrlHelper url,
             CreatedResponse onCreated,
             AlreadyExistsResponse onAlreadyExists,
-            ReferencedDocumentNotFoundResponse onStageNotFound,
+            ReferencedDocumentDoesNotExistsResponse<Resources.ProcessStage> onStageNotFound,
             UnauthorizedResponse onUnauthorized,
             GeneralConflictResponse onFailure)
         {

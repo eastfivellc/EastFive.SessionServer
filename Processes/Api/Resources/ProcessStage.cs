@@ -146,11 +146,13 @@ namespace EastFive.Api.Azure.Resources
         #endregion
 
         [EastFive.Api.HttpPost(Type = typeof(Resources.ProcessStage), MatchAllBodyParameters = false)]
-        public static Task<HttpResponseMessage> CreateConnectorAsync(
+        public static Task<HttpResponseMessage> CreateAsync(
                 [Property(Name = Resources.ProcessStage.IdPropertyName)]
                     Guid processStageId,
-                [PropertyOptional(Name = Resources.ProcessStage.TypePropertyName)]
-                    Guid? processStageTypeId,
+                [Property(Name = Resources.ProcessStage.OwnerPropertyName)]
+                    Guid ownerId,
+                [Property(Name = Resources.ProcessStage.TypePropertyName)]
+                    Guid processStageTypeId,
                 [PropertyOptional(Name = Resources.ProcessStage.TitlePropertyName)]
                     string title,
                 [PropertyOptional(Name = Resources.ProcessStage.ViewablePropertyName)]
@@ -163,47 +165,31 @@ namespace EastFive.Api.Azure.Resources
                     Resources.ProcessStage.ConfirmableResource [] confirmables,
                 EastFive.Api.Controllers.Security security, Context context, HttpRequestMessage request, UrlHelper url,
             CreatedResponse onCreated,
-            CreatedBodyResponse onCreatedAndModified,
             AlreadyExistsResponse onAlreadyExists,
-            AlreadyExistsReferencedResponse onRelationshipAlreadyExists,
-            ReferencedDocumentNotFoundResponse onReferenceNotFound,
+            ReferencedDocumentDoesNotExistsResponse<Resources.ProcessStageType> onTypeDoesNotExist,
+            ReferencedDocumentDoesNotExistsResponse<Resources.ProcessStage> onConfirmationStageDoesNotExist,
+            ReferencedDocumentDoesNotExistsResponse<BlackBarLabs.Api.ResourceBase> onActorDoesNotExists,
             UnauthorizedResponse onUnauthorized,
             GeneralConflictResponse onFailure)
         {
-            throw new NotImplementedException();
-            //return Connectors.CreateConnectorAsync(id, source, destination,
-            //        Flow, destinationIntegration, security.performingAsActorId, security.claims,
-            //    () => onCreated(),
-            //    (connection) =>
-            //    {
-            //        return request.Headers.Accept
-            //            .OrderByDescending(accept => accept.Quality.HasValue ? accept.Quality.Value : 1.0)
-            //            .First(
-            //                (accept, next) =>
-            //                {
-            //                    if(
-            //                        accept.MediaType.ToLower() == "x-ordering/connection" || 
-            //                        accept.MediaType.ToLower() == "x-ordering/connection+json")
-            //                        return onCreatedAndModified(
-            //                            ConnectionController.GetResource(connection, url),
-            //                            "x-ordering/connection+json");
-
-            //                    if (
-            //                        accept.MediaType.ToLower() == "x-ordering/connector" ||
-            //                        accept.MediaType.ToLower() == "x-ordering/connector+json" ||
-            //                        accept.MediaType.ToLower() == "application/json")
-            //                        return onCreatedAndModified(
-            //                            GetResource(connection.connector, connection.adapterExternal.integrationId, url),
-            //                            "x-ordering/connector+json");
-
-            //                    return next();
-            //                },
-            //                () => onCreatedAndModified(GetResource(connection.connector, connection.adapterExternal.integrationId, url)));
-            //    },
-            //    () => onAlreadyExists(),
-            //    (existingConnectorId) => onRelationshipAlreadyExists(existingConnectorId),
-            //    (brokenId) => onReferenceNotFound(),
-            //    (why) => onFailure(why));
+            return EastFive.Azure.ProcessStages.CreateAsync(processStageId, ownerId, processStageTypeId, title,
+                    viewableIds, editableIds, completableIds,
+                    confirmables
+                        .Select(
+                            confirmable => 
+                                confirmable.ProcessStageNext.ToGuid().Value
+                                    .PairWithKey(
+                                        confirmable.Positions
+                                            .Select(position => position.ToGuid().Value)
+                                            .ToArray()))
+                        .ToArray(),
+                    security,
+                () => onCreated(),
+                () => onAlreadyExists(),
+                () => onTypeDoesNotExist(),
+                (missingStageId) => onConfirmationStageDoesNotExist(),
+                () => onActorDoesNotExists(),
+                (why) => onFailure(why));
         }
 
         [EastFive.Api.HttpPut(Type = typeof(Resources.ProcessStage), MatchAllBodyParameters = false)]

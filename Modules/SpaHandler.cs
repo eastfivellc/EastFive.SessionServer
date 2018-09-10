@@ -119,7 +119,7 @@ namespace EastFive.Api.Azure.Modules
             if (!firstSegments
                     .Where(firstSegment => requestStart.StartsWith($"/{firstSegment}"))
                     .Any())
-                return request.CreateHtmlResponse(Security.SessionServer.Properties.Resources.indexPage);
+                return request.CreateHtmlResponse(EastFive.Api.Azure.Properties.Resources.indexPage);
 
             return await continuation(request, cancellationToken);
         }

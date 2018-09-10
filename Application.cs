@@ -117,13 +117,12 @@ namespace EastFive.Api.Azure
             return await base.InitializeAsync();
         }
 
-        internal virtual async Task<Func<bool, string, IDictionary<string, string>, Task>> LogAuthorizationRequestAsync(string method, 
-            IDictionary<string, string> values)
+        internal virtual Credentials.IManageAuthorizationRequests AuthorizationRequestManager
         {
-            return (success, message, extraParameters) =>
+            get
             {
-                return 1.ToTask();
-            };
+                return new Credentials.NoActionAuthorizationRequestManager();
+            }
         }
 
         internal TResult GetAuthorizationProvider<TResult>(string method,
@@ -153,13 +152,7 @@ namespace EastFive.Api.Azure
             var provider = ServiceConfiguration.loginProviders[methodName];
             return onSuccess(provider);
         }
-
-        protected void AddProvider(Func<Func<object, object[]>, Func<object[]>, Func<string, object[]>, Task<object[]>> initializeAsync)
-        {
-            
-
-        }
-
+        
         public virtual Task<TResult> OnUnmappedUserAsync<TResult>(string method, IProvideAuthorization authorizationProvider, string subject, IDictionary<string, string> extraParameters, 
             Func<Guid, TResult> onCreatedMapping,
             Func<TResult> onNoChange)
