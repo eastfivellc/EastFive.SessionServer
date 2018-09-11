@@ -186,9 +186,10 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             Guid sessionId, Guid? authorizationId, string jwtToken, string refreshToken,
             IDictionary<string, string> extraParams, Uri baseUri, Uri redirectUrl,
             Func<Uri, string, TResult> onRedirect,
-            Func<HttpStatusCode, string, string, TResult> onResponse)
+            Func<HttpStatusCode, string, string, TResult> onResponse,
+            TelemetryClient telemetry)
         {
-            var telemetry = application.Telemetry;
+            
             var redirectResponse = await application.GetRedirectUriAsync(authorizationProvider,
                     method, action,
                     sessionId, authorizationId, jwtToken, refreshToken, extraParams,
