@@ -121,7 +121,7 @@ namespace EastFive.Api.Azure
         {
             get
             {
-                return new Credentials.NoActionAuthorizationRequestManager();
+                return new Credentials.AzureStorageTablesLogAuthorizationRequestManager();
             }
         }
 
