@@ -38,22 +38,21 @@ namespace EastFive.Api.Azure.Monitoring
             return repo;
         }
 
-        public static async Task<TResult> CreateAsync<TResult>(Guid id, Guid authenticationId, DateTime time, string method, string controller, string content,
+        public static Task<TResult> CreateAsync<TResult>(Guid id, Guid authenticationId, DateTime time, string method, string controller, string content,
                 AzureStorageRepository repo,
             Func<TResult> onSuccess)
         {
+            var doc = new MonitoringDocument();
+            doc.AuthenticationId = authenticationId;
+            doc.Time = time;
+            doc.Method = method;
+            doc.Controller = controller;
+            doc.Content = content;
+
             var monthBucketedPartitionKey = GenerateMonthBucketedPartitionKey(time);
-            return await repo.CreateOrUpdateAsync<MonitoringDocument, TResult>(id, monthBucketedPartitionKey,
-                async (created, doc, saveAsync) =>
-                {
-                    doc.AuthenticationId = authenticationId;
-                    doc.Time = time;
-                    doc.Method = method;
-                    doc.Controller = controller;
-                    doc.Content = content;
-                    await saveAsync(doc);
-                    return onSuccess();
-                });
+            return repo.CreateAsync(id, monthBucketedPartitionKey, doc,
+                () => onSuccess(),
+                () => throw new Exception("Guid not unique"));
         }
 
         private static string GenerateMonthBucketedPartitionKey(DateTime date)
