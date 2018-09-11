@@ -37,7 +37,7 @@ namespace EastFive.Security.SessionServer
             return context;
         }
 
-        internal Security.SessionServer.Persistence.DataContext DataContext
+        public Security.SessionServer.Persistence.DataContext DataContext
         {
             get { return dataContext ?? (dataContext = dataContextCreateFunc.Invoke()); }
         }

@@ -181,14 +181,14 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                 (why) => onResponse(HttpStatusCode.ServiceUnavailable, why, why).ToTask());
         }
 
-        private static async Task<TResult> CreateResponse<TResult>(AzureApplication application, IProvideAuthorization authorizationProvider,
+        public static async Task<TResult> CreateResponse<TResult>(AzureApplication application, IProvideAuthorization authorizationProvider,
             string method, AuthenticationActions action,
             Guid sessionId, Guid? authorizationId, string jwtToken, string refreshToken,
             IDictionary<string, string> extraParams, Uri baseUri, Uri redirectUrl,
             Func<Uri, string, TResult> onRedirect,
-            Func<HttpStatusCode, string, string, TResult> onResponse,
-            TelemetryClient telemetry)
+            Func<HttpStatusCode, string, string, TResult> onResponse)
         {
+            var telemetry = application.Telemetry;
             var redirectResponse = await application.GetRedirectUriAsync(authorizationProvider,
                     method, action,
                     sessionId, authorizationId, jwtToken, refreshToken, extraParams,

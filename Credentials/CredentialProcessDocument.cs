@@ -39,6 +39,7 @@ namespace EastFive.Api.Azure.Credentials
 
         public string Message { get; set; }
 
+
         public string Method { get; set; }
 
         public string Token { get; set; }
@@ -90,6 +91,16 @@ namespace EastFive.Api.Azure.Credentials
             return azureStorageRepository.CreateAsync(id, doc,
                 () => true,
                 () => false);
+        }
+
+        public static Task<TResult> FindByIdAsync<TResult>(Guid id,
+            Func<CredentialProcessDocument, TResult> onFound,
+            Func<TResult> onNotFound,
+            AzureStorageRepository azureStorageRepository)
+        {
+            return azureStorageRepository.FindByIdAsync(id,
+                onFound,
+                onNotFound);
         }
 
         public static async Task<TResult> UpdateAsync<TResult>(Guid id,
