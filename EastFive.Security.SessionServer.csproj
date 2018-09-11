@@ -178,6 +178,8 @@
     <Compile Include="Api\Controllers\InternalIntegrationResponseController.cs" />
     <Compile Include="Api\Controllers\ManifestController.cs" />
     <Compile Include="Application.cs" />
+    <Compile Include="Credentials\AzureStorageTablesLogAuthorizationRequestManager.cs" />
+    <Compile Include="Credentials\CredentialProcessDocument.cs" />
     <Compile Include="Credentials\NoActionAuthorizationRequestManager.cs" />
     <Compile Include="Credentials\IManageAuthorizationRequests.cs" />
     <Compile Include="IProvideRedirection.cs" />

@@ -83,12 +83,14 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Requesting credential manager.");
             
             Func<string, TResult> onStop = (why) => onResponse(HttpStatusCode.ServiceUnavailable, why, why);
+            var requestId = Guid.NewGuid();
 
-            return await await authorizationRequestManager.CredentialValidation<Task<TResult>>(method, values,
-                async () => await await context.Sessions.CreateOrUpdateWithAuthenticationAsync(
+            return await await authorizationRequestManager.CredentialValidation<Task<TResult>>(requestId, application,
+                    method, values,
+                () => context.Sessions.CreateOrUpdateWithAuthenticationAsync(
                         application, method, values,
                     (sessionId, authorizationId, token, refreshToken, action, provider, extraParams, redirectUrl) =>
-                        authorizationRequestManager.CreatedAuthenticationLoginAsync(application, sessionId, authorizationId, 
+                        authorizationRequestManager.CreatedAuthenticationLoginAsync(requestId, application, sessionId, authorizationId, 
                                 token, refreshToken, method, action, provider, extraParams, redirectUrl,
                             () => CreateResponse(application, provider, method, action, sessionId, authorizationId, 
                                     token, refreshToken, extraParams, baseUri, redirectUrl, 
@@ -97,9 +99,9 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                                 telemetry),
                             onStop),
                     (redirectUrl, reason, provider, extraParams) =>
-                        authorizationRequestManager.CreatedAuthenticationLogoutAsync(application,
+                        authorizationRequestManager.CreatedAuthenticationLogoutAsync(requestId, application,
                                 reason, method, provider, extraParams, redirectUrl,
-                            () =>
+                            async () =>
                             {
                                if (redirectUrl.IsDefaultOrNull())
                                     return Web.Configuration.Settings.GetUri(Security.SessionServer.Configuration.AppSettings.LandingPage,
@@ -111,9 +113,9 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                             },
                             onStop),
                     async (subject, credentialProvider, extraParams, createMappingAsync) =>
-                        authorizationRequestManager.CredentialUnmappedAsync<TResult>(application,
+                        authorizationRequestManager.CredentialUnmappedAsync<TResult>(requestId, application,
                                 subject, method, credentialProvider, extraParams, createMappingAsync,
-                            async () =>
+                            async (createMappingNewAsync) =>
                             {
                                 return await await application.OnUnmappedUserAsync<Task<TResult>>(method, credentialProvider, subject, extraParams,
                                     async (authorizationId) =>
@@ -121,7 +123,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                                         //await updatingAuthLogTask;
                                         telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Creating Authentication.");
                                         //updatingAuthLogTask = saveAuthLogAsync(true, $"New user mapping requested:{subject}/{credentialProvider.GetType().FullName}[{authorizationId}]", extraParams);
-                                        return await await createMappingAsync(authorizationId,
+                                        return await await createMappingNewAsync(authorizationId,
                                             async (sessionId, jwtToken, refreshToken, action, redirectUrl) =>
                                             {
                                                 //await updatingAuthLogTask;

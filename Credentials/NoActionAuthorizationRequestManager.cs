@@ -10,9 +10,9 @@ namespace EastFive.Api.Azure.Credentials
 {
     class NoActionAuthorizationRequestManager : IManageAuthorizationRequests
     {
-        public async Task<TResult> CredentialValidation<TResult>(string method, 
+        public Task<TResult> CredentialValidation<TResult>(string method, 
             IDictionary<string, string> values, 
-            Func<TResult> onContinue,
+            Func<Task<TResult>> onContinue,
             Func<string, TResult> onStop)
         {
             return onContinue();
@@ -33,10 +33,10 @@ namespace EastFive.Api.Azure.Credentials
             return await resp;
         }
 
-        public async Task<TResult> CreatedAuthenticationLogoutAsync<TResult>(AzureApplication application,
+        public Task<TResult> CreatedAuthenticationLogoutAsync<TResult>(AzureApplication application,
                 string reason, string method,
                 IProvideAuthorization provider, IDictionary<string, string> extraParams, Uri redirectUrl,
-            Func<TResult> onContinue,
+            Func<Task<TResult>> onContinue,
             Func<string, TResult> onStop)
         {
             //await saveAuthLogAsync(true, $"Logout:{location} -- {reason}", extraParams);
@@ -70,6 +70,32 @@ namespace EastFive.Api.Azure.Credentials
             Func<string, TResult> onStop)
         {
             return onContinue();
+        }
+
+        public Task<TResult> CredentialValidation<TResult>(Guid requestId, AzureApplication application, string method, IDictionary<string, string> values, Func<Task<TResult>> onContinue, Func<string, TResult> onStop)
+        {
+            return onContinue();
+        }
+
+        public Task<TResult> CreatedAuthenticationLoginAsync<TResult>(Guid requestId, AzureApplication application, Guid sessionId, Guid authorizationId, string token, string refreshToken, string method, AuthenticationActions action, IProvideAuthorization provider, IDictionary<string, string> extraParams, Uri redirectUrl, Func<Task<TResult>> onContinue, Func<string, TResult> onStop)
+        {
+            return onContinue();
+        }
+
+        public Task<TResult> CreatedAuthenticationLogoutAsync<TResult>(Guid requestId, AzureApplication application, string reason, string method, IProvideAuthorization provider, IDictionary<string, string> extraParams, Uri redirectUrl, Func<Task<TResult>> onContinue, Func<string, TResult> onStop)
+        {
+            return onContinue();
+        }
+
+        public Task<TResult> CredentialUnmappedAsync<TResult>(Guid requestId, AzureApplication application, string subject, string method,
+                IProvideAuthorization credentialProvider, IDictionary<string, string> extraParams, 
+                Func<Guid, Func<Guid, string, string, AuthenticationActions, Uri, Task<Task<TResult>>>,
+                    Func<string, Task<TResult>>, Task<Task<TResult>>> createMappingAsync,
+            Func<Func<Guid, Func<Guid, string, string, AuthenticationActions, Uri, Task<Task<TResult>>>, 
+                Func<string, Task<TResult>>, Task<Task<TResult>>>, Task<TResult>> onContinue, 
+            Func<string, TResult> onStop)
+        {
+            return onContinue(createMappingAsync);
         }
     }
 }
