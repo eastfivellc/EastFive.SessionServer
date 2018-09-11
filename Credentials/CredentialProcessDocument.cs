@@ -31,7 +31,7 @@ namespace EastFive.Api.Azure.Credentials
 
         public Guid AuthorizationId { get; set; }
         
-        public DateTime Time { get; set; }
+        public long Time { get; set; }
 
         public string Message { get; set; }
 

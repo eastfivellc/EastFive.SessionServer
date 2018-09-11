@@ -20,6 +20,7 @@ namespace EastFive.Api.Azure.Credentials
             {
                 Method = method,
                 Message = "CREDENTIAL VALIDATION REQUESTED",
+                Time = DateTime.UtcNow.Ticks,
             };
             doc.SetValuesRedirect(values);
             var loggingTask = CredentialProcessDocument.CreateAsync(requestId, doc, application.AzureContext.DataContext.AzureStorageRepository);
