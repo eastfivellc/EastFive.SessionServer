@@ -74,7 +74,7 @@ namespace EastFive.Api.Azure.Credentials
                     doc.Action = Enum.GetName(typeof(AuthenticationActions), AuthenticationActions.signin);
                     doc.Provider = provider.GetType().FullName;
                     doc.SetValuesCredential(extraParams);
-                    doc.RedirectUrl = redirectUrl.ToString();
+                    doc.RedirectUrl = redirectUrl.IsDefaultOrNull() ? string.Empty : redirectUrl.ToString();
                     await saveAsync(doc);
                     return true;
                 },
@@ -115,14 +115,14 @@ namespace EastFive.Api.Azure.Credentials
                             {
                                 doc.AuthorizationId = authorizationId;
                                 Func<Guid, string, string, AuthenticationActions, Uri, Task<Task<TResult>>> onCreateWrapped =
-                                    async (sessionId, token, refreshToken, action, redirectUri) =>
+                                    async (sessionId, token, refreshToken, action, redirectUrl) =>
                                     {
                                         doc.Message = "LOOKUP CREATED";
                                         doc.SessionId = sessionId;
                                         doc.Token = token;
                                         doc.RefreshToken = refreshToken;
                                         doc.Action = Enum.GetName(typeof(AuthenticationActions), action);
-                                        doc.RedirectUrl = redirectUri.ToString();
+                                        doc.RedirectUrl = redirectUrl.IsDefaultOrNull() ? string.Empty : redirectUrl.ToString();
                                         await saveAsync(doc);
                                         return await onCreated(sessionId, token, refreshToken, action, redirectUri);
                                     };
