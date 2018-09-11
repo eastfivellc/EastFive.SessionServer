@@ -54,7 +54,7 @@ namespace EastFive.Api.Azure.Credentials
 
         public byte[] ValuesRedirect { get; set; }
 
-        internal IDictionary<string, string> GetValuesRedirect()
+        public IDictionary<string, string> GetValuesRedirect()
         {
             return ValuesRedirect.FromByteArray(
                 (keyBytes) => System.Text.Encoding.UTF8.GetString(keyBytes),
@@ -71,7 +71,7 @@ namespace EastFive.Api.Azure.Credentials
         public byte[] ValuesCredentialKeys { get; set; }
         public byte[] ValuesCredentialValues { get; set; }
 
-        internal IDictionary<string, string> GetValuesCredential()
+        public IDictionary<string, string> GetValuesCredential()
         {
             return ValuesCredentialKeys.ToStringsFromUTF8ByteArray()
                 .Zip(ValuesCredentialValues.ToStringsFromUTF8ByteArray(),
