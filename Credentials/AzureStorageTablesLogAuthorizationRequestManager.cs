@@ -124,7 +124,7 @@ namespace EastFive.Api.Azure.Credentials
                                         doc.Action = Enum.GetName(typeof(AuthenticationActions), action);
                                         doc.RedirectUrl = redirectUrl.IsDefaultOrNull() ? string.Empty : redirectUrl.ToString();
                                         await saveAsync(doc);
-                                        return await onCreated(sessionId, token, refreshToken, action, redirectUri);
+                                        return await onCreated(sessionId, token, refreshToken, action, redirectUrl);
                                     };
                                 Func<string, Task<TResult>> onFailureWrapped =
                                     async (why) =>
