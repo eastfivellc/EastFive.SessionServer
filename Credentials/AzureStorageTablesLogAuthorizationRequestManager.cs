@@ -1,4 +1,5 @@
-﻿using EastFive.Security.SessionServer;
+﻿using EastFive.Extensions;
+using EastFive.Security.SessionServer;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -49,7 +50,7 @@ namespace EastFive.Api.Azure.Credentials
                     doc.Action = Enum.GetName(typeof(AuthenticationActions), action);
                     doc.Provider = provider.GetType().FullName;
                     doc.SetValuesCredential(extraParams);
-                    doc.RedirectUrl = redirectUrl.ToString();
+                    doc.RedirectUrl = redirectUrl.IsDefaultOrNull() ? string.Empty : redirectUrl.ToString();
                     await saveAsync(doc);
                     return true;
                 },

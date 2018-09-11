@@ -8,6 +8,10 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using System.Collections.Generic;
 using EastFive.Serialization;
+using System.Linq;
+using BlackBarLabs.Extensions;
+using EastFive.Collections.Generic;
+using EastFive.Linq;
 
 namespace EastFive.Api.Azure.Credentials
 {
@@ -63,20 +67,21 @@ namespace EastFive.Api.Azure.Credentials
                 (value) => System.Text.Encoding.UTF8.GetBytes(value));
         }
 
-        public byte[] ValuesCredential { get; set; }
+        public byte[] ValuesCredentialKeys { get; set; }
+        public byte[] ValuesCredentialValues { get; set; }
 
         internal IDictionary<string, string> GetValuesCredential()
         {
-            return ValuesCredential.FromByteArray(
-                (keyBytes) => System.Text.Encoding.UTF8.GetString(keyBytes),
-                (valueBytes) => System.Text.Encoding.UTF8.GetString(valueBytes));
+            return ValuesCredentialKeys.ToStringsFromUTF8ByteArray()
+                .Zip(ValuesCredentialValues.ToStringsFromUTF8ByteArray(),
+                    (k, v) => k.PairWithValue(v))
+                .ToDictionary();
         }
 
         internal void SetValuesCredential(IDictionary<string, string> extraParams)
         {
-            ValuesCredential = extraParams.ToByteArray(
-                (key) => System.Text.Encoding.UTF8.GetBytes(key),
-                (value) => System.Text.Encoding.UTF8.GetBytes(value));
+            ValuesCredentialKeys = extraParams.NullToEmpty().SelectKeys().ToUTF8ByteArrayOfStrings();
+            ValuesCredentialValues = extraParams.NullToEmpty().SelectValues().ToUTF8ByteArrayOfStrings();
         }
         
         internal static Task CreateAsync(Guid id,
