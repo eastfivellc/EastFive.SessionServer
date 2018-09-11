@@ -115,7 +115,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                                 subject, method, credentialProvider, extraParams, createMappingAsync,
                             async () =>
                             {
-                                return await await application.OnUnmappedUserAsync<Task<TResult>>(method, credentialProvider, subject, values,
+                                return await await application.OnUnmappedUserAsync<Task<TResult>>(method, credentialProvider, subject, extraParams,
                                     async (authorizationId) =>
                                     {
                                         //await updatingAuthLogTask;
