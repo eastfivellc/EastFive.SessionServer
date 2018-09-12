@@ -73,8 +73,10 @@ namespace EastFive.Api.Azure.Credentials
 
         public IDictionary<string, string> GetValuesCredential()
         {
-            return ValuesCredentialKeys.ToStringsFromUTF8ByteArray()
-                .Zip(ValuesCredentialValues.ToStringsFromUTF8ByteArray(),
+            var keys = ValuesCredentialKeys.ToStringsFromUTF8ByteArray();
+            var values = ValuesCredentialValues.ToStringsFromUTF8ByteArray();
+            return keys
+                .Zip(values,
                     (k, v) => k.PairWithValue(v))
                 .ToDictionary();
         }
@@ -101,6 +103,18 @@ namespace EastFive.Api.Azure.Credentials
             return azureStorageRepository.FindByIdAsync(id,
                 onFound,
                 onNotFound);
+        }
+
+        public static Task<TResult> FindAllAsync<TResult>(
+            Func<CredentialProcessDocument, TResult> onFound,
+            AzureStorageRepository azureStorageRepository)
+        {
+            return azureStorageRepository.FindAllAsync<CredentialProcessDocument, TResult>(
+                (docs) =>
+                {
+                    var results = docs.Where(doc => doc.GetValuesCredential().Count > 3).First();
+                    return onFound(results);
+                });
         }
 
         public static async Task<TResult> UpdateAsync<TResult>(Guid id,
