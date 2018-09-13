@@ -24,9 +24,9 @@ namespace EastFive.Api.Azure.Credentials
                 Time = DateTime.UtcNow.Ticks,
             };
             doc.SetValuesRedirect(values);
-            var loggingTask = CredentialProcessDocument.CreateAsync(requestId, doc, application.AzureContext.DataContext.AzureStorageRepository);
+            await CredentialProcessDocument.CreateAsync(requestId, doc, application.AzureContext.DataContext.AzureStorageRepository);
             var resp = await onContinue();
-            await loggingTask;
+            //await loggingTask;  //TODO - We were storing the CreateAsync as this task and awaiting it later, but we ran into a race condition that this solves.  
             return resp;
         }
 

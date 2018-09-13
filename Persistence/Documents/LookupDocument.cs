@@ -13,7 +13,7 @@ namespace EastFive.Azure.Persistence.Documents
 {
     [Serializable]
     [DataContract]
-    internal class LookupDocument : TableEntity
+    public class LookupDocument : TableEntity
     {
         [IgnoreDataMember]
         [IgnoreProperty]
@@ -36,7 +36,7 @@ namespace EastFive.Azure.Persistence.Documents
         public byte[] LookupDocumentIds_14 { get; set; }
         public byte[] LookupDocumentIds_15 { get; set; }
 
-        internal Guid[] GetLookupDocumentIds()
+        public Guid[] GetLookupDocumentIds()
         {
             return typeof(LookupDocument)
                 .GetProperties()
@@ -71,7 +71,7 @@ namespace EastFive.Azure.Persistence.Documents
                     });
         }
 
-        internal bool AddLookupDocumentId(Guid synchronizationDocumentId)
+        public bool AddLookupDocumentId(Guid synchronizationDocumentId)
         {
             try
             {
@@ -90,7 +90,7 @@ namespace EastFive.Azure.Persistence.Documents
             }
         }
 
-        internal bool RemoveLookupDocumentId(Guid lookupDocumentId)
+        public bool RemoveLookupDocumentId(Guid lookupDocumentId)
         {
             var lookupDocumentIds = GetLookupDocumentIds();
             if (!lookupDocumentIds.Contains(lookupDocumentId))
