@@ -112,7 +112,6 @@ namespace EastFive.Api.Azure.Credentials
             return azureStorageRepository.FindAllAsync<CredentialProcessDocument, TResult>(
                 (docs) =>
                 {
-                    //var results = docs.Where(doc => doc.GetValuesCredential().Count > 3).First();
                     return onFound(docs);
                 });
         }
