@@ -106,14 +106,15 @@ namespace EastFive.Api.Azure.Credentials
         }
 
         public static Task<TResult> FindAllAsync<TResult>(
-            Func<CredentialProcessDocument, TResult> onFound,
+            Func<CredentialProcessDocument[], TResult> onFound,
             AzureStorageRepository azureStorageRepository)
         {
             return azureStorageRepository.FindAllAsync<CredentialProcessDocument, TResult>(
                 (docs) =>
                 {
-                    var results = docs.Where(doc => doc.GetValuesCredential().Count > 3).First();
-                    return onFound(results);
+                    //var results = docs.Where(doc => doc.GetValuesCredential().Count > 3).First();
+                    //return onFound(results);
+                    return onFound(docs);
                 });
         }
 
