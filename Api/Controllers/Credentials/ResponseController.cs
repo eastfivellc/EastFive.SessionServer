@@ -79,21 +79,34 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             var authorizationRequestManager = application.AuthorizationRequestManager;
 
             var telemetry = application.Telemetry;
-            var context = application.AzureContext;
             telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Requesting credential manager.");
             
-            Func<string, TResult> onStop = (why) => onResponse(HttpStatusCode.ServiceUnavailable, why, why);
             var requestId = Guid.NewGuid();
 
-            return await await authorizationRequestManager.CredentialValidation<Task<TResult>>(requestId, application,
+            return await authorizationRequestManager.CredentialValidation<TResult>(requestId, application,
                     method, values,
-                () => context.Sessions.CreateOrUpdateWithAuthenticationAsync(
+                () => AuthenticationAsync(requestId, method, values, baseUri, application,
+                    onRedirect, onResponse),
+                (why) => onResponse(HttpStatusCode.ServiceUnavailable, why, why));
+        }
+
+        public async static Task<TResult> AuthenticationAsync<TResult>(Guid requestId, 
+                string method, IDictionary<string, string> values, Uri baseUri,
+                AzureApplication application, 
+            Func<Uri, string, TResult> onRedirect,
+            Func<HttpStatusCode, string, string, TResult> onResponse)
+        {
+            var context = application.AzureContext;
+            var authorizationRequestManager = application.AuthorizationRequestManager;
+            var telemetry = application.Telemetry;
+            Func<string, TResult> onStop = (why) => onResponse(HttpStatusCode.ServiceUnavailable, why, why);
+            return await await context.Sessions.CreateOrUpdateWithAuthenticationAsync(
                         application, method, values,
                     (sessionId, authorizationId, token, refreshToken, action, provider, extraParams, redirectUrl) =>
-                        authorizationRequestManager.CreatedAuthenticationLoginAsync(requestId, application, sessionId, authorizationId, 
+                        authorizationRequestManager.CreatedAuthenticationLoginAsync(requestId, application, sessionId, authorizationId,
                                 token, refreshToken, method, action, provider, extraParams, redirectUrl,
-                            () => CreateResponse(application, provider, method, action, sessionId, authorizationId, 
-                                    token, refreshToken, extraParams, baseUri, redirectUrl, 
+                            () => CreateResponse(application, provider, method, action, sessionId, authorizationId,
+                                    token, refreshToken, extraParams, baseUri, redirectUrl,
                                 onRedirect,
                                 onResponse,
                                 telemetry),
@@ -103,7 +116,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                                 reason, method, provider, extraParams, redirectUrl,
                             async () =>
                             {
-                               if (redirectUrl.IsDefaultOrNull())
+                                if (redirectUrl.IsDefaultOrNull())
                                     return Web.Configuration.Settings.GetUri(Security.SessionServer.Configuration.AppSettings.LandingPage,
                                             (redirect) => onRedirect(redirectUrl, reason),
                                             (why) => onResponse(HttpStatusCode.BadRequest, why, $"Location was null"));
@@ -177,8 +190,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                         //await saveAuthLogAsync(false, message, values);
                         telemetry.TrackException(new ResponseException(message));
                         return onResponse(HttpStatusCode.Conflict, message, why);
-                    }),
-                (why) => onResponse(HttpStatusCode.ServiceUnavailable, why, why).ToTask());
+                    });
         }
 
         public static async Task<TResult> CreateResponse<TResult>(AzureApplication application, IProvideAuthorization authorizationProvider,

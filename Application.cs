@@ -52,7 +52,13 @@ namespace EastFive.Api.Azure
         
         private Dictionary<string, IProvideAuthorization> authorizationProviders =
             default(Dictionary<string, IProvideAuthorization>);
-        public Dictionary<string, IProvideAuthorization> AuthorizationProviders { get; private set; }
+        public Dictionary<string, IProvideAuthorization> AuthorizationProviders
+        {
+            get
+            {
+                return authorizationProviders;
+            }
+        }
 
         private Dictionary<string, IProvideLogin> loginProviders =
             default(Dictionary<string, IProvideLogin>);

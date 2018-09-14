@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace EastFive.Api.Azure.Credentials
 {
-    interface IManageAuthorizationRequests
+    public interface IManageAuthorizationRequests
     {
         Task<TResult> CredentialValidation<TResult>(Guid requestId,
                 AzureApplication application,
