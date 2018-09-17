@@ -346,7 +346,7 @@ namespace EastFive.Security.SessionServer
                                     async (authenticationId, onCreatedLogin, onFailureToCreateLogin) =>
                                     {
                                         var sessionId = Guid.NewGuid();
-                                        var authorizationId = Guid.NewGuid();
+                                        var authorizationId = sessionId;
                                         return await await dataContext.CredentialMappings.CreateCredentialMappingAsync<Task<TResult>>(
                                             sessionId, method, subject, authenticationId,
                                             async () =>
