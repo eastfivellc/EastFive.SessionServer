@@ -27,6 +27,12 @@ namespace EastFive.Api.Azure.Credentials
     {
         public const string TokenId = "tokenid";
         public const string AgentId = "agentid";
+        public const string Subject = "pingone.subject";
+        public const string LastName = "lastName";
+        public const string FirstName = "firstName";
+        public const string Email = "email";
+
+
 
         public PingProvider()
         {
