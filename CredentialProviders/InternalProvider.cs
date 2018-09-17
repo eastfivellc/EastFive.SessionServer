@@ -88,7 +88,24 @@ namespace EastFive.Api.Azure.Credentials
                 () => onInvalidCredentials($"Could not find integration [{integrationId}]"));
             // return onSuccess(, default(Guid?), default(Guid?), tokenParameters).ToTask();
         }
-        
+
+        public TResult ParseCredentailParameters<TResult>(IDictionary<string, string> tokenParameters, 
+            Func<string, Guid?, Guid?, TResult> onSuccess, 
+            Func<string, TResult> onFailure)
+        {
+            if (!tokenParameters.ContainsKey(InternalProvider.integrationIdKey))
+                return onFailure($"Missing {integrationIdKey}");
+            var integrationIdString = tokenParameters[InternalProvider.integrationIdKey];
+            if (!Guid.TryParse(integrationIdString, out Guid integrationId))
+                return onFailure($"[{integrationIdString}] is not a UUID");
+            
+            var subject = integrationIdString;
+            var stateId = integrationId;
+            var loginId = integrationId;
+            
+            return onSuccess(subject, stateId, loginId);
+        }
+
         #endregion
 
         #region IProvideLogin

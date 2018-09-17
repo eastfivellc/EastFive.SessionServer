@@ -84,6 +84,11 @@ namespace EastFive.Api.Azure.Credentials
                 var provider = new Provider();
                 return onProvideAuthorization(provider).ToTask();
             }
+
+            public TResult ParseCredentailParameters<TResult>(IDictionary<string, string> responseParams, Func<string, Guid?, Guid?, TResult> onSuccess, Func<string, TResult> onFailure)
+            {
+                throw new NotImplementedException();
+            }
         }
 
         //internal static async Task<TResult> GetAsync<TResult>(Guid authenticationRequestId, Func<Type, Uri> callbackUrlFunc,
