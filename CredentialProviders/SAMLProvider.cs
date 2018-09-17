@@ -79,7 +79,7 @@ namespace EastFive.Api.Azure.Credentials
                                 var hash = SHA512.Create().ComputeHash(System.Text.Encoding.UTF8.GetBytes(nameId));
                                 var loginId = new Guid(hash.Take(16).ToArray());
 
-                                return onSuccess(nameId, default(Guid?), loginId, new Dictionary<string, string>()); // TODO: Build this from params above
+                                return onSuccess(nameId, default(Guid?), loginId, tokens);
                             },
                             (why) => onUnspecifiedConfiguration(why));
                     } catch(Exception ex)
@@ -89,6 +89,19 @@ namespace EastFive.Api.Azure.Credentials
                 },
                 (why) => onUnspecifiedConfiguration(why).ToTask());
         }
+
+        public TResult ParseCredentailParameters<TResult>(IDictionary<string, string> tokens,
+            Func<string, Guid?, Guid?, TResult> onSuccess,
+            Func<string, TResult> onFailure)
+        {
+
+            var nameId = tokens[SAMLProvider.SamlNameIDKey];
+            var hash = SHA512.Create().ComputeHash(System.Text.Encoding.UTF8.GetBytes(nameId));
+            var loginId = new Guid(hash.Take(16).ToArray());
+
+            return onSuccess(nameId, default(Guid?), loginId);
+        }
+
 
         #region IProvideLogin
 

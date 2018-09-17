@@ -2,6 +2,7 @@
 using EastFive.Api;
 using EastFive.Api.Azure.Credentials;
 using EastFive.Api.Azure.Credentials.Controllers;
+using EastFive.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,8 +33,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 BlackBarLabs.Persistence.Azure.StorageTables.AzureStorageRepository.CreateRepository(
                     Configuration.AppSettings.Storage));
         }
-
-
+        
         [EastFive.Api.HttpGet]
         public static async Task<HttpResponseMessage> ReplicateLogin(
             [QueryValidation(Name = "credential_process_id")]Guid credentialProcessId,
@@ -68,6 +68,57 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                             application,
                         (redirectUri, message) => redirectResponse(redirectUri, message),
                         (code, message, reason) => viewResponse($"<html><head><title>{reason}</title></head><body>{message}</body></html>", null));
+                },
+                () => viewResponse("", null).ToTask(),
+                BlackBarLabs.Persistence.Azure.StorageTables.AzureStorageRepository.CreateRepository(
+                    Configuration.AppSettings.Storage));
+        }
+
+        [EastFive.Api.HttpGet]
+        public static async Task<HttpResponseMessage> RedeemAsync(
+            [QueryValidation(Name = "redemption_process_id")]Guid credentialProcessId,
+            EastFive.Api.Azure.AzureApplication application, HttpRequestMessage request,
+            EastFive.Api.Controllers.RedirectResponse redirectResponse,
+            EastFive.Api.Controllers.ViewStringResponse viewResponse)
+        {
+            return await await CredentialProcessDocument.FindByIdAsync(credentialProcessId,
+                (document) =>
+                {
+                    var context = application.AzureContext;
+                    var provider = application.AuthorizationProviders.First(prov => prov.Value.GetType().FullName == document.Provider).Value;
+                    // Enum.TryParse(document.Action, out AuthenticationActions action);
+                    var responseParameters = document.GetValuesCredential();
+                    return provider.ParseCredentailParameters<Task<HttpResponseMessage>>(responseParameters,
+                        async (subject, stateId, loginId) => await await context.Sessions.TokenRedeemedAsync<Task<HttpResponseMessage>>(
+                            document.Method, provider, subject, stateId, loginId, responseParameters,
+                            (sessionId, authorizationId, token, refreshToken, actionReturned, providerReturned, extraParams, redirectUrl) =>
+                                ResponseController.CreateResponse(application, providerReturned, document.Method, actionReturned, sessionId, authorizationId,
+                                        token, refreshToken, extraParams, request.RequestUri, redirectUrl,
+                                    (redirectUri, message) => redirectResponse(redirectUri, message),
+                                    (code, message, reason) => viewResponse($"<html><head><title>{reason}</title></head><body>{message}</body></html>", null),
+                                    application.Telemetry),
+                            async (redirectUrl, reason, providerReturned, extraParams) =>
+                            {
+                                if (redirectUrl.IsDefaultOrNull())
+                                    return Web.Configuration.Settings.GetUri(Security.SessionServer.Configuration.AppSettings.LandingPage,
+                                            (redirect) => redirectResponse(redirectUrl, reason),
+                                            (why) => viewResponse($"<html><head><title>{reason}</title></head><body>{why}</body></html>", null));
+                                if (redirectUrl.Query.IsNullOrWhiteSpace())
+                                    redirectUrl = redirectUrl.SetQueryParam("cache", Guid.NewGuid().ToString("N"));
+                                return await redirectResponse(redirectUrl, reason).ToTask();
+                            },
+                            (subjectReturned, credentialProvider, extraParams, createMappingAsync) =>
+                                ResponseController.UnmappedCredentailAsync(application,
+                                        credentialProvider, document.Method, subjectReturned, extraParams, request.RequestUri,
+                                        createMappingAsync,
+                                    (redirectUri, message) => redirectResponse(redirectUri, message),
+                                    (code, message, reason) => viewResponse($"<html><head><title>{reason}</title></head><body>{message}</body></html>", null),
+                                    application.Telemetry).ToTask(),
+                            (why) => viewResponse($"<html><head><title>{why}</title></head><body>{why}</body></html>", null).ToTask(),
+                            (why) => viewResponse($"<html><head><title>{why}</title></head><body>{why}</body></html>", null).ToTask(),
+                            (why) => viewResponse($"<html><head><title>{why}</title></head><body>{why}</body></html>", null).ToTask(),
+                            application.Telemetry),
+                        (why) => viewResponse($"<html><head><title>{why}</title></head><body>{why}</body></html>", null).ToTask());
                 },
                 () => viewResponse("", null).ToTask(),
                 BlackBarLabs.Persistence.Azure.StorageTables.AzureStorageRepository.CreateRepository(

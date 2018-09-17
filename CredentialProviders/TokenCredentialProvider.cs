@@ -12,6 +12,8 @@ namespace EastFive.Api.Azure.Credentials
     [Attributes.IntegrationName("Token")]
     public class TokenCredentialProvider : IProvideAuthorization, IProvideLoginManagement
     {
+        private const string subjectIdKey = "loginId";
+
         private Security.SessionServer.Persistence.DataContext dataContext;
 
         public TokenCredentialProvider()
@@ -47,9 +49,26 @@ namespace EastFive.Api.Azure.Credentials
                     if (!loginId.HasValue)
                         return onInvalidCredentials("Token is not connected to an account");
 
-                    return onSuccess(loginId.Value.ToString("N"), default(Guid?), loginId.Value, null);
+                    var subjectId = loginId.Value.ToString("N");
+                    return onSuccess(subjectId, default(Guid?), loginId.Value,
+                        new Dictionary<string, string>()
+                        {
+                            { TokenCredentialProvider.subjectIdKey, subjectId  }
+                        });
                 },
                 () => onInvalidCredentials("The token does not exists"));
+        }
+
+        public TResult ParseCredentailParameters<TResult>(IDictionary<string, string> tokens,
+            Func<string, Guid?, Guid?, TResult> onSuccess,
+            Func<string, TResult> onFailure)
+        {
+            var subjectId = tokens[subjectIdKey];
+            var loginIdMaybe = default(Guid?);
+            if (Guid.TryParse(subjectId, out Guid loginId))
+                loginIdMaybe = loginId;
+
+            return onSuccess(subjectId, default(Guid?), loginIdMaybe);
         }
 
         #region IProvideLoginManagement
