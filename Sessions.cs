@@ -176,25 +176,36 @@ namespace EastFive.Security.SessionServer
             Func<string, TResult> onNotFound,
             Func<string, TResult> onFailure)
         {
-            return await this.dataContext.AuthenticationRequests.FindByIdAsync(authenticationRequestId,
-                (authenticationRequestStorage) =>
+            return await await this.dataContext.AuthenticationRequests.FindByIdAsync(authenticationRequestId,
+                async (authenticationRequestStorage) =>
                 {
                     if (authenticationRequestStorage.Deleted.HasValue)
                         return onNotFound("Session was deleted");
 
-                    return Context.GetLoginProvider(authenticationRequestStorage.method,
-                        (provider) =>
+                    return await Context.GetLoginProvider(authenticationRequestStorage.method,
+                        async (provider) =>
                         {
                             var authenticationRequest = Convert(authenticationRequestStorage);
+                            if(authenticationRequest.authorizationId.HasValue)
+                            {
+                                authenticationRequest = await CreateSessionAsync(authenticationRequest.id, authenticationRequest.authorizationId.Value,
+                                    (token, refreshToken) =>
+                                    {
+                                        authenticationRequest.token = token;
+                                        authenticationRequest.refreshToken = refreshToken;
+                                        return authenticationRequest;
+                                    },
+                                    (why) => authenticationRequest);
+                            }
                             var callbackUrl = callbackUrlFunc(provider.CallbackController);
                             authenticationRequest.loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackUrl, callbackUrlFunc);
                             authenticationRequest.logoutUrl = provider.GetLogoutUrl(authenticationRequestId, callbackUrl, callbackUrlFunc);
                             return onSuccess(authenticationRequest);
                         },
-                        () => onFailure("The credential provider for this request is no longer enabled in this system"),
-                        (why) => onFailure(why));
+                        () => onFailure("The credential provider for this request is no longer enabled in this system").ToTask(),
+                        (why) => onFailure(why).ToTask());
                 },
-                () => onNotFound("Session does not exist"));
+                () => onNotFound("Session does not exist").ToTask());
         }
 
         public async Task<TResult> LookupCredentialMappingAsync<TResult>(
