@@ -362,24 +362,23 @@ namespace EastFive.Azure.Synchronization
             Func<TResult> onConnectionNotFound)
         {
             var key = keyGuid.ToString("N");
-            return await await Persistence.AdapterDocument.FindByKeyAsync(key, integrationId, resourceType,
-                async adapterInternal =>
+            return await await Persistence.AdapterDocument.FindByKeyAsync(key, default(Guid), resourceType,
+                adapterInternal =>
                 {
-                    return await await Persistence.ConnectorDocument.FindByAdapterAsync(adapterInternal,
-                        (KeyValuePair<Connector, Guid>[] connectorAdapterExternalIdKvps) =>
+                    return Persistence.ConnectorDocument.FindByAdapterWithConnectionAsync(adapterInternal,
+                        (KeyValuePair<Connector, Adapter>[] connectorAdapterExternalIdKvps) =>
                         {
                             return connectorAdapterExternalIdKvps.First(
-                                async (connectorAdapterExternalIdKvp, next) =>
+                                (connectorAdapterExternalIdKvp, next) =>
                                 {
-                                    if (connectorAdapterExternalIdKvp.Value != integrationId)
-                                        return await next();
-                                    return await await Persistence.AdapterDocument.FindByIdAsync(connectorAdapterExternalIdKvp.Key.adapterExternalId,
-                                        (relatedAdapter) => onFound(relatedAdapter.key).ToTask(),
-                                        () => next());
+                                    if (connectorAdapterExternalIdKvp.Value.integrationId == integrationId)
+                                        return onFound(connectorAdapterExternalIdKvp.Value.key);
+
+                                    return next();
                                 },
-                                onConnectionNotFound.AsAsyncFunc());
+                                onConnectionNotFound);
                         },
-                        onConnectionNotFound.AsAsyncFunc());
+                        onConnectionNotFound);
                 },
                 onConnectionNotFound.AsAsyncFunc());
         }

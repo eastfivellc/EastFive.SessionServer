@@ -231,6 +231,32 @@ namespace EastFive.Azure.Synchronization.Persistence
                     onAdapterNotFound.AsAsyncFunc()));
         }
 
+        internal static Task<TResult> FindByAdapterWithConnectionAsync<TResult>(Adapter adapter,
+            Func<KeyValuePair<Connector, Adapter>[], TResult> onFound,
+            Func<TResult> onAdapterNotFound)
+        {
+            return AzureStorageRepository.Connection(
+                async azureStorageRepository =>
+                {
+                    var connections = await adapter.connectorIds
+                        .Select(
+                            connectorId => azureStorageRepository.FindLinkedDocumentAsync(connectorId,
+                                (ConnectorDocument connectorDoc) =>
+                                    connectorDoc.LocalAdapter == adapter.adapterId ?
+                                        connectorDoc.RemoteAdapter
+                                        :
+                                        connectorDoc.LocalAdapter,
+                                (ConnectorDocument connectorDoc, AdapterDocument adapterDoc) =>
+                                    Convert(connectorDoc).PairWithValue(AdapterDocument.Convert(adapterDoc)),
+                                () => default(KeyValuePair<Connector, Adapter>?),
+                                (connectorDoc) => default(KeyValuePair<Connector, Adapter>?)))
+                        .WhenAllAsync()
+                        .SelectWhereHasValueAsync()
+                        .ToArrayAsync();
+                    return onFound(connections);
+                });
+        }
+
         internal static Task<TResult> FindByIdWithAdapterRemoteAsync<TResult>(Guid connectorId,
             Func<Connector, Adapter, TResult> onFound,
             Func<TResult> onNotFound)

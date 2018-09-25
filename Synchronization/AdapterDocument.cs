@@ -192,6 +192,9 @@ namespace EastFive.Azure.Synchronization.Persistence
                     return azureStorageRepository.CreateOrUpdateAsync<AdapterDocument, TResult>(adapterId,
                         (created, adapterDoc, saveAsync) =>
                         {
+                            adapterDoc.Key = key;
+                            adapterDoc.IntegrationId = integrationId;
+                            adapterDoc.ResourceType = resourceType;
                             return onFound(created, Convert(adapterDoc),
                                 async (adapterUpdated) =>
                                 {
