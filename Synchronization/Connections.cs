@@ -348,6 +348,41 @@ namespace EastFive.Azure.Synchronization
         }
 
         /// <summary>
+        /// Convenience method for looking up an external to "internal"/default resource mapping.
+        /// </summary>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="keyGuid"></param>
+        /// <param name="integrationId"></param>
+        /// <param name="resourceType"></param>
+        /// <param name="onFound"></param>
+        /// <param name="onReferenceNotFound"></param>
+        /// <returns></returns>
+        public static async Task<TResult> FindInternalIdByResourceKeyAsync<TResult>(string key, Guid integrationId, string resourceType,
+            Func<string, TResult> onFound,
+            Func<TResult> onConnectionNotFound)
+        {
+            return await await Persistence.AdapterDocument.FindByKeyAsync(key, integrationId, resourceType,
+                adapterInternal =>
+                {
+                    return Persistence.ConnectorDocument.FindByAdapterWithConnectionAsync(adapterInternal,
+                        (KeyValuePair<Connector, Adapter>[] connectorAdapterExternalIdKvps) =>
+                        {
+                            return connectorAdapterExternalIdKvps.First(
+                                (connectorAdapterExternalIdKvp, next) =>
+                                {
+                                    if (connectorAdapterExternalIdKvp.Value.integrationId == default(Guid))
+                                        return onFound(connectorAdapterExternalIdKvp.Value.key);
+
+                                    return next();
+                                },
+                                onConnectionNotFound);
+                        },
+                        onConnectionNotFound);
+                },
+                onConnectionNotFound.AsAsyncFunc());
+        }
+
+        /// <summary>
         /// Convenience method for looking up an "internal" to external resource mapping.
         /// </summary>
         /// <typeparam name="TResult"></typeparam>
@@ -357,7 +392,7 @@ namespace EastFive.Azure.Synchronization
         /// <param name="onFound"></param>
         /// <param name="onReferenceNotFound"></param>
         /// <returns></returns>
-        public static async Task<TResult> FindResourceKeyByInternalKeyAsync<TResult>(Guid keyGuid, Guid integrationId, string resourceType,
+        public static async Task<TResult> FindResourceKeyByInternalIdAsync<TResult>(Guid keyGuid, Guid integrationId, string resourceType,
             Func<string, TResult> onFound,
             Func<TResult> onConnectionNotFound)
         {
