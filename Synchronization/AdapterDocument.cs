@@ -17,6 +17,7 @@ using EastFive;
 using EastFive.Linq;
 using BlackBarLabs.Persistence.Azure.StorageTables;
 using System.Runtime.Serialization;
+using EastFive.Linq.Async;
 
 namespace EastFive.Azure.Synchronization.Persistence
 {
@@ -148,6 +149,24 @@ namespace EastFive.Azure.Synchronization.Persistence
                 });
         }
 
+        public static IEnumerableAsync<Adapter> FindAllAsync(string resourceType)
+        {
+            if (resourceType.IsNullOrWhiteSpace())
+                resourceType = string.Empty;
+
+            return AzureStorageRepository.Connection(
+                azureStorageRepository =>
+                {
+                    var query = new TableQuery<AdapterDocument>();
+                    var localToRemoteIds = azureStorageRepository
+                        .FindAllAsync(query)
+                        .Where(doc => doc.ResourceType == resourceType)
+                        .Select(Convert);
+                    
+                    return localToRemoteIds;
+                });
+        }
+
 
         internal static Adapter Convert(AdapterDocument syncDoc)
         {
@@ -173,6 +192,9 @@ namespace EastFive.Azure.Synchronization.Persistence
                     return azureStorageRepository.CreateOrUpdateAsync<AdapterDocument, TResult>(adapterId,
                         (created, adapterDoc, saveAsync) =>
                         {
+                            adapterDoc.Key = key;
+                            adapterDoc.IntegrationId = integrationId;
+                            adapterDoc.ResourceType = resourceType;
                             return onFound(created, Convert(adapterDoc),
                                 async (adapterUpdated) =>
                                 {

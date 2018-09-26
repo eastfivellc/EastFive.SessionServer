@@ -226,6 +226,27 @@ namespace EastFive.Api.Azure.Credentials
             }
         }
 
+        public TResult ParseCredentailParameters<TResult>(IDictionary<string, string> tokenParameters,
+            Func<string, Guid?, Guid?, TResult> onSuccess,
+            Func<string, TResult> onFailure)
+        {
+            if (!tokenParameters.ContainsKey(LightspeedProvider.accountIdKey))
+                return onFailure($"Parameter with name [{LightspeedProvider.accountIdKey}] was not provided");
+
+            var state = default(Guid?);
+            if (tokenParameters.ContainsKey(LightspeedProvider.stateKey))
+                if (Guid.TryParse(tokenParameters[LightspeedProvider.stateKey], out Guid parsedState))
+                    state = parsedState;
+            
+            // Submit the form using HttpClient and 
+            // create form data as Multipart (enctype="multipart/form-data")
+
+            var subject = tokenParameters[LightspeedProvider.accountIdKey];
+
+
+            return onSuccess(subject, state, default(Guid?));
+        }
+
         #endregion
 
         #region IProvideLogin

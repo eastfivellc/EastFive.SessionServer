@@ -128,40 +128,12 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                     async (subject, credentialProvider, extraParams, createMappingAsync) =>
                         authorizationRequestManager.CredentialUnmappedAsync<TResult>(requestId, application,
                                 subject, method, credentialProvider, extraParams, createMappingAsync,
-                            async (createMappingNewAsync) =>
-                            {
-                                return await await application.OnUnmappedUserAsync<Task<TResult>>(method, credentialProvider, subject, extraParams,
-                                    async (authorizationId) =>
-                                    {
-                                        //await updatingAuthLogTask;
-                                        telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Creating Authentication.");
-                                        //updatingAuthLogTask = saveAuthLogAsync(true, $"New user mapping requested:{subject}/{credentialProvider.GetType().FullName}[{authorizationId}]", extraParams);
-                                        return await await createMappingNewAsync(authorizationId,
-                                            async (sessionId, jwtToken, refreshToken, action, redirectUrl) =>
-                                            {
-                                                //await updatingAuthLogTask;
-                                                //await saveAuthLogAsync(true, $"New user mapping requested:{subject}/{credentialProvider.GetType().FullName}[{authorizationId}]", extraParams);
-                                                telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Created Authentication.  Creating response.");
-                                                var resp = CreateResponse(application, credentialProvider, method, action, sessionId, authorizationId, jwtToken, refreshToken, extraParams, baseUri, redirectUrl, onRedirect, onResponse, telemetry);
-                                                //await updatingAuthLogTask;
-                                                return resp;
-                                            },
-                                            async (why) =>
-                                            {
-                                                //await updatingAuthLogTask;
-                                                //await saveAuthLogAsync(true, $"Failure to create user mapping requested:{subject}/{credentialProvider.GetType().FullName}[{authorizationId}]: {why}", extraParams);
-                                                var message = $"Failure to connect token to a user in this system: {why}";
-                                                telemetry.TrackException(new ResponseException(message));
-                                                return onResponse(HttpStatusCode.Conflict, message, message);
-                                            });
-                                    },
-                                    () =>
-                                    {
-                                        var message = "Token is not connected to a user in this system";
-                                        telemetry.TrackException(new ResponseException(message));
-                                        return onResponse(HttpStatusCode.Conflict, message, message).ToTask();
-                                    });
-                            },
+                            (createMappingNewAsync) => UnmappedCredentailAsync(application,
+                                credentialProvider, method, subject, extraParams, baseUri,
+                                createMappingNewAsync,
+                                onRedirect,
+                                onResponse,
+                                telemetry),
                             onStop),
                     async (why) =>
                     {
@@ -229,6 +201,54 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             var msg = redirectResponse;
             telemetry.TrackEvent($"CreateResponse - {msg}");
             return redirectResponse;
+        }
+
+        public static async Task<TResult> UnmappedCredentailAsync<TResult>(AzureApplication application,
+                IProvideAuthorization authorizationProvider, string method, string subject, IDictionary<string, string> extraParams,
+                Uri baseUri,
+                Func<Guid,
+                        Func<Guid, string, string, AuthenticationActions, Uri, Task<Task<TResult>>>,
+                        Func<string, Task<TResult>>, Task<Task<TResult>>> createMappingAsync,
+            Func<Uri, string, TResult> onRedirect,
+            Func<HttpStatusCode, string, string, TResult> onResponse,
+            TelemetryClient telemetry)
+        {
+            return await await application.OnUnmappedUserAsync<Task<TResult>>(method, authorizationProvider, subject, extraParams,
+                async (authorizationId) =>
+                {
+                    //await updatingAuthLogTask;
+                    telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Creating Authentication.");
+                    //updatingAuthLogTask = saveAuthLogAsync(true, $"New user mapping requested:{subject}/{credentialProvider.GetType().FullName}[{authorizationId}]", extraParams);
+                    return await await createMappingAsync(authorizationId,
+                        async (sessionId, jwtToken, refreshToken, action, redirectUrl) =>
+                        {
+                            //await updatingAuthLogTask;
+                            //await saveAuthLogAsync(true, $"New user mapping requested:{subject}/{credentialProvider.GetType().FullName}[{authorizationId}]", extraParams);
+                            telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Created Authentication.  Creating response.");
+                            var resp = CreateResponse(application, authorizationProvider, method, action, 
+                                    sessionId, authorizationId, jwtToken, refreshToken, extraParams, 
+                                    baseUri, redirectUrl,
+                                onRedirect, 
+                                onResponse,
+                                telemetry);
+                            //await updatingAuthLogTask;
+                            return resp;
+                        },
+                        async (why) =>
+                        {
+                            //await updatingAuthLogTask;
+                            //await saveAuthLogAsync(true, $"Failure to create user mapping requested:{subject}/{credentialProvider.GetType().FullName}[{authorizationId}]: {why}", extraParams);
+                            var message = $"Failure to connect token to a user in this system: {why}";
+                            telemetry.TrackException(new ResponseException(message));
+                            return onResponse(HttpStatusCode.Conflict, message, message);
+                        });
+                },
+                () =>
+                {
+                    var message = "Token is not connected to a user in this system";
+                    telemetry.TrackException(new ResponseException(message));
+                    return onResponse(HttpStatusCode.Conflict, message, message).ToTask();
+                });
         }
     }
 }

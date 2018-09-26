@@ -27,6 +27,12 @@ namespace EastFive.Api.Azure.Credentials
     {
         public const string TokenId = "tokenid";
         public const string AgentId = "agentid";
+        public const string Subject = "pingone.subject";
+        public const string LastName = "lastName";
+        public const string FirstName = "firstName";
+        public const string Email = "email";
+
+
 
         public PingProvider()
         {
@@ -108,9 +114,20 @@ namespace EastFive.Api.Azure.Credentials
                 },
                 (why) => onUnspecifiedConfiguration(why).ToTask());
         }
+        
+        public TResult ParseCredentailParameters<TResult>(IDictionary<string, string> responseParams, 
+            Func<string, Guid?, Guid?, TResult> onSuccess, 
+            Func<string, TResult> onFailure)
+        {
+            string subject = responseParams["pingone.subject"];
+            var hash = SHA512.Create().ComputeHash(System.Text.Encoding.UTF8.GetBytes(subject));
+            var loginId = new Guid(hash.Take(16).ToArray());
+
+            return onSuccess(subject, default(Guid?), loginId);
+        }
 
         #region IProvideLogin
-        
+
         public Uri GetLogoutUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
         {
             return default(Uri);

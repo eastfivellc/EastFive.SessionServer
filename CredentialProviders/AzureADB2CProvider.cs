@@ -10,6 +10,8 @@ using EastFive.Security.SessionServer;
 using BlackBarLabs.Extensions;
 using EastFive.Api.Azure.Credentials;
 using EastFive.Api.Azure.Credentials.Attributes;
+using EastFive.Linq;
+using EastFive.Collections.Generic;
 
 namespace EastFive.Api.Azure.Credentials
 {
@@ -133,13 +135,17 @@ namespace EastFive.Api.Azure.Credentials
                                 authId = authIdGuid;
 
                             // TODO: Populate extraParams from claims
-                            return onSuccess(subject, stateId, authId, extraParams);
+                            return onSuccess(subject, stateId, authId, 
+                                extraParams
+                                    .Concat(
+                                        claims.Claims.Select(claim => claim.Type.PairWithValue(claim.Value)))
+                                    .ToDictionary());
                         },
                         onUnspecifiedConfiguration);
                 },
                 onInvalidCredentials).ToTask();
         }
-
+        
         private TResult ValidateToken<TResult>(string idToken,
             Func<ClaimsPrincipal, TResult> onSuccess,
             Func<string, TResult> onFailed)
@@ -157,6 +163,38 @@ namespace EastFive.Api.Azure.Credentials
             {
                 return onFailed(ex.Message);
             }
+        }
+
+
+        public TResult ParseCredentailParameters<TResult>(IDictionary<string, string> responseParams,
+            Func<string, Guid?, Guid?, TResult> onSuccess, 
+            Func<string, TResult> onFailure)
+        {
+            if (!responseParams.ContainsKey(AzureADB2CProvider.StateKey))
+                return onFailure($"{AzureADB2CProvider.StateKey} not in auth response");
+            var stateParam = responseParams[AzureADB2CProvider.StateKey];
+            if (!Guid.TryParse(stateParam, out Guid stateId))
+                return onFailure($"Invalid state parameter [{stateParam}] is not a GUID");
+
+            return Web.Configuration.Settings.GetString(
+                    EastFive.Security.SessionServer.Configuration.AppSettings.LoginIdClaimType,
+                (claimType) =>
+                {
+                    var authClaims = responseParams
+                        .Where(claim => claim.Key.CompareTo(claimType) == 0)
+                        .ToArray();
+
+                    if (authClaims.Length == 0)
+                        return onFailure($"Token does not contain claim for [{claimType}] which is necessary to operate with this system");
+
+                    string subject = authClaims[0].Value;
+                    var authId = default(Guid?);
+                    if (Guid.TryParse(subject, out Guid authIdGuid))
+                        authId = authIdGuid;
+
+                    return onSuccess(subject, stateId, authId);
+                },
+                onFailure);
         }
 
         #endregion
@@ -313,7 +351,7 @@ namespace EastFive.Api.Azure.Credentials
         {
             return onSuccess(new Dictionary<string, string>(), new Dictionary<string, Type>(), new Dictionary<string, string>()).ToTask();
         }
-
+        
         #endregion
 
     }

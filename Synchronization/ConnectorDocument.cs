@@ -18,6 +18,7 @@ using EastFive.Linq;
 using BlackBarLabs.Persistence.Azure.StorageTables;
 using System.Runtime.Serialization;
 using BlackBarLabs.Linq.Async;
+using EastFive.Linq.Async;
 
 namespace EastFive.Azure.Synchronization.Persistence
 {
@@ -186,6 +187,27 @@ namespace EastFive.Azure.Synchronization.Persistence
                     onAdapterNotFound.AsAsyncFunc()));
         }
 
+        internal static Task<TResult> FindByAdapterAsync<TResult>(Adapter adapter,
+            Func<KeyValuePair<Connector, Guid>[], TResult> onFound,
+            Func<TResult> onAdapterNotFound)
+        {
+            return AzureStorageRepository.Connection(
+                async repo =>
+                    {
+                        var connectorIds = adapter.connectorIds;
+                        var connections = await connectorIds
+                            .Select(
+                                connectorId => FindByIdAsync(connectorId,
+                                    (connector, externalIntegrationId) => connector.PairWithValue(externalIntegrationId),
+                                    () => default(KeyValuePair<Connector, Guid>?)))
+                            .WhenAllAsync()
+                            .SelectWhereHasValueAsync()
+                            .ToArrayAsync();
+                        
+                        return onFound(connections);
+                    });
+        }
+
         internal static Task<TResult> FindByAdapterWithConnectionAsync<TResult>(Guid adapterId,
             Func<Adapter, KeyValuePair<Connector, Adapter>[], TResult> onFound,
             Func<TResult> onAdapterNotFound)
@@ -209,6 +231,32 @@ namespace EastFive.Azure.Synchronization.Persistence
                     onAdapterNotFound.AsAsyncFunc()));
         }
 
+        internal static Task<TResult> FindByAdapterWithConnectionAsync<TResult>(Adapter adapter,
+            Func<KeyValuePair<Connector, Adapter>[], TResult> onFound,
+            Func<TResult> onAdapterNotFound)
+        {
+            return AzureStorageRepository.Connection(
+                async azureStorageRepository =>
+                {
+                    var connections = await adapter.connectorIds
+                        .Select(
+                            connectorId => azureStorageRepository.FindLinkedDocumentAsync(connectorId,
+                                (ConnectorDocument connectorDoc) =>
+                                    connectorDoc.LocalAdapter == adapter.adapterId ?
+                                        connectorDoc.RemoteAdapter
+                                        :
+                                        connectorDoc.LocalAdapter,
+                                (ConnectorDocument connectorDoc, AdapterDocument adapterDoc) =>
+                                    Convert(connectorDoc).PairWithValue(AdapterDocument.Convert(adapterDoc)),
+                                () => default(KeyValuePair<Connector, Adapter>?),
+                                (connectorDoc) => default(KeyValuePair<Connector, Adapter>?)))
+                        .WhenAllAsync()
+                        .SelectWhereHasValueAsync()
+                        .ToArrayAsync();
+                    return onFound(connections);
+                });
+        }
+
         internal static Task<TResult> FindByIdWithAdapterRemoteAsync<TResult>(Guid connectorId,
             Func<Connector, Adapter, TResult> onFound,
             Func<TResult> onNotFound)
@@ -220,6 +268,34 @@ namespace EastFive.Azure.Synchronization.Persistence
                         onFound(Convert(connectorDoc), AdapterDocument.Convert(AdapterDoc)),
                     onNotFound,
                     (connectorDoc) => onNotFound()));
+        }
+
+        public static IEnumerableAsync<Connection> FindAllByType(string resourceType)
+        {
+            return AzureStorageRepository.Connection(
+                azureStorageRepository =>
+                {
+                    var query = new TableQuery<ConnectorDocument>();
+                    var connectors = azureStorageRepository.FindAllAsync(query);
+                    return connectors
+                        .SelectAsyncOptional<ConnectorDocument, Connection>(
+                            async (connector, select, skip) => await await AdapterDocument.FindByIdAsync(connector.LocalAdapter,
+                                async adapterInternal =>
+                                {
+                                    if (adapterInternal.resourceType != resourceType)
+                                        return skip();
+                                    return await AdapterDocument.FindByIdAsync(connector.RemoteAdapter,
+                                        adapterExternal => select(
+                                            new Connection()
+                                            {
+                                                connector = Convert(connector),
+                                                adapterInternal = adapterInternal,
+                                                adapterExternal = adapterExternal,
+                                            }),
+                                        () => skip());
+                                },
+                                () => skip().ToTask()));
+                });
         }
 
         public static Task<T> FindAllAsync<T>(Guid actorId, Guid integrationId, string resourceType,

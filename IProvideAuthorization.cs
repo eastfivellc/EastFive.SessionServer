@@ -31,6 +31,10 @@ namespace EastFive.Security.SessionServer
             Func<string, TResult> onUnspecifiedConfiguration,
             Func<string, TResult> onFailure);
 
+        TResult ParseCredentailParameters<TResult>(IDictionary<string, string> responseParams,
+            Func<string, Guid?, Guid?, TResult> onSuccess,
+            Func<string, TResult> onFailure);
+
         Task<TResult> UserParametersAsync<TResult>(Guid actorId, System.Security.Claims.Claim[] claims, IDictionary<string, string> extraParams,
             Func<
                 IDictionary<string, string>, //Key, label
