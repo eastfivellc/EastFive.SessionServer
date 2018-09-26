@@ -163,7 +163,7 @@ namespace EastFive.Api.Azure.Resources
                     Guid [] editableIds,
                 [PropertyOptional(Name = Resources.ProcessStage.ConfirmablePropertyName)]
                     Resources.ProcessStage.ConfirmableResource [] confirmables,
-                EastFive.Api.Controllers.Security security, Context context, HttpRequestMessage request, UrlHelper url,
+                EastFive.Api.Controllers.Security security, EastFive.Api.Azure.AzureApplication application,
             CreatedResponse onCreated,
             AlreadyExistsResponse onAlreadyExists,
             ReferencedDocumentDoesNotExistsResponse<Resources.ProcessStageType> onTypeDoesNotExist,

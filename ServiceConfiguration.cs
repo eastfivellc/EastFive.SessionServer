@@ -81,14 +81,18 @@ namespace EastFive.Security.SessionServer
                 .ToDictionary(
                     credentialProvider =>
                     {
-                        var methodName = credentialProvider.GetType().GetCustomAttribute<IntegrationNameAttribute>().Name;
+                        var methodName = credentialProvider.GetType().GetCustomAttribute<IntegrationNameAttribute, string>(
+                            attr => attr.Name,
+                            () => throw new Exception($"{credentialProvider.GetType().FullName} does not have IntegrationName attribute set"));
                         return methodName;
                     },
                     credentialProvider => credentialProvider);
             loginProviders = credentialProvidersWithoutMethods
                 .Where(credentialProvider => typeof(IProvideLogin).IsAssignableFrom(credentialProvider.GetType()))
                 .ToDictionary(
-                    credentialProvider => credentialProvider.GetType().GetCustomAttribute<IntegrationNameAttribute>().Name,
+                    credentialProvider => credentialProvider.GetType().GetCustomAttribute<IntegrationNameAttribute, string>(
+                        attr => attr.Name,
+                        () => throw new Exception($"{credentialProvider.GetType().FullName} does not have IntegrationName attribute set")),
                     credentialProvider => (IProvideLogin)credentialProvider);
             managementProviders = credentialProviders
                 .Where(credentialProvider => typeof(IProvideLoginManagement).IsAssignableFrom(credentialProvider.Value.GetType()))
