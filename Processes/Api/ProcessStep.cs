@@ -1,63 +1,87 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
+﻿using BlackBarLabs.Api;
+using BlackBarLabs.Api.Resources;
+using System;
+using System.Runtime.Serialization;
+using Newtonsoft.Json;
 using System.Net.Http;
+using EastFive.Api.Controllers;
+using System.Linq;
 using System.Web.Http.Routing;
 using System.Threading.Tasks;
-using System.Linq.Expressions;
-
-using EastFive.Collections.Generic;
-using EastFive;
-using EastFive.Api.Controllers;
-using EastFive.Extensions;
 using EastFive.Linq;
-using EastFive.Api;
-using EastFive.Azure.Synchronization;
-using BlackBarLabs.Api;
 using BlackBarLabs.Extensions;
-using BlackBarLabs.Api.Resources;
-using EastFive.Api.Azure;
-using EastFive.Azure;
 
-namespace EastFive.Api.Azure.Controllers
+namespace EastFive.Api.Azure.Resources
 {
+    [DataContract]
     [FunctionViewController(Route = "ProcessStep")]
-    public class ProcessStepController
+    public class ProcessStep : ResourceBase
     {
+        public const string StagePropertyName = "stage";
+        [JsonProperty(PropertyName = StagePropertyName)]
+        public WebId Stage { get; set; }
+
+        public const string ResourcePropertyName = "resource";
+        [JsonProperty(PropertyName = ResourcePropertyName)]
+        public WebId Resource { get; set; }
+
+        public const string CreatedOnPropertyName = "created_on";
+        [JsonProperty(PropertyName = CreatedOnPropertyName)]
+        public DateTime CreatedOn { get; set; }
+
+        public const string ResourceKeysPropertyName = "resource_keys";
+        [JsonProperty(PropertyName = ResourceKeysPropertyName)]
+        public string[] ResourceKeys { get; set; }
+
+        public const string ResourcesPropertyName = "resources";
+        [JsonProperty(PropertyName = ResourcesPropertyName)]
+        public WebId[] Resources { get; set; }
+        
+        public const string ConfirmedByPropertyName = "confirmed_by";
+        [JsonProperty(PropertyName = ConfirmedByPropertyName)]
+        public WebId ConfirmedBy { get; set; }
+
+        public const string ConfirmedWhenPropertyName = "confirmed_when";
+        [JsonProperty(PropertyName = ConfirmedWhenPropertyName)]
+        public DateTime? ConfirmedWhen { get; set; }
+
+        public const string PreviousPropertyName = "previous";
+        [JsonProperty(PropertyName = PreviousPropertyName)]
+        public WebId Previous { get; set; }
+
 
         #region GET
 
         [EastFive.Api.HttpGet]
         public static Task<HttpResponseMessage> FindByIdAsync(
-                [QueryDefaultParameter][Required(Name = Resources.ProcessStep.IdPropertyName)]Guid id,
+                [QueryDefaultParameter][Required(Name = ProcessStep.IdPropertyName)]Guid id,
                 AzureApplication httpApplication, EastFive.Api.Controllers.Security security, UrlHelper url,
             ContentResponse onFound,
             NotFoundResponse onNotFound,
             UnauthorizedResponse onUnauthorized)
         {
-            return Processes.FindByIdAsync(id, security,
+            return EastFive.Azure.Processes.FindByIdAsync(id, security,
                 (process) =>
                     onFound(GetResource(process, httpApplication, url)),
                 () => onNotFound(),
                 () => onUnauthorized());
         }
 
-        internal static Resources.ProcessStep GetResource(Process process, AzureApplication httpApplication, UrlHelper urlHelper)
+        internal static Resources.ProcessStep GetResource(EastFive.Azure.Process process, AzureApplication httpApplication, UrlHelper urlHelper)
         {
             return new Resources.ProcessStep
             {
-                Id = urlHelper.GetWebId<ProcessStepController>(process.processId),
+                Id = urlHelper.GetWebId<ProcessStep>(process.processId),
                 Stage = urlHelper.GetWebId<EastFive.Api.Azure.Resources.ProcessStage>(process.processStageId),
                 Resource = httpApplication.GetResourceLink(process.resourceType, process.resourceId, urlHelper),
                 CreatedOn = process.createdOn,
 
-                ConfirmedBy = process.confirmedBy.HasValue?
+                ConfirmedBy = process.confirmedBy.HasValue ?
                     Security.SessionServer.Library.configurationManager.GetActorLink(process.confirmedBy.Value, urlHelper)
                     :
                     default(WebId),
                 ConfirmedWhen = process.confirmedWhen,
-                Previous = urlHelper.GetWebId<ProcessStepController>(process.previousStep),
+                Previous = urlHelper.GetWebId<ProcessStep>(process.previousStep),
                 Resources = process.resources
                     .Select(resource => httpApplication.GetResourceLink(process.resourceType, resource.resourceId, urlHelper))
                     .ToArray(),
@@ -71,15 +95,15 @@ namespace EastFive.Api.Azure.Controllers
 
         [EastFive.Api.HttpPost(Type = typeof(Resources.ProcessStep), MatchAllBodyParameters = false)]
         public static Task<HttpResponseMessage> CreateAsync(
-                [Property(Name = Resources.ProcessStep.IdPropertyName)]Guid processId,
-                [PropertyOptional(Name = Resources.ProcessStep.PreviousPropertyName)]Guid? previousStepId,
-                [Property(Name = Resources.ProcessStep.ResourcePropertyName)]Guid resourceId,
-                [Property(Name = Resources.ProcessStep.StagePropertyName)]Guid processStageId,
-                [Property(Name = Resources.ProcessStep.CreatedOnPropertyName)]DateTime createdOn,
-                [PropertyOptional(Name = Resources.ProcessStep.ConfirmedByPropertyName)]Guid? confirmedById,
-                [PropertyOptional(Name = Resources.ProcessStep.ConfirmedWhenPropertyName)]DateTime? confirmedWhen,
-                [PropertyOptional(Name = Resources.ProcessStep.ResourceKeysPropertyName)]string [] resourceKeys,
-                [PropertyOptional(Name = Resources.ProcessStep.ResourcesPropertyName)]Guid[] resources,
+                [Property(Name = ProcessStep.IdPropertyName)]Guid processId,
+                [PropertyOptional(Name = ProcessStep.PreviousPropertyName)]Guid? previousStepId,
+                [Property(Name = ProcessStep.ResourcePropertyName)]Guid resourceId,
+                [Property(Name = ProcessStep.StagePropertyName)]Guid processStageId,
+                [Property(Name = ProcessStep.CreatedOnPropertyName)]DateTime createdOn,
+                [PropertyOptional(Name = ProcessStep.ConfirmedByPropertyName)]Guid? confirmedById,
+                [PropertyOptional(Name = ProcessStep.ConfirmedWhenPropertyName)]DateTime? confirmedWhen,
+                [PropertyOptional(Name = ProcessStep.ResourceKeysPropertyName)]string[] resourceKeys,
+                [PropertyOptional(Name = ProcessStep.ResourcesPropertyName)]Guid[] resources,
                 EastFive.Api.Controllers.Security security, UrlHelper url,
             CreatedResponse onCreated,
             AlreadyExistsResponse onAlreadyExists,
@@ -88,7 +112,7 @@ namespace EastFive.Api.Azure.Controllers
             GeneralConflictResponse onFailure)
         {
             return EastFive.Azure.Processes.CreateAsync(processId, processStageId, resourceId, createdOn,
-                    resourceKeys.NullToEmpty().Zip(resources.NullToEmpty(), (k,id) => k.PairWithValue(id)).ToArray(),
+                    resourceKeys.NullToEmpty().Zip(resources.NullToEmpty(), (k, id) => k.PairWithValue(id)).ToArray(),
                     previousStepId, confirmedWhen, confirmedById,
                     security,
                 () => onCreated(),
@@ -96,21 +120,21 @@ namespace EastFive.Api.Azure.Controllers
                 () => onStageNotFound(),
                 (why) => onFailure(why));
         }
-        
+
         [EastFive.Api.HttpPatch(Type = typeof(Resources.ProcessStep), MatchAllBodyParameters = false)]
         public static Task<HttpResponseMessage> UpdateConnectorAsync(
-                [Property(Name = Resources.ProcessStep.IdPropertyName)]Guid processId,
-                [PropertyOptional(Name = Resources.ProcessStep.ConfirmedByPropertyName)]Guid? confirmedById,
-                [PropertyOptional(Name = Resources.ProcessStep.ConfirmedWhenPropertyName)]DateTime? confirmedWhen,
-                [PropertyOptional(Name = Resources.ProcessStep.ResourceKeysPropertyName)]string[] resourceKeys,
-                [PropertyOptional(Name = Resources.ProcessStep.ResourcesPropertyName)]Guid[] resources,
+                [Property(Name = ProcessStep.IdPropertyName)]Guid processId,
+                [PropertyOptional(Name = ProcessStep.ConfirmedByPropertyName)]Guid? confirmedById,
+                [PropertyOptional(Name = ProcessStep.ConfirmedWhenPropertyName)]DateTime? confirmedWhen,
+                [PropertyOptional(Name = ProcessStep.ResourceKeysPropertyName)]string[] resourceKeys,
+                [PropertyOptional(Name = ProcessStep.ResourcesPropertyName)]Guid[] resources,
                 EastFive.Api.Controllers.Security security, UrlHelper url,
             NoContentResponse onUpdated,
             NotFoundResponse onNotFound,
             UnauthorizedResponse onUnauthorized,
             GeneralConflictResponse onFailure)
         {
-            return Processes.UpdateAsync(processId,
+            return EastFive.Azure.Processes.UpdateAsync(processId,
                     confirmedById, confirmedWhen,
                     resourceKeys.NullToEmpty().Zip(resources.NullToEmpty(), (k, id) => k.PairWithValue(id)).ToArray(),
                     security,
@@ -128,13 +152,13 @@ namespace EastFive.Api.Azure.Controllers
 
         [EastFive.Api.HttpDelete]
         public static Task<HttpResponseMessage> DeleteByIdAsync(
-                [QueryDefaultParameter][Required(Name = Resources.ProcessStep.IdPropertyName)]Guid processStepId,
+                [QueryDefaultParameter][Required(Name = ProcessStep.IdPropertyName)]Guid processStepId,
                 EastFive.Api.Controllers.Security security,
             NoContentResponse onDeleted,
             NotFoundResponse onNotFound,
             UnauthorizedResponse onUnauthorized)
         {
-            return Processes.DeleteByIdAsync(processStepId, security,
+            return EastFive.Azure.Processes.DeleteByIdAsync(processStepId, security,
                 () => onDeleted(),
                 () => onNotFound(),
                 () => onUnauthorized());
@@ -146,7 +170,7 @@ namespace EastFive.Api.Azure.Controllers
         {
             return onOption(
                 GetResource(
-                    new Process()
+                    new EastFive.Azure.Process()
                     {
                         processStageId = Guid.NewGuid(),
                         createdOn = DateTime.UtcNow,
@@ -159,11 +183,11 @@ namespace EastFive.Api.Azure.Controllers
                         resources = Enumerable
                             .Range(0, 3)
                             .Select(
-                                i => new Process.ProcessStageResource()
+                                i => new EastFive.Azure.Process.ProcessStageResource()
                                 {
                                     key = $"key{i}",
                                     resourceId = Guid.NewGuid(),
-                                    type = typeof(Process),
+                                    type = typeof(EastFive.Azure.Process),
                                 })
                             .ToArray(),
                     },

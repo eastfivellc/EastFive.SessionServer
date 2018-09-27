@@ -186,7 +186,6 @@
     <Compile Include="Modules\SpaHandler.cs" />
     <Compile Include="Monitoring\MonitoringDocument.cs" />
     <Compile Include="Processes\Api\ProcessStageGroupController.cs" />
-    <Compile Include="Processes\Api\ProcessStepController.cs" />
     <Compile Include="Processes\Api\ProcessStageTypeController.cs" />
     <Compile Include="Api\Controllers\SheetIntegrationController.cs" />
     <Compile Include="Api\Controllers\SpaServeController.cs" />
@@ -216,7 +215,7 @@
     <Compile Include="Api\Resources\Connection.cs" />
     <Compile Include="Api\Resources\Adapter.cs" />
     <Compile Include="Api\Resources\Manifest.cs" />
-    <Compile Include="Processes\Api\Resources\Process.cs" />
+    <Compile Include="Processes\Api\ProcessStep.cs" />
     <Compile Include="Processes\Api\Resources\ProcessStage.cs" />
     <Compile Include="Processes\Api\Resources\ProcessStageGroup.cs" />
     <Compile Include="Processes\Api\Resources\ProcessResourceView.cs" />

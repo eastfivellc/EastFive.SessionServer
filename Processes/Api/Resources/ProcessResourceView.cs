@@ -96,7 +96,7 @@ namespace EastFive.Api.Azure.Resources
         #region GET
 
         [EastFive.Api.HttpGet]
-        public static async Task<HttpResponseMessage> FindByResourceAsync(
+        public static async Task<HttpResponseMessage> FindByResourceTypeAsync(
                 [EastFive.Api.Required(Name = ActorPropertyName)]Guid actorId,
                 [EastFive.Api.Required(Name = Resources.ProcessStageType.ResourceTypePropertyName)]Type resourceType,
                 EastFive.Api.Controllers.Security security, AzureApplication application, UrlHelper url,
@@ -120,7 +120,7 @@ namespace EastFive.Api.Azure.Resources
                 Resource = application.GetResourceLink(view.resourceType, view.resourceId, url),
                 ResourceType = application.GetResourceMime(view.resourceType),
 
-                CurrentProcessStep = url.GetWebId<Controllers.ProcessStepController>(view.currentProcessStepId),
+                CurrentProcessStep = url.GetWebId<ProcessStep>(view.currentProcessStepId),
                 Titles = view.titles,
                 Completions = view.completions,
                 Invalidations = view.invalidations,
