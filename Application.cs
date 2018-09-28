@@ -39,11 +39,6 @@ namespace EastFive.Api.Azure
                 (httpApp, request, parameterInfo, onCreatedSessionContext) => onCreatedSessionContext(this.AzureContext));
         }
 
-        protected override void Application_Start()
-        {
-            base.Application_Start();
-        }
-
         protected override void Configure(HttpConfiguration config)
         {
             base.Configure(config);

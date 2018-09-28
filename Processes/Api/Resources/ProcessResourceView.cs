@@ -106,7 +106,11 @@ namespace EastFive.Api.Azure.Resources
         {
             return await await EastFive.Azure.ProcessResourceViews.FindByResourceAsync(actorId, resourceType,
                     security,
-                (views) => onMultipart(views.Select(ps => GetResource(ps, application, url))),
+                (views) =>
+                {
+                    var viewResources = views.Select(ps => GetResource(ps, application, url)).ToArray();
+                    return onMultipart(viewResources);
+                },
                 () => onResourceNotFound().ToTask(),
                 () => onUnauthorized().ToTask());
         }

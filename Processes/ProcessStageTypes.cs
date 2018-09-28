@@ -34,7 +34,7 @@ namespace EastFive.Azure
             Func<string, TResult> onFailure)
         {
             // TODO: Security
-            return ProcessStageGroupController.stages.First(
+            return EastFive.Api.Azure.Resources.ProcessStageGroup.stages.First(
                 async (stageGroup, nextStageGroup) =>
                 {
                     if (stageGroup.Id.UUID != processStageGroupId)

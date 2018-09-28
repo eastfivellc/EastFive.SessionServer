@@ -1,29 +1,49 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
+﻿using BlackBarLabs.Api;
+using BlackBarLabs.Api.Resources;
+using System;
+using System.Runtime.Serialization;
+using Newtonsoft.Json;
+using System.Threading.Tasks;
 using System.Net.Http;
 using System.Web.Http.Routing;
-using System.Threading.Tasks;
-using System.Linq.Expressions;
-
-using EastFive.Collections.Generic;
-using EastFive;
 using EastFive.Api.Controllers;
-using EastFive.Extensions;
-using EastFive.Linq;
-using EastFive.Api;
-using EastFive.Azure.Synchronization;
-
-using BlackBarLabs.Extensions;
-using BlackBarLabs.Api;
 using EastFive.Azure;
+using BlackBarLabs.Extensions;
+using System.Linq;
+using EastFive.Collections.Generic;
+using EastFive.Linq;
 
-namespace EastFive.Api.Azure.Controllers
+namespace EastFive.Api.Azure.Resources
 {
+    [DataContract]
     [FunctionViewController(Route = "ProcessStageType")]
-    public class ProcessStageTypeController
+    public class ProcessStageType : ResourceBase
     {
+        public const string GroupPropertyName = "group";
+        [JsonProperty(PropertyName = GroupPropertyName)]
+        public WebId Group { get; set; }
+
+        public const string OwnerPropertyName = "owner";
+        [JsonProperty(PropertyName = OwnerPropertyName)]
+        public WebId Owner { get; set; }
+
+        public const string TitlePropertyName = "title";
+        [JsonProperty(PropertyName = TitlePropertyName)]
+        public string Title { get; set; }
+
+        public const string ResourceTypePropertyName = "resource_type";
+        [JsonProperty(PropertyName = ResourceTypePropertyName)]
+        public string ResourceType { get; set; }
+
+        public const string ResourceKeysPropertyName = "resource_keys";
+        [JsonProperty(PropertyName = ResourceKeysPropertyName)]
+        public string [] ResourceKeys { get; set; }
+
+        public const string ResourceTypesPropertyName = "resource_types";
+        [JsonProperty(PropertyName = ResourceTypesPropertyName)]
+        public string[] ResourceTypes { get; set; }
+
+
         #region GET
 
         [EastFive.Api.HttpGet]
@@ -35,7 +55,7 @@ namespace EastFive.Api.Azure.Controllers
             UnauthorizedResponse onUnauthorized)
         {
             return await await ProcessStageTypes.FindAllAsync(security,
-                types => 
+                types =>
                     types.First(
                         async (stage, next) =>
                         {
@@ -45,14 +65,14 @@ namespace EastFive.Api.Azure.Controllers
                         },
                         () => onNotFound().ToTask()),
                 () => onUnauthorized().ToTask());
-            
+
             //return Connectors.FindByIdAsync(id,
             //        security.performingAsActorId, security.claims,
             //    (synchronization, destinationIntegrationId) => onFound(GetResource(synchronization, destinationIntegrationId, url)),
             //    () => onNotFound(),
             //    () => onUnauthorized());
         }
-        
+
         [EastFive.Api.HttpGet]
         public static async Task<HttpResponseMessage> FindAllAsync(
                 EastFive.Api.Controllers.Security security, HttpRequestMessage request, UrlHelper url,
@@ -63,14 +83,14 @@ namespace EastFive.Api.Azure.Controllers
                 types => onMultipart(types.Select(type => GetResource(type, url))),
                 () => onUnauthorized().ToTask());
         }
-        
-        internal static Resources.ProcessStageType GetResource(ProcessStageType processStageType, UrlHelper urlHelper)
+
+        internal static Resources.ProcessStageType GetResource(EastFive.Azure.ProcessStageType processStageType, UrlHelper urlHelper)
         {
             return new Resources.ProcessStageType
             {
-                Id = urlHelper.GetWebId<ProcessStageTypeController>(processStageType.processStageTypeId),
+                Id = urlHelper.GetWebId<EastFive.Api.Azure.Resources.ProcessStageType>(processStageType.processStageTypeId),
 
-                Group = urlHelper.GetWebId<ProcessStageGroupController>(processStageType.processStageGroupId),
+                Group = urlHelper.GetWebId<EastFive.Api.Azure.Resources.ProcessStageGroup>(processStageType.processStageGroupId),
 
                 Title = processStageType.title,
 
@@ -110,7 +130,7 @@ namespace EastFive.Api.Azure.Controllers
             GeneralConflictResponse onFailure)
         {
             var resourceList = resourceKeys.Zip(resourceTypes, (k, v) => k.PairWithValue(v)).ToArray();
-            return ProcessStageTypes.CreateAsync(processStageTypeId, ownerId, processStageGroupId, title, 
+            return ProcessStageTypes.CreateAsync(processStageTypeId, ownerId, processStageGroupId, title,
                     resourceType, resourceList,
                     security,
                 () => onCreated(),
@@ -120,7 +140,7 @@ namespace EastFive.Api.Azure.Controllers
                 (why) => onFailure(why));
         }
 
-        
+
 
         [EastFive.Api.HttpOptions(MatchAllBodyParameters = false)]
         public static HttpResponseMessage Options(HttpRequestMessage request, UrlHelper url,

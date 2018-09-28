@@ -116,7 +116,8 @@ namespace EastFive.Azure.Persistence
                         {
                             var processLookup = procStepDocs.Select(step => step.Id).AsHashSet();
                             var missingSteps = procStepDocs
-                                    .Where(proc => (proc.PreviousStep.HasValue && processLookup.Contains(proc.PreviousStep.Value)))
+                                    .Where(proc => proc.PreviousStep.HasValue)
+                                    .Where(proc => !processLookup.Contains(proc.PreviousStep.Value))
                                     .ToArray();
                             if(!missingSteps.Any())
                                 return onFound(procStepDocs.Select(Convert).ToArray());
@@ -183,8 +184,9 @@ namespace EastFive.Azure.Persistence
         internal static Task<TResult> CreateAsync<TResult>(Guid processId,
                 Guid processStageId, 
                 Guid actorId, Guid resourceId, Type resourceType, DateTime createdOn,
-                 Process.ProcessStageResource[] resources,
+                Process.ProcessStageResource[] resources,
                 Guid? previousStepId, DateTime? confirmedWhen, Guid? confirmedBy,
+                Guid [] lookupActorIds,
             Func<TResult> onSuccess,
             Func<TResult> onAlreadyExists)
         {
@@ -211,10 +213,11 @@ namespace EastFive.Azure.Persistence
                     rollback.AddTaskCreate(processId, processDocument,
                         onAlreadyExists, azureStorageRepository);
 
-                    rollback.AddTaskCreateOrUpdate<TResult, Documents.ProcessStepActorLookupDocument>(actorId, resourceTypeString,
-                        (created, lookupDoc) => lookupDoc.AddLookupDocumentId(processId),
-                        actorDoc => actorDoc.RemoveLookupDocumentId(processId),
-                        azureStorageRepository);
+                    foreach(var lookupActorId in lookupActorIds.Distinct())
+                        rollback.AddTaskCreateOrUpdate<TResult, Documents.ProcessStepActorLookupDocument>(lookupActorId, resourceTypeString,
+                            (created, lookupDoc) => lookupDoc.AddLookupDocumentId(processId),
+                            actorDoc => actorDoc.RemoveLookupDocumentId(processId),
+                            azureStorageRepository);
 
                     rollback.AddTaskCreateOrUpdate<TResult, Documents.ProcessStepResourceLookupDocument>(resourceId, resourceTypeString,
                         (created, lookupDoc) => lookupDoc.AddLookupDocumentId(processId),

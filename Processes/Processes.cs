@@ -82,12 +82,39 @@ namespace EastFive.Azure
                                         if (unusedResourceIds.Any())
                                             return onFailure($"`{unusedResourceIds.First().Key}` is not valid resource key for a stage of type `{stageType.processStageTypeId}`");
 
+                                        var applicableActors = stage.completableIds
+                                            .Concat(stage.confirmableIds.SelectKeys().SelectMany())
+                                            .Concat(stage.editableIds).Concat(stage.viewableIds)
+                                            .Distinct()
+                                            .ToArray();
+
+                                        if (previousStepId.HasValue)
+                                            return await await Persistence.ProcessDocument.FindByIdAsync(previousStepId.Value,
+                                                async previousStep =>
+                                                {
+                                                    if (!(previousStep.confirmedBy.HasValue && previousStep.confirmedWhen.HasValue))
+                                                        return onFailure("Previous step has not been confirmed.");
+
+                                                    //TODO: if(previousStep.nextStep.HasValue)
+
+                                                    return await Persistence.ProcessDocument.CreateAsync(processId,
+                                                            processStageId, stage.ownerId,
+                                                            resourceId, resourceType, createdOn,
+                                                            procStageResources,
+                                                            previousStepId, confirmedWhen, confirmedBy,
+                                                            applicableActors,
+                                                        onCreated,
+                                                        onAlreadyExists);
+                                                },
+                                                () => onFailure("Previous step does not exist").ToTask());
+
                                         // TODO: If confirmed is set, ensure that the security actor posesses a position that is authorized to move the process forward
                                         return await Persistence.ProcessDocument.CreateAsync(processId,
                                                         processStageId, stage.ownerId,
                                                         resourceId, resourceType, createdOn,
                                                         procStageResources,
                                                         previousStepId, confirmedWhen, confirmedBy,
+                                                        applicableActors,
                                                     onCreated,
                                                     onAlreadyExists);
                                     });

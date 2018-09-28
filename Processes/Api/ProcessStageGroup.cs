@@ -1,28 +1,31 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
+﻿using BlackBarLabs.Api;
+using BlackBarLabs.Api.Resources;
+using System;
+using System.Runtime.Serialization;
+using Newtonsoft.Json;
+using EastFive.Azure;
+using System.Threading.Tasks;
+using EastFive.Api.Controllers;
 using System.Net.Http;
 using System.Web.Http.Routing;
-using System.Threading.Tasks;
-using System.Linq.Expressions;
-
-using EastFive.Collections.Generic;
-using EastFive;
-using EastFive.Api.Controllers;
-using EastFive.Extensions;
 using EastFive.Linq;
-using EastFive.Api;
-using EastFive.Azure.Synchronization;
-
 using BlackBarLabs.Extensions;
-using EastFive.Azure;
 
-namespace EastFive.Api.Azure.Controllers
+namespace EastFive.Api.Azure.Resources
 {
+    [DataContract]
     [FunctionViewController(Route = "ProcessStageGroup")]
-    public class ProcessStageGroupController
+    public class ProcessStageGroup : ResourceBase
     {
+        public const string TitlePropertyName = "title";
+        [JsonProperty(PropertyName = TitlePropertyName)]
+        public string Title { get; set; }
+
+        public const string RankPropertyName = "rank";
+        [JsonProperty(PropertyName = RankPropertyName)]
+        public double Rank { get; set; }
+
+
         internal static Resources.ProcessStageGroup[] stages = new[]
         {
             new Resources.ProcessStageGroup
@@ -70,7 +73,7 @@ namespace EastFive.Api.Azure.Controllers
             //    () => onNotFound(),
             //    () => onUnauthorized());
         }
-        
+
         [EastFive.Api.HttpGet]
         public static Task<HttpResponseMessage> FindAllAsync(
                 EastFive.Api.Controllers.Security security, HttpRequestMessage request, UrlHelper url,
@@ -78,16 +81,15 @@ namespace EastFive.Api.Azure.Controllers
         {
             return onMultipart(stages);
         }
-        
+
 
         #endregion
-        
+
 
         [EastFive.Api.HttpPut(Type = typeof(EastFive.Api.Resources.Connector), MatchAllBodyParameters = false)]
-        public static Task<HttpResponseMessage> UpdateConnectorAsync([PropertyGuid]Guid id,
+        public static Task<HttpResponseMessage> UpdateGroupAsync([PropertyGuid]Guid id,
                 [PropertyGuid(Name = EastFive.Api.Resources.Connector.SourcePropertyName)]Guid source,
                 [PropertyGuid(Name = EastFive.Api.Resources.Connector.DestinationPropertyName)]Guid? destination,
-                [PropertyEnum(Name = EastFive.Api.Resources.Connector.FlowPropertyName)]Connector.SynchronizationMethod Flow,
                 [PropertyGuid(Name = EastFive.Api.Resources.Connector.DestinationIntegrationPropertyName)]Guid? destinationIntegration,
                 EastFive.Api.Controllers.Security security, HttpRequestMessage request, UrlHelper url,
             NoContentResponse onUpdated,
@@ -109,6 +111,5 @@ namespace EastFive.Api.Azure.Controllers
         {
             return onOption(stages[1]);
         }
-
     }
 }
