@@ -68,6 +68,11 @@ namespace EastFive.Azure.Synchronization
 
     public abstract class Connections
     {
+        /// <summary>
+        /// "Internal" integration id for convenience methods
+        /// </summary>
+        private static Guid internalIntegrationId = default(Guid);
+
         abstract public string ResourceType { get; }
 
         private IIntegrate service;
@@ -318,7 +323,7 @@ namespace EastFive.Azure.Synchronization
             string resourceType,
             Func<Guid, TResult> onSuccess)
         {
-            return Persistence.AdapterDocument.FindOrCreateAsync(resourceIdInternal.ToString("N"), default(Guid), resourceType,
+            return Persistence.AdapterDocument.FindOrCreateAsync(resourceIdInternal.ToString("N"), internalIntegrationId, resourceType,
                 (createdAdapterInteral, adapterInternal, saveAdapterInternalAsync) =>
                     Persistence.AdapterDocument.FindOrCreateAsync(resourceIdExternalSystem, externalSystemIntegrationId, resourceType,
                         async (createdAdapterExternal, adapterExternal, saveAdapterExternalAsync) =>
@@ -358,7 +363,7 @@ namespace EastFive.Azure.Synchronization
         /// <param name="onReferenceNotFound"></param>
         /// <returns></returns>
         public static async Task<TResult> FindInternalIdByResourceKeyAsync<TResult>(string key, Guid integrationId, string resourceType,
-            Func<string, TResult> onFound,
+            Func<Guid, TResult> onFound,
             Func<TResult> onConnectionNotFound)
         {
             return await await Persistence.AdapterDocument.FindByKeyAsync(key, integrationId, resourceType,
@@ -370,8 +375,9 @@ namespace EastFive.Azure.Synchronization
                             return connectorAdapterExternalIdKvps.First(
                                 (connectorAdapterExternalIdKvp, next) =>
                                 {
-                                    if (connectorAdapterExternalIdKvp.Value.integrationId == default(Guid))
-                                        return onFound(connectorAdapterExternalIdKvp.Value.key);
+                                    if (connectorAdapterExternalIdKvp.Value.integrationId == internalIntegrationId)
+                                        if(Guid.TryParse(connectorAdapterExternalIdKvp.Value.key, out Guid internalId))
+                                            return onFound(internalId);
 
                                     return next();
                                 },
@@ -392,30 +398,64 @@ namespace EastFive.Azure.Synchronization
         /// <param name="onFound"></param>
         /// <param name="onReferenceNotFound"></param>
         /// <returns></returns>
-        public static async Task<TResult> FindResourceKeyByInternalIdAsync<TResult>(Guid keyGuid, Guid integrationId, string resourceType,
+        public static Task<TResult> FindResourceKeyByInternalIdAsync<TResult>(Guid keyGuid, Guid integrationId, string resourceType,
             Func<string, TResult> onFound,
             Func<TResult> onConnectionNotFound)
         {
+            return FindResourceKeysByInternalIdAsync<TResult>(keyGuid, resourceType,
+                integrationIdResourceKeys =>
+                {
+                    return integrationIdResourceKeys
+                        .First(
+                            (integrationIdResourceKey, next) =>
+                            {
+                                if (integrationIdResourceKey.Key == integrationId)
+                                    return onFound(integrationIdResourceKey.Value);
+
+                                return next();
+                            },
+                            onConnectionNotFound);
+                },
+                onConnectionNotFound);
+        }
+
+        public static async Task<TResult> FindResourceKeysByInternalIdAsync<TResult>(Guid keyGuid, string resourceType,
+            Func<KeyValuePair<Guid, string>[], TResult> onFound,
+            Func<TResult> onConnectionNotFound)
+        {
             var key = keyGuid.ToString("N");
-            return await await Persistence.AdapterDocument.FindByKeyAsync(key, default(Guid), resourceType,
+            return await await Persistence.AdapterDocument.FindByKeyAsync(key, internalIntegrationId, resourceType,
                 adapterInternal =>
                 {
                     return Persistence.ConnectorDocument.FindByAdapterWithConnectionAsync(adapterInternal,
                         (KeyValuePair<Connector, Adapter>[] connectorAdapterExternalIdKvps) =>
-                        {
-                            return connectorAdapterExternalIdKvps.First(
-                                (connectorAdapterExternalIdKvp, next) =>
-                                {
-                                    if (connectorAdapterExternalIdKvp.Value.integrationId == integrationId)
-                                        return onFound(connectorAdapterExternalIdKvp.Value.key);
-
-                                    return next();
-                                },
-                                onConnectionNotFound);
-                        },
+                            onFound(connectorAdapterExternalIdKvps.SelectValues(
+                                adapter => adapter.integrationId.PairWithValue(adapter.key)).ToArray()),
                         onConnectionNotFound);
                 },
                 onConnectionNotFound.AsAsyncFunc());
+        }
+
+        public static IEnumerableAsync<KeyValuePair<Guid, string>> FindResourceKeysByInternalIdAsync(Guid keyGuid, string resourceType)
+        {
+            // TODO: Make all of this not aweful!!! DO NOT CODE LIKE THIS UNLESS ITS FRIDAY AFTERNOON!!!
+
+            // TODO: Make Persistence.ConnectorDocument.FindByAdapterWithConnectionAsync EnumerableAsync
+            var task = FindResourceKeysByInternalIdAsync(keyGuid, resourceType,
+                vs => vs,
+                () => new KeyValuePair<Guid, string>[] { });
+            var values = default(KeyValuePair<Guid, string>[]);
+            int index = 0;
+            return EnumerableAsync.Yield<KeyValuePair<Guid, string>>(
+                async (yieldReturn, yieldBreak) =>
+                {
+                    if (values.IsDefault())
+                        values = await task;
+                    if (index >= values.Length)
+                        return yieldBreak;
+                    index = index + 1;
+                    return yieldReturn(values[index - 1]);
+                });
         }
 
         #endregion
