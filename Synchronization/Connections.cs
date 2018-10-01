@@ -436,17 +436,34 @@ namespace EastFive.Azure.Synchronization
                 onConnectionNotFound.AsAsyncFunc());
         }
 
-        public static IEnumerableAsync<KeyValuePair<Guid, string>> FindResourceKeysByInternalIdAsync(Guid keyGuid, string resourceType)
+        public static async Task<TResult> FindResourceAdapterByInternalIdAsync<TResult>(Guid keyGuid, string resourceType,
+            Func<KeyValuePair<Guid, Adapter>[], TResult> onFound,
+            Func<TResult> onConnectionNotFound)
+        {
+            var key = keyGuid.ToString("N");
+            return await await Persistence.AdapterDocument.FindByKeyAsync(key, internalIntegrationId, resourceType,
+                adapterInternal =>
+                {
+                    return Persistence.ConnectorDocument.FindByAdapterWithConnectionAsync(adapterInternal,
+                        (KeyValuePair<Connector, Adapter>[] connectorAdapterExternalIdKvps) =>
+                            onFound(connectorAdapterExternalIdKvps.SelectValues(
+                                adapter => adapter.integrationId.PairWithValue(adapter)).ToArray()),
+                        onConnectionNotFound);
+                },
+                onConnectionNotFound.AsAsyncFunc());
+        }
+
+        public static IEnumerableAsync<KeyValuePair<Guid, Adapter>> FindResourceKeysByInternalIdAsync(Guid keyGuid, string resourceType)
         {
             // TODO: Make all of this not aweful!!! DO NOT CODE LIKE THIS UNLESS ITS FRIDAY AFTERNOON!!!
 
             // TODO: Make Persistence.ConnectorDocument.FindByAdapterWithConnectionAsync EnumerableAsync
-            var task = FindResourceKeysByInternalIdAsync(keyGuid, resourceType,
+            var task = FindResourceAdapterByInternalIdAsync(keyGuid, resourceType,
                 vs => vs,
-                () => new KeyValuePair<Guid, string>[] { });
-            var values = default(KeyValuePair<Guid, string>[]);
+                () => new KeyValuePair<Guid, Adapter>[] { });
+            var values = default(KeyValuePair<Guid, Adapter>[]);
             int index = 0;
-            return EnumerableAsync.Yield<KeyValuePair<Guid, string>>(
+            return EnumerableAsync.Yield<KeyValuePair<Guid, Adapter>>(
                 async (yieldReturn, yieldBreak) =>
                 {
                     if (values.IsDefault())
