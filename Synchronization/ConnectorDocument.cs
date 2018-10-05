@@ -375,32 +375,31 @@ namespace EastFive.Azure.Synchronization.Persistence
                 });
         }
 
-        internal static Task<TResult> CreateBatchAsync<TResult>(IEnumerable<KeyValuePair<Guid, Guid>> adapterIds,
-                Connector.SynchronizationMethod method,
-            Func<Guid[], Guid[], Guid[], TResult> onComplete)
+        internal static IEnumerableAsync<Guid> CreateBatch(IEnumerableAsync<KeyValuePair<Guid, Guid>> adapterIds,
+                Connector.SynchronizationMethod method)
         {
             return AzureStorageRepository.Connection(
                 connection =>
                 {
-                    return connection.CreateOrReplaceBatchAsync(
-                        adapterIds
-                            .Select(
-                                kvp =>
-                                {
-                                    var connectorDoc = new ConnectorDocument
-                                    {
-                                        LocalAdapter = kvp.Key,
-                                        RemoteAdapter = kvp.Value,
-                                    };
-                                    connectorDoc.SetMethod(method);
-                                    return connectorDoc;
-                                })
-                            .ToArray(),
-                        (c) => Guid.NewGuid(),
-                        (savedIds, failedIds) =>
-                        {
-                            return onComplete(savedIds, failedIds, new Guid[] { });
-                        });
+                    return connection
+                        .CreateOrReplaceBatch(
+                                adapterIds
+                                    .Select(
+                                        kvp =>
+                                        {
+                                            var connectorDoc = new ConnectorDocument
+                                            {
+                                                LocalAdapter = kvp.Key,
+                                                RemoteAdapter = kvp.Value,
+                                            };
+                                            connectorDoc.SetMethod(method);
+                                            return connectorDoc;
+                                        }),
+                                (c) => Guid.NewGuid(),
+                            c => true.PairWithValue(c),
+                            c => false.PairWithValue(c))
+                        .Where(kvp => kvp.Key)
+                        .Select(kvp => kvp.Value);
                 });
         }
     }

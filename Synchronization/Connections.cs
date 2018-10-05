@@ -339,30 +339,24 @@ namespace EastFive.Azure.Synchronization
                         }));
         }
 
-        public static async Task<TResult> CreateOrReplaceBatchConnection<TResult>(
-            Guid[] resourceIdInternals, string[] resourceKeys,
-            Guid externalSystemIntegrationId, string resourceType,
-            Func<Guid[], TResult> onSuccess)
+        public static IEnumerableAsync<Guid> CreateOrReplaceBatchConnection(
+            IEnumerableAsync<KeyValuePair<Guid, string>> resourceKeys,
+            Guid externalSystemIntegrationId, string resourceType)
         {
-            var adapterIdsInternalTask = Persistence.AdapterDocument.CreateOrUpdateBatchAsync(
-                resourceIdInternals
-                    .Select(resourceIdInternal => resourceIdInternal.ToString("N")),
+            var adapterIdsInternal = Persistence.AdapterDocument.CreateOrUpdateBatch(
+                resourceKeys
+                    .Select(resourceIdInternal => resourceIdInternal.Key.ToString("N")),
                 internalIntegrationId, resourceType);
 
-            var adapterIdsExternal = await Persistence.AdapterDocument.CreateOrUpdateBatchAsync(
-                resourceKeys,
+            var adapterIdsExternal = Persistence.AdapterDocument.CreateOrUpdateBatch(
+                resourceKeys
+                    .Select(resourceIdInternal => resourceIdInternal.Value),
                 internalIntegrationId, resourceType);
-
-            var adapterIdsInternal = await adapterIdsInternalTask;
-
-            return await Persistence.ConnectorDocument.CreateBatchAsync(
+            
+            return Persistence.ConnectorDocument.CreateBatch(
                     adapterIdsInternal
                         .Zip(adapterIdsExternal, (k1, k2) => k1.PairWithValue(k2)),
-                    Connector.SynchronizationMethod.ignore,
-                (connectorIds, getRelationshipIdAsyncs, missingAdapterIds) =>
-                {
-                    return onSuccess(connectorIds);
-                });
+                    Connector.SynchronizationMethod.ignore);
         }
 
         public static IEnumerableAsync<Adapter> FindAdaptersByType(string resourceType)

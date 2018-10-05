@@ -211,7 +211,7 @@ namespace EastFive.Azure.Synchronization.Persistence
         }
 
 
-        internal static Task<Guid[]> CreateOrUpdateBatchAsync(IEnumerable<string> keys, Guid integrationId, string resourceType)
+        internal static IEnumerableAsync<Guid> CreateOrUpdateBatch(IEnumerableAsync<string> keys, Guid integrationId, string resourceType)
         {
             return AzureStorageRepository.Connection(
                 azureStorageRepository =>
@@ -227,11 +227,11 @@ namespace EastFive.Azure.Synchronization.Persistence
                                     ResourceType = resourceType,
                                 };
                                 return adapter;
-                            })
-                        .ToArray();
-                    return azureStorageRepository.CreateOrReplaceBatchAsync(adapters,
+                            });
+                    return azureStorageRepository.CreateOrReplaceBatch(adapters,
                         adapter => GetId(adapter.Key, integrationId, resourceType),
-                        (created, adapterDoc) => created);
+                        (successAdapterId) => successAdapterId,
+                        (failedAdapterId) => failedAdapterId);
                 });
         }
 
