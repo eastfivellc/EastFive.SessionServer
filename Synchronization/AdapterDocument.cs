@@ -210,6 +210,31 @@ namespace EastFive.Azure.Synchronization.Persistence
                 });
         }
 
+
+        internal static Task<Guid[]> CreateOrUpdateBatchAsync(IEnumerable<string> keys, Guid integrationId, string resourceType)
+        {
+            return AzureStorageRepository.Connection(
+                azureStorageRepository =>
+                {
+                    var adapters = keys
+                        .Select(
+                            key =>
+                            { 
+                                var adapter = new AdapterDocument()
+                                {
+                                    Key = key,
+                                    IntegrationId = integrationId,
+                                    ResourceType = resourceType,
+                                };
+                                return adapter;
+                            })
+                        .ToArray();
+                    return azureStorageRepository.CreateOrReplaceBatchAsync(adapters,
+                        adapter => GetId(adapter.Key, integrationId, resourceType),
+                        (created, adapterDoc) => created);
+                });
+        }
+
         public static Task<TResult> FindOrCreateAsync<TResult>(string key, Guid integrationId, string resourceType,
                 Guid integrationExternalId,
             Func<Adapter, KeyValuePair<Connector, Adapter>?, Func<Adapter, KeyValuePair<Connector, Adapter>?, Task<Connection>>, Task<TResult>> onFound,
@@ -438,6 +463,7 @@ namespace EastFive.Azure.Synchronization.Persistence
             //        return await rollback.ExecuteAsync(() => connection);
             //    });
         }
+
 
         internal static Task<TResult> DeleteByIdAsync<TResult>(Guid synchronizationId,
             Func<TResult> onDeleted,

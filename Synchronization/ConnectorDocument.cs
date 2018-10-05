@@ -374,5 +374,34 @@ namespace EastFive.Azure.Synchronization.Persistence
                         onNotFound);
                 });
         }
+
+        internal static Task<TResult> CreateBatchAsync<TResult>(IEnumerable<KeyValuePair<Guid, Guid>> adapterIds,
+                Connector.SynchronizationMethod method,
+            Func<Guid[], Guid[], Guid[], TResult> onComplete)
+        {
+            return AzureStorageRepository.Connection(
+                connection =>
+                {
+                    return connection.CreateOrReplaceBatchAsync(
+                        adapterIds
+                            .Select(
+                                kvp =>
+                                {
+                                    var connectorDoc = new ConnectorDocument
+                                    {
+                                        LocalAdapter = kvp.Key,
+                                        RemoteAdapter = kvp.Value,
+                                    };
+                                    connectorDoc.SetMethod(method);
+                                    return connectorDoc;
+                                })
+                            .ToArray(),
+                        (c) => Guid.NewGuid(),
+                        (savedIds, failedIds) =>
+                        {
+                            return onComplete(savedIds, failedIds, new Guid[] { });
+                        });
+                });
+        }
     }
 }

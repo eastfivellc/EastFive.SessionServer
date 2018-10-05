@@ -338,7 +338,33 @@ namespace EastFive.Azure.Synchronization
                                 (internalOrExternalAdapterId) => throw new Exception($"Freshly created adapter `{internalOrExternalAdapterId}` does not exist any longer."));
                         }));
         }
-        
+
+        public static async Task<TResult> CreateOrReplaceBatchConnection<TResult>(
+            Guid[] resourceIdInternals, string[] resourceKeys,
+            Guid externalSystemIntegrationId, string resourceType,
+            Func<Guid[], TResult> onSuccess)
+        {
+            var adapterIdsInternalTask = Persistence.AdapterDocument.CreateOrUpdateBatchAsync(
+                resourceIdInternals
+                    .Select(resourceIdInternal => resourceIdInternal.ToString("N")),
+                internalIntegrationId, resourceType);
+
+            var adapterIdsExternal = await Persistence.AdapterDocument.CreateOrUpdateBatchAsync(
+                resourceKeys,
+                internalIntegrationId, resourceType);
+
+            var adapterIdsInternal = await adapterIdsInternalTask;
+
+            return await Persistence.ConnectorDocument.CreateBatchAsync(
+                    adapterIdsInternal
+                        .Zip(adapterIdsExternal, (k1, k2) => k1.PairWithValue(k2)),
+                    Connector.SynchronizationMethod.ignore,
+                (connectorIds, getRelationshipIdAsyncs, missingAdapterIds) =>
+                {
+                    return onSuccess(connectorIds);
+                });
+        }
+
         public static IEnumerableAsync<Adapter> FindAdaptersByType(string resourceType)
         {
             var adapters = EastFive.Azure.Synchronization.Persistence.AdapterDocument.FindAllAsync(resourceType);
