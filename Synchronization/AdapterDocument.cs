@@ -211,7 +211,7 @@ namespace EastFive.Azure.Synchronization.Persistence
         }
 
 
-        internal static IEnumerableAsync<Guid> CreateOrUpdateBatch(IEnumerableAsync<string> keys, Guid integrationId, string resourceType)
+        internal static IEnumerableAsync<Adapter> CreateOrUpdateBatch(IEnumerableAsync<string> keys, Guid integrationId, string resourceType)
         {
             return AzureStorageRepository.Connection(
                 azureStorageRepository =>
@@ -228,10 +228,38 @@ namespace EastFive.Azure.Synchronization.Persistence
                                 };
                                 return adapter;
                             });
-                    return azureStorageRepository.CreateOrReplaceBatch(adapters,
-                        adapter => GetId(adapter.Key, integrationId, resourceType),
-                        (successAdapterId) => successAdapterId,
-                        (failedAdapterId) => failedAdapterId);
+                    return azureStorageRepository
+                        .CreateOrReplaceBatch(adapters,
+                                adapter => GetId(adapter.Key, integrationId, resourceType),
+                            (successAdapter) => successAdapter,
+                            (failedAdapter) => failedAdapter)
+                        .Select(adapter => Convert(adapter));
+                });
+        }
+
+        internal static IEnumerableAsync<Adapter> CreateOrUpdateBatch(IEnumerable<string> keys, Guid integrationId, string resourceType)
+        {
+            return AzureStorageRepository.Connection(
+                azureStorageRepository =>
+                {
+                    var adapters = keys
+                        .Select(
+                            key =>
+                            {
+                                var adapter = new AdapterDocument()
+                                {
+                                    Key = key,
+                                    IntegrationId = integrationId,
+                                    ResourceType = resourceType,
+                                };
+                                return adapter;
+                            });
+                    return azureStorageRepository
+                        .CreateOrReplaceBatch(adapters,
+                                adapter => GetId(adapter.Key, integrationId, resourceType),
+                            (successAdapter) => successAdapter,
+                            (failedAdapter) => failedAdapter)
+                        .Select(adapter => Convert(adapter));
                 });
         }
 

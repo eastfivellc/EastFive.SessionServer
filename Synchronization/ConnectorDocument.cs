@@ -327,6 +327,18 @@ namespace EastFive.Azure.Synchronization.Persistence
             };
         }
 
+        internal static ConnectorDocument Convert(Connector connector)
+        {
+            var connectorDoc = new ConnectorDocument
+            {
+                LocalAdapter = connector.adapterInternalId,
+                RemoteAdapter = connector.adapterExternalId,
+            };
+            connectorDoc.SetId(connector.connectorId);
+            connectorDoc.SetMethod(connector.synchronizationMethod);
+            return connectorDoc;
+        }
+
         public delegate Task<Connector> UpdateDelegate(string externalId, Connector.SynchronizationMethod method,
             string createdBy, Adapter identifiersInternal, Adapter identifiersExternal);
 
@@ -375,7 +387,7 @@ namespace EastFive.Azure.Synchronization.Persistence
                 });
         }
 
-        internal static IEnumerableAsync<Guid> CreateBatch(IEnumerableAsync<KeyValuePair<Guid, Guid>> adapterIds,
+        internal static IEnumerableAsync<Guid> CreateBatch(IEnumerableAsync<Connector> adapterIds,
                 Connector.SynchronizationMethod method)
         {
             return AzureStorageRepository.Connection(
@@ -385,21 +397,40 @@ namespace EastFive.Azure.Synchronization.Persistence
                         .CreateOrReplaceBatch(
                                 adapterIds
                                     .Select(
-                                        kvp =>
+                                        connector =>
                                         {
-                                            var connectorDoc = new ConnectorDocument
-                                            {
-                                                LocalAdapter = kvp.Key,
-                                                RemoteAdapter = kvp.Value,
-                                            };
-                                            connectorDoc.SetMethod(method);
+                                            var connectorDoc = Convert(connector);
                                             return connectorDoc;
                                         }),
-                                (c) => Guid.NewGuid(),
+                                (c) => c.Id,
                             c => true.PairWithValue(c),
                             c => false.PairWithValue(c))
                         .Where(kvp => kvp.Key)
-                        .Select(kvp => kvp.Value);
+                        .Select(kvp => kvp.Value.Id);
+                });
+        }
+
+        internal static IEnumerableAsync<Guid> CreateBatch(IEnumerable<Connector> adapterIds,
+                Connector.SynchronizationMethod method)
+        {
+            
+            return AzureStorageRepository.Connection(
+                connection =>
+                {
+                    return connection
+                        .CreateOrReplaceBatch(
+                                adapterIds
+                                    .Select(
+                                        connector =>
+                                        {
+                                            var connectorDoc = Convert(connector);
+                                            return connectorDoc;
+                                        }),
+                                (c) => c.Id,
+                            c => true.PairWithValue(c),
+                            c => false.PairWithValue(c))
+                        .Where(kvp => kvp.Key)
+                        .Select(kvp => kvp.Value.Id);
                 });
         }
     }
