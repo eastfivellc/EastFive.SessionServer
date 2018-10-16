@@ -296,6 +296,22 @@ namespace EastFive.Azure.Synchronization
                 onReferenceNotFound);
         }
 
+        public static async Task<TResult> FindAdapterByKeyAsync<TResult>(string key, Guid integrationId, string resourceType,
+            Func<Adapter, TResult> onFound,
+            Func<TResult> onReferenceNotFound)
+        {
+            if (Guid.TryParse(key, out Guid keyGuid))
+            {
+                key = keyGuid.ToString("N");
+            }
+            return await Persistence.AdapterDocument.FindByKeyAsync(key, integrationId, resourceType,
+                relatedAdapter =>
+                {
+                    return onFound(relatedAdapter);
+                },
+                onReferenceNotFound);
+        }
+
         public abstract Task<TResult> GetAdaptersAsync<TResult>(
             Guid integrationId,
             Func<IEnumerable<Adapter>, TResult> onMatch,
