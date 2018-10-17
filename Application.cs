@@ -187,7 +187,7 @@ namespace EastFive.Api.Azure
             if(authorizationProvider is Credentials.IProvideRedirection)
             {
                 return await (authorizationProvider as Credentials.IProvideRedirection).GetRedirectUriAsync(this, authorizationId, requestId, token, refreshToken,
-                    authParams, 
+                        authParams, 
                     (redirectUri) => onSuccess(this.SetRedirectParameters(new Uri(baseUri, redirectUri), requestId, authorizationId, token, refreshToken)),
                     onInvalidParameter,
                     onFailure);
