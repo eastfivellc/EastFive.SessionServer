@@ -328,9 +328,17 @@ namespace EastFive.Azure.Synchronization
             string resourceType,
             Func<Guid, TResult> onSuccess)
         {
-            return Persistence.AdapterDocument.FindOrCreateAsync(resourceIdInternal.ToString("N"), internalIntegrationId, resourceType,
+            return CreateOrUpdateConnection(resourceIdInternal.ToString("N"), resourceIdExternalSystem, externalSystemIntegrationId, resourceType, onSuccess);
+        }
+
+        public static Task<TResult> CreateOrUpdateConnection<TResult>(string resourceKeyInternal,
+            string resourceKeyExternalSystem, Guid externalSystemIntegrationId,
+            string resourceType,
+            Func<Guid, TResult> onSuccess)
+        {
+            return Persistence.AdapterDocument.FindOrCreateAsync(resourceKeyInternal, internalIntegrationId, resourceType,
                 (createdAdapterInteral, adapterInternal, saveAdapterInternalAsync) =>
-                    Persistence.AdapterDocument.FindOrCreateAsync(resourceIdExternalSystem, externalSystemIntegrationId, resourceType,
+                    Persistence.AdapterDocument.FindOrCreateAsync(resourceKeyExternalSystem, externalSystemIntegrationId, resourceType,
                         async (createdAdapterExternal, adapterExternal, saveAdapterExternalAsync) =>
                         {
                             var adapterInternalId = await saveAdapterInternalAsync(adapterInternal);
