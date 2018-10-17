@@ -278,16 +278,21 @@ namespace EastFive.Azure.Synchronization
                 onReferenceNotFound.AsAsyncFunc());
         }
 
-        public static async Task<TResult> FindAdapterByKeyAsync<TResult>(string key, Guid integrationId, string resourceType,
+        public static Task<TResult> FindAdapterByKeyAsync<TResult>(string key, Guid integrationId, string resourceType,
                 System.Security.Claims.Claim[] claims,
             Func<Adapter, TResult> onFound,
             Func<TResult> onReferenceNotFound,
             Func<TResult> onUnauthorized)
         {
-            if(Guid.TryParse(key, out Guid keyGuid))
-            {
-                key = keyGuid.ToString("N");
-            }
+            return FindAdapterByKeyAsync(key, integrationId, resourceType,
+                onFound,
+                onReferenceNotFound);
+        }
+
+        public static async Task<TResult> FindAdapterByKeyAsync<TResult>(string key, Guid integrationId, string resourceType,
+            Func<Adapter, TResult> onFound,
+            Func<TResult> onReferenceNotFound)
+        {
             return await Persistence.AdapterDocument.FindByKeyAsync(key, integrationId, resourceType,
                 relatedAdapter =>
                 {
