@@ -184,15 +184,34 @@ namespace EastFive.Api.Azure
             Func<string, string, TResult> onInvalidParameter,
             Func<string, TResult> onFailure)
         {
-            if(authorizationProvider is Credentials.IProvideRedirection)
-            {
-                return await (authorizationProvider as Credentials.IProvideRedirection).GetRedirectUriAsync(this, authorizationId, requestId, token, refreshToken,
-                        authParams, 
-                    (redirectUri) => onSuccess(this.SetRedirectParameters(new Uri(baseUri, redirectUri), requestId, authorizationId, token, refreshToken)),
-                    onInvalidParameter,
-                    onFailure);
-            }
+            if(!(authorizationProvider is Credentials.IProvideRedirection))
+                return await ComputeRedirect(requestId, authorizationId, token, refreshToken, redirectUriFromPost, authParams,
+                        onSuccess,
+                        onInvalidParameter,
+                        onFailure);
 
+            return await await (authorizationProvider as Credentials.IProvideRedirection).GetRedirectUriAsync(this, authorizationId, requestId, token, refreshToken,
+                        authParams, 
+                    (redirectUri) => onSuccess(this.SetRedirectParameters(new Uri(baseUri, redirectUri), requestId, authorizationId, token, refreshToken)).AsTask(),
+                    () => ComputeRedirect(requestId, authorizationId, token, refreshToken, redirectUriFromPost, authParams,
+                        onSuccess,
+                        onInvalidParameter,
+                        onFailure),
+                    onInvalidParameter.AsAsyncFunc(),
+                    onFailure.AsAsyncFunc());
+            
+        }
+
+        private async Task<TResult> ComputeRedirect<TResult>(
+                Guid requestId,
+                Guid? authorizationId,
+                string token, string refreshToken,
+                Uri redirectUriFromPost,
+                IDictionary<string, string> authParams,
+            Func<Uri, TResult> onSuccess,
+            Func<string, string, TResult> onInvalidParameter,
+            Func<string, TResult> onFailure)
+        {
             if (!redirectUriFromPost.IsDefault())
             {
                 var redirectUrl = SetRedirectParameters(redirectUriFromPost, requestId, authorizationId, token, refreshToken);
