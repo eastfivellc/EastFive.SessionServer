@@ -363,7 +363,11 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="$(SolutionDir)\BlackBarLabs.Api\BlackBarLabs.Api.csproj">
+    <ProjectReference Include="..\BlackBarLabs.Api\EastFive.Api.csproj">
+      <Project>{aaa1724b-0787-4ce1-bad5-e3c930db07c1}</Project>
+      <Name>EastFive.Api</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BlackBarLabs.Api\EastFive.Api.csproj">
       <Project>{aaa1724b-0787-4ce1-bad5-e3c930db07c1}</Project>
       <Name>BlackBarLabs.Api</Name>
     </ProjectReference>

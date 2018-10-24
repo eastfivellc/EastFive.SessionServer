@@ -153,7 +153,7 @@ namespace EastFive.Api.Controllers
             Type = typeof(EastFive.Api.Resources.Connector),
             MatchAllBodyParameters = false)]
         public static Task<HttpResponseMessage> DeleteByIdAsync(
-                [QueryDefaultParameter][PropertyGuid(Name = ResourceBase.IdPropertyName)]Guid synchronizationId,
+                [QueryDefaultParameter][Required(Name = ResourceBase.IdPropertyName)]Guid synchronizationId,
                 Security security, Context context, HttpRequestMessage request, UrlHelper url,
             ContentResponse onFound,
             NotFoundResponse onNotFound,

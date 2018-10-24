@@ -2,7 +2,6 @@
 using System.Net;
 using System.Threading.Tasks;
 using System.Net.Http;
-using BlackBarLabs.Api;
 using System.Web.Http.Routing;
 using System.Configuration;
 using EastFive.Api.Services;
@@ -19,6 +18,7 @@ using BlackBarLabs.Linq.Async;
 using EastFive.Linq;
 using BlackBarLabs.Linq;
 using EastFive.Security.SessionServer;
+using BlackBarLabs.Api;
 
 namespace EastFive.Api.Azure.Credentials
 {
