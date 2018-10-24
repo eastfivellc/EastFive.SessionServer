@@ -7,7 +7,6 @@ using System.Web.Http.Routing;
 using System.Configuration;
 
 using BlackBarLabs;
-using BlackBarLabs.Api;
 using BlackBarLabs.Extensions;
 using EastFive.Api.Services;
 using EastFive.Security.SessionServer.Configuration;
@@ -15,6 +14,7 @@ using EastFive.Api;
 using EastFive.Security.SessionServer;
 using EastFive.Security.SessionServer.Api.Controllers;
 using EastFive.Security;
+using BlackBarLabs.Api;
 
 namespace EastFive.Api.Azure.Credentials
 {
