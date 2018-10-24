@@ -375,7 +375,7 @@ namespace EastFive.Azure
         }
 
         public async Task<TResult> GetParamsByActorAsync<TResult>(Guid actorId, string method,
-            Func<IDictionary<string, string>, TResult> onSuccess,
+            Func<Guid, IDictionary<string, string>, TResult> onSuccess,
             Func<TResult> onNotFound)
         {
             return await await dataContext.Integrations.FindAsync(actorId, method,
@@ -384,7 +384,7 @@ namespace EastFive.Azure
                     return await this.dataContext.AuthenticationRequests.FindByIdAsync(authenticationRequestId,
                         (authRequest) =>
                         {
-                            return onSuccess(authRequest.extraParams);
+                            return onSuccess(authenticationRequestId, authRequest.extraParams);
                         },
                         onNotFound);
                 },

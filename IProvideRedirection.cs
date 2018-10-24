@@ -11,6 +11,7 @@ namespace EastFive.Api.Azure.Credentials
                 Guid? authorizationId, Guid requestId, string token, string refreshToken,
                 IDictionary<string, string> authorizationParameters,
             Func<Uri, TResult> onSuccess,
+            Func<TResult> onIgnored,
             Func<string, string, TResult> onInvalidParameter,
             Func<string, TResult> onFailure);
     }

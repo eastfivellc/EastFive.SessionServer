@@ -210,6 +210,59 @@ namespace EastFive.Azure.Synchronization.Persistence
                 });
         }
 
+
+        internal static IEnumerableAsync<Adapter> CreateOrUpdateBatch(IEnumerableAsync<string> keys, Guid integrationId, string resourceType)
+        {
+            return AzureStorageRepository.Connection(
+                azureStorageRepository =>
+                {
+                    var adapters = keys
+                        .Select(
+                            key =>
+                            { 
+                                var adapter = new AdapterDocument()
+                                {
+                                    Key = key,
+                                    IntegrationId = integrationId,
+                                    ResourceType = resourceType,
+                                };
+                                return adapter;
+                            });
+                    return azureStorageRepository
+                        .CreateOrReplaceBatch(adapters,
+                                adapter => GetId(adapter.Key, integrationId, resourceType),
+                            (successAdapter) => successAdapter,
+                            (failedAdapter) => failedAdapter)
+                        .Select(adapter => Convert(adapter));
+                });
+        }
+
+        internal static IEnumerableAsync<Adapter> CreateOrUpdateBatch(IEnumerable<string> keys, Guid integrationId, string resourceType)
+        {
+            return AzureStorageRepository.Connection(
+                azureStorageRepository =>
+                {
+                    var adapters = keys
+                        .Select(
+                            key =>
+                            {
+                                var adapter = new AdapterDocument()
+                                {
+                                    Key = key,
+                                    IntegrationId = integrationId,
+                                    ResourceType = resourceType,
+                                };
+                                return adapter;
+                            });
+                    return azureStorageRepository
+                        .CreateOrReplaceBatch(adapters,
+                                adapter => GetId(adapter.Key, integrationId, resourceType),
+                            (successAdapter) => successAdapter,
+                            (failedAdapter) => failedAdapter)
+                        .Select(adapter => Convert(adapter));
+                });
+        }
+
         public static Task<TResult> FindOrCreateAsync<TResult>(string key, Guid integrationId, string resourceType,
                 Guid integrationExternalId,
             Func<Adapter, KeyValuePair<Connector, Adapter>?, Func<Adapter, KeyValuePair<Connector, Adapter>?, Task<Connection>>, Task<TResult>> onFound,
@@ -438,6 +491,7 @@ namespace EastFive.Azure.Synchronization.Persistence
             //        return await rollback.ExecuteAsync(() => connection);
             //    });
         }
+
 
         internal static Task<TResult> DeleteByIdAsync<TResult>(Guid synchronizationId,
             Func<TResult> onDeleted,

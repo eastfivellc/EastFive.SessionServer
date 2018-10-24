@@ -22,9 +22,11 @@ using System.Collections;
 
 namespace EastFive.Api.Azure.Credentials
 {
-    [Attributes.IntegrationName("Ping")]
+    [Attributes.IntegrationName(PingProvider.integrationName)]
     public class PingProvider : IProvideLogin
     {
+        public const string integrationName = "Ping";
+
         public const string TokenId = "tokenid";
         public const string AgentId = "agentid";
         public const string Subject = "pingone.subject";
@@ -44,7 +46,7 @@ namespace EastFive.Api.Azure.Credentials
             //return "https://sso.connect.pingidentity.com/sso/TXS/2.0/2/" + pingConnectToken;
         }
 
-        [Attributes.IntegrationName("Ping")]
+        [Attributes.IntegrationName(PingProvider.integrationName)]
         public static Task<TResult> InitializeAsync<TResult>(
             Func<IProvideAuthorization, TResult> onProvideAuthorization,
             Func<TResult> onProvideNothing,
