@@ -202,7 +202,7 @@ namespace EastFive.Azure
                 () => onNotFound());
         }
 
-        internal async Task<TResult> GetByActorAsync<TResult>(Guid actorId, Func<Type, Uri> callbackUrlFunc,
+        public async Task<TResult> GetByActorAsync<TResult>(Guid actorId, Func<Type, Uri> callbackUrlFunc,
                 Guid actingAs, System.Security.Claims.Claim [] claims,
             Func<Session[], TResult> onSuccess,
             Func<TResult> onNotFound,
