@@ -7,8 +7,8 @@
     <ProjectGuid>{E2F3FCFB-89C8-47B3-B3D2-AE35E52A84FA}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>EastFive.Api.Azure</RootNamespace>
-    <AssemblyName>EastFive.Security.SessionServer</AssemblyName>
+    <RootNamespace>EastFive.Azure</RootNamespace>
+    <AssemblyName>EastFive.Azure</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
