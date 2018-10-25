@@ -173,9 +173,9 @@
     <Compile Include="Api\Actions\PasswordCredentialActions.cs" />
     <Compile Include="Api\Actions\InviteCredentialActions.cs" />
     <Compile Include="Api\Constants.cs" />
-    <Compile Include="Api\Controllers\AdapterController.cs" />
-    <Compile Include="Api\Controllers\ConnectionController.cs" />
-    <Compile Include="Api\Controllers\ConnectorController.cs" />
+    <Compile Include="Synchronization\Api\AdapterController.cs" />
+    <Compile Include="Synchronization\Api\ConnectionController.cs" />
+    <Compile Include="Synchronization\Api\ConnectorController.cs" />
     <Compile Include="Api\Controllers\ContentController.cs" />
     <Compile Include="Api\Controllers\InternalIntegrationController.cs" />
     <Compile Include="Api\Controllers\InternalIntegrationResponseController.cs" />
@@ -212,17 +212,17 @@
     <Compile Include="Api\Controllers\SessionController.cs" />
     <Compile Include="Api\RequestExtensions.cs" />
     <Compile Include="Api\Resources\AccountLink.cs" />
-    <Compile Include="Api\Resources\Connector.cs" />
-    <Compile Include="Api\Resources\Connection.cs" />
-    <Compile Include="Api\Resources\Adapter.cs" />
+    <Compile Include="Synchronization\Api\Connector.cs" />
+    <Compile Include="Synchronization\Api\Connection.cs" />
+    <Compile Include="Synchronization\Api\Adapter.cs" />
     <Compile Include="Api\Resources\Manifest.cs" />
     <Compile Include="Processes\Api\ProcessStep.cs" />
     <Compile Include="Processes\Api\Resources\ProcessStage.cs" />
     <Compile Include="Processes\Api\ProcessStageGroup.cs" />
     <Compile Include="Processes\Api\Resources\ProcessResourceView.cs" />
     <Compile Include="Processes\Api\ProcessStageType.cs" />
-    <Compile Include="Api\Resources\Queries\ConnectionQuery.cs" />
-    <Compile Include="Api\Resources\Queries\AdapterQuery.cs" />
+    <Compile Include="Synchronization\Api\ConnectionQuery.cs" />
+    <Compile Include="Synchronization\Api\AdapterQuery.cs" />
     <Compile Include="Api\Resources\UserInfo.cs" />
     <Compile Include="Api\Resources\AuthHeaderProps.cs" />
     <Compile Include="Api\Controllers\AccountLinksController.cs" />
@@ -346,6 +346,7 @@
     <Compile Include="Synchronization\ConnectorDocument.cs" />
     <Compile Include="Synchronization\AdapterDocument.cs" />
     <Compile Include="Synchronization\Connections.cs" />
+    <Compile Include="Synchronization\ConnectorSynchronization.cs" />
     <Compile Include="Synchronization\IntegrationAdapterLookupDocument.cs" />
     <Compile Include="Synchronization\Synchronizations.cs" />
   </ItemGroup>

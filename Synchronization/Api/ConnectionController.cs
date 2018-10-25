@@ -52,7 +52,7 @@ namespace EastFive.Api.Controllers
             var resource = new EastFive.Api.Resources.Connection()
             {
                 Id = url.GetWebId<ConnectionController>(connection.connector.connectorId),
-                Connector = ConnectorController.GetResource(connection.connector, connection.adapterExternal.integrationId, url),
+                Connector = ConnectorController.GetResource(connection.connector, url),
                 Source = AdapterController.GetResource(connection.adapterInternal, url),
                 Destination = AdapterController.GetResource(connection.adapterExternal, url),
             };

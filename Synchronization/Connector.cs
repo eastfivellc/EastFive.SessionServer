@@ -26,7 +26,7 @@ namespace EastFive.Azure.Synchronization
                 {
                     Func<Guid, Adapter?, Task<TResult>> createConnector =
                         async (destinationAdapterId, destinationAdapterMaybe) => await await Persistence.ConnectorDocument.CreateAsync(connectorId,
-                            sourceId, destinationAdapterId, flow,
+                            sourceId, destinationAdapterId, flow, sourceAdapter.resourceType,
                             async () =>
                             {
                                 if (!destinationAdapterMaybe.HasValue)
@@ -44,7 +44,7 @@ namespace EastFive.Azure.Synchronization
                                 return onCreatedAndModified(connection);
                             },
                             onAlreadyExists.AsAsyncFunc(),
-                            async (callback) => onRelationshipAlreadyExists(await callback()),
+                            async (callback) => onRelationshipAlreadyExists((await callback()).connectorId),
                             onAdapterDoesNotExist.AsAsyncFunc());
 
                     if (destinationAdapterIdMaybe.HasValue)
@@ -83,14 +83,36 @@ namespace EastFive.Azure.Synchronization
 
         public static Task<TResult> FindByIdAsync<TResult>(Guid connectorId,
                 Guid performingAsAuthorization, System.Security.Claims.Claim[] claims,
-            Func<Connector, Guid, TResult> onFound,
+            Func<Connector, TResult> onFound,
             Func<TResult> onNotFound,
             Func<TResult> onUnauthorized)
         {
+            // TODO: SEcurity check
+            return FindByIdAsync(connectorId,
+                onFound,
+                onNotFound);
+        }
+
+        public static Task<TResult> FindByIdAsync<TResult>(Guid connectorId,
+            Func<Connector, TResult> onFound,
+            Func<TResult> onNotFound)
+        {
             return Persistence.ConnectorDocument.FindByIdAsync(connectorId,
-                (connector, destinationIntegrationId) =>
+                (connector) =>
                 {
-                    return onFound(connector, destinationIntegrationId);
+                    return onFound(connector);
+                },
+                onNotFound);
+        }
+
+        public static Task<TResult> FindByIdAsync<TResult>(Guid connectorId, Guid integrationId,
+            Func<Connector, Guid, TResult> onFound,
+            Func<TResult> onNotFound)
+        {
+            return Persistence.ConnectorDocument.FindByIdAsync(connectorId, integrationId,
+                (connector, integrationIdOther) =>
+                {
+                    return onFound(connector, integrationIdOther);
                 },
                 onNotFound);
         }

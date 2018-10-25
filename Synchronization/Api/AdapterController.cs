@@ -103,16 +103,14 @@ namespace EastFive.Api.Controllers
         }
 
         #endregion
-
-
+        
         internal static EastFive.Api.Resources.Adapter GetResource(EastFive.Azure.Synchronization.Connection connection,
             System.Web.Http.Routing.UrlHelper url)
         {
             var adapter = connection.adapterInternal;
             return GetResource(adapter, url);
         }
-
-
+        
         internal static EastFive.Api.Resources.Adapter GetResource(EastFive.Azure.Synchronization.Adapter adapter,
             System.Web.Http.Routing.UrlHelper url)
         {

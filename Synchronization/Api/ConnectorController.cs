@@ -38,7 +38,7 @@ namespace EastFive.Api.Controllers
         {
             return Connectors.FindByIdAsync(id,
                     security.performingAsActorId, security.claims,
-                (synchronization, destinationIntegrationId) => onFound(GetResource(synchronization, destinationIntegrationId, url)),
+                (synchronization) => onFound(GetResource(synchronization, url)),
                 () => onNotFound(),
                 () => onUnauthorized());
         }
@@ -54,14 +54,14 @@ namespace EastFive.Api.Controllers
                     security.performingAsActorId, security.claims,
                 connectors =>
                 {
-                    var r = onMultipart(connectors.Select(connector => GetResource(connector.Key, connector.Value, url)));
+                    var r = onMultipart(connectors.Select(connector => GetResource(connector.Key, url)));
                     return r;
                 },
                 () => onReferenceNotFound().ToTask(),
                 () => onUnauthorized().ToTask());
         }
 
-        internal static EastFive.Api.Resources.Connector GetResource(Connector connector, Guid destinationIntegrationId,
+        internal static EastFive.Api.Resources.Connector GetResource(Connector connector,
             System.Web.Http.Routing.UrlHelper url)
         {
             var resource = new EastFive.Api.Resources.Connector()
@@ -71,8 +71,7 @@ namespace EastFive.Api.Controllers
 
                 Source = url.GetWebId<Controllers.AdapterController>(connector.adapterInternalId),
                 Destination = url.GetWebId<Controllers.AdapterController>(connector.adapterExternalId),
-
-                DestinationIntegration = destinationIntegrationId,
+                
             };
             return resource;
         }
@@ -116,12 +115,12 @@ namespace EastFive.Api.Controllers
                                     accept.MediaType.ToLower() == "x-ordering/connector+json" ||
                                     accept.MediaType.ToLower() == "application/json")
                                     return onCreatedAndModified(
-                                        GetResource(connection.connector, connection.adapterExternal.integrationId, url),
+                                        GetResource(connection.connector, url),
                                         "x-ordering/connector+json");
                                 
                                 return next();
                             },
-                            () => onCreatedAndModified(GetResource(connection.connector, connection.adapterExternal.integrationId, url)));
+                            () => onCreatedAndModified(GetResource(connection.connector, url)));
                 },
                 () => onAlreadyExists(),
                 (existingConnectorId) => onRelationshipAlreadyExists(existingConnectorId),
@@ -185,7 +184,6 @@ namespace EastFive.Api.Controllers
                         createdBy = adapter1Id,
                         synchronizationMethod = Connector.SynchronizationMethod.useExternal,
                     },
-                    Guid.NewGuid(),
                     url));
         }
 
