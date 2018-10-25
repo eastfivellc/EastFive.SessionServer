@@ -30,7 +30,14 @@ namespace EastFive.Security.SessionServer.Configuration
             Location = "The URL that the webUI is deployed")]
         public const string LandingPage = "EastFive.Security.SessionServer.RouteDefinitions.LandingPage";
         public const string AppleAppSiteAssociationId = "EastFive.Security.SessionServer.AppleAppSiteAssociation.AppId";
-        
+
+        [ConfigKey("Connection string that is used for the service bus.",
+            DeploymentOverrides.Suggested,
+            DeploymentSecurityConcern = true,
+            PrivateRepositoryOnly = true,
+            Location = "The URL that the webUI is deployed")]
+        public const string ServiceBusConnectionString = "EastFive.Api.Workers.ServiceBusConnectionString";
+
         [ConfigAttribute]
         public static class OAuth
         {
