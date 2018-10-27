@@ -514,20 +514,31 @@ namespace EastFive.Azure.Synchronization.Persistence
                 Func<TResult, Task<ILockResult<TResult>>>, 
                 Func<TResult, Task<ILockResult<TResult>>>, 
                 Task<ILockResult<TResult>>> onLockAquired,
-            Func<int, TimeSpan, TimeSpan?, TResult> onAlreadyLocked,
+            Func<int,
+                TimeSpan, 
+                TimeSpan?,
+                Func<Task<TResult>>,
+                Func<Task<TResult>>,
+                Task<TResult>> onAlreadyLocked,
             Func<TResult> onNotFound)
         {
             return AzureStorageRepository.Connection(
                 async connection =>
                 {
+                    TimeSpan? ComputeDuration(ConnectorSynchronizationDocument connSyncDoc)
+                    {
+                        var duration = connSyncDoc.WhenLast.HasValue ?
+                                (DateTime.UtcNow - new DateTime(connSyncDoc.WhenLast.Value, DateTimeKind.Utc))
+                                :
+                                default(TimeSpan?);
+                        return duration;
+                    }
+
                     var lockResult = await await connection.LockedUpdateAsync<ConnectorSynchronizationDocument, Task<ILockResult<TResult>>>(connectorId,
                         connSyncDoc => connSyncDoc.Locked,
                         (connSyncDoc, unlockAndUpdate, unlock) =>
                         {
-                            var duration = connSyncDoc.WhenLast.HasValue ?
-                                (DateTime.UtcNow - new DateTime(connSyncDoc.WhenLast.Value, DateTimeKind.Utc))
-                                :
-                                default(TimeSpan?);
+                            var duration = ComputeDuration(connSyncDoc);
                             return onLockAquired(duration,
                                 async r =>
                                 {
@@ -570,6 +581,23 @@ namespace EastFive.Azure.Synchronization.Persistence
                                 },
                                 () => (new LockResult<TResult>(onNotFound())).AsTask());
                         },
+                        onAlreadyLocked:
+                            async (retryCount, retryDuration, connSyncDoc, continueAquiring, force) =>
+                            {
+                                var duration = ComputeDuration(connSyncDoc);
+                                var lockCompleteResponse = await onAlreadyLocked(retryCount, retryDuration, duration,
+                                    async () =>
+                                    {
+                                        var lockResponse = await await continueAquiring();
+                                        return lockResponse.Result;
+                                    },
+                                    async () =>
+                                    {
+                                        var lockResponse = await await force();
+                                        return lockResponse.Result;
+                                    });
+                                return (new LockResult<TResult>(lockCompleteResponse)).AsTask<ILockResult<TResult>>();
+                            },
                         mutatePartition: GetMutatePartitionKey(resourceType));
                     return lockResult.Result;
                 });

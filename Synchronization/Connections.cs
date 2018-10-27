@@ -671,15 +671,20 @@ namespace EastFive.Azure.Synchronization
 
         #endregion
         
-        public static Task<TResult> SynchronizeLockedAsync<TResult>(Connector connector, string resourceType,
+        public static Task<TResult> SynchronizeLockedAsync<TResult>(Guid connectorId, string resourceType,
             Func<TimeSpan?, 
                 Func<TResult, Task<Persistence.ConnectorDocument.ILockResult<TResult>>>, 
                 Func<TResult, Task<Persistence.ConnectorDocument.ILockResult<TResult>>>,
                 Task<Persistence.ConnectorDocument.ILockResult<TResult>>> onLockAquired,
-            Func<int, TimeSpan,TimeSpan?, TResult> onAlreadyLocked,
+            Func<int, 
+                TimeSpan,
+                TimeSpan?,
+                Func<Task<TResult>>, 
+                Func<Task<TResult>>,
+                Task<TResult>> onAlreadyLocked,
             Func<TResult> onNotFound)
         {
-            return Persistence.ConnectorDocument.SynchronizeLockedAsync(connector.connectorId, resourceType,
+            return Persistence.ConnectorDocument.SynchronizeLockedAsync(connectorId, resourceType,
                 async (duration, unlockAndSave, unlock) =>
                 {
                     var result = await onLockAquired(duration,
@@ -687,8 +692,12 @@ namespace EastFive.Azure.Synchronization
                         (t) => unlock(t));
                     return result;
                 },
-                onAlreadyLocked,
-                onNotFound);
+                onAlreadyLocked:
+                    (retryCount, retrySpan, doc, continueAquiring, force) =>
+                    {
+                        return onAlreadyLocked(retryCount, retrySpan, doc, continueAquiring, force);
+                    },
+                onNotFound:onNotFound);
         }
 
         
