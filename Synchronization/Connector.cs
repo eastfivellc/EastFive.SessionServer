@@ -1,4 +1,5 @@
 ﻿using BlackBarLabs.Extensions;
+using EastFive.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,8 +12,8 @@ namespace EastFive.Azure.Synchronization
 {
     public static class Connectors
     {
-        public static async Task<TResult> CreateConnectorAsync<TResult>(Guid connectorId, Guid sourceId, Guid? destinationAdapterIdMaybe,
-                Connector.SynchronizationMethod flow, Guid? destinationIntegrationMaybe,
+        public static async Task<TResult> CreateConnectorAsync<TResult>(Guid connectorId, Guid sourceAdapterId, Guid destinationAdapterId,
+                Connector.SynchronizationMethod flow,
                 Guid performingAsActorId, Claim[] claims,
             Func<TResult> onCreated,
             Func<Connection, TResult> onCreatedAndModified,
@@ -21,48 +22,37 @@ namespace EastFive.Azure.Synchronization
             Func<Guid, TResult> onAdapterDoesNotExist,
             Func<string, TResult> onFailure)
         {
-            return await await Persistence.AdapterDocument.FindByIdAsync(sourceId,
+            return await await Persistence.AdapterDocument.FindByIdAsync(sourceAdapterId,
                 async sourceAdapter =>
                 {
-                    Func<Guid, Adapter?, Task<TResult>> createConnector =
-                        async (destinationAdapterId, destinationAdapterMaybe) => await await Persistence.ConnectorDocument.CreateAsync(connectorId,
-                            sourceId, destinationAdapterId, flow, sourceAdapter.resourceType,
-                            async () =>
-                            {
-                                if (!destinationAdapterMaybe.HasValue)
-                                    return await onCreated().ToTask();
+                    return await await Persistence.AdapterDocument.FindByIdAsync(destinationAdapterId,
+                        async (destinationAdapter) =>
+                        {
+                            if (destinationAdapter.resourceType != sourceAdapter.resourceType)
+                                return onFailure($"Cannot connect `{sourceAdapter.resourceType}` to `{destinationAdapter.resourceType}`.");
 
-                                var connector = new Connector()
+                            return await await Persistence.ConnectorDocument.CreateAsync(connectorId,
+                                    sourceAdapterId, destinationAdapterId, flow, sourceAdapter.resourceType,
+                                () =>
                                 {
-                                    connectorId = connectorId,
-                                    adapterExternalId = destinationAdapterId,
-                                    adapterInternalId = sourceId,
-                                    createdBy = sourceId,
-                                    synchronizationMethod = flow,
-                                };
-                                var connection = Convert(sourceAdapter, connector, destinationAdapterMaybe.Value);
-                                return onCreatedAndModified(connection);
-                            },
-                            onAlreadyExists.AsAsyncFunc(),
-                            async (callback) => onRelationshipAlreadyExists((await callback()).connectorId),
-                            onAdapterDoesNotExist.AsAsyncFunc());
-
-                    if (destinationAdapterIdMaybe.HasValue)
-                        return await createConnector(destinationAdapterIdMaybe.Value, default(Adapter?));
-
-                    if (!destinationIntegrationMaybe.HasValue)
-                        return onFailure("Destination integration must be specified to create a new destination.");
-                    return await Persistence.AdapterDocument.FindOrCreateAsync($"TODO:{Guid.NewGuid()}", destinationIntegrationMaybe.Value, sourceAdapter.resourceType,
-                            async (created, destinationAdapter, saveAsync) =>
-                            {
-                                if (!created)
-                                    return onAlreadyExists();
-                                var destinationAdapterId = await saveAsync(destinationAdapter);
-                                return await createConnector(destinationAdapterId, destinationAdapter);
-                            });
+                                    var connector = new Connector()
+                                    {
+                                        connectorId = connectorId,
+                                        adapterExternalId = destinationAdapterId,
+                                        adapterInternalId = sourceAdapterId,
+                                        createdBy = sourceAdapterId,
+                                        synchronizationMethod = flow,
+                                    };
+                                    var connection = Convert(sourceAdapter, connector, destinationAdapter);
+                                    return onCreatedAndModified(connection).AsTask();
+                                },
+                                onAlreadyExists.AsAsyncFunc(),
+                                async (callback) => onRelationshipAlreadyExists((await callback()).connectorId),
+                                onAdapterDoesNotExist.AsAsyncFunc());
+                        },
+                        () => onAdapterDoesNotExist(destinationAdapterId).AsTask());
                 },
-                () => onAdapterDoesNotExist(sourceId).ToTask());
-            
+                () => onAdapterDoesNotExist(sourceAdapterId).ToTask());
         }
 
         public static async Task<TResult> UpdateConnectorAsync<TResult>(Guid connectorId,

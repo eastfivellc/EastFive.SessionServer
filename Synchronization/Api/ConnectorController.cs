@@ -81,9 +81,8 @@ namespace EastFive.Api.Controllers
         [EastFive.Api.HttpPost(Type = typeof(EastFive.Api.Resources.Connector), MatchAllBodyParameters = false)]
         public static Task<HttpResponseMessage> CreateConnectorAsync([PropertyGuid]Guid id,
                 [PropertyGuid(Name = EastFive.Api.Resources.Connector.SourcePropertyName)]Guid source,
-                [PropertyGuid(Name = EastFive.Api.Resources.Connector.DestinationPropertyName)]Guid? destination,
+                [PropertyGuid(Name = EastFive.Api.Resources.Connector.DestinationPropertyName)]Guid destination,
                 [PropertyEnum(Name = EastFive.Api.Resources.Connector.FlowPropertyName)]Connector.SynchronizationMethod Flow,
-                [PropertyGuid(Name = EastFive.Api.Resources.Connector.DestinationIntegrationPropertyName)]Guid? destinationIntegration,
                 Security security, Context context, HttpRequestMessage request, UrlHelper url,
             CreatedResponse onCreated,
             CreatedBodyResponse onCreatedAndModified,
@@ -94,7 +93,7 @@ namespace EastFive.Api.Controllers
             GeneralConflictResponse onFailure)
         {
             return Connectors.CreateConnectorAsync(id, source, destination,
-                    Flow, destinationIntegration, security.performingAsActorId, security.claims,
+                    Flow, security.performingAsActorId, security.claims,
                 () => onCreated(),
                 (connection) =>
                 {
@@ -134,7 +133,6 @@ namespace EastFive.Api.Controllers
                 [PropertyGuid(Name = EastFive.Api.Resources.Connector.SourcePropertyName)]Guid source,
                 [PropertyGuid(Name = EastFive.Api.Resources.Connector.DestinationPropertyName)]Guid? destination,
                 [PropertyEnum(Name = EastFive.Api.Resources.Connector.FlowPropertyName)]Connector.SynchronizationMethod Flow,
-                [PropertyGuid(Name = EastFive.Api.Resources.Connector.DestinationIntegrationPropertyName)]Guid? destinationIntegration,
                 Security security, Context context, HttpRequestMessage request, UrlHelper url,
             NoContentResponse onUpdated,
             NotFoundResponse onNotFound,
