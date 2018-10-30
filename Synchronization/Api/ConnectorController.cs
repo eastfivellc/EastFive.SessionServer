@@ -79,10 +79,11 @@ namespace EastFive.Api.Controllers
         #endregion
 
         [EastFive.Api.HttpPost(Type = typeof(EastFive.Api.Resources.Connector), MatchAllBodyParameters = false)]
-        public static Task<HttpResponseMessage> CreateConnectorAsync([PropertyGuid]Guid id,
-                [PropertyGuid(Name = EastFive.Api.Resources.Connector.SourcePropertyName)]Guid source,
-                [PropertyGuid(Name = EastFive.Api.Resources.Connector.DestinationPropertyName)]Guid destination,
-                [PropertyEnum(Name = EastFive.Api.Resources.Connector.FlowPropertyName)]Connector.SynchronizationMethod Flow,
+        public static Task<HttpResponseMessage> CreateConnectorAsync(
+                [QueryDefaultParameter][Property]Guid id,
+                [Property(Name = EastFive.Api.Resources.Connector.SourcePropertyName)]Guid source,
+                [Property(Name = EastFive.Api.Resources.Connector.DestinationPropertyName)]Guid destination,
+                [Property(Name = EastFive.Api.Resources.Connector.FlowPropertyName)]Connector.SynchronizationMethod Flow,
                 Security security, Context context, HttpRequestMessage request, UrlHelper url,
             CreatedResponse onCreated,
             CreatedBodyResponse onCreatedAndModified,
@@ -129,10 +130,11 @@ namespace EastFive.Api.Controllers
 
 
         [EastFive.Api.HttpPut(Type = typeof(EastFive.Api.Resources.Connector), MatchAllBodyParameters = false)]
-        public static Task<HttpResponseMessage> UpdateConnectorAsync([PropertyGuid]Guid id,
-                [PropertyGuid(Name = EastFive.Api.Resources.Connector.SourcePropertyName)]Guid source,
-                [PropertyGuid(Name = EastFive.Api.Resources.Connector.DestinationPropertyName)]Guid? destination,
-                [PropertyEnum(Name = EastFive.Api.Resources.Connector.FlowPropertyName)]Connector.SynchronizationMethod Flow,
+        public static Task<HttpResponseMessage> UpdateConnectorAsync(
+                [QueryDefaultParameter][Property]Guid id,
+                [Property(Name = EastFive.Api.Resources.Connector.SourcePropertyName)]Guid source,
+                [PropertyOptional(Name = EastFive.Api.Resources.Connector.DestinationPropertyName)]Guid? destination,
+                [Property(Name = EastFive.Api.Resources.Connector.FlowPropertyName)]Connector.SynchronizationMethod Flow,
                 Security security, Context context, HttpRequestMessage request, UrlHelper url,
             NoContentResponse onUpdated,
             NotFoundResponse onNotFound,

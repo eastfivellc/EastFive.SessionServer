@@ -87,10 +87,11 @@ namespace EastFive.Api.Azure.Resources
 
 
         [EastFive.Api.HttpPut(Type = typeof(EastFive.Api.Resources.Connector), MatchAllBodyParameters = false)]
-        public static Task<HttpResponseMessage> UpdateGroupAsync([PropertyGuid]Guid id,
-                [PropertyGuid(Name = EastFive.Api.Resources.Connector.SourcePropertyName)]Guid source,
-                [PropertyGuid(Name = EastFive.Api.Resources.Connector.DestinationPropertyName)]Guid? destination,
-                [PropertyGuid(Name = EastFive.Api.Resources.Connector.DestinationIntegrationPropertyName)]Guid? destinationIntegration,
+        public static Task<HttpResponseMessage> UpdateGroupAsync(
+                [QueryDefaultParameter][Property]Guid id,
+                [Property(Name = EastFive.Api.Resources.Connector.SourcePropertyName)]Guid source,
+                [PropertyOptional(Name = EastFive.Api.Resources.Connector.DestinationPropertyName)]Guid? destination,
+                [PropertyOptional(Name = EastFive.Api.Resources.Connector.DestinationIntegrationPropertyName)]Guid? destinationIntegration,
                 EastFive.Api.Controllers.Security security, HttpRequestMessage request, UrlHelper url,
             NoContentResponse onUpdated,
             NotFoundResponse onNotFound,
