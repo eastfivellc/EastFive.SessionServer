@@ -2,6 +2,7 @@
 using EastFive.Api;
 using EastFive.Api.Azure.Credentials;
 using EastFive.Api.Azure.Credentials.Controllers;
+using EastFive.Api.Controllers;
 using EastFive.Extensions;
 using System;
 using System.Collections.Generic;
@@ -21,10 +22,15 @@ namespace EastFive.Security.SessionServer.Api.Controllers
         }
 
         [EastFive.Api.HttpGet]
-        public static Task<HttpResponseMessage> SessionManagement(
-            EastFive.Api.Controllers.ViewFileResponse viewResponse)
+        public static async Task<HttpResponseMessage> SessionManagement(
+            EastFive.Api.Controllers.Security security,
+            EastFive.Api.Azure.AzureApplication application,
+            UnauthorizedResponse onUnauthorized,
+            ViewFileResponse viewResponse)
         {
-            return CredentialProcessDocument.FindAllAsync(
+            if (!await application.IsAdminAsync(security))
+                return onUnauthorized();
+            return await CredentialProcessDocument.FindAllAsync(
                 (documents) =>
                 {
                     var orderedDocs = documents.OrderByDescending(doc => doc.Time).ToArray();

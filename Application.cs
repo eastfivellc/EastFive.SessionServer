@@ -21,6 +21,7 @@ using Microsoft.ApplicationInsights;
 using BlackBarLabs;
 using EastFive.Linq.Async;
 using BlackBarLabs.Linq.Async;
+using EastFive.Api.Controllers;
 
 namespace EastFive.Api.Azure
 {
@@ -37,6 +38,31 @@ namespace EastFive.Api.Azure
 
             this.AddInstigator(typeof(Security.SessionServer.Context),
                 (httpApp, request, parameterInfo, onCreatedSessionContext) => onCreatedSessionContext(this.AzureContext));
+        }
+
+        public virtual async Task<bool> CanAdministerCredentialAsync(Guid actorInQuestion, Api.Controllers.Security security)
+        {
+            if (actorInQuestion == security.performingAsActorId)
+                return true;
+
+            if (await IsAdminAsync(security))
+                return true;
+
+            return false;
+        }
+
+        public virtual Task<bool> IsAdminAsync(Api.Controllers.Security security)
+        {
+            return EastFive.Web.Configuration.Settings.GetGuid(
+                EastFive.Api.AppSettings.ActorIdSuperAdmin,
+                (actorIdSuperAdmin) =>
+                {
+                    if (actorIdSuperAdmin == security.performingAsActorId)
+                        return true;
+
+                    return false;
+                },
+                (why) => false).AsTask();
         }
 
         protected override void Configure(HttpConfiguration config)
