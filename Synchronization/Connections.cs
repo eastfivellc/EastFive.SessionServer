@@ -609,16 +609,24 @@ namespace EastFive.Azure.Synchronization
             Func<TResult> onConnectionNotFound)
         {
             var key = keyGuid.ToString("N");
-            return await await Persistence.AdapterDocument.FindByKeyAsync(key, internalIntegrationId, resourceType,
+            return await await Persistence.AdapterDocument.FindByKeyAsync<Task<TResult>>(key, internalIntegrationId, resourceType,
                 adapterInternal =>
                 {
                     return Persistence.ConnectorDocument.FindByAdapterWithConnectionAsync(adapterInternal,
                         (KeyValuePair<Connector, Adapter>[] connectorAdapterExternalIdKvps) =>
-                            onFound(connectorAdapterExternalIdKvps.SelectValues(
-                                adapter => adapter.integrationId.PairWithValue(adapter.key)).ToArray()),
-                        onConnectionNotFound);
+                        {
+                            return onFound(connectorAdapterExternalIdKvps.SelectValues(
+                                adapter => adapter.integrationId.PairWithValue(adapter.key)).ToArray());
+                        },
+                        ()=>
+                        {
+                            return onConnectionNotFound();
+                        });
                 },
-                onConnectionNotFound.AsAsyncFunc());
+                () =>
+                {
+                    return onConnectionNotFound().ToTask();
+                });
         }
 
         public static Task<TResult> FindResourceAdapterByInternalIdAsync<TResult>(Guid resourceGuid, string resourceType,
