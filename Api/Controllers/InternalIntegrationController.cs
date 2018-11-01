@@ -22,7 +22,8 @@ namespace EastFive.Api.Controllers
 
         [HttpGet]
         public async static Task<HttpResponseMessage> IntegrationUploadAsync(EastFive.Security.SessionServer.Context context,
-                [QueryDefaultParameter][Required(Name = StateQueryParameter)]Guid integrationId, HttpRequestMessage request, System.Web.Http.Routing.UrlHelper url,
+                [QueryParameter(CheckFileName = true, Name = StateQueryParameter)]Guid integrationId,
+                HttpRequestMessage request, System.Web.Http.Routing.UrlHelper url,
             ViewFileResponse onLoadUploadPage)
         {
             return await onLoadUploadPage("InternalIntegration/ConfigureIntegration.cshtml", integrationId).ToTask();
@@ -30,7 +31,8 @@ namespace EastFive.Api.Controllers
 
         [HttpPost(MatchAllParameters = false)]
         public async static Task<HttpResponseMessage> XlsPostAsync(EastFive.Security.SessionServer.Context context,
-                [Required]Guid integration, [Required]IDictionary<string, bool> resourceTypes,
+                [QueryParameter]Guid integration,
+                [QueryParameter]IDictionary<string, bool> resourceTypes,
                 Azure.AzureApplication application,
                 HttpRequestMessage request, System.Web.Http.Routing.UrlHelper url,
             RedirectResponse onSuccess,

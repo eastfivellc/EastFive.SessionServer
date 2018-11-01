@@ -32,7 +32,7 @@ namespace EastFive.Api.Controllers
         
         [EastFive.Api.HttpGet]
         public static Task<HttpResponseMessage> FindByIdAsync(
-                [QueryDefaultParameter][Required(Name ="id")] Guid adapterId,
+                [QueryParameter(CheckFileName = true, Name ="id")] Guid adapterId,
                 Security security, Context context, HttpRequestMessage request, UrlHelper url,
             ContentResponse onFound,
             NotFoundResponse onNotFound,

@@ -31,8 +31,10 @@ namespace EastFive.Api.Azure.Credentials.Controllers
     {
         [HttpGet]
         public static async Task<HttpResponseMessage> GetResponse(AzureApplication application, 
-            [QueryDefaultParameter][Required]Guid integrationId, [Required]string resourceTypes,
-            HttpRequestMessage request, RedirectResponse onRedirect)
+                [QueryParameter(CheckFileName = true)]Guid integrationId,
+                [QueryParameter]string resourceTypes,
+                HttpRequestMessage request,
+            RedirectResponse onRedirect)
         {
             var extraParams = new Dictionary<string, string>()
             {

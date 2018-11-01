@@ -30,7 +30,8 @@ namespace EastFive.Api.Controllers
         #region GET
 
         [EastFive.Api.HttpGet]
-        public static Task<HttpResponseMessage> FindByIdAsync([QueryDefaultParameter][Required]Guid id,
+        public static Task<HttpResponseMessage> FindByIdAsync(
+                [QueryParameter(CheckFileName = true)]Guid id,
                 Security security, Context context, HttpRequestMessage request, UrlHelper url,
             ContentResponse onFound,
             NotFoundResponse onNotFound,
@@ -80,7 +81,7 @@ namespace EastFive.Api.Controllers
 
         [EastFive.Api.HttpPost(Type = typeof(EastFive.Api.Resources.Connector), MatchAllBodyParameters = false)]
         public static Task<HttpResponseMessage> CreateConnectorAsync(
-                [QueryDefaultParameter][Property]Guid id,
+                [Property]Guid id,
                 [Property(Name = EastFive.Api.Resources.Connector.SourcePropertyName)]Guid source,
                 [Property(Name = EastFive.Api.Resources.Connector.DestinationPropertyName)]Guid destination,
                 [Property(Name = EastFive.Api.Resources.Connector.FlowPropertyName)]Connector.SynchronizationMethod Flow,
@@ -131,7 +132,7 @@ namespace EastFive.Api.Controllers
 
         [EastFive.Api.HttpPut(Type = typeof(EastFive.Api.Resources.Connector), MatchAllBodyParameters = false)]
         public static Task<HttpResponseMessage> UpdateConnectorAsync(
-                [QueryDefaultParameter][Property]Guid id,
+                [Property]Guid id,
                 [Property(Name = EastFive.Api.Resources.Connector.SourcePropertyName)]Guid source,
                 [PropertyOptional(Name = EastFive.Api.Resources.Connector.DestinationPropertyName)]Guid? destination,
                 [Property(Name = EastFive.Api.Resources.Connector.FlowPropertyName)]Connector.SynchronizationMethod Flow,
@@ -152,7 +153,7 @@ namespace EastFive.Api.Controllers
             Type = typeof(EastFive.Api.Resources.Connector),
             MatchAllBodyParameters = false)]
         public static Task<HttpResponseMessage> DeleteByIdAsync(
-                [QueryDefaultParameter][Required(Name = ResourceBase.IdPropertyName)]Guid synchronizationId,
+                [QueryParameter(CheckFileName = true, Name = ResourceBase.IdPropertyName)]Guid synchronizationId,
                 Security security, Context context, HttpRequestMessage request, UrlHelper url,
             ContentResponse onFound,
             NotFoundResponse onNotFound,

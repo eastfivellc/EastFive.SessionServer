@@ -52,7 +52,7 @@ namespace EastFive.Api.Azure.Resources
 
         [EastFive.Api.HttpGet]
         public static Task<HttpResponseMessage> FindByIdAsync(
-                [QueryDefaultParameter][Required]Guid id,
+                [QueryParameter(CheckFileName = true)]Guid id,
                 EastFive.Api.Controllers.Security security, HttpRequestMessage request, UrlHelper url,
             ContentResponse onFound,
             NotFoundResponse onNotFound,
@@ -88,7 +88,7 @@ namespace EastFive.Api.Azure.Resources
 
         [EastFive.Api.HttpPut(Type = typeof(EastFive.Api.Resources.Connector), MatchAllBodyParameters = false)]
         public static Task<HttpResponseMessage> UpdateGroupAsync(
-                [QueryDefaultParameter][Property]Guid id,
+                [Property]Guid id,
                 [Property(Name = EastFive.Api.Resources.Connector.SourcePropertyName)]Guid source,
                 [PropertyOptional(Name = EastFive.Api.Resources.Connector.DestinationPropertyName)]Guid? destination,
                 [PropertyOptional(Name = EastFive.Api.Resources.Connector.DestinationIntegrationPropertyName)]Guid? destinationIntegration,

@@ -48,7 +48,7 @@ namespace EastFive.Api.Azure.Resources
 
         [EastFive.Api.HttpGet]
         public static async Task<HttpResponseMessage> FindByIdAsync(
-                [QueryDefaultParameter][Required]Guid processStageTypeId,
+                [QueryParameter(CheckFileName = true)]Guid processStageTypeId,
                 EastFive.Api.Controllers.Security security, HttpRequestMessage request, UrlHelper url,
             ContentResponse onFound,
             NotFoundResponse onNotFound,

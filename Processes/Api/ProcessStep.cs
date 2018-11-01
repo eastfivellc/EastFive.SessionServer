@@ -54,7 +54,7 @@ namespace EastFive.Api.Azure.Resources
 
         [EastFive.Api.HttpGet]
         public static Task<HttpResponseMessage> FindByIdAsync(
-                [QueryDefaultParameter][Required(Name = ProcessStep.IdPropertyName)]Guid id,
+                [QueryParameter(CheckFileName = true, Name = ProcessStep.IdPropertyName)]Guid id,
                 AzureApplication httpApplication, EastFive.Api.Controllers.Security security, UrlHelper url,
             ContentResponse onFound,
             NotFoundResponse onNotFound,
@@ -152,7 +152,7 @@ namespace EastFive.Api.Azure.Resources
 
         [EastFive.Api.HttpDelete]
         public static Task<HttpResponseMessage> DeleteByIdAsync(
-                [QueryDefaultParameter][Required(Name = ProcessStep.IdPropertyName)]Guid processStepId,
+                [QueryParameter(CheckFileName = true, Name = ProcessStep.IdPropertyName)]Guid processStepId,
                 EastFive.Api.Controllers.Security security,
             NoContentResponse onDeleted,
             NotFoundResponse onNotFound,

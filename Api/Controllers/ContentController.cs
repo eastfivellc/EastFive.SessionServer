@@ -7,6 +7,7 @@ using System.Web.Http;
 using BlackBarLabs.Web;
 using BlackBarLabs.Api;
 using System.Threading.Tasks;
+using EastFive.Api.Controllers;
 
 namespace EastFive.Api.Azure.Controllers
 {
@@ -15,19 +16,25 @@ namespace EastFive.Api.Azure.Controllers
     {
         [HttpPost]
         public static async Task<HttpResponseMessage> CreateContentAsync(
-            [QueryDefaultParameter][Required]Guid contentId, [Required]ByteArrayContent content,
-            HttpRequestMessage request)
+                [QueryParameter(CheckFileName = true)]Guid contentId,
+                [QueryParameter]ByteArrayContent content,
+                HttpRequestMessage request,
+            CreatedResponse onCreated,
+            AlreadyExistsResponse onAlreadyExists)
         {
             var contentType = content.Headers.ContentType.MediaType;
             var contentBytes = await content.ReadAsByteArrayAsync();
             return await Content.CreateContentAsync(contentId, contentType, contentBytes,
-                () => request.CreateResponse(HttpStatusCode.Created),
-                () => request.CreateResponse(HttpStatusCode.Conflict).AddReason($"Content with name {contentId} already exists"));
+                () => onCreated(),
+                () => onAlreadyExists());
         }
 
         [HttpGet]
-        public static async Task<HttpResponseMessage> QueryByContentIdAsync([QueryDefaultParameter][Required]Guid contentId,
-                [Optional]int? width, [Optional]int? height, [Optional]bool? fill,
+        public static async Task<HttpResponseMessage> QueryByContentIdAsync(
+                [QueryParameter(CheckFileName = true)]Guid contentId,
+                [OptionalQueryParameter]int? width,
+                [OptionalQueryParameter]int? height,
+                [OptionalQueryParameter]bool? fill,
             HttpRequestMessage request, System.Web.Http.Routing.UrlHelper url)
         {
             var response = await Content.FindContentByContentIdAsync(contentId, new System.Security.Claims.Claim[] { },
@@ -51,7 +58,11 @@ namespace EastFive.Api.Azure.Controllers
             return response;
         }
 
-        private static async Task<HttpResponseMessage> QueryAsVideoStream([Required]Guid contentId, [Required]bool streaming, HttpRequestMessage request, System.Web.Http.Routing.UrlHelper url)
+        private static async Task<HttpResponseMessage> QueryAsVideoStream(
+            [QueryParameter]Guid contentId,
+            [QueryParameter]bool streaming, 
+            HttpRequestMessage request, 
+            System.Web.Http.Routing.UrlHelper url)
         {
             var response = await Content.FindContentByContentIdAsync(contentId, new System.Security.Claims.Claim[] { },
                 (contentType, video) => request.CreateResponseVideoStream(video, contentType),

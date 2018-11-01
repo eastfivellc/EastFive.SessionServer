@@ -68,7 +68,8 @@ namespace EastFive.Api.Azure.Resources
         #region GET
 
         [EastFive.Api.HttpGet]
-        public static Task<HttpResponseMessage> FindByIdAsync([QueryDefaultParameter][Required]Guid id,
+        public static Task<HttpResponseMessage> FindByIdAsync(
+                [QueryParameter(CheckFileName = true)]Guid id,
                 EastFive.Api.Controllers.Security security, UrlHelper url,
             ContentResponse onFound,
             NotFoundResponse onNotFound,
