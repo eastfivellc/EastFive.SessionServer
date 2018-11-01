@@ -72,7 +72,7 @@ namespace EastFive.Azure.Synchronization.Persistence
         private static Func<string, string> GetMutatePartitionKey(string resourceType) =>
             partition => $"{resourceType}___{partition}";
 
-        public static Task<TResult> CreateAsync<TResult>(Guid connectorId,
+        public static Task<TResult> CreateAndUpdateAdaptersAsync<TResult>(Guid connectorId,
                 Guid adapterInternalId, Guid adapterExternalId, Connector.SynchronizationMethod method, string resourceType,
             Func<TResult> onCreated,
             Func<TResult> onAlreadyExists,
@@ -148,6 +148,56 @@ namespace EastFive.Azure.Synchronization.Persistence
                 });
         }
 
+
+        public static Task<TResult> CreateWithoutAdapterUpdateAsync<TResult>(Guid connectorId,
+                Guid adapterInternalId, Guid adapterExternalId, Connector.SynchronizationMethod method, string resourceType,
+            Func<TResult> onCreated,
+            Func<TResult> onAlreadyExists,
+            Func<Func<Task<Connector>>, TResult> onRelationshipAlreadyExists)
+        {
+            return AzureStorageRepository.Connection(
+                azureStorageRepository =>
+                {
+                    var lookupId = GetId(adapterInternalId, adapterExternalId);
+                    var rollback = new RollbackAsync<TResult>();
+                    rollback.AddTaskCreate(connectorId,
+                            new ConnectorDocument()
+                            {
+                                LocalAdapter = adapterInternalId,
+                                RemoteAdapter = adapterExternalId,
+                                Method = Enum.GetName(typeof(Connector.SynchronizationMethod), method),
+                            },
+                        onAlreadyExists,
+                        azureStorageRepository);
+                    rollback.AddTaskCreate(lookupId,
+                            new EastFive.Persistence.Azure.Documents.LookupDocument()
+                            {
+                                Lookup = connectorId,
+                            },
+                        () => onRelationshipAlreadyExists(
+                            async () => await await azureStorageRepository.FindByIdAsync(lookupId,
+                                (EastFive.Persistence.Azure.Documents.LookupDocument lookupDoc) =>
+                                    azureStorageRepository.FindByIdAsync(lookupDoc.Lookup,
+                                        (ConnectorDocument connectorDoc) => Convert(connectorDoc),
+                                        () => default(Connector)),
+                                () => default(Connector).AsTask())),
+                        azureStorageRepository);
+
+                    rollback.AddTaskCreate(connectorId,
+                            new ConnectorSynchronizationDocument
+                            {
+                                Locked = false,
+                            },
+                        () => onRelationshipAlreadyExists(
+                            () => azureStorageRepository.FindByIdAsync(connectorId,
+                                (ConnectorDocument connectorDoc) => Convert(connectorDoc),
+                                () => default(Connector))),
+                        azureStorageRepository,
+                            mutatePartition: GetMutatePartitionKey(resourceType));
+                    
+                    return rollback.ExecuteAsync(onCreated);
+                });
+        }
 
         public static Task<TResult> UpdateAsync<TResult>(Guid connectorId,
             Func<Connector, Func<Connector.SynchronizationMethod, Task>, Task<TResult>> onUpdated,
@@ -305,17 +355,24 @@ namespace EastFive.Azure.Synchronization.Persistence
                 });
         }
 
-        internal static Task<TResult> FindByIdWithAdapterRemoteAsync<TResult>(Guid connectorId,
+        internal static Task<TResult> FindByIdWithAdapterRemoteAsync<TResult>(Guid connectorId, Adapter sourceAdapter,
             Func<Connector, Adapter, TResult> onFound,
             Func<TResult> onNotFound)
         {
             return AzureStorageRepository.Connection(
-                azureStorageRepository => azureStorageRepository.FindLinkedDocumentAsync(connectorId,
-                    (ConnectorDocument connectorDoc) => connectorDoc.RemoteAdapter,
-                    (ConnectorDocument connectorDoc, AdapterDocument AdapterDoc) =>
-                        onFound(Convert(connectorDoc), AdapterDocument.Convert(AdapterDoc)),
-                    onNotFound,
-                    (connectorDoc) => onNotFound()));
+                azureStorageRepository =>
+                    azureStorageRepository.FindLinkedDocumentAsync(connectorId,
+                        (ConnectorDocument connectorDoc) => connectorDoc.RemoteAdapter == sourceAdapter.adapterId?
+                            connectorDoc.LocalAdapter
+                            :
+                            connectorDoc.RemoteAdapter,
+                        (ConnectorDocument connectorDoc, AdapterDocument remoteAdapterDoc) =>
+                        {
+                            var connector = Convert(connectorDoc);
+                            return onFound(connector, AdapterDocument.Convert(remoteAdapterDoc));
+                        },
+                        onNotFound,
+                        (parentDoc) => onNotFound()));
         }
 
         public static IEnumerableAsync<Connection> FindAllByType(string resourceType)
