@@ -36,7 +36,7 @@ namespace EastFive.Azure.Synchronization.Persistence
         public string Name { get; set; }
 
         public byte[] IdentifiersKeys { get; set; }
-
+        
         public byte[] IdentifiersValues { get; set; }
         
         public KeyValuePair<string, string>[] GetIdentifiers()
@@ -125,45 +125,38 @@ namespace EastFive.Azure.Synchronization.Persistence
                 },
                 onNotFound));
         }
-        
-        public async static Task<T> FindAllAsync<T>(Guid integrationId, string resourceType,
-            Func<Adapter[], T> callback)
+
+        public static IEnumerableAsync<Adapter> FindAll(Guid integrationId, string resourceType)
         {
             if (resourceType.IsNullOrWhiteSpace())
-                return callback(new Adapter[] { });
-
-            return await AzureStorageRepository.Connection(
-                async azureStorageRepository =>
-                {
-                    var localToRemoteIds = await azureStorageRepository
-                        .FindAllAsync(
-                            (AdapterDocument[] adaptersAll) =>
-                                adaptersAll
-                                    .Where(adapter =>
-                                        adapter.IntegrationId == integrationId &&
-                                        (!adapter.ResourceType.IsNullOrWhiteSpace()) &&
-                                        adapter.ResourceType.ToLower() == resourceType.ToLower())
-                                    .Select(Convert)
-                                    .ToArray());
-                    return callback(localToRemoteIds);
-                });
-        }
-
-        public static IEnumerableAsync<Adapter> FindAllAsync(string resourceType)
-        {
-            if (resourceType.IsNullOrWhiteSpace())
-                resourceType = string.Empty;
+                return EnumerableAsync.Empty<Adapter>();
 
             return AzureStorageRepository.Connection(
                 azureStorageRepository =>
                 {
-                    var query = new TableQuery<AdapterDocument>();
-                    var localToRemoteIds = azureStorageRepository
-                        .FindAllAsync(query)
-                        .Where(doc => doc.ResourceType == resourceType)
+                    var whereIntegrationQuery = TableQuery.GenerateFilterConditionForGuid("IntegrationId", QueryComparisons.Equal, integrationId);
+                    var whereResourceTypeQuery = TableQuery.GenerateFilterCondition("ResourceType", QueryComparisons.Equal, resourceType);
+                    var whereQuery = TableQuery.CombineFilters(whereIntegrationQuery, TableOperators.And, whereResourceTypeQuery);
+                    var adapterQuery = new TableQuery<AdapterDocument>().Where(whereQuery);
+                    return azureStorageRepository
+                        .FindAllAsync(adapterQuery)
                         .Select(Convert);
-                    
-                    return localToRemoteIds;
+                });
+        }
+
+        public static IEnumerableAsync<Adapter> FindAll(string resourceType)
+        {
+            if (resourceType.IsNullOrWhiteSpace())
+                return EnumerableAsync.Empty<Adapter>();
+
+            return AzureStorageRepository.Connection(
+                azureStorageRepository =>
+                {
+                    var whereResourceTypeQuery = TableQuery.GenerateFilterCondition("ResourceType", QueryComparisons.Equal, resourceType);
+                    var adapterQuery = new TableQuery<AdapterDocument>().Where(whereResourceTypeQuery);
+                    return azureStorageRepository
+                        .FindAllAsync(adapterQuery)
+                        .Select(Convert);
                 });
         }
 
@@ -209,8 +202,7 @@ namespace EastFive.Azure.Synchronization.Persistence
                         });
                 });
         }
-
-
+        
         internal static IEnumerableAsync<Adapter> CreateOrUpdateBatch(IEnumerableAsync<string> keys, Guid integrationId, string resourceType)
         {
             return AzureStorageRepository.Connection(
@@ -262,237 +254,30 @@ namespace EastFive.Azure.Synchronization.Persistence
                         .Select(adapter => Convert(adapter));
                 });
         }
-
-        public static Task<TResult> FindOrCreateAsync<TResult>(string key, Guid integrationId, string resourceType,
-                Guid integrationExternalId,
-            Func<Adapter, KeyValuePair<Connector, Adapter>?, Func<Adapter, KeyValuePair<Connector, Adapter>?, Task<Connection>>, Task<TResult>> onFound,
-            Func<Func<Adapter, KeyValuePair<Connector, Adapter>?, Task<Connection>>, Task<TResult>> onNotFound)
+        
+        internal static Task<TResult> UpdateAsync<TResult>(Guid sourceAdapterId,
+            Func<Adapter, Func<Guid[], string, KeyValuePair<string, string>[], Task>, Task<TResult>> onFound,
+            Func<TResult> onNotFound)
         {
-            throw new NotImplementedException();
-            return AzureStorageRepository.Connection<Task<TResult>>(
-                async azureStorageRepository =>
+            return AzureStorageRepository.Connection(
+                azureStorageRepository =>
                 {
-                    var adapterId = GetId(key, integrationId, resourceType);
-                    var result = await await azureStorageRepository.FindLinkedDocumentsAsync<AdapterDocument, ConnectorDocument, Task<TResult>>(adapterId,
-                        (lookupDoc) => lookupDoc.GetConnectorIds(),
-                        async (adapterDoc, connectorDocs) =>
+                    return azureStorageRepository.UpdateAsync<AdapterDocument, TResult>(sourceAdapterId,
+                        (adapterDoc, saveAsync) =>
                         {
-                            var matches = connectorDocs
-                                //.Where(connectorDoc => connectorDoc.IntegrationId == integrationExternalId)
-                                .ToArray();
-                            if (!matches.Any())
-                                return await onFound(Convert(adapterDoc), default(KeyValuePair<Connector, Adapter>?),
-                                    (adapterUpdated, connectorAdapterMaybe) => UpdateAsync(adapterId,
-                                        adapterUpdated.key, adapterUpdated.name, adapterUpdated.identifiers,
-                                        connectorAdapterMaybe, resourceType, integrationId, integrationExternalId));
-
-                            var match = matches.First();
-                            if (matches.Length > 1)
-                            {
-                                bool[] deleted = await matches
-                                    .Skip(1)
-                                    .Select(
-                                        matchToDelete => ConnectorDocument.DeleteByIdAsync(matchToDelete.Id,
-                                            (adapterLocalId, adapterRemoteId) => true,
-                                            () => false))
-                                    .WhenAllAsync(1);
-                            }
-                            return await await AdapterDocument.FindByIdAsync(match.RemoteAdapter,
-                                adapterRemote => onFound(Convert(adapterDoc), ConnectorDocument.Convert(match).PairWithValue(adapterRemote),
-                                    (adapterUpdated, connectorAdapterMaybe) => UpdateAsync(adapterId, adapterUpdated.key, adapterUpdated.name, adapterUpdated.identifiers,
-                                        connectorAdapterMaybe, resourceType, integrationId, integrationExternalId)),
-                                "Resource deleted during update".AsFunctionException<Task<TResult>>());
-                        },
-                        () => onNotFound(
-                            (adapterUpdated, connectorAdapterMaybe) => CreateAsync(adapterId, adapterUpdated.key, adapterUpdated.name, adapterUpdated.identifiers,
-                                connectorAdapterMaybe, resourceType, integrationId, integrationExternalId)));
-                    return result;
+                            var adapter = Convert(adapterDoc);
+                            return onFound(adapter,
+                                (connectorIds, name, identifiers) =>
+                                {
+                                    adapterDoc.SetConnectorIds(connectorIds);
+                                    adapterDoc.Name = name;
+                                    adapterDoc.SetIdentifiers(identifiers);
+                                    return saveAsync(adapterDoc);
+                                });
+                        });
                 });
         }
-
-        private static Task<Connection> CreateAsync(Guid adapterId,
-            string key, string name, KeyValuePair<string, string>[] identifiers,
-            KeyValuePair<Connector, Adapter>? connectorAdapterMaybe,
-            string resourceType, Guid integrationId, Guid integrationIdRemote)
-        {
-            throw new NotImplementedException();
-            //return AzureStorageRepository.Connection<Task<Connection>>(
-            //    async azureStorageRepository =>
-            //    {
-            //        var rollback = new RollbackAsync<Connection>();
-                    
-            //        var adapterDoc = new AdapterDocument()
-            //        {
-            //            Key = key,
-            //            IntegrationId = integrationId,
-            //            Name = name,
-            //            ResourceType = resourceType,
-            //        };
-            //        adapterDoc.SetIdentifiers(identifiers);
-
-            //        rollback.AddTaskCreateOrUpdate(integrationId,
-            //            (created, integrationAdapterLookupDoc) => integrationAdapterLookupDoc.AddLookupDocumentId(adapterId),
-            //            (IntegrationAdapterLookupDocument integrationAdapterLookupDoc) => integrationAdapterLookupDoc.RemoveSynchronizationDocumentId(adapterId),
-            //            azureStorageRepository);
-                    
-            //        if (!connectorAdapterMaybe.HasValue)
-            //        {
-            //            rollback.AddTaskCreate(adapterId, adapterDoc, () => default(Connection), azureStorageRepository);
-            //            return await rollback.ExecuteAsync(
-            //                () => new Connection
-            //                {
-            //                    adapterInternal = Convert(adapterDoc),
-            //                });
-            //        }
-
-            //        var connector = connectorAdapterMaybe.Value.Key;
-            //        var adapterRemote = connectorAdapterMaybe.Value.Value;
-            //        adapterRemote.adapterId = GetId(adapterRemote.key, adapterRemote.integrationId, adapterRemote.resourceType);
-
-            //        var connectorDoc = new ConnectorDocument()
-            //        {
-            //            CreatedBy = connector.createdBy,
-            //            LocalAdapter = adapterId,
-            //            RemoteAdapter = adapterRemote.adapterId,
-            //        };
-            //        connectorDoc.SetMethod(connector.synchronizationMethod);
-            //        adapterDoc.AddConnectorId(connector.connectorId);
-            //        rollback.AddTaskCreate(connector.connectorId, connectorDoc, () => default(Connection), azureStorageRepository);
-
-            //        var adapterRemoteDoc = new AdapterDocument()
-            //        {
-            //            Key = adapterRemote.key,
-            //            IntegrationId = integrationIdRemote,
-            //            Name = adapterRemote.name,
-            //            ResourceType = resourceType,
-            //        };
-            //        adapterRemoteDoc.AddConnectorId(connector.connectorId);
-            //        adapterRemoteDoc.SetIdentifiers(adapterRemote.identifiers);
-            //        rollback.AddTaskCreate(adapterRemote.adapterId, adapterRemoteDoc, () => default(Connection), azureStorageRepository);
-
-            //        rollback.AddTaskCreateOrUpdate(adapterRemote.integrationId,
-            //            (created, integrationAdapterLookupDoc) => integrationAdapterLookupDoc.AddLookupDocumentId(adapterRemote.adapterId),
-            //            (IntegrationAdapterLookupDocument integrationAdapterLookupDoc) => integrationAdapterLookupDoc.RemoveSynchronizationDocumentId(adapterRemote.adapterId),
-            //            azureStorageRepository);
-
-            //        rollback.AddTaskCreate(adapterId, adapterDoc, () => default(Connection), azureStorageRepository);
-
-            //        return await rollback.ExecuteAsync(
-            //            () => new Connection
-            //            {
-            //                adapterInternal = Convert(adapterDoc),
-            //                adapterExternal = Convert(adapterRemoteDoc),
-            //                connector = ConnectorDocument.Convert(connectorDoc),
-            //            });
-            //    });
-        }
-
-        private static Task<Connection> UpdateAsync(Guid adapterId,
-            string key, string name, KeyValuePair<string, string>[] identifiers,
-            KeyValuePair<Connector, Adapter>? connectorAdapterMaybe,
-            string resourceType, Guid integrationId, Guid integrationIdRemote)
-        {
-            throw new NotImplementedException();
-            //return AzureStorageRepository.Connection(
-            //    async azureStorageRepository =>
-            //    {
-            //        var rollback = new RollbackAsync<Connection>();
-                    
-            //        rollback.AddTaskCreateOrUpdate(integrationId,
-            //            (created, integrationAdapterLookupDoc) => integrationAdapterLookupDoc.AddLookupDocumentId(adapterId),
-            //            (IntegrationAdapterLookupDocument integrationAdapterLookupDoc) => integrationAdapterLookupDoc.RemoveSynchronizationDocumentId(adapterId),
-            //            azureStorageRepository);
-                    
-            //        var connection = new Connection
-            //        {
-            //            adapterInternal = new Adapter()
-            //            {
-            //                adapterId = adapterId,
-            //                key = key,
-            //                name = name,
-            //                identifiers = identifiers,
-            //                integrationId = integrationId,
-            //                resourceType = resourceType,
-            //            },
-            //        };
-
-            //        if (!connectorAdapterMaybe.HasValue)
-            //        {
-            //            rollback.AddTaskUpdate<KeyValuePair<string, KeyValuePair<string, string>[]>, Connection, AdapterDocument>(adapterId,
-            //                (adapterDoc, onModified, onNotModified) =>
-            //                {
-            //                    var rollbackSave = adapterDoc.Name.PairWithValue(adapterDoc.GetIdentifiers());
-            //                    adapterDoc.Name = name;
-            //                    adapterDoc.SetIdentifiers(identifiers);
-            //                    adapterDoc.ResourceType = resourceType;
-            //                    return onModified(rollbackSave);
-            //                },
-            //                (save, adapterDoc) =>
-            //                {
-            //                    adapterDoc.Name = save.Key;
-            //                    adapterDoc.SetIdentifiers(save.Value);
-            //                    adapterDoc.ResourceType = resourceType;
-            //                    return true;
-            //                },
-            //                () => connection,
-            //                azureStorageRepository);
-            //            return await rollback.ExecuteAsync(() => connection);
-            //        }
-
-            //        var connector = connectorAdapterMaybe.Value.Key;
-            //        var adapterRemote = connectorAdapterMaybe.Value.Value;
-            //        adapterRemote.adapterId = GetId(adapterRemote.key, adapterRemote.integrationId, adapterRemote.resourceType);
-
-            //        var connectorDoc = new ConnectorDocument()
-            //        {
-            //            CreatedBy = connector.createdBy,
-            //            LocalAdapter = adapterId,
-            //            RemoteAdapter = adapterRemote.adapterId,
-            //        };
-            //        connectorDoc.SetMethod(connector.synchronizationMethod);
-            //        rollback.AddTaskCreate(connector.connectorId, connectorDoc, () => default(Connection), azureStorageRepository);
-
-            //        var adapterRemoteDoc = new AdapterDocument()
-            //        {
-            //            Key = adapterRemote.key,
-            //            IntegrationId = integrationIdRemote,
-            //            Name = adapterRemote.name,
-            //            ResourceType = resourceType,
-            //        };
-            //        adapterRemoteDoc.AddConnectorId(connector.connectorId);
-            //        adapterRemoteDoc.SetIdentifiers(adapterRemote.identifiers);
-            //        rollback.AddTaskCreate(adapterRemote.adapterId, adapterRemoteDoc, () => default(Connection), azureStorageRepository);
-                    
-            //        rollback.AddTaskCreateOrUpdate(adapterRemote.integrationId,
-            //            (created, integrationAdapterLookupDoc) => integrationAdapterLookupDoc.AddLookupDocumentId(adapterRemote.adapterId),
-            //            (IntegrationAdapterLookupDocument integrationAdapterLookupDoc) => integrationAdapterLookupDoc.RemoveSynchronizationDocumentId(adapterRemote.adapterId),
-            //            azureStorageRepository);
-                    
-            //        rollback.AddTaskUpdate<KeyValuePair<KeyValuePair<string, Guid[]>, KeyValuePair<string, string>[]>, Connection, AdapterDocument>(adapterId,
-            //                (adapterDoc, onModified, onNotModified) =>
-            //                {
-            //                    var rollbackSave = adapterDoc.Name.PairWithValue(adapterDoc.GetConnectorIds()).PairWithValue(adapterDoc.GetIdentifiers());
-            //                    adapterDoc.AddConnectorId(connector.connectorId);
-            //                    adapterDoc.Name = name;
-            //                    adapterDoc.SetIdentifiers(identifiers);
-            //                    adapterDoc.ResourceType = resourceType;
-            //                    return onModified(rollbackSave);
-            //                },
-            //                (save, adapterDoc) =>
-            //                {
-            //                    adapterDoc.Name = save.Key.Key;
-            //                    adapterDoc.SetConnectorIds(save.Key.Value);
-            //                    adapterDoc.SetIdentifiers(save.Value);
-            //                    adapterDoc.ResourceType = resourceType;
-            //                    return true;
-            //                },
-            //                () => connection,
-            //                azureStorageRepository);
-            //        return await rollback.ExecuteAsync(() => connection);
-            //    });
-        }
-
-
+        
         internal static Task<TResult> DeleteByIdAsync<TResult>(Guid synchronizationId,
             Func<TResult> onDeleted,
             Func<TResult> onNotFound)
