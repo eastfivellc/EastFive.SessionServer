@@ -406,7 +406,7 @@
     </ProjectReference>
     <ProjectReference Include="..\BlackBarLabs.Api\EastFive.Api.csproj">
       <Project>{aaa1724b-0787-4ce1-bad5-e3c930db07c1}</Project>
-      <Name>BlackBarLabs.Api</Name>
+      <Name>EastFive.Api</Name>
     </ProjectReference>
     <ProjectReference Include="$(SolutionDir)\BlackBarLabs.Persistence.Azure\BlackBarLabs.Persistence.Azure.csproj">
       <Project>{a228d9d3-91c9-48cb-9498-8e7b39f10ffe}</Project>
