@@ -71,7 +71,7 @@ namespace EastFive.Azure.Synchronization
         /// <summary>
         /// "Internal" integration id for convenience methods
         /// </summary>
-        private static Guid internalIntegrationId = default(Guid);
+        private static Guid defaultInternalIntegrationId = default(Guid);
 
         abstract public string ResourceType { get; }
 
@@ -102,6 +102,63 @@ namespace EastFive.Azure.Synchronization
                             return adapterInternalStorage;
                         }))
                 .WhenAllAsync();
+        }
+
+        public static Task<TResult> CreateOrUpdateConnection<TResult>(string resourceKeyInternal, Guid internalSystemItegrationId,
+            string resourceKeyExternalSystem, Guid externalSystemIntegrationId,
+            string resourceType,
+            Func<Connector, TResult> onSuccess)
+        {
+            return Persistence.AdapterDocument.FindOrCreateAsync(resourceKeyInternal, internalSystemItegrationId, resourceType,
+                (createdAdapterInteral, adapterInternal, saveAdapterInternalAsync) =>
+                    Persistence.AdapterDocument.FindOrCreateAsync(resourceKeyExternalSystem, externalSystemIntegrationId, resourceType,
+                        async (createdAdapterExternal, adapterExternal, saveAdapterExternalAsync) =>
+                        {
+                            var mutualConnections = adapterInternal.connectorIds.Intersect(adapterExternal.connectorIds);
+                            if (mutualConnections.Any())
+                            {
+                                var connectorIdMutual = mutualConnections.First();
+                                var connector = new Connector
+                                {
+                                    connectorId = connectorIdMutual,
+                                    adapterExternalId = adapterExternal.adapterId,
+                                    adapterInternalId = adapterInternal.adapterId,
+
+                                    // BOLD assumptions based on this being a convenience method
+                                    createdBy = adapterInternal.adapterId,
+                                    synchronizationMethod = Connector.SynchronizationMethod.ignore,
+                                };
+                                return onSuccess(connector);
+                            }
+
+                            var adapterInternalId = createdAdapterInteral ?
+                                await saveAdapterInternalAsync(adapterInternal)
+                                :
+                                adapterInternal.adapterId;
+                            var adapterExternalId = createdAdapterExternal ?
+                                await saveAdapterExternalAsync(adapterExternal)
+                                :
+                                adapterExternal.adapterId;
+
+                            var connectorId = Guid.NewGuid();
+                            return await await Persistence.ConnectorDocument.CreateWithoutAdapterUpdateAsync(connectorId,
+                                    adapterInternalId, adapterExternalId, Connector.SynchronizationMethod.ignore, resourceType,
+                                () => onSuccess(
+                                    new Connector
+                                    {
+                                        connectorId = connectorId,
+                                        adapterExternalId = adapterExternalId,
+                                        adapterInternalId = adapterInternalId,
+                                        createdBy = adapterInternalId,
+                                        synchronizationMethod = Connector.SynchronizationMethod.ignore,
+                                    }).ToTask(),
+                                () => throw new Exception("Guid not unique."),
+                                async (getRelationshipIdAsync) =>
+                                {
+                                    var existingConnector = await getRelationshipIdAsync();
+                                    return onSuccess(existingConnector);
+                                });
+                        }));
         }
 
         //public async Task<TResult> ResolveResourcesAsync<TResourceInternal, TResult>(
@@ -223,7 +280,7 @@ namespace EastFive.Azure.Synchronization
         //                return onMatch(connections);
         //            });
         //}
-        
+
         public static Task<TResult> FindAdapterByIdAsync<TResult>(Guid synchronizationId,
             Func<EastFive.Azure.Synchronization.Adapter, TResult> onFound,
             Func<TResult> onNotFound)
@@ -295,6 +352,47 @@ namespace EastFive.Azure.Synchronization
                 onReferenceNotFound);
         }
 
+        public static async Task<TResult> FindAdapterConnectorByKeyAsync<TResult>(string localResourceKey, Guid localIntegrationId, string localResourceType,
+                Guid remoteIntegrationId,
+            Func<Connector, Adapter, TResult> onFound,
+            Func<TResult> onLocalAdapterNotFound)
+        {
+            return await await FindAdapterByKeyAsync(localResourceKey, localIntegrationId, localResourceType,
+                (localAdapter) => localAdapter.connectorIds
+                    .SelectAsyncOptional<Guid, KeyValuePair<Adapter, Connector>>(
+                        (connectorId, select, skip) => Persistence.ConnectorDocument.FindByIdWithAdapterRemoteAsync(connectorId, localAdapter,
+                            (remoteConnector, remoteAdapter) => select(remoteAdapter.PairWithValue(remoteConnector)),
+                            skip))
+                   .FirstMatchAsync<KeyValuePair<Adapter, Connector>, TResult>(
+                        (adapterConnectorKvp, next) =>
+                        {
+                            var remoteAdapter = adapterConnectorKvp.Key;
+                            var remoteConnector = adapterConnectorKvp.Value;
+                            if (remoteAdapter.integrationId == remoteIntegrationId)
+                                return onFound(remoteConnector, remoteAdapter);
+                            return next();
+                        },
+                        () => onLocalAdapterNotFound()),
+                onLocalAdapterNotFound.AsAsyncFunc());
+        }
+
+        public static Task<TResult> FindAdapterConnectorsByKeyAsync<TResult>(string localResourceKey, Guid localIntegrationId, string localResourceType,
+            Func<IEnumerableAsync<KeyValuePair<Connector, Adapter>>, TResult> onFound,
+            Func<TResult> onLocalAdapterNotFound)
+        {
+            return FindAdapterByKeyAsync(localResourceKey, localIntegrationId, localResourceType,
+                (localAdapter) =>
+                {
+                    var adapterConnectorKpvs = localAdapter.connectorIds
+                        .SelectAsyncOptional<Guid, KeyValuePair<Connector, Adapter>>(
+                            (connectorId, select, skip) => Persistence.ConnectorDocument.FindByIdWithAdapterRemoteAsync(connectorId, localAdapter,
+                                (remoteConnector, remoteAdapter) => select(remoteAdapter.PairWithKey(remoteConnector)),
+                                skip));
+                    return onFound(adapterConnectorKpvs);
+                },
+                onLocalAdapterNotFound);
+        }
+
         public abstract Task<TResult> GetAdaptersAsync<TResult>(
             Guid integrationId,
             Func<IEnumerable<Adapter>, TResult> onMatch,
@@ -305,28 +403,16 @@ namespace EastFive.Azure.Synchronization
             Func<TResult> onSuccess,
             Func<string, TResult> onFailure);
 
-        public static async Task<TResult> FindAdapterConnectorByKeyAsync<TResult>(string key, Guid integrationId, string resourceType,
-            Func<Adapter, Connector, TResult> onFound,
+        #region Convenience methods
+        
+        public static Task<TResult> FindInternalAdapterConnectorByExternalKeyAsync<TResult>(string key, Guid integrationId, string resourceType,
+            Func<Connector, Adapter, TResult> onFound,
             Func<TResult> onReferenceNotFound)
         {
-            return await await FindAdapterByKeyAsync(key, integrationId, resourceType,
-                (adapter) => adapter.connectorIds
-                    .SelectAsyncOptional<Guid, KeyValuePair<Guid, Connector>>(
-                        (connectorId, select, skip) => Connectors.FindByIdAsync(connectorId, integrationId,
-                            (connector, integrationIdOther) => select(integrationIdOther.PairWithValue(connector)),
-                            skip))
-                   .FirstMatchAsync(
-                        async (connectorKvp, next) =>
-                        {
-                            if (connectorKvp.Key == internalIntegrationId)
-                                return onFound(adapter, connectorKvp.Value);
-                            return await next();
-                        },
-                        () => onReferenceNotFound()),
-                onReferenceNotFound.AsAsyncFunc());
+            return FindAdapterConnectorByKeyAsync(key, integrationId, resourceType, defaultInternalIntegrationId,
+                onFound,
+                onReferenceNotFound);
         }
-
-        #region Convenience methods
 
         /// <summary>
         /// Convenience method for creating an adapter for an "internal" and external resource, and a connector for the two adapters.
@@ -338,88 +424,42 @@ namespace EastFive.Azure.Synchronization
         /// <param name="resourceType"></param>
         /// <param name="onSuccess"></param>
         /// <returns></returns>
-        public static Task<TResult> CreateOrUpdateConnection<TResult>(Guid resourceIdInternal,
-            string resourceIdExternalSystem, Guid externalSystemIntegrationId,
+        public static Task<TResult> CreateOrUpdateInternalExternalConnection<TResult>(Guid resourceIdInternal,
+            string resourceKeyExternal, Guid externalSystemIntegrationId,
             string resourceType,
             Func<Guid, TResult> onSuccess)
         {
-            return CreateOrUpdateConnection(resourceIdInternal.ToString("N"), resourceIdExternalSystem, externalSystemIntegrationId, resourceType, onSuccess);
+            return CreateOrUpdateInternalExternalConnection(resourceIdInternal.ToString("N"), resourceKeyExternal, externalSystemIntegrationId, resourceType, onSuccess);
         }
 
         public static Task<TResult> CreateOrUpdateConnection<TResult>(Guid resourceIdInternal,
-            string resourceIdExternalSystem, Guid externalSystemIntegrationId,
+            string resourceKeyExternal, Guid externalSystemIntegrationId,
             string resourceType,
             Func<Connector, TResult> onSuccess)
         {
-            return CreateOrUpdateConnection(resourceIdInternal.ToString("N"), resourceIdExternalSystem, externalSystemIntegrationId, resourceType, onSuccess);
+            return CreateOrUpdateInternalExternalConnection(resourceIdInternal.ToString("N"), resourceKeyExternal, externalSystemIntegrationId, resourceType, onSuccess);
         }
 
-        public static Task<TResult> CreateOrUpdateConnection<TResult>(string resourceKeyInternal,
-            string resourceKeyExternalSystem, Guid externalSystemIntegrationId,
+        public static Task<TResult> CreateOrUpdateInternalExternalConnection<TResult>(string resourceKeyInternal,
+            string resourceKeyExternal, Guid externalSystemIntegrationId,
             string resourceType,
             Func<Guid, TResult> onSuccess)
         {
-            return CreateOrUpdateConnection(resourceKeyInternal, 
-                    resourceKeyExternalSystem, externalSystemIntegrationId,
+            return CreateOrUpdateInternalExternalConnection(resourceKeyInternal,
+                    resourceKeyExternal, externalSystemIntegrationId,
                     resourceType,
                 (Connector connector) => onSuccess(connector.connectorId));
         }
 
-        public static Task<TResult> CreateOrUpdateConnection<TResult>(string resourceKeyInternal,
-            string resourceKeyExternalSystem, Guid externalSystemIntegrationId,
+        public static Task<TResult> CreateOrUpdateInternalExternalConnection<TResult>(string resourceKeyInternal,
+            string resourceKeyExternal, Guid externalSystemIntegrationId,
             string resourceType,
             Func<Connector, TResult> onSuccess)
         {
-            return Persistence.AdapterDocument.FindOrCreateAsync(resourceKeyInternal, internalIntegrationId, resourceType,
-                (createdAdapterInteral, adapterInternal, saveAdapterInternalAsync) =>
-                    Persistence.AdapterDocument.FindOrCreateAsync(resourceKeyExternalSystem, externalSystemIntegrationId, resourceType,
-                        async (createdAdapterExternal, adapterExternal, saveAdapterExternalAsync) =>
-                        {
-                            var mutualConnections = adapterInternal.connectorIds.Intersect(adapterExternal.connectorIds);
-                            if (mutualConnections.Any())
-                            {
-                                var connectorIdMutual = mutualConnections.First();
-                                var connector = new Connector
-                                {
-                                    connectorId = connectorIdMutual,
-                                    adapterExternalId = adapterExternal.adapterId,
-                                    adapterInternalId = adapterInternal.adapterId,
-
-                                    // BOLD assumptions based on this being a convenience method
-                                    createdBy = adapterInternal.adapterId,
-                                    synchronizationMethod = Connector.SynchronizationMethod.ignore,
-                                };
-                                return onSuccess(connector);
-                            }
-
-                            var adapterInternalId = createdAdapterInteral?
-                                await saveAdapterInternalAsync(adapterInternal)
-                                :
-                                adapterInternal.adapterId;
-                            var adapterExternalId = createdAdapterExternal ?
-                                await saveAdapterExternalAsync(adapterExternal)
-                                :
-                                adapterExternal.adapterId;
-
-                            var connectorId = Guid.NewGuid();
-                            return await await Persistence.ConnectorDocument.CreateWithoutAdapterUpdateAsync(connectorId, 
-                                    adapterInternalId, adapterExternalId, Connector.SynchronizationMethod.ignore, resourceType,
-                                () => onSuccess(
-                                    new Connector
-                                    {
-                                        connectorId = connectorId,
-                                        adapterExternalId = adapterExternalId,
-                                        adapterInternalId = adapterInternalId,
-                                        createdBy = adapterInternalId,
-                                        synchronizationMethod = Connector.SynchronizationMethod.ignore,
-                                    }).ToTask(),
-                                () => throw new Exception("Guid not unique."),
-                                async (getRelationshipIdAsync) =>
-                                {
-                                    var existingConnector = await getRelationshipIdAsync();
-                                    return onSuccess(existingConnector);
-                                });
-                        }));
+            return CreateOrUpdateConnection(resourceKeyInternal, defaultInternalIntegrationId,
+                resourceKeyExternal, externalSystemIntegrationId,
+                resourceType,
+                onSuccess);
         }
 
         public static IEnumerableAsync<Guid> CreateOrReplaceBatchConnection(
@@ -449,7 +489,7 @@ namespace EastFive.Azure.Synchronization
                     resourceIdKeys
                         .Distinct(resourceIdKey => resourceIdKey.Key)
                         .Select(resourceIdKey => resourceIdKey.Key.ToString("N")),
-                    internalIntegrationId, resourceType)
+                    defaultInternalIntegrationId, resourceType)
                 .ToArrayAsync(); //.ToDictionary(adapter => Guid.Parse(adapter.key), adapter => adapter.adapterId);
 
             var adaptersExternalTask = Persistence.AdapterDocument
@@ -457,7 +497,7 @@ namespace EastFive.Azure.Synchronization
                     resourceIdKeys
                         .Distinct(resourceIdKey => resourceIdKey.Value)
                         .Select(resourceIdKey => resourceIdKey.Value),
-                    internalIntegrationId, resourceType)
+                    defaultInternalIntegrationId, resourceType)
                 .ToArrayAsync(); // (adapter => adapter.key, adapter => adapter.adapterId);
 
             var adaptersInternal = (await adaptersInternalTask)
@@ -526,7 +566,7 @@ namespace EastFive.Azure.Synchronization
                             return connectorAdapterExternalIdKvps.First(
                                 (connectorAdapterExternalIdKvp, next) =>
                                 {
-                                    if (connectorAdapterExternalIdKvp.Value.integrationId == internalIntegrationId)
+                                    if (connectorAdapterExternalIdKvp.Value.integrationId == defaultInternalIntegrationId)
                                         if(Guid.TryParse(connectorAdapterExternalIdKvp.Value.key, out Guid internalId))
                                             return onFound(internalId);
 
@@ -566,7 +606,7 @@ namespace EastFive.Azure.Synchronization
                 integrationIdResourceKeys =>
                 {
                     return integrationIdResourceKeys
-                        .FirstMatchAsync(
+                        .FirstAsyncMatchAsync(
                             async (integrationIdResourceKey, next) =>
                             {
                                 var externalAdapter = integrationIdResourceKey.Value;
@@ -595,7 +635,7 @@ namespace EastFive.Azure.Synchronization
             Func<IEnumerableAsync<KeyValuePair<Connector, Adapter>>, TResult> onFound,
             Func<TResult> onAdapterNotFound)
         {
-            return Persistence.AdapterDocument.FindByKeyAsync<TResult>(keyInternal, internalIntegrationId, resourceType,
+            return Persistence.AdapterDocument.FindByKeyAsync<TResult>(keyInternal, defaultInternalIntegrationId, resourceType,
                 adapterInternal =>
                 {
                     var connectorAdapterKvps = adapterInternal.connectorIds
@@ -610,57 +650,29 @@ namespace EastFive.Azure.Synchronization
                     return onAdapterNotFound();
                 });
         }
-
-        public static Task<TResult> FindResourceAdapterByInternalIdAsync<TResult>(Guid resourceGuid, string resourceType,
-            Func<KeyValuePair<Guid, Adapter>[], TResult> onFound,
-            Func<TResult> onConnectionNotFound)
+        
+        public static Task<TResult> FindAdapterConnectorsByInternalIdAsync<TResult>(Guid internalGuidKey, string resourceType,
+            Func<IEnumerableAsync<KeyValuePair<Connector, Adapter>>, TResult> onFoundInternalAdapter,
+            Func<TResult> onInternalAdapterNotFound)
         {
-            var key = resourceGuid.ToString("N");
-            return FindResourceAdapterByKeyAsync(key, resourceType, internalIntegrationId,
-                onFound,
-                onConnectionNotFound);
+            var internalKey = internalGuidKey.ToString("N");
+            return FindAdapterConnectorsByKeyAsync(internalKey, defaultInternalIntegrationId, resourceType,
+                onFoundInternalAdapter,
+                onInternalAdapterNotFound);
         }
 
-        public static async Task<TResult> FindResourceAdapterByKeyAsync<TResult>(string resourceKey, string resourceType, Guid sourceIntegrationId,
-            Func<KeyValuePair<Guid, Adapter>[], TResult> onFound,
-            Func<TResult> onConnectionNotFound)
+        public static Task<TResult> FindAdapterConnectorByInternalIdAsync<TResult>(Guid internalGuidKey, string resourceType, Guid remoteIntegrationId,
+            Func<Connector, Adapter, TResult> onFoundInternalAdapter,
+            Func<TResult> onInternalAdapterNotFound)
         {
-            return await await Persistence.AdapterDocument.FindByKeyAsync(resourceKey, sourceIntegrationId, resourceType,
-                adapterInternal =>
-                {
-                    return Persistence.ConnectorDocument.FindByAdapterWithConnectionAsync(adapterInternal,
-                        (KeyValuePair<Connector, Adapter>[] connectorAdapterExternalIdKvps) =>
-                            onFound(connectorAdapterExternalIdKvps.SelectValues(
-                                adapter => adapter.integrationId.PairWithValue(adapter)).ToArray()),
-                        onConnectionNotFound);
-                },
-                onConnectionNotFound.AsAsyncFunc());
-        }
-
-        public static IEnumerableAsync<KeyValuePair<Guid, Adapter>> FindResourceKeysByInternalIdAsync(Guid keyGuid, string resourceType)
-        {
-            // TODO: Make all of this not aweful!!! DO NOT CODE LIKE THIS UNLESS ITS FRIDAY AFTERNOON!!!
-
-            // TODO: Make Persistence.ConnectorDocument.FindByAdapterWithConnectionAsync EnumerableAsync
-            var task = FindResourceAdapterByInternalIdAsync(keyGuid, resourceType,
-                vs => vs,
-                () => new KeyValuePair<Guid, Adapter>[] { });
-            var values = default(KeyValuePair<Guid, Adapter>[]);
-            int index = 0;
-            return EnumerableAsync.Yield<KeyValuePair<Guid, Adapter>>(
-                async (yieldReturn, yieldBreak) =>
-                {
-                    if (values.IsDefault())
-                        values = await task;
-                    if (index >= values.Length)
-                        return yieldBreak;
-                    index = index + 1;
-                    return yieldReturn(values[index - 1]);
-                });
+            var internalKey = internalGuidKey.ToString("N");
+            return FindAdapterConnectorByKeyAsync(internalKey, defaultInternalIntegrationId, resourceType, remoteIntegrationId,
+                onFoundInternalAdapter,
+                onInternalAdapterNotFound);
         }
 
         #endregion
-        
+
         public static Task<TResult> SynchronizeLockedAsync<TResult>(Guid connectorId, string resourceType,
             Func<TimeSpan?, 
                 Func<TResult, Task<Persistence.ConnectorDocument.ILockResult<TResult>>>, 
