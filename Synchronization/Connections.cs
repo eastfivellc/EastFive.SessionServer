@@ -151,11 +151,30 @@ namespace EastFive.Azure.Synchronization
                                         adapterInternalId = adapterInternalId,
                                         createdBy = adapterInternalId,
                                         synchronizationMethod = Connector.SynchronizationMethod.ignore,
-                                    }).ToTask(),
+                                    }).AsTask(),
                                 () => throw new Exception("Guid not unique."),
-                                async (getRelationshipIdAsync) =>
+                                async (existingConnector) =>
                                 {
-                                    var existingConnector = await getRelationshipIdAsync();
+                                    Task<bool> UpdateAdapter(Adapter adapter)
+                                    {
+                                        return Persistence.AdapterDocument.UpdateAsync(adapter.adapterId,
+                                            async (adapterToUpdate, saveAdapter) =>
+                                            {
+                                                var updateConnectorList = adapterToUpdate.connectorIds.Append(existingConnector.connectorId).ToArray();
+                                                await saveAdapter(updateConnectorList, adapterToUpdate.name, adapterToUpdate.identifiers);
+                                                return true;
+                                            },
+                                            () => false);
+                                    }
+                                    if (!adapterInternal.connectorIds.Contains(existingConnector.connectorId))
+                                    {
+                                        bool updated = await UpdateAdapter(adapterInternal);
+                                    }
+                                    if (!adapterExternal.connectorIds.Contains(existingConnector.connectorId))
+                                    {
+                                        bool updated = await UpdateAdapter(adapterExternal);
+                                    }
+
                                     return onSuccess(existingConnector);
                                 });
                         }));
@@ -702,7 +721,39 @@ namespace EastFive.Azure.Synchronization
                 onNotFound:onNotFound);
         }
 
-        
+        public static async Task<TResult> DeleteAdapterAndConnections<TResult>(Adapter adapter, 
+            Func<TResult> onDeleted,
+            Func<string, TResult> onFailure)
+        {
+            bool [] successes = await adapter.connectorIds
+                .Select(
+                    async connectorId =>
+                    {
+                        bool deleted = await await Persistence.ConnectorDocument.DeleteByIdAsync(connectorId,
+                            (adapterId1, adapterId2) =>
+                            {
+                                var otherAdapterId = adapterId1 == adapter.adapterId ?
+                                    adapterId2
+                                    :
+                                    adapterId1;
+                                return Persistence.AdapterDocument.UpdateAsync(otherAdapterId,
+                                    async (otherAdapter, updateOtherAdapterAsync) =>
+                                    {
+                                        await updateOtherAdapterAsync(otherAdapter.connectorIds.Where(cId => cId != connectorId).ToArray(), otherAdapter.name, otherAdapter.identifiers);
+                                        return true;
+                                    },
+                                    () => false);
+                            },
+                            () => false.AsTask());
+                        return deleted;
+                    })
+                .AsyncEnumerable()
+                .JoinTask(Persistence.AdapterDocument.DeleteByIdAsync(adapter.adapterId,
+                    () => true,
+                    () => false))
+                .ToArrayAsync();
+            return onDeleted();
 
+        }
     }
 }

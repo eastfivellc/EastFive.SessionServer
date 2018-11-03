@@ -52,7 +52,10 @@ namespace EastFive.Azure.Synchronization
                                     return onCreated();
                                 },
                                 onAlreadyExists.AsAsyncFunc(),
-                                async (callback) => onRelationshipAlreadyExists((await callback()).connectorId));
+                                (existingConnector) =>
+                                {
+                                    return onRelationshipAlreadyExists(existingConnector.connectorId).AsTask();
+                                });
                         },
                         () => onAdapterDoesNotExist(destinationAdapterId));
                 },
