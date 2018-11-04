@@ -149,72 +149,82 @@ namespace EastFive.Azure.Synchronization.Persistence
         }
 
 
-        public static async Task<TResult> CreateWithoutAdapterUpdateAsync<TResult>(Guid connectorId,
+        public static Task<TResult> CreateWithoutAdapterUpdateAsync<TResult>(Guid connectorId,
                 Guid adapterInternalId, Guid adapterExternalId, Connector.SynchronizationMethod method, string resourceType,
             Func<TResult> onCreated,
             Func<TResult> onAlreadyExists,
             Func<Connector, TResult> onRelationshipAlreadyExists)
         {
-            var retryResult = await await AzureStorageRepository.Connection(
-                azureStorageRepository =>
+            return AzureStorageRepository.Connection(
+                async azureStorageRepository =>
                 {
                     var lookupId = GetId(adapterInternalId, adapterExternalId);
-                    var rollback = new RollbackAsync<Task<KeyValuePair<bool, TResult>>>();
-                    rollback.AddTaskCreate(connectorId,
-                            new ConnectorDocument()
-                            {
-                                LocalAdapter = adapterInternalId,
-                                RemoteAdapter = adapterExternalId,
-                                Method = Enum.GetName(typeof(Connector.SynchronizationMethod), method),
-                            },
-                        () => false.PairWithValue(onAlreadyExists()).AsTask(),
-                        azureStorageRepository);
-                    rollback.AddTaskCreate(lookupId,
+                    return await await azureStorageRepository.CreateAsync(lookupId,
                             new EastFive.Persistence.Azure.Documents.LookupDocument()
                             {
                                 Lookup = connectorId,
                             },
                         async () =>
                         {
-                            return await await azureStorageRepository.FindByIdAsync(lookupId,
-                                    async (EastFive.Persistence.Azure.Documents.LookupDocument lookupDoc) =>
-                                        await await azureStorageRepository.FindByIdAsync(lookupDoc.Lookup,
-                                            (ConnectorDocument connectorDoc) => onRelationshipAlreadyExists(Convert(connectorDoc)).PairWithKey(false).AsTask(),
-                                            () =>
-                                            {
-                                                // if the referenced doc does not exists, this was legacy data, delete and retry
-                                                return azureStorageRepository.DeleteIfAsync<EastFive.Persistence.Azure.Documents.LookupDocument, KeyValuePair<bool, TResult>>(lookupId,
-                                                    async (doc, deleteAsync) =>
-                                                    {
-                                                        await deleteAsync();
-                                                        return true.PairWithValue(default(TResult));
-                                                    },
-                                                    () => true.PairWithValue(default(TResult)));
-                                            }),
-                                    () => true.PairWithValue(default(TResult)).AsTask());
-                        },
-                        azureStorageRepository);
-                     
-                    rollback.AddTaskCreate(connectorId,
-                            new ConnectorSynchronizationDocument
-                            {
-                                Locked = false,
-                            },
-                        () => false.PairWithValue(onAlreadyExists()).AsTask(),
-                        azureStorageRepository,
-                        mutatePartition: GetMutatePartitionKey(resourceType));
-                    
-                    return rollback.ExecuteAsync(
-                        () => onCreated().PairWithKey(true).AsTask());
-                });
-            if (!retryResult.Key)
-                return retryResult.Value;
+                            var creatingSyncDocTask = azureStorageRepository.CreateOrUpdateAsync<ConnectorSynchronizationDocument, bool>(connectorId,
+                                async (created, connectorSyncDoc, saveAsync) =>
+                                {
+                                    if (connectorSyncDoc.Locked)
+                                    {
+                                        connectorSyncDoc.Locked = false;
+                                        await saveAsync(connectorSyncDoc);
+                                    }
+                                    return true;
+                                },
+                                mutatePartition: GetMutatePartitionKey(resourceType));
 
-            return await CreateWithoutAdapterUpdateAsync(connectorId,
-                    adapterInternalId, adapterExternalId, method, resourceType,
-                onCreated,
-                onAlreadyExists,
-                onRelationshipAlreadyExists);
+                            return await await azureStorageRepository.CreateAsync(connectorId,
+                                new ConnectorDocument()
+                                {
+                                    LocalAdapter = adapterInternalId,
+                                    RemoteAdapter = adapterExternalId,
+                                    Method = Enum.GetName(typeof(Connector.SynchronizationMethod), method),
+                                },
+                                async () =>
+                                {
+                                    bool createdSyncDoc = await creatingSyncDocTask;
+                                    return onCreated();
+                                },
+                                onAlreadyExists.AsAsyncFunc());
+                            
+                        },
+                        async () =>
+                        {
+                            return await await azureStorageRepository.FindByIdAsync(lookupId,
+                                async (EastFive.Persistence.Azure.Documents.LookupDocument lookupDoc) =>
+                                    await await azureStorageRepository.FindByIdAsync(lookupDoc.Lookup,
+                                        (ConnectorDocument connectorDoc) => onRelationshipAlreadyExists(Convert(connectorDoc)).AsTask(),
+                                        async () =>
+                                        {
+                                            // if the referenced doc does not exists, this was legacy data, delete and retry
+                                            return await await azureStorageRepository.DeleteIfAsync<EastFive.Persistence.Azure.Documents.LookupDocument, Task<TResult>>(lookupId,
+                                                async (doc, deleteAsync) =>
+                                                {
+                                                    await deleteAsync();
+                                                    return CreateWithoutAdapterUpdateAsync(connectorId,
+                                                            adapterInternalId, adapterExternalId, method, resourceType,
+                                                        onCreated,
+                                                        onAlreadyExists,
+                                                        onRelationshipAlreadyExists);
+                                                },
+                                                () => CreateWithoutAdapterUpdateAsync(connectorId,
+                                                            adapterInternalId, adapterExternalId, method, resourceType,
+                                                        onCreated,
+                                                        onAlreadyExists,
+                                                        onRelationshipAlreadyExists));
+                                        }),
+                                () => CreateWithoutAdapterUpdateAsync(connectorId,
+                                        adapterInternalId, adapterExternalId, method, resourceType,
+                                    onCreated,
+                                    onAlreadyExists,
+                                    onRelationshipAlreadyExists));
+                        });
+                });
         }
 
         public static Task<TResult> UpdateAsync<TResult>(Guid connectorId,

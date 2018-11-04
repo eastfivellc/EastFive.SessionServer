@@ -115,7 +115,8 @@ namespace EastFive.Azure.Synchronization
                         async (createdAdapterExternal, adapterExternal, saveAdapterExternalAsync) =>
                         {
                             var mutualConnections = adapterInternal.connectorIds.Intersect(adapterExternal.connectorIds);
-                            if (mutualConnections.Any())
+                            var alreadyConnected = mutualConnections.Any();
+                            if (alreadyConnected)
                             {
                                 var connectorIdMutual = mutualConnections.First();
                                 var connector = new Connector
@@ -130,50 +131,33 @@ namespace EastFive.Azure.Synchronization
                                 };
                                 return onSuccess(connector);
                             }
-
-                            var adapterInternalId = createdAdapterInteral ?
-                                await saveAdapterInternalAsync(adapterInternal)
-                                :
-                                adapterInternal.adapterId;
-                            var adapterExternalId = createdAdapterExternal ?
-                                await saveAdapterExternalAsync(adapterExternal)
-                                :
-                                adapterExternal.adapterId;
-
+                            
                             var connectorId = Guid.NewGuid();
                             return await await Persistence.ConnectorDocument.CreateWithoutAdapterUpdateAsync(connectorId,
-                                    adapterInternalId, adapterExternalId, Connector.SynchronizationMethod.ignore, resourceType,
-                                () => onSuccess(
-                                    new Connector
-                                    {
-                                        connectorId = connectorId,
-                                        adapterExternalId = adapterExternalId,
-                                        adapterInternalId = adapterInternalId,
-                                        createdBy = adapterInternalId,
-                                        synchronizationMethod = Connector.SynchronizationMethod.ignore,
-                                    }).AsTask(),
+                                    adapterInternal.adapterId, adapterExternal.adapterId, Connector.SynchronizationMethod.ignore, resourceType,
+                                async () =>
+                                {
+                                    adapterInternal.connectorIds = adapterInternal.connectorIds.Append(connectorId).ToArray();
+                                    await saveAdapterInternalAsync(adapterInternal);
+                                    adapterExternal.connectorIds = adapterExternal.connectorIds.Append(connectorId).ToArray();
+                                    await saveAdapterExternalAsync(adapterExternal);
+                                    return onSuccess(
+                                        new Connector
+                                        {
+                                            connectorId = connectorId,
+                                            adapterExternalId = adapterExternal.adapterId,
+                                            adapterInternalId = adapterInternal.adapterId,
+                                            createdBy = adapterInternal.adapterId,
+                                            synchronizationMethod = Connector.SynchronizationMethod.ignore,
+                                        });
+                                },
                                 () => throw new Exception("Guid not unique."),
                                 async (existingConnector) =>
                                 {
-                                    Task<bool> UpdateAdapter(Adapter adapter)
-                                    {
-                                        return Persistence.AdapterDocument.UpdateAsync(adapter.adapterId,
-                                            async (adapterToUpdate, saveAdapter) =>
-                                            {
-                                                var updateConnectorList = adapterToUpdate.connectorIds.Append(existingConnector.connectorId).ToArray();
-                                                await saveAdapter(updateConnectorList, adapterToUpdate.name, adapterToUpdate.identifiers);
-                                                return true;
-                                            },
-                                            () => false);
-                                    }
-                                    if (!adapterInternal.connectorIds.Contains(existingConnector.connectorId))
-                                    {
-                                        bool updated = await UpdateAdapter(adapterInternal);
-                                    }
-                                    if (!adapterExternal.connectorIds.Contains(existingConnector.connectorId))
-                                    {
-                                        bool updated = await UpdateAdapter(adapterExternal);
-                                    }
+                                    adapterInternal.connectorIds = adapterInternal.connectorIds.Append(connectorId).ToArray();
+                                    await saveAdapterInternalAsync(adapterInternal);
+                                    adapterExternal.connectorIds = adapterExternal.connectorIds.Append(connectorId).ToArray();
+                                    await saveAdapterExternalAsync(adapterExternal);
 
                                     return onSuccess(existingConnector);
                                 });
