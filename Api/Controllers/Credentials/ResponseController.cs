@@ -122,7 +122,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                                             (why) => onResponse(HttpStatusCode.BadRequest, why, $"Location was null"));
                                 if (redirectUrl.Query.IsNullOrWhiteSpace())
                                     redirectUrl = redirectUrl.SetQueryParam("cache", Guid.NewGuid().ToString("N"));
-                                return onRedirect(redirectUrl, reason);
+                                return await onRedirect(redirectUrl, reason).AsTask();
                             },
                             onStop),
                     async (subject, credentialProvider, extraParams, createMappingAsync) =>
