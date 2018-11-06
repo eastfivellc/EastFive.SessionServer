@@ -159,8 +159,7 @@ namespace EastFive.Azure.Synchronization.Persistence
                         .Select(Convert);
                 });
         }
-
-
+        
         internal static Adapter Convert(AdapterDocument syncDoc)
         {
             return new Adapter
