@@ -37,7 +37,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                     return viewResponse("/SessionManagement/Index.cshtml", orderedDocs);
                 },
                 BlackBarLabs.Persistence.Azure.StorageTables.AzureStorageRepository.CreateRepository(
-                    Configuration.AppSettings.Storage));
+                    EastFive.Azure.AppSettings.ASTConnectionStringKey));
         }
         
         [EastFive.Api.HttpGet]
@@ -56,7 +56,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 },
                 () => viewResponse("", null).ToTask(),
                 BlackBarLabs.Persistence.Azure.StorageTables.AzureStorageRepository.CreateRepository(
-                    Configuration.AppSettings.Storage));
+                    EastFive.Azure.AppSettings.ASTConnectionStringKey));
         }
 
         [EastFive.Api.HttpGet]
@@ -77,7 +77,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 },
                 () => viewResponse("", null).ToTask(),
                 BlackBarLabs.Persistence.Azure.StorageTables.AzureStorageRepository.CreateRepository(
-                    Configuration.AppSettings.Storage));
+                    EastFive.Azure.AppSettings.ASTConnectionStringKey));
         }
 
         [EastFive.Api.HttpGet]
@@ -128,7 +128,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 },
                 () => viewResponse("", null).ToTask(),
                 BlackBarLabs.Persistence.Azure.StorageTables.AzureStorageRepository.CreateRepository(
-                    Configuration.AppSettings.Storage));
+                    EastFive.Azure.AppSettings.ASTConnectionStringKey));
         }
 
         [EastFive.Api.HttpGet]
@@ -155,7 +155,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 },
                 () => viewResponse("", null).ToTask(),
                 BlackBarLabs.Persistence.Azure.StorageTables.AzureStorageRepository.CreateRepository(
-                    Configuration.AppSettings.Storage));
+                    EastFive.Azure.AppSettings.ASTConnectionStringKey));
         }
 
     }

@@ -31,7 +31,7 @@ namespace EastFive.Api.Azure.Credentials
 
         public SAMLProvider()
         {
-            this.dataContext = new DataContext(Security.SessionServer.Configuration.AppSettings.Storage);
+            this.dataContext = new DataContext(EastFive.Azure.AppSettings.ASTConnectionStringKey);
         }
 
         [IntegrationName("SAML")]

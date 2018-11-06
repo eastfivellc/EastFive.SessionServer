@@ -280,7 +280,7 @@ namespace EastFive.Api.Azure
             {
                 return new EastFive.Security.SessionServer.Context(
                     () => new EastFive.Security.SessionServer.Persistence.DataContext(
-                        EastFive.Security.SessionServer.Configuration.AppSettings.Storage));
+                        EastFive.Azure.AppSettings.ASTConnectionStringKey));
             }
         }
         

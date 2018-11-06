@@ -91,7 +91,6 @@ namespace EastFive.Api.Azure.Modules
                     });
             }
         }
-
         
         protected override async Task<HttpResponseMessage> SendAsync(EastFive.Api.HttpApplication httpApp, HttpRequestMessage request, CancellationToken cancellationToken, Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> continuation)
         {
