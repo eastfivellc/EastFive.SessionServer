@@ -21,7 +21,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             return View("~/Views/ActAsUser/");
         }
 
-        [EastFive.Api.HttpGet]
+        [EastFive.Api.HttpGet (MatchAllParameters = true )]
         public static async Task<HttpResponseMessage> SessionManagement(
             EastFive.Api.Controllers.Security security,
             EastFive.Api.Azure.AzureApplication application,
@@ -42,7 +42,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
         
         [EastFive.Api.HttpGet]
         public static async Task<HttpResponseMessage> ReplicateLogin(
-            [QueryValidation(Name = "credential_process_id")]Guid credentialProcessId,
+            [QueryParameter(Name = "credential_process_id")]Guid credentialProcessId,
             EastFive.Api.Azure.AzureApplication application, HttpRequestMessage request,
             EastFive.Api.Controllers.RedirectResponse redirectResponse,
             EastFive.Api.Controllers.ViewStringResponse viewResponse)
@@ -61,7 +61,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
 
         [EastFive.Api.HttpGet]
         public static async Task<HttpResponseMessage> AuthenticationAsync(
-            [QueryValidation(Name = "authentication_process_id")]Guid credentialProcessId,
+            [QueryParameter(Name = "authentication_process_id")]Guid credentialProcessId,
             EastFive.Api.Azure.AzureApplication application, HttpRequestMessage request,
             EastFive.Api.Controllers.RedirectResponse redirectResponse,
             EastFive.Api.Controllers.ViewStringResponse viewResponse)
@@ -82,7 +82,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
 
         [EastFive.Api.HttpGet]
         public static async Task<HttpResponseMessage> RedeemAsync(
-            [QueryValidation(Name = "redemption_process_id")]Guid credentialProcessId,
+            [QueryParameter(Name = "redemption_process_id")]Guid credentialProcessId,
             EastFive.Api.Azure.AzureApplication application, HttpRequestMessage request,
             EastFive.Api.Controllers.RedirectResponse redirectResponse,
             EastFive.Api.Controllers.ViewStringResponse viewResponse)
@@ -133,7 +133,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
 
         [EastFive.Api.HttpGet]
         public static async Task<HttpResponseMessage> CreateResponseAsync(
-            [QueryValidation(Name = "login_process_id")]Guid credentialProcessId,
+            [QueryParameter(Name = "login_process_id")]Guid credentialProcessId,
             EastFive.Api.Azure.AzureApplication application, HttpRequestMessage request,
             EastFive.Api.Controllers.RedirectResponse redirectResponse,
             EastFive.Api.Controllers.ViewStringResponse viewResponse)
