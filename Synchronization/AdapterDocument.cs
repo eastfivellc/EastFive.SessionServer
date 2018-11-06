@@ -196,6 +196,7 @@ namespace EastFive.Azure.Synchronization.Persistence
                                     adapterDoc.Name = adapterUpdated.name;
                                     adapterDoc.ResourceType = resourceType; // Shim
                                     adapterDoc.SetIdentifiers(adapterUpdated.identifiers);
+                                    adapterDoc.SetConnectorIds(adapterUpdated.connectorIds);
                                     await saveAsync(adapterDoc);
                                     return adapterId;
                                 });
