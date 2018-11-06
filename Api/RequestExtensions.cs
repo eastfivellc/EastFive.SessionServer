@@ -13,7 +13,7 @@ namespace EastFive.Security.SessionServer
         public static Context GetSessionServerContext()
         {
             var context = new EastFive.Security.SessionServer.Context(
-                () => new EastFive.Security.SessionServer.Persistence.DataContext(Configuration.AppSettings.Storage));
+                () => new EastFive.Security.SessionServer.Persistence.DataContext(EastFive.Azure.AppSettings.ASTConnectionStringKey));
             return context;
         }
 

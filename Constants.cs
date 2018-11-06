@@ -12,7 +12,6 @@ namespace EastFive.Security.SessionServer
         {
             public const string SpaSiteLocation = "EastFive.Security.SessionServer.SpaSiteLocation";
             public const string ApplicationInsightsKey = "EastFive.Security.SessionServer.ApplicationInsightsKey";
-            public const string ASTConnectionStringKey = "Azure.Authorization.Storage";
         }
     }
 }

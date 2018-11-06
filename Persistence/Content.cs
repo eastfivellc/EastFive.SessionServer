@@ -25,7 +25,7 @@ namespace EastFive.Api.Azure.Persistence
         private static CloudBlobClient BlobStore(CloudStorageAccount cloudStorageAccount = null)
         {
             if (cloudStorageAccount == null)
-                cloudStorageAccount = Web.Configuration.Settings.GetString(Constants.AppSettingKeys.ASTConnectionStringKey,
+                cloudStorageAccount = Web.Configuration.Settings.GetString(EastFive.Azure.AppSettings.ASTConnectionStringKey,
                     (storageSetting) =>
                     {
                         return CloudStorageAccount.Parse(storageSetting);
