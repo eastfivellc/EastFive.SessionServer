@@ -45,7 +45,7 @@ namespace EastFive.Api.Controllers
         }
         
         [EastFive.Api.HttpGet]
-        public static async Task<HttpResponseMessage> FindByAdapterAsync([Required(Name ="adapter")]Guid adapterId,
+        public static async Task<HttpResponseMessage> FindByAdapterAsync([QueryParameter(Name ="adapter")]Guid adapterId,
                 Security security, Context context, HttpRequestMessage request, UrlHelper url,
             MultipartAcceptArrayResponseAsync onMultipart,
             ReferencedDocumentNotFoundResponse onReferenceNotFound,
