@@ -23,13 +23,13 @@ namespace EastFive.Security.SessionServer.Api.Controllers
 
         [EastFive.Api.HttpGet (MatchAllParameters = true )]
         public static async Task<HttpResponseMessage> SessionManagement(
-            EastFive.Api.Controllers.Security security,
+            //EastFive.Api.Controllers.Security security,
             EastFive.Api.Azure.AzureApplication application,
             UnauthorizedResponse onUnauthorized,
             ViewFileResponse viewResponse)
         {
-            if (!await application.IsAdminAsync(security))
-                return onUnauthorized();
+            //if (!await application.IsAdminAsync(security))
+            //    return onUnauthorized();
             return await CredentialProcessDocument.FindAllAsync(
                 (documents) =>
                 {

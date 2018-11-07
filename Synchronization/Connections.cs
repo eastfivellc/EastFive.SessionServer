@@ -129,7 +129,11 @@ namespace EastFive.Azure.Synchronization
                                     createdBy = adapterInternal.adapterId,
                                     synchronizationMethod = Connector.SynchronizationMethod.ignore,
                                 };
-                                return onSuccess(connector);
+                                //var isValid = await Persistence.ConnectorDocument.FindByIdAsync(connector.connectorId,
+                                //    cd => true,
+                                //    () => false);
+                                //if(isValid)
+                                    return onSuccess(connector);
                             }
                             
                             var connectorId = Guid.NewGuid();
@@ -643,9 +647,18 @@ namespace EastFive.Azure.Synchronization
                 {
                     var connectorAdapterKvps = adapterInternal.connectorIds
                         .SelectAsyncOptional<Guid, KeyValuePair<Connector, Adapter>>(
-                            (connectorId, select, skip) => Persistence.ConnectorDocument.FindByIdWithAdapterRemoteAsync(connectorId, adapterInternal,
-                                (connector, adapter) => select(connector.PairWithValue(adapter)),
-                                skip));
+                            (connectorId, select, skip) =>
+                            {
+                                return Persistence.ConnectorDocument.FindByIdWithAdapterRemoteAsync(connectorId, adapterInternal,
+                                    (connector, adapter) =>
+                                    {
+                                        return select(connector.PairWithValue(adapter));
+                                    },
+                                    () =>
+                                    {
+                                        return skip();
+                                    });
+                            });
                     return onFound(connectorAdapterKvps);
                 },
                 () =>
