@@ -1,5 +1,7 @@
-﻿using BlackBarLabs.Persistence.Azure.StorageTables;
+﻿using BlackBarLabs.Persistence.Azure;
+using BlackBarLabs.Persistence.Azure.StorageTables;
 using EastFive.Extensions;
+using EastFive.Persistence.Azure.StorageTables.Driver;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -36,12 +38,14 @@ namespace EastFive.Azure.Persistence
 
         public Task<TResult> ValueAsync<TResult>(Func<T, TResult> valueCallback)
         {
-            return AzureStorageRepository.Connection(
-                connect =>
+            var driver = AzureTableDriver.FromSettings();
+            var rowKey = this.id.AsRowKey();
+            return driver.FindByIdAsync(rowKey, rowKey.GeneratePartitionKey(),
+                (T entity) =>
                 {
-                    object v = 1;
-                    return valueCallback((T)v).AsTask();
-                });
+                    return valueCallback(entity);
+                },
+                () => default(TResult));
         }
     }
 }
