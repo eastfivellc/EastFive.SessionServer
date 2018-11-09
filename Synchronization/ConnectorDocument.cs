@@ -153,49 +153,77 @@ namespace EastFive.Azure.Synchronization.Persistence
                 Guid adapterInternalId, Guid adapterExternalId, Connector.SynchronizationMethod method, string resourceType,
             Func<TResult> onCreated,
             Func<TResult> onAlreadyExists,
-            Func<Func<Task<Connector>>, TResult> onRelationshipAlreadyExists)
+            Func<Connector, TResult> onRelationshipAlreadyExists)
         {
             return AzureStorageRepository.Connection(
-                azureStorageRepository =>
+                async azureStorageRepository =>
                 {
                     var lookupId = GetId(adapterInternalId, adapterExternalId);
-                    var rollback = new RollbackAsync<TResult>();
-                    rollback.AddTaskCreate(connectorId,
-                            new ConnectorDocument()
-                            {
-                                LocalAdapter = adapterInternalId,
-                                RemoteAdapter = adapterExternalId,
-                                Method = Enum.GetName(typeof(Connector.SynchronizationMethod), method),
-                            },
-                        onAlreadyExists,
-                        azureStorageRepository);
-                    rollback.AddTaskCreate(lookupId,
+                    return await await azureStorageRepository.CreateAsync(lookupId,
                             new EastFive.Persistence.Azure.Documents.LookupDocument()
                             {
                                 Lookup = connectorId,
                             },
-                        () => onRelationshipAlreadyExists(
-                            async () => await await azureStorageRepository.FindByIdAsync(lookupId,
-                                (EastFive.Persistence.Azure.Documents.LookupDocument lookupDoc) =>
-                                    azureStorageRepository.FindByIdAsync(lookupDoc.Lookup,
-                                        (ConnectorDocument connectorDoc) => Convert(connectorDoc),
-                                        () => default(Connector)),
-                                () => default(Connector).AsTask())),
-                        azureStorageRepository);
+                        async () =>
+                        {
+                            var creatingSyncDocTask = azureStorageRepository.CreateOrUpdateAsync<ConnectorSynchronizationDocument, bool>(connectorId,
+                                async (created, connectorSyncDoc, saveAsync) =>
+                                {
+                                    if (connectorSyncDoc.Locked)
+                                    {
+                                        connectorSyncDoc.Locked = false;
+                                        await saveAsync(connectorSyncDoc);
+                                    }
+                                    return true;
+                                },
+                                mutatePartition: GetMutatePartitionKey(resourceType));
 
-                    rollback.AddTaskCreate(connectorId,
-                            new ConnectorSynchronizationDocument
-                            {
-                                Locked = false,
-                            },
-                        () => onRelationshipAlreadyExists(
-                            () => azureStorageRepository.FindByIdAsync(connectorId,
-                                (ConnectorDocument connectorDoc) => Convert(connectorDoc),
-                                () => default(Connector))),
-                        azureStorageRepository,
-                            mutatePartition: GetMutatePartitionKey(resourceType));
-                    
-                    return rollback.ExecuteAsync(onCreated);
+                            return await await azureStorageRepository.CreateAsync(connectorId,
+                                new ConnectorDocument()
+                                {
+                                    LocalAdapter = adapterInternalId,
+                                    RemoteAdapter = adapterExternalId,
+                                    Method = Enum.GetName(typeof(Connector.SynchronizationMethod), method),
+                                },
+                                async () =>
+                                {
+                                    bool createdSyncDoc = await creatingSyncDocTask;
+                                    return onCreated();
+                                },
+                                onAlreadyExists.AsAsyncFunc());
+                            
+                        },
+                        async () =>
+                        {
+                            return await await azureStorageRepository.FindByIdAsync(lookupId,
+                                async (EastFive.Persistence.Azure.Documents.LookupDocument lookupDoc) =>
+                                    await await azureStorageRepository.FindByIdAsync(lookupDoc.Lookup,
+                                        (ConnectorDocument connectorDoc) => onRelationshipAlreadyExists(Convert(connectorDoc)).AsTask(),
+                                        async () =>
+                                        {
+                                            // if the referenced doc does not exists, this was legacy data, delete and retry
+                                            return await await azureStorageRepository.DeleteIfAsync<EastFive.Persistence.Azure.Documents.LookupDocument, Task<TResult>>(lookupId,
+                                                async (doc, deleteAsync) =>
+                                                {
+                                                    await deleteAsync();
+                                                    return CreateWithoutAdapterUpdateAsync(connectorId,
+                                                            adapterInternalId, adapterExternalId, method, resourceType,
+                                                        onCreated,
+                                                        onAlreadyExists,
+                                                        onRelationshipAlreadyExists);
+                                                },
+                                                () => CreateWithoutAdapterUpdateAsync(connectorId,
+                                                            adapterInternalId, adapterExternalId, method, resourceType,
+                                                        onCreated,
+                                                        onAlreadyExists,
+                                                        onRelationshipAlreadyExists));
+                                        }),
+                                () => CreateWithoutAdapterUpdateAsync(connectorId,
+                                        adapterInternalId, adapterExternalId, method, resourceType,
+                                    onCreated,
+                                    onAlreadyExists,
+                                    onRelationshipAlreadyExists));
+                        });
                 });
         }
 

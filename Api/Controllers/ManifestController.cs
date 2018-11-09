@@ -97,7 +97,7 @@ namespace EastFive.Api.Azure.Controllers
                                         :
                                         validator.Name.ToLower();
                                     var required = methodParam.ContainsCustomAttribute<PropertyAttribute>() ||
-                                        methodParam.ContainsCustomAttribute<RequiredAttribute>();
+                                        methodParam.ContainsCustomAttribute<QueryParameterAttribute>();
 
                                     return CSharpInvocationHtml(lookupName, required, methodParam.ParameterType);
                                     

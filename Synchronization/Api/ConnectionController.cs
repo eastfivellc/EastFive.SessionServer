@@ -29,7 +29,7 @@ namespace EastFive.Api.Controllers
         #region GET
         
         [EastFive.Api.HttpGet]
-        public static async Task<HttpResponseMessage> FindByAdapterAsync([Required]Guid adapter,
+        public static async Task<HttpResponseMessage> FindByAdapterAsync([QueryParameter]Guid adapter,
                 Security security, Context context, HttpRequestMessage request, UrlHelper url,
             MultipartAcceptArrayResponseAsync onMultipart,
             ReferencedDocumentNotFoundResponse onReferenceNotFound,

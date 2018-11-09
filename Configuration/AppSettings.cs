@@ -1,11 +1,24 @@
 ﻿using EastFive.Web;
 
+namespace EastFive.Azure
+{
+    [ConfigAttribute]
+    public static class AppSettings
+    {
+        [ConfigKey("Identifies this application to an AADB2C application",
+           DeploymentOverrides.Suggested,
+           DeploymentSecurityConcern = false,
+           Location = "Azure Portal | Storage | Connection Strings",
+           PrivateRepositoryOnly = true)]
+        public const string ASTConnectionStringKey = EastFive.Azure.Persistence.AppSettings.Storage; // "EastFive.Azure.StorageTables.ConnectionString";
+    }
+}
+
 namespace EastFive.Security.SessionServer.Configuration
 {
     [ConfigAttribute]
     public static class AppSettings
     {
-        public const string Storage = "Azure.Authorization.Storage";
         //public const string Storage = "EastFive.Security.SessionServer.Storage";
         public const string TokenExpirationInMinutes = "EastFive.Security.SessionServer.tokenExpirationInMinutes";
         public const string LoginIdClaimType = "EastFive.Security.SessionServer.LoginProvider.LoginIdClaimType";

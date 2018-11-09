@@ -159,8 +159,7 @@ namespace EastFive.Azure.Synchronization.Persistence
                         .Select(Convert);
                 });
         }
-
-
+        
         internal static Adapter Convert(AdapterDocument syncDoc)
         {
             return new Adapter
@@ -196,6 +195,7 @@ namespace EastFive.Azure.Synchronization.Persistence
                                     adapterDoc.Name = adapterUpdated.name;
                                     adapterDoc.ResourceType = resourceType; // Shim
                                     adapterDoc.SetIdentifiers(adapterUpdated.identifiers);
+                                    adapterDoc.SetConnectorIds(adapterUpdated.connectorIds);
                                     await saveAsync(adapterDoc);
                                     return adapterId;
                                 });
@@ -286,10 +286,10 @@ namespace EastFive.Azure.Synchronization.Persistence
                 azureStorageRepository =>
                 {
                     return azureStorageRepository.DeleteIfAsync<ConnectorDocument, TResult>(synchronizationId,
-                        async (syncDoc, deleteSyncDocAsync) =>
+                        (syncDoc, deleteSyncDocAsync) =>
                         {
                             throw new NotImplementedException();
-                            return onDeleted();
+                            // return onDeleted();
                             //if (syncDoc.LocalIdMaybe.HasValue)
                             //{
                             //    bool successLocal = await azureStorageRepository.DeleteIfAsync<ConnectorDocument, bool>(syncDoc.LocalIdMaybe.Value,

@@ -218,7 +218,12 @@ namespace EastFive.Api.Azure
 
             return await await (authorizationProvider as Credentials.IProvideRedirection).GetRedirectUriAsync(this, authorizationId, requestId, token, refreshToken,
                         authParams, 
-                    (redirectUri) => onSuccess(this.SetRedirectParameters(new Uri(baseUri, redirectUri), requestId, authorizationId, token, refreshToken)).AsTask(),
+                    (redirectUri) =>
+                    {
+                        var fullUri = new Uri(baseUri, redirectUri);
+                        var redirectDecorated = this.SetRedirectParameters(fullUri, requestId, authorizationId, token, refreshToken);
+                        return onSuccess(redirectDecorated).AsTask();
+                    },
                     () => ComputeRedirect(requestId, authorizationId, token, refreshToken, redirectUriFromPost, authParams,
                         onSuccess,
                         onInvalidParameter,
@@ -280,7 +285,7 @@ namespace EastFive.Api.Azure
             {
                 return new EastFive.Security.SessionServer.Context(
                     () => new EastFive.Security.SessionServer.Persistence.DataContext(
-                        EastFive.Security.SessionServer.Configuration.AppSettings.Storage));
+                        EastFive.Azure.AppSettings.ASTConnectionStringKey));
             }
         }
         

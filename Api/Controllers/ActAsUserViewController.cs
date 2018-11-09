@@ -21,15 +21,15 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             return View("~/Views/ActAsUser/");
         }
 
-        [EastFive.Api.HttpGet]
+        [EastFive.Api.HttpGet (MatchAllParameters = true )]
         public static async Task<HttpResponseMessage> SessionManagement(
-            EastFive.Api.Controllers.Security security,
+            EastFive.Api.Controllers.ApiSecurity security,
             EastFive.Api.Azure.AzureApplication application,
             UnauthorizedResponse onUnauthorized,
             ViewFileResponse viewResponse)
         {
-            if (!await application.IsAdminAsync(security))
-                return onUnauthorized();
+            //if (!await application.IsAdminAsync(security))
+            //    return onUnauthorized();
             return await CredentialProcessDocument.FindAllAsync(
                 (documents) =>
                 {
@@ -37,12 +37,12 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                     return viewResponse("/SessionManagement/Index.cshtml", orderedDocs);
                 },
                 BlackBarLabs.Persistence.Azure.StorageTables.AzureStorageRepository.CreateRepository(
-                    Configuration.AppSettings.Storage));
+                    EastFive.Azure.AppSettings.ASTConnectionStringKey));
         }
         
         [EastFive.Api.HttpGet]
         public static async Task<HttpResponseMessage> ReplicateLogin(
-            [QueryValidation(Name = "credential_process_id")]Guid credentialProcessId,
+            [QueryParameter(Name = "credential_process_id")]Guid credentialProcessId,
             EastFive.Api.Azure.AzureApplication application, HttpRequestMessage request,
             EastFive.Api.Controllers.RedirectResponse redirectResponse,
             EastFive.Api.Controllers.ViewStringResponse viewResponse)
@@ -56,12 +56,12 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 },
                 () => viewResponse("", null).ToTask(),
                 BlackBarLabs.Persistence.Azure.StorageTables.AzureStorageRepository.CreateRepository(
-                    Configuration.AppSettings.Storage));
+                    EastFive.Azure.AppSettings.ASTConnectionStringKey));
         }
 
         [EastFive.Api.HttpGet]
         public static async Task<HttpResponseMessage> AuthenticationAsync(
-            [QueryValidation(Name = "authentication_process_id")]Guid credentialProcessId,
+            [QueryParameter(Name = "authentication_process_id")]Guid credentialProcessId,
             EastFive.Api.Azure.AzureApplication application, HttpRequestMessage request,
             EastFive.Api.Controllers.RedirectResponse redirectResponse,
             EastFive.Api.Controllers.ViewStringResponse viewResponse)
@@ -77,12 +77,12 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 },
                 () => viewResponse("", null).ToTask(),
                 BlackBarLabs.Persistence.Azure.StorageTables.AzureStorageRepository.CreateRepository(
-                    Configuration.AppSettings.Storage));
+                    EastFive.Azure.AppSettings.ASTConnectionStringKey));
         }
 
         [EastFive.Api.HttpGet]
         public static async Task<HttpResponseMessage> RedeemAsync(
-            [QueryValidation(Name = "redemption_process_id")]Guid credentialProcessId,
+            [QueryParameter(Name = "redemption_process_id")]Guid credentialProcessId,
             EastFive.Api.Azure.AzureApplication application, HttpRequestMessage request,
             EastFive.Api.Controllers.RedirectResponse redirectResponse,
             EastFive.Api.Controllers.ViewStringResponse viewResponse)
@@ -128,12 +128,12 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 },
                 () => viewResponse("", null).ToTask(),
                 BlackBarLabs.Persistence.Azure.StorageTables.AzureStorageRepository.CreateRepository(
-                    Configuration.AppSettings.Storage));
+                    EastFive.Azure.AppSettings.ASTConnectionStringKey));
         }
 
         [EastFive.Api.HttpGet]
         public static async Task<HttpResponseMessage> CreateResponseAsync(
-            [QueryValidation(Name = "login_process_id")]Guid credentialProcessId,
+            [QueryParameter(Name = "login_process_id")]Guid credentialProcessId,
             EastFive.Api.Azure.AzureApplication application, HttpRequestMessage request,
             EastFive.Api.Controllers.RedirectResponse redirectResponse,
             EastFive.Api.Controllers.ViewStringResponse viewResponse)
@@ -155,7 +155,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 },
                 () => viewResponse("", null).ToTask(),
                 BlackBarLabs.Persistence.Azure.StorageTables.AzureStorageRepository.CreateRepository(
-                    Configuration.AppSettings.Storage));
+                    EastFive.Azure.AppSettings.ASTConnectionStringKey));
         }
 
     }

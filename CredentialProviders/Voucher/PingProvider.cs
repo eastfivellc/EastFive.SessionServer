@@ -33,6 +33,9 @@ namespace EastFive.Api.Azure.Credentials
         public const string LastName = "lastName";
         public const string FirstName = "firstName";
         public const string Email = "email";
+        public const string PracticeId = "practiceID";
+        public const string DepartmentId = "departmentID";
+        public const string PatientId = "patientID"; 
 
 
 

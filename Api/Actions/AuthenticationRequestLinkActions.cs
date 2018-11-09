@@ -45,7 +45,7 @@ namespace EastFive.Api.Azure.Credentials
         }
 
         [HttpGet]
-        public static async Task<HttpResponseMessage> QueryByIntegrationAsync([Required]bool supportsIntegration,
+        public static async Task<HttpResponseMessage> QueryByIntegrationAsync([QueryParameter]bool supportsIntegration,
             HttpRequestMessage request, UrlHelper urlHelper)
         {
             var context = request.GetSessionServerContext();

@@ -29,7 +29,7 @@ namespace EastFive.Api.Controllers
 
         [HttpPost]
         public async static Task<HttpResponseMessage> XlsPostAsync(EastFive.Security.SessionServer.Context context,
-                ContentBytes sheet, [Required]Guid integration, IDictionary<string, bool> resourceTypes,
+                ContentBytes sheet, [QueryParameter]Guid integration, IDictionary<string, bool> resourceTypes,
                 HttpRequestMessage request, System.Web.Http.Routing.UrlHelper url,
             RedirectResponse onSuccess,
             NotFoundResponse onNotFound,

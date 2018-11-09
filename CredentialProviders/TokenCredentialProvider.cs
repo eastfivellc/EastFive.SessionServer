@@ -18,7 +18,7 @@ namespace EastFive.Api.Azure.Credentials
 
         public TokenCredentialProvider()
         {
-            this.dataContext = new DataContext(Security.SessionServer.Configuration.AppSettings.Storage);
+            this.dataContext = new DataContext(EastFive.Azure.AppSettings.ASTConnectionStringKey);
         }
 
         [Attributes.IntegrationName("Token")]

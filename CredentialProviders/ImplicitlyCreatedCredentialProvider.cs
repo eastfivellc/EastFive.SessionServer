@@ -99,7 +99,7 @@ namespace EastFive.Api.Azure.Credentials
 
             // Create or fetch the document with that key
 
-            const string connectionStringKeyName = EastFive.Security.SessionServer.Configuration.AppSettings.Storage;
+            const string connectionStringKeyName = EastFive.Azure.AppSettings.ASTConnectionStringKey;
             var context = new BlackBarLabs.Persistence.Azure.DataStores(connectionStringKeyName);
             var result = await context.AzureStorageRepository.DeleteIfAsync<CredentialsDocument, TResult>(authId,
                 async (document, delete) =>

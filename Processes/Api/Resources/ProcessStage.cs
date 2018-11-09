@@ -84,7 +84,7 @@ namespace EastFive.Api.Azure.Resources
 
         [EastFive.Api.HttpGet]
         public static async Task<HttpResponseMessage> FindByResourceAsync(
-                [Required]Guid resourceId,
+                [QueryParameter]Guid resourceId,
                 EastFive.Api.Controllers.Security security, UrlHelper url,
             MultipartAcceptArrayResponseAsync onMultipart,
             ReferencedDocumentNotFoundResponse onResourceNotFound,
@@ -98,9 +98,9 @@ namespace EastFive.Api.Azure.Resources
 
         [EastFive.Api.HttpGet]
         public static async Task<HttpResponseMessage> FindByFirstStepByActorAndTypeAsync(
-                [Required(Name = Resources.ProcessStage.OwnerPropertyName)]Guid ownerId,
-                [Required(Name = Resources.ProcessStage.TypePropertyName)]Type resourceType,
-                [Required(Name = "processstage." + Resources.ProcessStage.ConfirmablePropertyName + "." + Resources.ProcessStage.ConfirmableResource.ProcessStageNextPropertyName)]
+                [QueryParameter(Name = Resources.ProcessStage.OwnerPropertyName)]Guid ownerId,
+                [QueryParameter(Name = Resources.ProcessStage.TypePropertyName)]Type resourceType,
+                [QueryParameter(Name = "processstage." + Resources.ProcessStage.ConfirmablePropertyName + "." + Resources.ProcessStage.ConfirmableResource.ProcessStageNextPropertyName)]
                     EastFive.Api.Controllers.WebIdNone nextStage,
                 AzureApplication application, EastFive.Api.Controllers.Security security, UrlHelper url,
             MultipartAcceptArrayResponseAsync onMultipart,

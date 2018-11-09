@@ -45,7 +45,8 @@ namespace EastFive.Api.Controllers
 
         
         [EastFive.Api.HttpGet]
-        public static async Task<HttpResponseMessage> FindByRelatedAsync([Required]Guid relatedTo, [Required]Guid integration, // int top, int skip
+        public static async Task<HttpResponseMessage> FindByRelatedAsync(
+                [QueryParameter]Guid relatedTo, [QueryParameter]Guid integration, // int top, int skip
                 Security security, Context context, HttpRequestMessage request, UrlHelper url,
             MultipartAcceptArrayResponseAsync onMultipart,
             ReferencedDocumentNotFoundResponse onReferenceNotFound,
@@ -63,7 +64,7 @@ namespace EastFive.Api.Controllers
         }
         
         [EastFive.Api.HttpGet]
-        public static Task<HttpResponseMessage> FindByRelatedAsync([Required]string key, [Required]Guid integration, [Required]string resourceType,
+        public static Task<HttpResponseMessage> FindByRelatedAsync([QueryParameter]string key, [QueryParameter]Guid integration, [QueryParameter]string resourceType,
                 Security security, Context context, HttpRequestMessage request, UrlHelper url,
             ContentResponse onFound,
             ReferencedDocumentNotFoundResponse onReferenceNotFound,
@@ -81,13 +82,15 @@ namespace EastFive.Api.Controllers
         }
 
         [EastFive.Api.HttpGet]
-        public static Task<Task<HttpResponseMessage>> FindByIntegrationAsync([Required]Guid integration, [Required]string resourceType,
+        public static async Task<HttpResponseMessage> FindByIntegrationAsync(
+                [QueryParameter]Guid integration,
+                [QueryParameter]string resourceType,
                 Security security, Context context, HttpRequestMessage request, UrlHelper url,
             MultipartAcceptArrayResponseAsync onMultipart,
             ReferencedDocumentNotFoundResponse onReferenceNotFound,
             UnauthorizedResponse onUnauthorized)
         {
-            return EastFive.Azure.Synchronization.Synchronizations.FindAdaptersByIntgrationAndResourceTypeAsync(integration, resourceType,
+            return await await EastFive.Azure.Synchronization.Synchronizations.FindAdaptersByIntgrationAndResourceTypeAsync(integration, resourceType,
                     security.performingAsActorId, security.claims,
                 synchronizations =>
                 {

@@ -97,8 +97,8 @@ namespace EastFive.Api.Azure.Resources
 
         [EastFive.Api.HttpGet]
         public static async Task<HttpResponseMessage> FindByResourceTypeAsync(
-                [EastFive.Api.Required(Name = ActorPropertyName)]Guid actorId,
-                [EastFive.Api.Required(Name = Resources.ProcessStageType.ResourceTypePropertyName)]Type resourceType,
+                [EastFive.Api.QueryParameter(Name = ActorPropertyName)]Guid actorId,
+                [EastFive.Api.QueryParameter(Name = Resources.ProcessStageType.ResourceTypePropertyName)]Type resourceType,
                 EastFive.Api.Controllers.Security security, AzureApplication application, UrlHelper url,
             [Display(Name = "Found")]MultipartAcceptArrayResponseAsync onMultipart,
             ReferencedDocumentNotFoundResponse onResourceNotFound,
