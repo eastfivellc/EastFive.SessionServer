@@ -301,7 +301,7 @@
     <Compile Include="Configuration\ClaimsDefinitions.cs" />
     <Compile Include="Configuration\EmailTemplateDefinitions.cs" />
     <Compile Include="CredentialProviders\LightspeedProvider.cs" />
-    <Compile Include="CredentialProviders\Voucher\PingProvider.cs" />
+    <Compile Include="CredentialProviders\PingProvider.cs" />
     <Compile Include="CredentialProviders\SAMLProvider.cs" />
     <Compile Include="CredentialProviders\TokenCredentialProvider.cs" />
     <Compile Include="Persistence\Content.cs" />
