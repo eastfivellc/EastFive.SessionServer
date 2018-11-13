@@ -348,19 +348,18 @@ namespace EastFive.Azure
                 {
                     if (!activitiesOfTypeT.ContainsKey(integration.method))
                         return new KeyValuePair<Integration, object[]> { };
-                    return await activitiesOfTypeT[integration.method]
-                        .FlatMap(
-                            (invocation, next, skip) =>
+                    var activities = await activitiesOfTypeT[integration.method]
+                        .SelectAsyncOptional<ServiceConfiguration.IntegrationActivityDelegate, object>(
+                            async (invocation, select, skip) =>
                             {
-                                return (Task<KeyValuePair<Integration, object[]>>)invocation(integration,
-                                    async (obj) => await next(obj),
-                                    async (why) => await skip());
-                            },
-                            (IEnumerable<object> activities) =>
-                            {
-                                var activitiesArray = activities.ToArray();
-                                return integration.PairWithValue(activitiesArray).ToTask();
-                            });
+                                var resultTask = (Task<object>)invocation(integration,
+                                    (obj) => select(obj).AsTask<object>(),
+                                    (why) => skip().AsTask<object>());
+                                var result = await resultTask;
+                                return (EnumerableAsync.ISelected<object>)(result);
+                            })
+                        .ToArrayAsync();
+                    return integration.PairWithValue(activities);
                 },
                 () => (new KeyValuePair<Integration, object[]> { }).ToTask());
         }
