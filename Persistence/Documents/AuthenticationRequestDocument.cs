@@ -12,6 +12,7 @@ using BlackBarLabs.Persistence.Azure;
 using BlackBarLabs.Persistence.Azure.StorageTables;
 using BlackBarLabs.Linq;
 using EastFive.Serialization;
+using EastFive.Azure;
 
 namespace EastFive.Security.SessionServer.Persistence.Documents
 {
@@ -52,6 +53,35 @@ namespace EastFive.Security.SessionServer.Persistence.Documents
         }
 
         #endregion
-        
+        public static Task<TResult> UpdateAsync<TResult>(Guid integrationId,
+            Func<Integration, Func<Integration, Task<string>>, Task<TResult>> onFound,
+            Func<TResult> onNotFound)
+        {
+            return AzureStorageRepository.Connection(
+                ast => ast.UpdateAsync<AuthenticationRequestDocument, TResult>(integrationId,
+                    (doc, updateAsync) =>
+                    {
+                        var integration = Convert(doc);
+                        return onFound(integration,
+                            async (updatedIntegration) =>
+                            {
+                                doc.SetExtraParams(updatedIntegration.parameters);
+                                await updateAsync(doc);
+                                return doc.RedirectUrl;
+                            });
+                    },
+                    onNotFound));
+        }
+
+        public static Integration Convert(AuthenticationRequestDocument doc)
+        {
+            return new EastFive.Azure.Integration
+            {
+                integrationId = doc.Id,
+                method = doc.Method,
+                parameters = doc.GetExtraParams(),
+                authorizationId = doc.LinkedAuthenticationId.GetValueOrDefault(),
+            };
+        }
     }
 }

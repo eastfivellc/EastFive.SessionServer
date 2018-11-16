@@ -20,6 +20,7 @@ using EastFive.Security.SessionServer;
 using EastFive.Security;
 using EastFive.Linq.Async;
 using EastFive.Api.Azure.Credentials.Attributes;
+using EastFive.Security.SessionServer.Persistence.Documents;
 
 namespace EastFive.Azure
 {
@@ -145,6 +146,13 @@ namespace EastFive.Azure
                 });
         }
 
+        public static Task<TResult> UpdateAsync<TResult>(Guid integrationId,
+            Func<Integration, Func<Integration, Task<string>>, Task<TResult>> onFound,
+            Func<TResult> onNotFound)
+        {
+            return AuthenticationRequestDocument.UpdateAsync(integrationId, onFound, onNotFound);
+        }
+
         internal async Task<TResult> GetAsync<TResult>(Guid authenticationRequestId, Func<Type, Uri> callbackUrlFunc,
             Func<Session, TResult> onSuccess,
             Func<TResult> onNotFound,
@@ -182,7 +190,9 @@ namespace EastFive.Azure
         }
 
         public Task<TResult> GetAuthenticatedByIdAsync<TResult>(Guid authenticationRequestId,
-            Func<Integration, TResult> onSuccess,
+            Func<Uri,   // redirect 
+                Integration, 
+                TResult> onSuccess,
             Func<TResult> onNotFound)
         {
             return this.dataContext.AuthenticationRequests.FindByIdAsync(authenticationRequestId,
@@ -190,7 +200,7 @@ namespace EastFive.Azure
                 {
                     if (!authenticationRequestStorage.authorizationId.HasValue)
                         return onNotFound();
-                    return onSuccess(
+                    return onSuccess(authenticationRequestStorage.redirect,
                         new Integration
                         {
                             authorizationId = authenticationRequestStorage.authorizationId.Value,
