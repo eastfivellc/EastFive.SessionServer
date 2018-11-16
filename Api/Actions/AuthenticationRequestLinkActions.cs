@@ -15,6 +15,7 @@ using EastFive.Security.SessionServer;
 using EastFive.Security.SessionServer.Api.Controllers;
 using EastFive.Security;
 using BlackBarLabs.Api;
+using System.Collections.Generic;
 
 namespace EastFive.Api.Azure.Credentials
 {
@@ -59,13 +60,15 @@ namespace EastFive.Api.Azure.Credentials
                 why => request.CreateResponse(HttpStatusCode.ServiceUnavailable).AddReason(why));
         }
 
-        private static Resources.AuthenticationRequestLink Convert(string method, UrlHelper urlHelper)
+        private static Resources.AuthenticationRequestLink Convert(KeyValuePair<string, IProvideLogin> providerPair, UrlHelper urlHelper)
         {
+            var method = providerPair.Key;
+            var name = providerPair.Value is IProvideIntegration integrationProvider ? integrationProvider.GetDefaultName(null) : method.ToString();
             return new Resources.AuthenticationRequestLink
             {
                 Id = urlHelper.GetWebId<Controllers.SessionController>(SecureGuid.Generate()),
                 Method = method,
-                Name = method.ToString(),
+                Name = name,
                 SecureId = SecureGuid.Generate(),
             };
         }

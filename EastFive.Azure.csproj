@@ -194,6 +194,7 @@
     <Compile Include="Api\Actions\PasswordCredentialActions.cs" />
     <Compile Include="Api\Actions\InviteCredentialActions.cs" />
     <Compile Include="Api\Constants.cs" />
+    <Compile Include="IProvideIntegration.cs" />
     <Compile Include="Persistence\AzureStorageTables\StorageExtensions.cs" />
     <Compile Include="Persistence\AzureStorageTables\Extensions\AzurePersistenceExtensions.cs" />
     <Compile Include="Synchronization\Api\AdapterController.cs" />

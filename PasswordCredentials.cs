@@ -86,8 +86,9 @@ namespace EastFive.Api.Azure.Credentials
                             return await Web.Configuration.Settings.GetUri(EastFive.Security.SessionServer.Configuration.AppSettings.LandingPage,
                                 async (landingPage) =>
                                 {
+                                    var method = CredentialValidationMethodTypes.Password.ToString();
                                     return await await context.Sessions.CreateLoginAsync(Guid.NewGuid(),
-                                        Enum.GetName(typeof(CredentialValidationMethodTypes), CredentialValidationMethodTypes.Password), landingPage, landingPage,
+                                        method, landingPage, landingPage,
                                         (type) => callbackUrl,
                                         async (authenticationRequest) =>
                                         {

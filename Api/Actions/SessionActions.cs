@@ -26,7 +26,7 @@ namespace EastFive.Api.Azure.Credentials
 
             var method = authenticationRequest.Method;
             return await context.Sessions.CreateLoginAsync(credentialId.Value,
-                    method,
+                    method, 
                     authenticationRequest.LocationAuthenticationReturn,
                     authenticationRequest.LocationLogoutReturn,
                     (controllerType) => urlHelper.GetLocation(controllerType),

@@ -36,21 +36,24 @@ namespace EastFive.Security.SessionServer
         }
 
         public Task<TResult> GetAllAsync<TResult>(
-            Func<string[], TResult> onSuccess,
+            Func<KeyValuePair<string, IProvideLogin>[], TResult> onSuccess,
             Func<string, TResult> onFailure)
         {
             if (ServiceConfiguration.loginProviders.IsDefaultOrNull())
                 return onFailure("System not initialized").ToTask();
-            return onSuccess(ServiceConfiguration.loginProviders.SelectKeys().ToArray()).ToTask();
+            return onSuccess(ServiceConfiguration.loginProviders.ToArray()).ToTask();
         }
 
         public Task<TResult> GetAllAsync<TResult>(bool integrationOnly,
-            Func<string[], TResult> onSuccess,
+            Func<KeyValuePair<string,IProvideLogin>[], TResult> onSuccess,
             Func<string, TResult> onFailure)
         {
             if (!integrationOnly)
                 return GetAllAsync(onSuccess, onFailure);
-            return onSuccess(ServiceConfiguration.loginProviders.SelectKeys().ToArray()).ToTask();
+            return onSuccess(ServiceConfiguration.loginProviders
+                .Where(x => x.Value is IProvideIntegration)
+                .ToArray()
+            ).ToTask();
         }
     }
 }

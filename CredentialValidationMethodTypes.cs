@@ -15,5 +15,6 @@
         CSMD,
         PMPAware,
         Internal,
+        pmp_gateway,
     }
 }

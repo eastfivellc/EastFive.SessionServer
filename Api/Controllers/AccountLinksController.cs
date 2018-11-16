@@ -50,7 +50,8 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                     .CreateResponseValidationFailure(q, qry => qry.redirect_uri)
                     .ToActionResult();
             
-            var response = await Context.GetLoginProvider(Enum.GetName(typeof(CredentialValidationMethodTypes), CredentialValidationMethodTypes.Password),
+            var method = CredentialValidationMethodTypes.Password.ToString();
+            var response = await Context.GetLoginProvider(method,
                 async (loginProvider) =>
                 {
                     var callbackUrl = this.Url.GetLocation<OpenIdResponseController>(
@@ -60,7 +61,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                             .First());
                     var authReqId = Guid.NewGuid();
                     return await context.Sessions.CreateLoginAsync(authReqId,
-                        Enum.GetName(typeof(CredentialValidationMethodTypes), CredentialValidationMethodTypes.Password), redirectUrl, redirectUrl,
+                        method, redirectUrl, redirectUrl,
                         (type) => Url.GetLocation(type),
                         (authRequest) =>
                         {
