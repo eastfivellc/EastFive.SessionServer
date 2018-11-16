@@ -1,4 +1,8 @@
-﻿using EastFive.Extensions;
+﻿using BlackBarLabs;
+using EastFive.Async;
+using EastFive.Extensions;
+using EastFive.Linq;
+using EastFive.Linq.Async;
 using EastFive.Persistence.Azure.StorageTables.Driver;
 using System;
 using System.Collections.Generic;
@@ -8,29 +12,27 @@ using System.Threading.Tasks;
 
 namespace EastFive.Azure.Persistence.AzureStorageTables
 {
-    public interface ITransactionResult
-    {
-        TResult Execute<TResult>();
-    }
+    
 
     public static class StorageExtensions
     {
-        public static async Task<TResult> CheckAsync<T, TResult>(this IRef<T> value,
-            Func<TResult> onFound,
+        public static async Task<ITransactionResult<TResult>> CheckAsync<T, TResult>(this IRef<T> value,
             Func<TResult> onNotFound)
             where T : struct
         {
             if (value.IsDefaultOrNull())
-                return onNotFound();
+                return onNotFound().TransactionResultFailure();
 
             await value.ResolveAsync();
-            if (value.value.HasValue)
-                return onFound();
-            return onNotFound();
+            if (!value.value.HasValue)
+                return onNotFound().TransactionResultFailure();
+
+            Func<Task> rollback = () => 1.AsTask();
+            return rollback.TransactionResultSuccess<TResult>();
         }
 
         public static Task<TResult> AzureStorageTableCreateAsync<TEntity, TResult>(this TEntity entity,
-            Func<TResult> onCreated,
+            Func<Guid, TResult> onCreated,
             Func<TResult> onAlreadyExists)
         {
             return AzureTableDriverDynamic
@@ -40,42 +42,24 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                     onAlreadyExists);
         }
 
-        private class TransactionResultSuccess<TResult> : ITransactionResult
+        public static async Task<ITransactionResult<TResult>> AzureStorageTableRollbackCreateAsync<TEntity, TResult>(this TEntity entity,
+            Func<TResult> onAlreadyExists)
         {
-            public Func<TResult> onCompleteSuccess;
-
-            public TransactionResultSuccess(Func<TResult> onCompleteSuccess)
-            {
-                this.onCompleteSuccess = onCompleteSuccess;
-            }
-
-            public TResult1 Execute<TResult1>()
-            {
-                return (TResult1)((object)onCompleteSuccess());
-            }
-        }
-
-        public static async Task<TResult> TransactionAsync<T, TResult>(this T objectTransact,
-            Func<ITransactionResult, Func<TResult, ITransactionResult>, Task<ITransactionResult>> firstRollback,
-            Func<TResult> onCompleteSuccess)
-        {
-            var success = new TransactionResultSuccess<TResult>(onCompleteSuccess);
-            var nextRollback = await firstRollback(success,
-                result => new TransactionResultSuccess<TResult>(() => result));
-            return nextRollback.Execute<TResult>();
-        }
-
-        public static async Task<TResult> TransactionAsync<T, TResult>(this T objectTransact,
-            Func<ITransactionResult, Func<TResult, ITransactionResult>, Task<ITransactionResult>> firstRollback,
-            Func<ITransactionResult, Func<TResult, ITransactionResult>, Task<ITransactionResult>> secondRollback,
-            Func<TResult> onCompleteSuccess)
-        {
-            var success = new TransactionResultSuccess<TResult>(onCompleteSuccess);
-            var nextRollback = await firstRollback(success,
-                result => new TransactionResultSuccess<TResult>(() => result));
-            var secondRollbackWrapped = await secondRollback(nextRollback,
-                result => new TransactionResultSuccess<TResult>(() => result));
-            return secondRollbackWrapped.Execute<TResult>();
+            var driver = AzureTableDriverDynamic
+                .FromSettings();
+            return await driver
+                .CreateAsync(entity,
+                    (resourceId) =>
+                    {
+                        Func<Task> rollback = (() =>
+                        {
+                            return driver.DeleteByIdAsync<TEntity, bool>(resourceId,
+                                () => true,
+                                () => false);
+                        });
+                        return rollback.TransactionResultSuccess<TResult>();
+                    },
+                    () => onAlreadyExists().TransactionResultFailure());
         }
     }
 }

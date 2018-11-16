@@ -153,10 +153,18 @@ namespace EastFive.Messaging
                     },
                     async () =>
                     {
+                        if (message.ScheduledEnqueueTimeUtc < DateTime.UtcNow)
+                            return MessageProcessStatus.NoAction;
                         // TODO: Update resent count and send error if it gets too large
                         // Let message get resent
-                        await client.ScheduleMessageAsync(message, DateTimeOffset.UtcNow + TimeSpan.FromSeconds(10));
-                        return MessageProcessStatus.ReprocessImmediately;
+                        try
+                        {
+                            await client.ScheduleMessageAsync(message, DateTimeOffset.UtcNow + TimeSpan.FromSeconds(10));
+                            return MessageProcessStatus.ReprocessImmediately;
+                        } catch(Exception ex)
+                        {
+                            return MessageProcessStatus.Broken;
+                        }
                     },
                     async (whyReturned) =>
                     {
