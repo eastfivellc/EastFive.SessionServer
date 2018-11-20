@@ -237,9 +237,9 @@ namespace EastFive.Azure
                                         async (labels, types, descriptions) =>
                                         {
                                             var callbackUrl = callbackUrlFunc(provider.CallbackController);
-                                            var loginUrl = provider.GetLoginUrl(Guid.Empty, callbackUrl, callbackUrlFunc);
+                                            var loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackUrl, callbackUrlFunc);
                                             var authenticationRequest = await Convert(authenticationRequestId, ap.Key, AuthenticationActions.access,
-                                                default(string), authenticationRequestId, loginUrl, default(Uri), authRequest.extraParams, labels, types, descriptions);
+                                                default(string), authenticationRequestId, loginUrl, authRequest.redirect, authRequest.extraParams, labels, types, descriptions);
                                             return authenticationRequest;
                                         });
                                 },
@@ -254,7 +254,7 @@ namespace EastFive.Azure
                                                 async (labels, types, descriptions) =>
                                                 {
                                                     var callbackUrl = callbackUrlFunc(provider.CallbackController);
-                                                    var loginUrl = provider.GetLoginUrl(Guid.Empty, callbackUrl, callbackUrlFunc);
+                                                    var loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackUrl, callbackUrlFunc);
                                                     var authenticationRequest = await Convert(authenticationRequestId, ap.Key, AuthenticationActions.access,
                                                         default(string), authenticationRequestId, loginUrl, default(Uri), default(IDictionary<string, string>), labels, types, descriptions);
                                                     return authenticationRequest;
