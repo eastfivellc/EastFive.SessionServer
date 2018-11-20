@@ -188,7 +188,7 @@ namespace EastFive.Api.Azure.Credentials
 
                     // Can't update a session that does not exist
                     var session = await context.Integrations.UpdateAsync(resource.Id.ToGuid().Value,
-                        actingAs, claims, application,
+                        actingAs, claims, application, resource.Name,
                         resource.UserParameters
                             .ToDictionary(
                                 userParam => userParam.Key,

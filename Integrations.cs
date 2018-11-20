@@ -170,7 +170,7 @@ namespace EastFive.Azure
                                 {
                                     var callbackUrl = callbackUrlFunc(provider.CallbackController);
                                     var loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackUrl, callbackUrlFunc);
-                                    var authenticationRequest = await Convert(authenticationRequestStorage, loginUrl, extraParams, labels, types, descriptions);
+                                    var authenticationRequest = await Convert(authenticationRequestStorage, provider, loginUrl, extraParams, labels, types, descriptions);
                                     return onSuccess(authenticationRequest);
                                 });
                         },
@@ -238,7 +238,7 @@ namespace EastFive.Azure
                                         {
                                             var callbackUrl = callbackUrlFunc(provider.CallbackController);
                                             var loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackUrl, callbackUrlFunc);
-                                            var authenticationRequest = await Convert(authenticationRequestId, ap.Key, AuthenticationActions.access,
+                                            var authenticationRequest = await Convert(authenticationRequestId, ap.Key, authRequest.name, provider, AuthenticationActions.access,
                                                 default(string), authenticationRequestId, loginUrl, authRequest.redirect, authRequest.extraParams, labels, types, descriptions);
                                             return authenticationRequest;
                                         });
@@ -255,7 +255,7 @@ namespace EastFive.Azure
                                                 {
                                                     var callbackUrl = callbackUrlFunc(provider.CallbackController);
                                                     var loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackUrl, callbackUrlFunc);
-                                                    var authenticationRequest = await Convert(authenticationRequestId, ap.Key, AuthenticationActions.access,
+                                                    var authenticationRequest = await Convert(authenticationRequestId, ap.Key, default(string), provider, AuthenticationActions.access,
                                                         default(string), authenticationRequestId, loginUrl, default(Uri), default(IDictionary<string, string>), labels, types, descriptions);
                                                     return authenticationRequest;
                                                 });
@@ -412,14 +412,14 @@ namespace EastFive.Azure
                     if (!authRequestStorage.authorizationId.HasValue)
                         return onUnauthenticatedAuthenticationRequest();
 
-                    await saveAsync(authRequestStorage.authorizationId.Value, token, updatedUserParameters);
+                    await saveAsync(authRequestStorage.authorizationId.Value, authRequestStorage.name, token, updatedUserParameters);
                     return onUpdated(authRequestStorage.redirect);
                 },
                 onAutheticationRequestNotFound);
         }
 
         public Task<TResult> UpdateAsync<TResult>(Guid authenticationRequestId, Guid actingAsUser,
-                System.Security.Claims.Claim[] claims, Api.Azure.AzureApplication application,
+                System.Security.Claims.Claim[] claims, Api.Azure.AzureApplication application, string name,
               IDictionary<string, string> updatedUserParameters,
           Func<TResult> onUpdated,
           Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onLogin,
@@ -447,17 +447,17 @@ namespace EastFive.Azure
                             onFailure);
                     }
 
-                    return UpdateUserParameters(authRequestStorage.authorizationId.Value, authRequestStorage.method, actingAsUser, 
+                    return UpdateUserParameters(authRequestStorage.authorizationId.Value, authRequestStorage.method, name, actingAsUser, 
                         claims, authRequestStorage.token, authRequestStorage.extraParams, updatedUserParameters, saveAsync, onUpdated, onFailure );
                 },
                 onLookupCredentialNotFound);
         }
 
-        private static Task<TResult> UpdateUserParameters<TResult>(Guid authorizationId, string method, Guid actingAsUser, System.Security.Claims.Claim[] claims,
+        private static Task<TResult> UpdateUserParameters<TResult>(Guid authorizationId, string method, string name, Guid actingAsUser, System.Security.Claims.Claim[] claims,
             string token,
             IDictionary<string, string> extraParams,
             IDictionary<string, string> updatedUserParameters,
-            Func<Guid, string, IDictionary<string, string>, Task> saveAsync,
+            Func<Guid, string, string, IDictionary<string, string>, Task> saveAsync,
             Func<TResult> onUpdated,
             Func<string, TResult> onFailure)
         {
@@ -484,7 +484,7 @@ namespace EastFive.Azure
 
                                 return userParametersBeingUpdated.Append(extraParamFromStorage).ToDictionary();
                             });
-                    await saveAsync(authorizationId, token, mergedExtraParams);
+                    await saveAsync(authorizationId, name, token, mergedExtraParams);
                     return onUpdated();
                 },
                 () => onFailure("Integration is no longer available for the system given").ToTask(),
@@ -525,7 +525,7 @@ namespace EastFive.Azure
             return await await this.dataContext.AuthenticationRequests.DeleteByIdAsync(accessId,
                 async (integration, deleteAsync) =>
                 {
-                    var integrationDeleted = await Convert(integration, default(Uri), default(Dictionary<string, string>),
+                    var integrationDeleted = await Convert(integration, default(IProvideLogin), default(Uri), default(Dictionary<string, string>),
                                    default(Dictionary<string, string>), default(Dictionary<string, Type>), default(Dictionary<string, string>));
                     if (!integration.authorizationId.HasValue)
                     {
@@ -575,19 +575,22 @@ namespace EastFive.Azure
 
         private static Task<Session> Convert(
             Security.SessionServer.Persistence.AuthenticationRequest authenticationRequest,
+            IProvideLogin provider,
             Uri loginUrl,
             IDictionary<string, string> extraParams, 
             IDictionary<string, string> labels, 
             IDictionary<string, Type> types, 
             IDictionary<string, string> descriptions)
         {
-            return Convert(authenticationRequest.id, authenticationRequest.method, authenticationRequest.action, authenticationRequest.token, 
+            return Convert(authenticationRequest.id, authenticationRequest.method, authenticationRequest.name, provider, authenticationRequest.action, authenticationRequest.token, 
                 authenticationRequest.authorizationId.Value, loginUrl, authenticationRequest.redirect, extraParams, labels, types, descriptions);
         }
 
         private async static Task<Session> Convert(
             Guid authenticationRequestStorageId,
-            string methodName,
+            string method,
+            string name,
+            IProvideLogin provider,
             AuthenticationActions action,
             string token,
             Guid authorizationId,
@@ -622,11 +625,15 @@ namespace EastFive.Azure
                 (resourceTypesInner) => resourceTypesInner,
                 () => new string[] { });
 
+            var computedName = !string.IsNullOrWhiteSpace(name) ?
+                name :
+                provider is IProvideIntegration integrationProvider ? integrationProvider.GetDefaultName(extraParams) : method;
+
             return new Session
             {
                 id = authenticationRequestStorageId,
-                method = methodName,
-                name = methodName,
+                method = method,
+                name = computedName,
                 action = action,
                 token = token,
                 authorizationId = authorizationId,
