@@ -92,15 +92,15 @@ namespace EastFive.Api.Azure.Credentials
                 (authenticationRequests) =>
                 {
                     var response = authenticationRequests
-                        .Append(
-                            new Session()
-                            {
-                                action = AuthenticationActions.link,
-                                authorizationId = actorId,
-                                id = actorId,
-                                method = "account",
-                                name = "Account",
-                            })
+                        //.Append(
+                        //    new Session()
+                        //    {
+                        //        action = AuthenticationActions.link,
+                        //        authorizationId = actorId,
+                        //        id = actorId,
+                        //        method = "account",
+                        //        name = "Account",
+                        //    })
                         .Select(authenticationRequest => 
                             request.CreateResponse(HttpStatusCode.OK, Convert(authenticationRequest, urlHelper)))
                         .ToArray();
