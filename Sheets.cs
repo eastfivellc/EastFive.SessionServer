@@ -33,9 +33,12 @@ namespace EastFive.Api.Azure.Credentials
                 onAlreadyExists);
         }
 
-        [Attributes.IntegrationName("Sheets")]
+        [Attributes.IntegrationName(IntegrationName)]
         public class Provider : IProvideAuthorization, IProvideLogin
         {
+            public const string IntegrationName = "Sheets";
+            public string Method => IntegrationName;
+            
             public const string resourceTypesKey = "resource_types";
             public const string sheetIdKey = "sheet_id";
 
@@ -75,7 +78,7 @@ namespace EastFive.Api.Azure.Credentials
                 return onSuccess(new Dictionary<string, string>(), new Dictionary<string, Type>(), new Dictionary<string, string>()).ToTask();
             }
 
-            [Attributes.IntegrationName("Sheets")]
+            [Attributes.IntegrationName(IntegrationName)]
             public static Task<TResult> InitializeProviderAsync<TResult>(
                 Func<IProvideAuthorization, TResult> onProvideAuthorization,
                 Func<TResult> onProvideNothing,

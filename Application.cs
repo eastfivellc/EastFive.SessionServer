@@ -22,11 +22,14 @@ using BlackBarLabs;
 using EastFive.Linq.Async;
 using BlackBarLabs.Linq.Async;
 using EastFive.Api.Controllers;
+using EastFive.Collections.Generic;
 
 namespace EastFive.Api.Azure
 {
     public class AzureApplication : EastFive.Api.HttpApplication
     {
+        public const string QueryRequestIdentfier = "request_id";
+
         public TelemetryClient Telemetry { get; private set; }
 
         public AzureApplication()
@@ -71,76 +74,41 @@ namespace EastFive.Api.Azure
             config.MessageHandlers.Add(new Api.Azure.Modules.SpaHandler(this, config));
         }
         
-        private Dictionary<string, IProvideAuthorization> authorizationProviders =
-            default(Dictionary<string, IProvideAuthorization>);
-        public Dictionary<string, IProvideAuthorization> AuthorizationProviders
+        public IDictionaryAsync<string, IProvideAuthorization> AuthorizationProviders
         {
             get
             {
-                return authorizationProviders;
+                return this.InstantiateAll<IProvideAuthorization>()
+                    .Where(authorization => !authorization.IsDefaultOrNull())
+                    .Select(authorization => authorization.PairWithKey(authorization.Method))
+                    .ToDictionary();
             }
         }
 
-        private Dictionary<string, IProvideLogin> loginProviders =
-            default(Dictionary<string, IProvideLogin>);
-        internal Dictionary<string, IProvideLogin> LoginProviders { get; private set; }
-
-        private Dictionary<string, IProvideLoginManagement> credentialManagementProviders =
-            default(Dictionary<string, IProvideLoginManagement>);
-        internal Dictionary<string, IProvideLoginManagement> CredentialManagementProviders { get; private set; }
-
-        protected delegate void AddProviderDelegate<TResult>(Func<Func<object, TResult>, Func<TResult>, Func<string, TResult>, Task<TResult>> initializeAsync);
-
-        protected virtual void AddProviders<TResult>(AddProviderDelegate<TResult> callback)
+        public IDictionaryAsync<string, IProvideLogin> LoginProviders
         {
-
+            get
+            {
+                return this.InstantiateAll<IProvideLogin>()
+                    .Where(loginProvider => !loginProvider.IsDefaultOrNull())
+                    .Select(loginProvider => loginProvider.PairWithKey(loginProvider.Method))
+                    .ToDictionary();
+            }
         }
 
+        public IDictionaryAsync<string, IProvideLoginManagement> CredentialManagementProviders
+        {
+            get
+            {
+                return this.InstantiateAll<IProvideLoginManagement>()
+                    .Where(loginManager => !loginManager.IsDefaultOrNull())
+                    .Select(loginManager => loginManager.PairWithKey(loginManager.Method))
+                    .ToDictionary();
+            }
+        }
+        
         protected override async Task<Initialized> InitializeAsync()
         {
-            var initializersTasks = new Task<object[]>[] { };
-            AddProviders<object[]>(
-                (providerInitializer) =>
-                {
-                    var temp = providerInitializer(
-                        initializer => new[] { initializer },
-                        () => new object[] { },
-                        (why) => new object[] { });
-
-                    initializersTasks = initializersTasks.Append(temp).ToArray();
-                });
-            var initializers = await initializersTasks
-                    .WhenAllAsync()
-                    .SelectManyAsync()
-                    .ToArrayAsync();
-
-            var credentialProviders = initializers
-                .Where(
-                    initializer => initializer.GetType().ContainsCustomAttribute<IntegrationNameAttribute>())
-                .ToDictionary(
-                    credentialProvider =>
-                    {
-                        var methodName = credentialProvider.GetType().GetCustomAttribute<IntegrationNameAttribute>().Name;
-                        return methodName;
-                    },
-                    credentialProvider => credentialProvider);
-
-            authorizationProviders = credentialProviders
-                .Where(credentialProviderKvp => typeof(IProvideAuthorization).IsAssignableFrom(credentialProviderKvp.Value.GetType()))
-                .ToDictionary(
-                    kvp => kvp.Key,
-                    kvp => kvp.Value as IProvideAuthorization);
-            loginProviders = credentialProviders
-                .Where(credentialProviderKvp => typeof(IProvideLogin).IsAssignableFrom(credentialProviderKvp.Value.GetType()))
-                .ToDictionary(
-                    kvp => kvp.Key,
-                    kvp => kvp.Value as IProvideLogin);
-            credentialManagementProviders = credentialProviders
-                .Where(credentialProviderKvp => typeof(IProvideLoginManagement).IsAssignableFrom(credentialProviderKvp.Value.GetType()))
-                .ToDictionary(
-                    kvp => kvp.Key,
-                    kvp => kvp.Value as IProvideLoginManagement);
-
             return await base.InitializeAsync();
         }
 
@@ -152,32 +120,25 @@ namespace EastFive.Api.Azure
             }
         }
 
-        internal TResult GetAuthorizationProvider<TResult>(string method,
+        internal async Task<TResult> GetAuthorizationProviderAsync<TResult>(string method,
             Func<IProvideAuthorization, TResult> onSuccess,
-            Func<TResult> onCredintialSystemNotAvailable,
+            Func<TResult> onCredentialSystemNotAvailable,
             Func<string, TResult> onFailure)
         {
-            this.InitializationWait();
-            if (!authorizationProviders.ContainsKey(method))
-                return onCredintialSystemNotAvailable();
-
-            var provider = authorizationProviders[method];
-            return onSuccess(provider);
+            return await this.AuthorizationProviders.TryGetValue(method,
+                onSuccess,
+                onCredentialSystemNotAvailable);
         }
         
-        internal TResult GetLoginProvider<TResult>(Type providerType,
+        internal async Task<TResult> GetLoginProviderAsync<TResult>(string method,
             Func<IProvideLogin, TResult> onSuccess,
-            Func<TResult> onCredintialSystemNotAvailable,
+            Func<TResult> onCredentialSystemNotAvailable,
             Func<string, TResult> onFailure)
         {
-            this.InitializationWait();
-
-            var methodName = providerType.GetCustomAttribute<IntegrationNameAttribute>().Name;
-            if (!ServiceConfiguration.loginProviders.ContainsKey(methodName))
-                return onCredintialSystemNotAvailable();
-
-            var provider = ServiceConfiguration.loginProviders[methodName];
-            return onSuccess(provider);
+            // this.InitializationWait();
+            return await this.LoginProviders.TryGetValue(method,
+                onSuccess,
+                onCredentialSystemNotAvailable);
         }
         
         public virtual Task<TResult> OnUnmappedUserAsync<TResult>(string method, IProvideAuthorization authorizationProvider, string subject, IDictionary<string, string> extraParameters, 
@@ -275,7 +236,7 @@ namespace EastFive.Api.Azure
                 //.SetQueryParam(parameterAuthorizationId, authorizationId.Value.ToString("N"))
                 //.SetQueryParam(parameterToken, token)
                 //.SetQueryParam(parameterRefreshToken, refreshToken)
-                .SetQueryParam("request_id", requestId.ToString());
+                .SetQueryParam(AzureApplication.QueryRequestIdentfier, requestId.ToString());
             return redirectUrl;
         }
 

@@ -29,6 +29,8 @@ namespace EastFive.Security.SessionServer
 
     public interface IProvideLoginManagement
     {
+        string Method { get; }
+
         Task<TResult> CreateAuthorizationAsync<TResult>(string displayName,
             string userId, bool isEmail, string secret, bool forceChange,
             Func<Guid, TResult> onSuccess,

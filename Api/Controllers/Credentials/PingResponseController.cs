@@ -30,19 +30,20 @@ namespace EastFive.Api.Azure.Credentials.Controllers
     [FunctionViewController(Route="PingResponse")]
     public class PingResponse
     {
-        public const string TokenIdPropertyName = "tokenid";
+        public const string TokenIdPropertyName = PingProvider.TokenId;
         [JsonProperty(PropertyName = TokenIdPropertyName)]
         public string tokenid { get; set; }
 
-        public const string AgentIdPropertyName = "agentid";
+        public const string AgentIdPropertyName = PingProvider.AgentId;
         [JsonProperty(PropertyName = AgentIdPropertyName)]
         public string agentid { get; set; }
 
-        [HttpGet]
+        [HttpGet(MatchAllParameters = false)]
         public static Task<HttpResponseMessage> Get(
-            [QueryParameter(Name = TokenIdPropertyName)]string tokenId,
-            [QueryParameter(Name = AgentIdPropertyName)]string agentId,
-            AzureApplication application, HttpRequestMessage request,
+                [QueryParameter(Name = TokenIdPropertyName)]string tokenId,
+                [QueryParameter(Name = AgentIdPropertyName)]string agentId,
+                AzureApplication application,
+                HttpRequestMessage request,
             RedirectResponse redirectResponse)
         {
             //The way this works...

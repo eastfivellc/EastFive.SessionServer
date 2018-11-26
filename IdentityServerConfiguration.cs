@@ -95,7 +95,7 @@ namespace EastFive.Security.SessionServer
                 //.SetQueryParam(parameterAuthorizationId, authorizationId.Value.ToString("N"))
                 //.SetQueryParam(parameterToken, token)
                 //.SetQueryParam(parameterRefreshToken, refreshToken)
-                .SetQueryParam("request_id", requestId.ToString());
+                .SetQueryParam(EastFive.Api.Azure.AzureApplication.QueryRequestIdentfier, requestId.ToString());
             return redirectUrl;
         }
 

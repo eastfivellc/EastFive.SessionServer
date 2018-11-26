@@ -19,9 +19,12 @@ using EastFive.Api.Azure.Credentials.Attributes;
 
 namespace EastFive.Api.Azure.Credentials
 {
-    [IntegrationName("SAML")]
+    [IntegrationName(IntegrationName)]
     public class SAMLProvider : IProvideLogin
     {
+        public const string IntegrationName = "SAML";
+        public string Method => IntegrationName;
+
         private DataContext dataContext;
         
         internal const string SamlpResponseKey = "samlp:Response";
@@ -34,7 +37,7 @@ namespace EastFive.Api.Azure.Credentials
             this.dataContext = new DataContext(EastFive.Azure.AppSettings.ASTConnectionStringKey);
         }
 
-        [IntegrationName("SAML")]
+        [IntegrationName(IntegrationName)]
         public static Task<TResult> InitializeAsync<TResult>(
             Func<IProvideLogin, TResult> onProvideLogin,
             Func<IProvideAuthorization, TResult> onProvideAuthorization,

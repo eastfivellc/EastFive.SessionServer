@@ -9,10 +9,13 @@ using EastFive.Security.SessionServer;
 
 namespace EastFive.Api.Azure.Credentials
 {
-    [Attributes.IntegrationName("Voucher")]
+    [Attributes.IntegrationName(IntegrationName)]
     public class VoucherCredentialProvider : IProvideAuthorization
     {
-        [Attributes.IntegrationName("Voucher")]
+        public const string IntegrationName = "Voucher";
+        public string Method => IntegrationName;
+
+        [Attributes.IntegrationName(IntegrationName)]
         public static Task<TResult> InitializeAsync<TResult>(
             Func<IProvideAuthorization, TResult> onProvideAuthorization,
             Func<TResult> onProvideNothing,
@@ -20,9 +23,7 @@ namespace EastFive.Api.Azure.Credentials
         {
             return onProvideAuthorization(new VoucherCredentialProvider()).ToTask();
         }
-
-        public CredentialValidationMethodTypes Method => CredentialValidationMethodTypes.SAML;
-
+        
         public Type CallbackController => typeof(Controllers.TokenController);
 
         public Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> extraParams,

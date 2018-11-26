@@ -15,14 +15,17 @@ using EastFive.Collections.Generic;
 
 namespace EastFive.Api.Azure.Credentials
 {
-    [IntegrationName("Password")]
+    [IntegrationName(IntegrationName)]
     public class AzureADB2CProvider : IProvideLogin, IProvideLoginManagement
     {
+        public const string IntegrationName = "Password";
+        public string Method => IntegrationName;
+
         #region Setup
 
         internal const string StateKey = "state";
         internal const string IdTokenKey = "id_token";
-
+        
         EastFive.AzureADB2C.B2CGraphClient client;
         private TokenValidationParameters validationParameters;
         internal string audience;
@@ -95,9 +98,7 @@ namespace EastFive.Api.Azure.Credentials
         #endregion
 
         #region IProvideAuthorization
-
-        public CredentialValidationMethodTypes Method => CredentialValidationMethodTypes.Password;
-
+        
         public async Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> extraParams,
             Func<string, Guid?, Guid?, IDictionary<string, string>, TResult> onSuccess,
             Func<Guid?, IDictionary<string, string>, TResult> onUnauthenticated,
@@ -202,7 +203,10 @@ namespace EastFive.Api.Azure.Credentials
         #region IProvideLogin
 
         public Type CallbackController => typeof(Controllers.OpenIdResponseController);
-            //typeof(SessionServer.Api.Controllers.AADB2CResponseController);
+
+        
+
+        //typeof(SessionServer.Api.Controllers.AADB2CResponseController);
 
         public Uri GetLoginUrl(Guid state, Uri responseLocation, Func<Type, Uri> controllerToLocation)
         {

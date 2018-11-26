@@ -172,6 +172,7 @@ namespace EastFive.Security.SessionServer
         }
         
         internal async Task<TResult> GetAsync<TResult>(Guid authenticationRequestId, Func<Type, Uri> callbackUrlFunc,
+                AzureApplication application,
             Func<Session, TResult> onSuccess,
             Func<string, TResult> onNotFound,
             Func<string, TResult> onFailure)
@@ -182,7 +183,7 @@ namespace EastFive.Security.SessionServer
                     if (authenticationRequestStorage.Deleted.HasValue)
                         return onNotFound("Session was deleted");
 
-                    return await Context.GetLoginProvider(authenticationRequestStorage.method,
+                    return await await application.GetLoginProviderAsync(authenticationRequestStorage.method,
                         async (provider) =>
                         {
                             var authenticationRequest = Convert(authenticationRequestStorage);
@@ -256,7 +257,7 @@ namespace EastFive.Security.SessionServer
             Func<string, TResult> onNotConfigured,
             Func<string, TResult> onFailure)
         {
-            return await application.GetAuthorizationProvider(method,
+            return await await application.GetAuthorizationProviderAsync(method,
                 async (provider) =>
                 {
                     return await await provider.RedeemTokenAsync(extraParams,
@@ -323,7 +324,7 @@ namespace EastFive.Security.SessionServer
             Func<string, TResult> onNotConfigured,
             Func<string, TResult> onFailure)
         {
-            return await application.GetAuthorizationProvider(method,
+            return await await application.GetAuthorizationProviderAsync(method,
                 async (provider) =>
                 {
                     return await await provider.RedeemTokenAsync(extraParams,
