@@ -60,7 +60,7 @@ namespace EastFive.Api.Azure.Credentials
 
         public CredentialValidationMethodTypes Method => CredentialValidationMethodTypes.Ping;
 
-        public Type CallbackController => typeof(Controllers.PingResponseController);
+        public Type CallbackController => typeof(Controllers.PingResponse);
 
         public async Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> extraParams,
             Func<string, Guid?, Guid?, IDictionary<string, string>, TResult> onSuccess,

@@ -52,7 +52,7 @@ namespace EastFive.Security.SessionServer
             this.dataContext = dataContext;
             this.context = context;
 
-            telemetry = Web.Configuration.Settings.GetString(SessionServer.Configuration.AppSettings.ApplicationInsightsKey,
+            telemetry = Web.Configuration.Settings.GetString(EastFive.Azure.AppSettings.ApplicationInsightsKey,
                 (applicationInsightsKey) =>
                 {
                     return new TelemetryClient { InstrumentationKey = applicationInsightsKey };

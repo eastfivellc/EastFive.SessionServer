@@ -32,7 +32,7 @@ namespace EastFive.Api.Azure
         public AzureApplication()
             : base()
         {
-            Telemetry = EastFive.Web.Configuration.Settings.GetString(Security.SessionServer.Constants.AppSettingKeys.ApplicationInsightsKey,
+            Telemetry = EastFive.Web.Configuration.Settings.GetString(EastFive.Azure.AppSettings.ApplicationInsightsKey,
                 (applicationInsightsKey) => new TelemetryClient { InstrumentationKey = applicationInsightsKey },
                 (why) => new TelemetryClient());
 

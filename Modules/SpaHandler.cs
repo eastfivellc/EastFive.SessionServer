@@ -61,7 +61,7 @@ namespace EastFive.Api.Azure.Modules
                     .Open()
                     .ToBytes();
 
-                lookupSpaFile = ConfigurationContext.Instance.GetSettingValue(Security.SessionServer.Constants.AppSettingKeys.SpaSiteLocation,
+                lookupSpaFile = ConfigurationContext.Instance.GetSettingValue(EastFive.Azure.AppSettings.SpaSiteLocation,
                     (siteLocation) =>
                     {
                         application.Telemetry.TrackEvent($"SpaHandlerModule - ExtractSpaFiles   siteLocation: {siteLocation}");
