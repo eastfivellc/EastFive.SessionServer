@@ -430,7 +430,7 @@ namespace EastFive.Security.SessionServer
 
                     if (AuthenticationActions.link == authenticationRequest.action)
                         return await context.Invites.CreateInviteCredentialAsync(sessionId, sessionId,
-                                authenticationRequest.authorizationId, method, subject,
+                                authenticationRequest.authorizationId, method, subject, authenticationRequest.name,
                                 extraParams, saveAuthRequest, authenticationRequest.redirect,
                             onLogin,
                             onInvalidToken,
@@ -456,7 +456,7 @@ namespace EastFive.Security.SessionServer
                             return await await this.CreateSessionAsync(sessionId, authenticationId,
                                 async (token, refreshToken) =>
                                 {
-                                    await saveAuthRequest(authenticationId, token, extraParams);
+                                    await saveAuthRequest(authenticationId, authenticationRequest.name, token, extraParams);
                                     return onLogin(sessionId, authenticationId,
                                         token, refreshToken, AuthenticationActions.signin, extraParams, authenticationRequest.redirect);
                                 },

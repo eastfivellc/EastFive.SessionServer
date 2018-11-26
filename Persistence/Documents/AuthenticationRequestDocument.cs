@@ -28,6 +28,7 @@ namespace EastFive.Security.SessionServer.Persistence.Documents
         #region Properties
 
         public string Method { get; set; }
+        public string Name { get; set; }
         public string Token { get; set; }
 
         public string Action { get; set; }

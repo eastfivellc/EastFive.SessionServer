@@ -54,9 +54,9 @@ namespace EastFive.Security.SessionServer
         #region InviteCredential
 
         public async Task<TResult> CreateInviteCredentialAsync<TResult>(Guid sessionId, Guid? stateId,
-            Guid? authorizationId, string method, string subject,
+            Guid? authorizationId, string method, string subject, string name,
             IDictionary<string, string> extraParams, 
-            Func<Guid, string, IDictionary<string, string>, Task> saveAuthRequest,
+            Func<Guid, string, string, IDictionary<string, string>, Task> saveAuthRequest,
             Uri redirectUrl,
             Func<Guid, Guid, string, string, AuthenticationActions, IDictionary<string, string>, Uri, TResult> onLogin,
             Func<string, TResult> onInvalidToken,
@@ -73,7 +73,7 @@ namespace EastFive.Security.SessionServer
                 async () => await await context.Sessions.GenerateSessionWithClaimsAsync(sessionId, authenticationId,
                     async (token, refreshToken) =>
                     {
-                        await saveAuthRequest(authenticationId, token, extraParams);
+                        await saveAuthRequest(authenticationId, name, token, extraParams);
                         return onLogin(stateId.Value, authenticationId, token, refreshToken, AuthenticationActions.link, extraParams,
                             redirectUrl);
                     },
