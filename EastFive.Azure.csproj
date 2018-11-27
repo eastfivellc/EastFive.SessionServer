@@ -341,7 +341,6 @@
     <Compile Include="CredentialProviders\ImplicitlyCreatedCredentialProvider.cs" />
     <Compile Include="CredentialProviders\Voucher\VoucherCredentialProvider.cs" />
     <Compile Include="Claims.cs" />
-    <Compile Include="Api\Actions\SessionActions.cs" />
     <Compile Include="Persistence\Documents\CredentialMappingDocument.cs" />
     <Compile Include="Persistence\Documents\ActorDocument.cs" />
     <Compile Include="Persistence\Documents\ClaimDocument.cs" />
