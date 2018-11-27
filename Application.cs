@@ -141,11 +141,18 @@ namespace EastFive.Api.Azure
                 onCredentialSystemNotAvailable);
         }
         
-        public virtual Task<TResult> OnUnmappedUserAsync<TResult>(string method, IProvideAuthorization authorizationProvider, string subject, IDictionary<string, string> extraParameters, 
+        public virtual async Task<TResult> OnUnmappedUserAsync<TResult>(string method, IProvideAuthorization authorizationProvider, string subject, IDictionary<string, string> extraParameters, 
             Func<Guid, TResult> onCreatedMapping,
             Func<TResult> onNoChange)
         {
-            return onNoChange().ToTask();
+            if (authorizationProvider is Credentials.IProvideAccountInformation)
+            {
+                return await(authorizationProvider as Credentials.IProvideAccountInformation)
+                    .CreateAccount(this, method, authorizationProvider, subject, extraParameters,
+                        onCreatedMapping,
+                        onNoChange);
+            }
+            return onNoChange();
         }
 
         public virtual Web.Services.ISendMessageService SendMessageService { get => Web.Services.ServiceConfiguration.SendMessageService(); }

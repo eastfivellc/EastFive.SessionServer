@@ -191,6 +191,7 @@
     <Compile Include="Api\Actions\PasswordCredentialActions.cs" />
     <Compile Include="Api\Actions\InviteCredentialActions.cs" />
     <Compile Include="Api\Constants.cs" />
+    <Compile Include="Credentials\IProvideAccountInformation.cs" />
     <Compile Include="IProvideIntegration.cs" />
     <Compile Include="Persistence\AzureStorageTables\StorageExtensions.cs" />
     <Compile Include="Persistence\AzureStorageTables\Extensions\AzurePersistenceExtensions.cs" />
@@ -206,7 +207,7 @@
     <Compile Include="Credentials\CredentialProcessDocument.cs" />
     <Compile Include="Credentials\NoActionAuthorizationRequestManager.cs" />
     <Compile Include="Credentials\IManageAuthorizationRequests.cs" />
-    <Compile Include="IProvideRedirection.cs" />
+    <Compile Include="Credentials\IProvideRedirection.cs" />
     <Compile Include="Messaging\QueueProcessor.cs" />
     <Compile Include="Modules\SpaHandler.cs" />
     <Compile Include="Monitoring\MonitoringDocument.cs" />
@@ -306,11 +307,11 @@
     <Compile Include="Processes\ProcessStages.cs" />
     <Compile Include="Processes\Persistence\ProcessStageDocument.cs" />
     <Compile Include="Sheets.cs" />
-    <Compile Include="IProvideToken.cs" />
-    <Compile Include="IProvideLoginManagement.cs" />
+    <Compile Include="Credentials\IProvideToken.cs" />
+    <Compile Include="Credentials\IProvideLoginManagement.cs" />
     <Compile Include="Integrations.cs" />
-    <Compile Include="IProvideLogin.cs" />
-    <Compile Include="IProvideAuthorization.cs" />
+    <Compile Include="Credentials\IProvideLogin.cs" />
+    <Compile Include="Credentials\IProvideAuthorization.cs" />
     <Compile Include="LoginProviders.cs" />
     <Compile Include="Exceptions\PingResponseException.cs" />
     <Compile Include="IConfigureIdentityServer.cs" />
