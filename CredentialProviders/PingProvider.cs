@@ -22,10 +22,11 @@ using System.Collections;
 
 namespace EastFive.Api.Azure.Credentials
 {
-    [Attributes.IntegrationName(PingProvider.integrationName)]
+    [Attributes.IntegrationName(PingProvider.IntegrationName)]
     public class PingProvider : IProvideLogin
     {
-        public const string integrationName = "Ping";
+        public const string IntegrationName = "Ping";
+        public string Method => IntegrationName;
 
         public const string TokenId = "tokenid";
         public const string AgentId = "agentid";
@@ -35,10 +36,9 @@ namespace EastFive.Api.Azure.Credentials
         public const string Email = "email";
         public const string PracticeId = "practiceID";
         public const string DepartmentId = "departmentID";
-        public const string PatientId = "patientID"; 
-
-
-
+        public const string PatientId = "patientID";
+        public const string EncounterId = "extraidentifier";
+        
         public PingProvider()
         {
         }
@@ -49,7 +49,7 @@ namespace EastFive.Api.Azure.Credentials
             //return "https://sso.connect.pingidentity.com/sso/TXS/2.0/2/" + pingConnectToken;
         }
 
-        [Attributes.IntegrationName(PingProvider.integrationName)]
+        [Attributes.IntegrationName(PingProvider.IntegrationName)]
         public static Task<TResult> InitializeAsync<TResult>(
             Func<IProvideAuthorization, TResult> onProvideAuthorization,
             Func<TResult> onProvideNothing,
@@ -57,12 +57,11 @@ namespace EastFive.Api.Azure.Credentials
         {
             return onProvideAuthorization(new PingProvider()).ToTask();
         }
+        
 
-        public CredentialValidationMethodTypes Method => CredentialValidationMethodTypes.Ping;
+        public Type CallbackController => typeof(Controllers.PingResponse);
 
-        public Type CallbackController => typeof(Controllers.PingResponseController);
-
-        public async Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> extraParams,
+        public virtual async Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> extraParams,
             Func<string, Guid?, Guid?, IDictionary<string, string>, TResult> onSuccess,
             Func<Guid?, IDictionary<string, string>, TResult> onUnauthenticated,
             Func<string, TResult> onInvalidCredentials,

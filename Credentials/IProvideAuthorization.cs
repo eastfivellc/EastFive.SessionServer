@@ -11,6 +11,8 @@ namespace EastFive.Security.SessionServer
         
         Type CallbackController { get; }
 
+        string Method { get; }
+
         /// <summary>
         /// This method validates that the provided token is valid for
         /// the specified username and provider.
@@ -24,7 +26,11 @@ namespace EastFive.Security.SessionServer
         /// <returns>Value which will be stored for future access to this system. The return value must
         /// not be a default or empty string if the token was valid.</returns>
         Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> responseParams,
-            Func<string, Guid?, Guid?, IDictionary<string, string>, TResult> onSuccess,
+            Func<string, // Subject: unique identifier in the external system
+                Guid?, // stateId: If the login flow was initiated from a sessionId or integrationId, this is that ID, otherwise default(Guid?)
+                Guid?, // loginId: legacy GUID lookup predating the subject string identifier
+                IDictionary<string, string>, // full set of parameters returned from the authorization process, saved for later.
+                TResult> onSuccess,
             Func<Guid?, IDictionary<string, string>, TResult> onNotAuthenticated,
             Func<string, TResult> onInvalidToken,
             Func<string, TResult> onCouldNotConnect,

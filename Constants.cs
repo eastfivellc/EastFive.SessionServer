@@ -6,12 +6,4 @@ using System.Threading.Tasks;
 
 namespace EastFive.Security.SessionServer
 {
-    public class Constants
-    {
-        public static class AppSettingKeys
-        {
-            public const string SpaSiteLocation = "EastFive.Security.SessionServer.SpaSiteLocation";
-            public const string ApplicationInsightsKey = "EastFive.Security.SessionServer.ApplicationInsightsKey";
-        }
-    }
 }

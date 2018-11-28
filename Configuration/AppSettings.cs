@@ -11,6 +11,10 @@ namespace EastFive.Azure
            Location = "Azure Portal | Storage | Connection Strings",
            PrivateRepositoryOnly = true)]
         public const string ASTConnectionStringKey = EastFive.Azure.Persistence.AppSettings.Storage; // "EastFive.Azure.StorageTables.ConnectionString";
+
+        public const string ApplicationInsightsKey = "EastFive.Security.SessionServer.ApplicationInsightsKey";
+
+        public const string SpaSiteLocation = "EastFive.Security.SessionServer.SpaSiteLocation";
     }
 }
 
@@ -34,8 +38,6 @@ namespace EastFive.Security.SessionServer.Configuration
 
         public const string PingIdentityAthenaRestApiKey = "EastFive.Security.LoginProvider.PingIdentity.Athena.RestApiKey";
         public const string PingIdentityAthenaRestAuthUsername = "EastFive.Security.LoginProvider.PingIdentity.Athena.RestAuthUsername";
-
-        public const string ApplicationInsightsKey = "EastFive.Security.SessionServer.ApplicationInsightsKey";
         
         [ConfigKey("Link that is sent (emailed) to the user to login to the application",
             DeploymentOverrides.Desireable,

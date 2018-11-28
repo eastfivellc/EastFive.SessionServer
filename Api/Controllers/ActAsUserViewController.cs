@@ -4,6 +4,7 @@ using EastFive.Api.Azure.Credentials;
 using EastFive.Api.Azure.Credentials.Controllers;
 using EastFive.Api.Controllers;
 using EastFive.Extensions;
+using EastFive.Linq.Async;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -88,13 +89,17 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             EastFive.Api.Controllers.ViewStringResponse viewResponse)
         {
             return await await CredentialProcessDocument.FindByIdAsync(credentialProcessId,
-                (document) =>
+                async (document) =>
                 {
                     var context = application.AzureContext;
-                    var provider = application.AuthorizationProviders.First(prov => prov.Value.GetType().FullName == document.Provider).Value;
-                    // Enum.TryParse(document.Action, out AuthenticationActions action);
                     var responseParameters = document.GetValuesCredential();
-                    return provider.ParseCredentailParameters<Task<HttpResponseMessage>>(responseParameters,
+                    var providerKvp = await application.AuthorizationProviders
+                        .Where(prov => prov.Value.GetType().FullName == document.Provider)
+                        .FirstAsync(
+                            value => value,
+                            () => default(KeyValuePair<string, IProvideAuthorization>));
+                    var provider = providerKvp.Value;
+                    return await provider.ParseCredentailParameters(responseParameters,
                         async (subject, stateId, loginId) => await await context.Sessions.TokenRedeemedAsync<Task<HttpResponseMessage>>(
                             document.Method, provider, subject, stateId, loginId, responseParameters,
                             (sessionId, authorizationId, token, refreshToken, actionReturned, providerReturned, extraParams, redirectUrl) =>
@@ -139,11 +144,16 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             EastFive.Api.Controllers.ViewStringResponse viewResponse)
         {
             return await await CredentialProcessDocument.FindByIdAsync(credentialProcessId,
-                (document) =>
+                async (document) =>
                 {
-                    var provider = application.AuthorizationProviders.First(prov => prov.Value.GetType().FullName == document.Provider).Value;
+                    var providerKvp = await application.AuthorizationProviders
+                        .Where(prov => prov.Value.GetType().FullName == document.Provider)
+                        .FirstAsync(
+                            value => value,
+                            () => default(KeyValuePair<string, IProvideAuthorization>));
+                    var provider = providerKvp.Value;
                     Enum.TryParse(document.Action, out AuthenticationActions action);
-                    return ResponseController.CreateResponse(application, provider, document.Method, action,
+                    return await ResponseController.CreateResponse(application, provider, document.Method, action,
                             document.SessionId, document.AuthorizationId, document.Token, document.RefreshToken,
                             document.GetValuesCredential(), request.RequestUri, 
                             document.RedirectUrl.IsNullOrWhiteSpace(

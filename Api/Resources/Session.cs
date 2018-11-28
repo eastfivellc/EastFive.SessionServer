@@ -1,13 +1,23 @@
-﻿using BlackBarLabs.Extensions;
+﻿using BlackBarLabs.Api;
+using BlackBarLabs.Extensions;
+using EastFive.Api.Controllers;
+using EastFive.Security.SessionServer;
 using EastFive.Security.SessionServer.Api.Resources;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Net;
+using System.Net.Http;
 using System.Runtime.Serialization;
+using System.Threading.Tasks;
+using System.Web.Http.Routing;
 
 namespace EastFive.Api.Azure.Credentials.Resources
 {
     [DataContract]
+    [FunctionViewController(Route = "Session",
+        Resource = typeof(Session),
+        ContentType = "application/x-session+json")]
     public class Session : AuthorizationRequest
     {
         [DataMember]
@@ -33,10 +43,9 @@ namespace EastFive.Api.Azure.Credentials.Resources
         [DataMember]
         [JsonProperty(PropertyName = "refresh_token")]
         public string RefreshToken { get; set; }
-<<<<<<< Updated upstream
-        
-=======
 
+        #region Actionables
+        
         [HttpPost(MatchAllBodyParameters = false)]
         public static async Task<HttpResponseMessage> CreateAsync([Resource]Resources.Session authenticationRequest,
             HttpRequestMessage request, UrlHelper urlHelper)
@@ -67,7 +76,6 @@ namespace EastFive.Api.Azure.Credentials.Resources
                     .AddReason(why));
         }
 
-        #region Actionables
         
         [HttpGet]
         public static async Task<HttpResponseMessage> QueryByIdAsync(
@@ -195,7 +203,5 @@ namespace EastFive.Api.Azure.Credentials.Resources
         }
 
         #endregion
-
->>>>>>> Stashed changes
     }
 }

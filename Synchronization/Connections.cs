@@ -229,12 +229,12 @@ namespace EastFive.Azure.Synchronization
                             (remoteConnector, remoteAdapter) => select(remoteAdapter.PairWithValue(remoteConnector)),
                             skip))
                    .FirstMatchAsync<KeyValuePair<Adapter, Connector>, TResult>(
-                        (adapterConnectorKvp, next) =>
+                        (adapterConnectorKvp, match, next) =>
                         {
                             var remoteAdapter = adapterConnectorKvp.Key;
                             var remoteConnector = adapterConnectorKvp.Value;
                             if (remoteAdapter.integrationId == remoteIntegrationId)
-                                return onFound(remoteConnector, remoteAdapter);
+                                return match(onFound(remoteConnector, remoteAdapter));
                             return next();
                         },
                         () => onLocalAdapterNotFound()),

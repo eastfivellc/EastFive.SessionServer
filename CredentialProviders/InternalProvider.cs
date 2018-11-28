@@ -20,6 +20,7 @@ namespace EastFive.Api.Azure.Credentials
     public class InternalProvider : IProvideLogin
     {
         public const string IntegrationName = "Internal";
+        public string Method => IntegrationName;
 
         #region Initialization
 

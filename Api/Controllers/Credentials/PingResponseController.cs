@@ -22,25 +22,28 @@ using EastFive.Security.SessionServer.Exceptions;
 using EastFive.Extensions;
 using EastFive.Api.Controllers;
 using EastFive.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace EastFive.Api.Azure.Credentials.Controllers
 {
-    public class PingRequest
-    {
-        public string tokenid { get; set; }
-
-        public string agentid { get; set; }
-    }
-    
     [RoutePrefix("aadb2c")]
     [FunctionViewController(Route="PingResponse")]
-    public class PingResponseController
+    public class PingResponse
     {
-        [HttpGet]
+        public const string TokenIdPropertyName = PingProvider.TokenId;
+        [JsonProperty(PropertyName = TokenIdPropertyName)]
+        public string tokenid { get; set; }
+
+        public const string AgentIdPropertyName = PingProvider.AgentId;
+        [JsonProperty(PropertyName = AgentIdPropertyName)]
+        public string agentid { get; set; }
+
+        [HttpGet(MatchAllParameters = false)]
         public static Task<HttpResponseMessage> Get(
-            [QueryParameter(Name ="tokenid")]string tokenId,
-            [QueryParameter(Name = "agentid")]string agentId,
-            AzureApplication application, HttpRequestMessage request,
+                [QueryParameter(Name = TokenIdPropertyName)]string tokenId,
+                [QueryParameter(Name = AgentIdPropertyName)]string agentId,
+                AzureApplication application,
+                HttpRequestMessage request,
             RedirectResponse redirectResponse)
         {
             //The way this works...
