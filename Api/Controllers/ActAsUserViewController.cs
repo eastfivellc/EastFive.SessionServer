@@ -23,7 +23,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
 
         [EastFive.Api.HttpGet (MatchAllParameters = true )]
         public static async Task<HttpResponseMessage> SessionManagement(
-            EastFive.Api.Controllers.ApiSecurity security,
+            //EastFive.Api.Controllers.ApiSecurity security,
             EastFive.Api.Azure.AzureApplication application,
             UnauthorizedResponse onUnauthorized,
             ViewFileResponse viewResponse)
