@@ -1,4 +1,10 @@
-﻿using BlackBarLabs.Api;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
+
 using BlackBarLabs.Extensions;
 using EastFive.Api;
 using EastFive.Api.Azure.Credentials.Controllers;
@@ -6,12 +12,7 @@ using EastFive.Collections.Generic;
 using EastFive.Security.SessionServer;
 using EastFive.Serialization;
 using EastFive.Sheets;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace EastFive.Api.Controllers
 {
@@ -41,11 +42,11 @@ namespace EastFive.Api.Controllers
         {
             var resourceTypesList = resourceTypes.SelectKeys().Join(",");
             return onSuccess(
-                url.GetLocation(
-                    integration, resourceTypesList,
-                    (integrationId, resTypesList) =>
-                        InternalIntegrationResponseController
-                            .GetResponse(application, integrationId, resTypesList, request, (location,why) => onSuccess(location,why))), null);
+                url.GetLocation<InternalIntegrationResponseController>(
+                    (irc) => irc.IntegrationId.AssignQueryValue(integration),
+                    (irc) => irc.ResourceTypes.AssignQueryValue(resourceTypesList),
+                    application),
+                "complete");
         }
     }
 }

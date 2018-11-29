@@ -23,16 +23,25 @@ using EastFive.Extensions;
 using EastFive.Security.SessionServer.Api.Controllers;
 using EastFive.Collections.Generic;
 using EastFive.Api.Controllers;
+using Newtonsoft.Json;
 
 namespace EastFive.Api.Azure.Credentials.Controllers
 {
     [FunctionViewController(Route = "InternalIntegrationResponse")]
-    public static class InternalIntegrationResponseController
+    public class InternalIntegrationResponseController
     {
+        public const string IntegrationIdPropertyName = "integrationId";
+        [JsonProperty(PropertyName = IntegrationIdPropertyName)]
+        public Guid IntegrationId;
+
+        public const string resourceTypesPropertyName = "resource_types";
+        [JsonProperty(PropertyName = resourceTypesPropertyName)]
+        public string ResourceTypes;
+        
         [HttpGet]
         public static async Task<HttpResponseMessage> GetResponse(AzureApplication application, 
-                [QueryParameter(CheckFileName = true)]Guid integrationId,
-                [QueryParameter]string resourceTypes,
+                [QueryParameter(CheckFileName = true, Name = IntegrationIdPropertyName)]Guid integrationId,
+                [QueryParameter(Name = resourceTypesPropertyName)]string resourceTypes,
                 HttpRequestMessage request,
             RedirectResponse onRedirect)
         {
