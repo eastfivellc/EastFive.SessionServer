@@ -22,19 +22,21 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             return View("~/Views/ActAsUser/");
         }
 
-        [EastFive.Api.HttpGet (MatchAllParameters = true )]
+        [EastFive.Api.HttpGet]
         public static async Task<HttpResponseMessage> SessionManagement(
+            [OptionalQueryParameter(Name = "ApiKeySecurity")]string apiSecurityKey,
             EastFive.Api.Controllers.ApiSecurity security,
-            EastFive.Api.Azure.AzureApplication application,
+            //EastFive.Api.Azure.AzureApplication application,
             UnauthorizedResponse onUnauthorized,
             ViewFileResponse viewResponse)
+
         {
             //if (!await application.IsAdminAsync(security))
             //    return onUnauthorized();
             return await CredentialProcessDocument.FindAllAsync(
                 (documents) =>
                 {
-                    var orderedDocs = documents.OrderByDescending(doc => doc.Time).ToArray();
+                    var orderedDocs = documents.OrderByDescending(doc => doc.Time).Take(30).ToArray();
                     return viewResponse("/SessionManagement/Index.cshtml", orderedDocs);
                 },
                 BlackBarLabs.Persistence.Azure.StorageTables.AzureStorageRepository.CreateRepository(
@@ -103,11 +105,13 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                         async (subject, stateId, loginId) => await await context.Sessions.TokenRedeemedAsync<Task<HttpResponseMessage>>(
                             document.Method, provider, subject, stateId, loginId, responseParameters,
                             (sessionId, authorizationId, token, refreshToken, actionReturned, providerReturned, extraParams, redirectUrl) =>
-                                ResponseController.CreateResponse(application, providerReturned, document.Method, actionReturned, sessionId, authorizationId,
+                            {
+                                return ResponseController.CreateResponse(application, providerReturned, document.Method, actionReturned, sessionId, authorizationId,
                                         token, refreshToken, extraParams, request.RequestUri, redirectUrl,
                                     (redirectUri, message) => redirectResponse(redirectUri, message),
                                     (code, message, reason) => viewResponse($"<html><head><title>{reason}</title></head><body>{message}</body></html>", null),
-                                    application.Telemetry),
+                                    application.Telemetry);
+                            },
                             async (redirectUrl, reason, providerReturned, extraParams) =>
                             {
                                 if (redirectUrl.IsDefaultOrNull())
@@ -119,12 +123,14 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                                 return await redirectResponse(redirectUrl, reason).ToTask();
                             },
                             (subjectReturned, credentialProvider, extraParams, createMappingAsync) =>
-                                ResponseController.UnmappedCredentailAsync(application,
+                            {
+                                return ResponseController.UnmappedCredentailAsync(application,
                                         credentialProvider, document.Method, subjectReturned, extraParams, request.RequestUri,
                                         createMappingAsync,
                                     (redirectUri, message) => redirectResponse(redirectUri, message),
                                     (code, message, reason) => viewResponse($"<html><head><title>{reason}</title></head><body>{message}</body></html>", null),
-                                    application.Telemetry).ToTask(),
+                                    application.Telemetry).ToTask();
+                            },
                             (why) => viewResponse($"<html><head><title>{why}</title></head><body>{why}</body></html>", null).ToTask(),
                             (why) => viewResponse($"<html><head><title>{why}</title></head><body>{why}</body></html>", null).ToTask(),
                             (why) => viewResponse($"<html><head><title>{why}</title></head><body>{why}</body></html>", null).ToTask(),
