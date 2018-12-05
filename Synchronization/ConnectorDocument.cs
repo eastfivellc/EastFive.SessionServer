@@ -48,6 +48,8 @@ namespace EastFive.Azure.Synchronization.Persistence
         
         public string Method { get; set; }
 
+        public DateTime? LastSynchronized { get; set; }
+
         public Connector.SynchronizationMethod GetMethod()
         {
             Enum.TryParse(this.Method, out Connector.SynchronizationMethod result);
@@ -403,6 +405,64 @@ namespace EastFive.Azure.Synchronization.Persistence
                         (parentDoc) => onNotFound()));
         }
 
+        internal static Task<TResult> UpdateSynchronizationWithAdapterRemoteAsync<TResult>(Guid connectorId, Adapter sourceAdapter,
+            Func<Connector, Adapter, Func<DateTime?, Task>, Task<TResult>> onFound,
+            Func<TResult> onNotFound)
+        {
+            return AzureStorageRepository.Connection(
+                azureStorageRepository =>
+                    azureStorageRepository.UpdateAsync<ConnectorDocument, TResult>(connectorId,
+                        async (connectorDoc, saveConnector) =>
+                        {
+                            var otherAdapterId = connectorDoc.RemoteAdapter == sourceAdapter.adapterId ?
+                                connectorDoc.LocalAdapter
+                                :
+                                connectorDoc.RemoteAdapter;
+                            return await await azureStorageRepository.FindByIdAsync(otherAdapterId,
+                                (AdapterDocument otherAdapterDoc) =>
+                                {
+                                    var connector = Convert(connectorDoc);
+                                    return onFound(connector, AdapterDocument.Convert(otherAdapterDoc),
+                                        async (dateTime) =>
+                                        {
+                                            connectorDoc.LastSynchronized = dateTime;
+                                            await saveConnector(connectorDoc);
+                                        });
+                                },
+                                onNotFound.AsAsyncFunc());
+                        },
+                        onNotFound));
+        }
+
+        internal static Task<TResult> UpdateSynchronizationWithAdapterRemoteAsyncAsync<TResult>(Guid connectorId, Adapter sourceAdapter,
+            Func<Connector, Adapter, Func<DateTime?, Task>, Task<TResult>> onFound,
+            Func<Task<TResult>> onNotFound)
+        {
+            return AzureStorageRepository.Connection(
+                azureStorageRepository =>
+                    azureStorageRepository.UpdateAsyncAsync<ConnectorDocument, TResult>(connectorId,
+                        async (connectorDoc, saveConnector) =>
+                        {
+                            var otherAdapterId = connectorDoc.RemoteAdapter == sourceAdapter.adapterId ?
+                                connectorDoc.LocalAdapter
+                                :
+                                connectorDoc.RemoteAdapter;
+                            return await await azureStorageRepository.FindByIdAsync(otherAdapterId,
+                                (AdapterDocument otherAdapterDoc) =>
+                                {
+                                    var connector = Convert(connectorDoc);
+                                    return onFound(connector, AdapterDocument.Convert(otherAdapterDoc),
+                                        async (dateTime) =>
+                                        {
+                                            connectorDoc.LastSynchronized = dateTime;
+                                            await saveConnector(connectorDoc);
+                                        });
+                                },
+                                onNotFound);
+                        },
+                        onNotFound));
+        }
+
         public static IEnumerableAsync<Connection> FindAllByType(string resourceType)
         {
             return AzureStorageRepository.Connection(
@@ -457,6 +517,7 @@ namespace EastFive.Azure.Synchronization.Persistence
                 createdBy = syncDoc.CreatedBy,
                 adapterExternalId = syncDoc.RemoteAdapter,
                 adapterInternalId = syncDoc.LocalAdapter,
+                lastSynchronized = syncDoc.LastSynchronized,
             };
         }
 

@@ -34,6 +34,7 @@ namespace EastFive.Azure.Synchronization
         public Guid createdBy;
 
         public Guid adapterInternalId;
+
         public Guid adapterExternalId;
 
         public enum SynchronizationMethod
@@ -44,6 +45,8 @@ namespace EastFive.Azure.Synchronization
             ignore,
         }
         public SynchronizationMethod synchronizationMethod;
+
+        public DateTime? lastSynchronized;
     }
     
     public struct Connection
@@ -238,6 +241,26 @@ namespace EastFive.Azure.Synchronization
                             return next();
                         },
                         () => onLocalAdapterNotFound()),
+                onLocalAdapterNotFound.AsAsyncFunc());
+        }
+
+        public static async Task<TResult> UpdateAdapterConnectorByKeyAsync<TResult>(string localResourceKey, Guid localIntegrationId, string localResourceType,
+                Guid remoteIntegrationId,
+            Func<Connector, Adapter, Func<DateTime?, Task>, Task<TResult>> onFound,
+            Func<TResult> onLocalAdapterNotFound)
+        {
+            return await await FindAdapterByKeyAsync(localResourceKey, localIntegrationId, localResourceType,
+                (localAdapter) => localAdapter.connectorIds
+                    .First(
+                        async (connectorId, next) => await await Persistence.ConnectorDocument.UpdateSynchronizationWithAdapterRemoteAsync<Task<TResult>>(connectorId, localAdapter,
+                            (remoteConnector, remoteAdapter, saveAsync) =>
+                            {
+                                if (remoteAdapter.integrationId != remoteIntegrationId)
+                                    return next().AsTask();
+                                return onFound(remoteConnector, remoteAdapter, saveAsync).AsTask();
+                            },
+                            next),
+                        () => onLocalAdapterNotFound().AsTask()),
                 onLocalAdapterNotFound.AsAsyncFunc());
         }
 
@@ -541,6 +564,16 @@ namespace EastFive.Azure.Synchronization
         {
             var internalKey = internalGuidKey.ToString("N");
             return FindAdapterConnectorByKeyAsync(internalKey, defaultInternalIntegrationId, resourceType, remoteIntegrationId,
+                onFoundInternalAdapter,
+                onInternalAdapterNotFound);
+        }
+
+        public static Task<TResult> UpdateConnectorByIdAsync<TResult>(Guid internalGuidKey, string resourceType, Guid remoteIntegrationId,
+            Func<Connector, Adapter, Func<DateTime?, Task>, Task<TResult>> onFoundInternalAdapter,
+            Func<TResult> onInternalAdapterNotFound)
+        {
+            var internalKey = internalGuidKey.ToString("N");
+            return UpdateAdapterConnectorByKeyAsync(internalKey, defaultInternalIntegrationId, resourceType, remoteIntegrationId,
                 onFoundInternalAdapter,
                 onInternalAdapterNotFound);
         }
