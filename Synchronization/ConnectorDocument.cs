@@ -200,7 +200,10 @@ namespace EastFive.Azure.Synchronization.Persistence
                             return await await azureStorageRepository.FindByIdAsync(lookupId,
                                 async (EastFive.Persistence.Azure.Documents.LookupDocument lookupDoc) =>
                                     await await azureStorageRepository.FindByIdAsync(lookupDoc.Lookup,
-                                        (ConnectorDocument connectorDoc) => onRelationshipAlreadyExists(Convert(connectorDoc)).AsTask(),
+                                        (ConnectorDocument connectorDoc) =>
+                                        {
+                                            return onRelationshipAlreadyExists(Convert(connectorDoc)).AsTask();
+                                        },
                                         async () =>
                                         {
                                             // if the referenced doc does not exists, this was legacy data, delete and retry
@@ -220,11 +223,20 @@ namespace EastFive.Azure.Synchronization.Persistence
                                                         onAlreadyExists,
                                                         onRelationshipAlreadyExists));
                                         }),
-                                () => CreateWithoutAdapterUpdateAsync(connectorId,
-                                        adapterInternalId, adapterExternalId, method, resourceType,
-                                    onCreated,
-                                    onAlreadyExists,
-                                    onRelationshipAlreadyExists));
+                                () =>
+                                {
+                                    // Most likely the referenced connection does not
+                                    // exists and this lookup was deleted by a parallel thread
+                                    // executing the failure case of the FindByIdAsync for the connector
+                                    // (in correponding success callback for lookup).
+                                    // 
+                                    // The create should work this time so try it again.
+                                    return CreateWithoutAdapterUpdateAsync(connectorId,
+                                            adapterInternalId, adapterExternalId, method, resourceType,
+                                        onCreated,
+                                        onAlreadyExists,
+                                        onRelationshipAlreadyExists);
+                                });
                         });
                 });
         }

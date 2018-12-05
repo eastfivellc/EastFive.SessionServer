@@ -92,16 +92,20 @@ namespace EastFive.Azure.Synchronization
                 .Select(
                     adapter => Persistence.AdapterDocument.FindOrCreateAsync(adapter.key,
                         integrationId, resourceType,
-                        async (created, adapterInternalStorage, saveAsync) =>
+                        async (created, adapterInternalStorage, mutateAsync) =>
                         {
-                            adapterInternalStorage.key = adapter.key; // SHIM?
-                            adapterInternalStorage.name = adapter.name;
-                            adapterInternalStorage.identifiers = adapter.identifiers;
-                            adapterInternalStorage.integrationId = integrationId;
-                            adapterInternalStorage.resourceType = resourceType;
-
                             // Update identifiers internally if there is no externally mapped resource
-                            var adapterId = await saveAsync(adapterInternalStorage);
+                            var adapterId = await mutateAsync(
+                                adapterToUpdate =>
+                                {
+                                    adapterToUpdate.key = adapter.key; // SHIM?
+                                    adapterToUpdate.name = adapter.name;
+                                    adapterToUpdate.identifiers = adapter.identifiers;
+                                    adapterToUpdate.integrationId = integrationId;
+                                    adapterToUpdate.resourceType = resourceType;
+                                    return adapterToUpdate;
+                                });
+
                             return adapterInternalStorage;
                         }))
                 .WhenAllAsync();
@@ -144,10 +148,27 @@ namespace EastFive.Azure.Synchronization
                                     adapterInternal.adapterId, adapterExternal.adapterId, Connector.SynchronizationMethod.ignore, resourceType,
                                 async () =>
                                 {
-                                    adapterInternal.connectorIds = adapterInternal.connectorIds.Append(connectorId).ToArray();
-                                    await saveAdapterInternalAsync(adapterInternal);
-                                    adapterExternal.connectorIds = adapterExternal.connectorIds.Append(connectorId).ToArray();
-                                    await saveAdapterExternalAsync(adapterExternal);
+                                    var savingInternal = saveAdapterInternalAsync(
+                                        (adapterInternalToUpdate) =>
+                                        {
+                                            adapterInternalToUpdate.connectorIds = adapterInternalToUpdate.connectorIds
+                                                .Append(connectorId)
+                                                .Distinct()
+                                                .ToArray();
+                                            return adapterInternalToUpdate;
+                                        });
+
+                                    await saveAdapterExternalAsync(
+                                        (adapterExternalToUpdate) =>
+                                        {
+                                            adapterExternalToUpdate.connectorIds = adapterExternalToUpdate.connectorIds
+                                                .Append(connectorId)
+                                                .Distinct()
+                                                .ToArray();
+                                            return adapterExternalToUpdate;
+                                        });
+                                    await savingInternal;
+
                                     return onSuccess(
                                         new Connector
                                         {
@@ -161,10 +182,34 @@ namespace EastFive.Azure.Synchronization
                                 () => throw new Exception("Guid not unique."),
                                 async (existingConnector) =>
                                 {
-                                    adapterInternal.connectorIds = adapterInternal.connectorIds.Append(connectorId).ToArray();
-                                    await saveAdapterInternalAsync(adapterInternal);
-                                    adapterExternal.connectorIds = adapterExternal.connectorIds.Append(connectorId).ToArray();
-                                    await saveAdapterExternalAsync(adapterExternal);
+                                    #region patch potential bad data
+
+                                    var savingInternal = adapterInternal.connectorIds.Contains(existingConnector.connectorId)?
+                                        adapterInternal.AsTask()
+                                        :
+                                        saveAdapterInternalAsync(
+                                            (adapterInternalToUpdate) =>
+                                            {
+                                                adapterInternalToUpdate.connectorIds = adapterInternalToUpdate.connectorIds
+                                                    .Append(existingConnector.connectorId)
+                                                    .Distinct()
+                                                    .ToArray();
+                                                return adapterInternalToUpdate;
+                                            });
+
+                                    if(!adapterExternal.connectorIds.Contains(existingConnector.connectorId))
+                                        await saveAdapterExternalAsync(
+                                            (adapterExternalToUpdate) =>
+                                            {
+                                                adapterExternalToUpdate.connectorIds = adapterExternalToUpdate.connectorIds
+                                                    .Append(existingConnector.connectorId)
+                                                    .Distinct()
+                                                    .ToArray();
+                                                return adapterExternalToUpdate;
+                                            });
+                                    await savingInternal;
+
+                                    #endregion
 
                                     return onSuccess(existingConnector);
                                 });

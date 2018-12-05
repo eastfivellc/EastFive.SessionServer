@@ -44,12 +44,6 @@ namespace EastFive.Security.SessionServer.Persistence
                 () => alreadyExists());
         }
 
-        public async Task<bool> DoesExistsAsync(Guid sessionId)
-        {
-            var sessionDocument = await repository.FindById<Documents.SessionDocument>(sessionId);
-            return null != sessionDocument;
-        }
-
         #endregion
         
         public async Task<TResult> UpdateAuthentication<TResult>(Guid sessionId,
