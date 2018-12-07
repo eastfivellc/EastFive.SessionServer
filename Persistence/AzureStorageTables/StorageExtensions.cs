@@ -16,6 +16,17 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
 
     public static class StorageExtensions
     {
+        public static Task<TResult> AzureStorageTableFindAsync<TEntity, TResult>(this Guid resourceId,
+            Func<TEntity, TResult> onFound,
+            Func<TResult> onDoesNotExists)
+        {
+            return AzureTableDriverDynamic
+                .FromSettings()
+                .FindByIdAsync<TEntity, TResult>(resourceId,
+                    onFound,
+                    onDoesNotExists);
+        }
+
         public static async Task<ITransactionResult<TResult>> CheckAsync<T, TResult>(this IRef<T> value,
             Func<TResult> onNotFound)
             where T : struct
