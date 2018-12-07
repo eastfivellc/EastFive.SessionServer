@@ -92,15 +92,15 @@ namespace EastFive.Api.Azure.Credentials
                 (authenticationRequests) =>
                 {
                     var response = authenticationRequests
-                        .Append(
-                            new Session()
-                            {
-                                action = AuthenticationActions.link,
-                                authorizationId = actorId,
-                                id = actorId,
-                                method = "account",
-                                name = "Account",
-                            })
+                        //.Append(
+                        //    new Session()
+                        //    {
+                        //        action = AuthenticationActions.link,
+                        //        authorizationId = actorId,
+                        //        id = actorId,
+                        //        method = "account",
+                        //        name = "Account",
+                        //    })
                         .Select(authenticationRequest => 
                             request.CreateResponse(HttpStatusCode.OK, Convert(authenticationRequest, urlHelper)))
                         .ToArray();
@@ -188,7 +188,7 @@ namespace EastFive.Api.Azure.Credentials
 
                     // Can't update a session that does not exist
                     var session = await context.Integrations.UpdateAsync(resource.Id.ToGuid().Value,
-                        actingAs, claims, application,
+                        actingAs, claims, application, resource.Name,
                         resource.UserParameters
                             .ToDictionary(
                                 userParam => userParam.Key,

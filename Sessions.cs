@@ -52,7 +52,7 @@ namespace EastFive.Security.SessionServer
             this.dataContext = dataContext;
             this.context = context;
 
-            telemetry = Web.Configuration.Settings.GetString(SessionServer.Configuration.AppSettings.ApplicationInsightsKey,
+            telemetry = Web.Configuration.Settings.GetString(EastFive.Azure.AppSettings.ApplicationInsightsKey,
                 (applicationInsightsKey) =>
                 {
                     return new TelemetryClient { InstrumentationKey = applicationInsightsKey };
@@ -172,6 +172,7 @@ namespace EastFive.Security.SessionServer
         }
         
         internal async Task<TResult> GetAsync<TResult>(Guid authenticationRequestId, Func<Type, Uri> callbackUrlFunc,
+                AzureApplication application,
             Func<Session, TResult> onSuccess,
             Func<string, TResult> onNotFound,
             Func<string, TResult> onFailure)
@@ -182,7 +183,7 @@ namespace EastFive.Security.SessionServer
                     if (authenticationRequestStorage.Deleted.HasValue)
                         return onNotFound("Session was deleted");
 
-                    return await Context.GetLoginProvider(authenticationRequestStorage.method,
+                    return await await application.GetLoginProviderAsync(authenticationRequestStorage.method,
                         async (provider) =>
                         {
                             var authenticationRequest = Convert(authenticationRequestStorage);
@@ -256,7 +257,7 @@ namespace EastFive.Security.SessionServer
             Func<string, TResult> onNotConfigured,
             Func<string, TResult> onFailure)
         {
-            return await application.GetAuthorizationProvider(method,
+            return await await application.GetAuthorizationProviderAsync(method,
                 async (provider) =>
                 {
                     return await await provider.RedeemTokenAsync(extraParams,
@@ -323,7 +324,7 @@ namespace EastFive.Security.SessionServer
             Func<string, TResult> onNotConfigured,
             Func<string, TResult> onFailure)
         {
-            return await application.GetAuthorizationProvider(method,
+            return await await application.GetAuthorizationProviderAsync(method,
                 async (provider) =>
                 {
                     return await await provider.RedeemTokenAsync(extraParams,
@@ -430,7 +431,7 @@ namespace EastFive.Security.SessionServer
 
                     if (AuthenticationActions.link == authenticationRequest.action)
                         return await context.Invites.CreateInviteCredentialAsync(sessionId, sessionId,
-                                authenticationRequest.authorizationId, method, subject,
+                                authenticationRequest.authorizationId, method, subject, authenticationRequest.name,
                                 extraParams, saveAuthRequest, authenticationRequest.redirect,
                             onLogin,
                             onInvalidToken,
@@ -456,7 +457,7 @@ namespace EastFive.Security.SessionServer
                             return await await this.CreateSessionAsync(sessionId, authenticationId,
                                 async (token, refreshToken) =>
                                 {
-                                    await saveAuthRequest(authenticationId, token, extraParams);
+                                    await saveAuthRequest(authenticationId, authenticationRequest.name, token, extraParams);
                                     return onLogin(sessionId, authenticationId,
                                         token, refreshToken, AuthenticationActions.signin, extraParams, authenticationRequest.redirect);
                                 },

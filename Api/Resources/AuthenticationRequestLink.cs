@@ -18,7 +18,7 @@ namespace EastFive.Api.Azure.Credentials.Resources
         [DataMember]
         [JsonProperty(PropertyName = "method")]
         public string Method { get; set; }
-        
+
         public CredentialValidationMethodTypes CredentialValidationMethodType
         {
             get

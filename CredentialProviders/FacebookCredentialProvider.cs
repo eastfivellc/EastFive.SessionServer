@@ -9,10 +9,13 @@ using EastFive.Api.Azure.Credentials.Attributes;
 
 namespace EastFive.Api.Azure.Credentials
 {
-    [IntegrationName("Facebook")]
+    [IntegrationName(IntegrationName)]
     public class FacebookCredentialProvider : IProvideLogin
     {
-        [IntegrationName("Facebook")]
+        public const string IntegrationName = "Facebook";
+        public string Method => IntegrationName;
+
+        [IntegrationName(IntegrationName)]
         public static Task<TResult> InitializeAsync<TResult>(
             Func<IProvideLogin, TResult> onProvideLogin,
             Func<IProvideAuthorization, TResult> onProvideAuthorization,
@@ -21,9 +24,7 @@ namespace EastFive.Api.Azure.Credentials
         {
             return onProvideNothing().ToTask();
         }
-
-        public CredentialValidationMethodTypes Method => CredentialValidationMethodTypes.Facebook;
-
+        
         public Type CallbackController => typeof(Controllers.ResponseController);
 
         public async Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> extraParams,

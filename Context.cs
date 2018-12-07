@@ -55,6 +55,7 @@ namespace EastFive.Security.SessionServer
                 () => onFailure("Claim is already in use"));
         }
 
+        [Obsolete("User Login Providers from Application.")]
         internal static TResult GetLoginProvider<TResult>(string method,
             Func<IProvideLogin, TResult> onSuccess,
             Func<TResult> onCredintialSystemNotAvailable,

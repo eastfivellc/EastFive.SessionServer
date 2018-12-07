@@ -11,10 +11,13 @@ using EastFive.Security.SessionServer;
 
 namespace EastFive.Api.Azure.Credentials
 {
-    [Attributes.IntegrationName("Implicit")]
+    [Attributes.IntegrationName(IntegrationName)]
     public class ImplicitlyCreatedCredentialProvider : IProvideLoginManagement, IProvideAuthorization
     {
-        [Attributes.IntegrationName("Implicit")]
+        public const string IntegrationName = "Implicit";
+        public string Method => IntegrationName;
+
+        [Attributes.IntegrationName(IntegrationName)]
         public static Task<TResult> InitializeAsync<TResult>(
             Func<IProvideLogin, TResult> onProvideLogin,
             Func<IProvideAuthorization, TResult> onProvideAuthorization,

@@ -175,29 +175,37 @@ namespace EastFive.Azure.Synchronization.Persistence
         }
 
         public static Task<TResult> FindOrCreateAsync<TResult>(string key, Guid integrationId, string resourceType,
-            Func<bool, Adapter, Func<Adapter, Task<Guid>>, Task<TResult>> onFound)
+            Func<bool, Adapter, Func<Func<Adapter, Adapter>, Task<Adapter>>, Task<TResult>> onFound)
         {
             return AzureStorageRepository.Connection(
                 azureStorageRepository =>
                 {
                     var adapterId = GetId(key, integrationId, resourceType);
-                    return azureStorageRepository.CreateOrUpdateAsync<AdapterDocument, TResult>(adapterId,
+                    return azureStorageRepository.CreateOrMutateAsync<AdapterDocument, TResult>(adapterId,
                         (created, adapterDoc, saveAsync) =>
                         {
                             adapterDoc.Key = key;
                             adapterDoc.IntegrationId = integrationId;
                             adapterDoc.ResourceType = resourceType;
                             return onFound(created, Convert(adapterDoc),
-                                async (adapterUpdated) =>
+                                async (adapterMutator) =>
                                 {
-                                    adapterDoc.IntegrationId = adapterUpdated.integrationId;
-                                    adapterDoc.Key = adapterUpdated.key;
-                                    adapterDoc.Name = adapterUpdated.name;
-                                    adapterDoc.ResourceType = resourceType; // Shim
-                                    adapterDoc.SetIdentifiers(adapterUpdated.identifiers);
-                                    adapterDoc.SetConnectorIds(adapterUpdated.connectorIds);
-                                    await saveAsync(adapterDoc);
-                                    return adapterId;
+                                    var adapterDocFinal = await saveAsync(
+                                        adapterStorage =>
+                                        {
+                                            adapterStorage.Key = key;
+                                            adapterStorage.IntegrationId = integrationId;
+                                            adapterStorage.ResourceType = resourceType;
+                                            var adapterUpdated = adapterMutator(Convert(adapterStorage));
+                                            adapterStorage.ResourceType = resourceType; // Shim
+                                            adapterStorage.IntegrationId = adapterUpdated.integrationId;
+                                            adapterStorage.Key = adapterUpdated.key;
+                                            adapterStorage.Name = adapterUpdated.name;
+                                            adapterStorage.SetIdentifiers(adapterUpdated.identifiers);
+                                            adapterStorage.SetConnectorIds(adapterUpdated.connectorIds);
+                                            return adapterStorage;
+                                        });
+                                    return Convert(adapterDocFinal);
                                 });
                         });
                 });

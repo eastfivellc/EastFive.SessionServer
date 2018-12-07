@@ -20,6 +20,7 @@ namespace EastFive.Security.SessionServer.Persistence
     {
         public Guid id;
         public string method;
+        public string name;
         public AuthenticationActions action;
         public Guid? authorizationId;
         public IDictionary<string, string> extraParams;
@@ -127,16 +128,17 @@ namespace EastFive.Security.SessionServer.Persistence
         }
 
         public async Task<TResult> UpdateAsync<TResult>(Guid authenticationRequestId,
-            Func<AuthenticationRequest, Func<Guid, string, IDictionary<string, string>, Task>, Task<TResult>> onFound,
+            Func<AuthenticationRequest, Func<Guid, string, string, IDictionary<string, string>, Task>, Task<TResult>> onFound,
             Func<TResult> onNotFound)
         {
             return await this.repository.UpdateAsync<Documents.AuthenticationRequestDocument, TResult>(authenticationRequestId,
                 async (document, saveAsync) =>
                 {
                     return await onFound(Convert(document),
-                        async (linkedAuthenticationId, token, extraParams) =>
+                        async (linkedAuthenticationId, name, token, extraParams) =>
                         {
                             document.LinkedAuthenticationId = linkedAuthenticationId;
+                            document.Name = name;
                             document.Token = token;
                             document.SetExtraParams(extraParams);
                             await saveAsync(document);
@@ -183,6 +185,7 @@ namespace EastFive.Security.SessionServer.Persistence
             {
                 id = document.Id,
                 method = document.Method,
+                name = document.Name,
                 action = (AuthenticationActions)Enum.Parse(typeof(AuthenticationActions), document.Action, true),
                 authorizationId = document.LinkedAuthenticationId,
                 token = document.Token,

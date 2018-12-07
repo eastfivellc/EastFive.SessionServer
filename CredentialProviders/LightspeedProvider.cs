@@ -15,9 +15,12 @@ using System.Threading.Tasks;
 
 namespace EastFive.Api.Azure.Credentials
 {
-    [IntegrationName("Lightspeed")]
+    [IntegrationName(IntegrationName)]
     public class LightspeedProvider : IProvideLogin
     {
+        public const string IntegrationName = "Lightspeed";
+        public string Method => IntegrationName;
+
         #region Initialization
 
         private const string tokenKey = "code";
@@ -56,7 +59,7 @@ namespace EastFive.Api.Azure.Credentials
                 onConfigurationNotAvailable);
         }
 
-        [IntegrationName("Lightspeed")]
+        [IntegrationName(IntegrationName)]
         public static async Task<TResult> InitializeAsync<TResult>(
             Func<IProvideAuthorization, TResult> onProvideAuthorization,
             Func<TResult> onProvideNothing,
@@ -70,9 +73,7 @@ namespace EastFive.Api.Azure.Credentials
         #endregion
 
         #region IProvideAuthorization
-
-        public CredentialValidationMethodTypes Method => CredentialValidationMethodTypes.Lightspeed;
-
+        
         public async Task<TResult> GetRefreshTokenAsync<TResult>(string code, string grantType,
             Func<string, string, string, string, string, TResult> onSuccess,
             Func<string, TResult> onInvalidCredentials)

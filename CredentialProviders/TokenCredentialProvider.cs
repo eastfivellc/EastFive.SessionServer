@@ -9,9 +9,12 @@ using EastFive.Security.SessionServer;
 
 namespace EastFive.Api.Azure.Credentials
 {
-    [Attributes.IntegrationName("Token")]
+    [Attributes.IntegrationName(IntegrationName)]
     public class TokenCredentialProvider : IProvideAuthorization, IProvideLoginManagement
     {
+        public const string IntegrationName = "Token";
+        public string Method => IntegrationName;
+
         private const string subjectIdKey = "loginId";
 
         private Security.SessionServer.Persistence.DataContext dataContext;
@@ -21,7 +24,7 @@ namespace EastFive.Api.Azure.Credentials
             this.dataContext = new DataContext(EastFive.Azure.AppSettings.ASTConnectionStringKey);
         }
 
-        [Attributes.IntegrationName("Token")]
+        [Attributes.IntegrationName(IntegrationName)]
         public static Task<TResult> InitializeAsync<TResult>(
             Func<IProvideAuthorization, TResult> onProvideAuthorization,
             Func<TResult> onProvideNothing,
@@ -29,9 +32,7 @@ namespace EastFive.Api.Azure.Credentials
         {
             return onProvideAuthorization(new TokenCredentialProvider()).ToTask();
         }
-
-        public CredentialValidationMethodTypes Method => CredentialValidationMethodTypes.Token;
-
+        
         public Type CallbackController => typeof(Controllers.TokenController);
 
         public Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> extraParams,
