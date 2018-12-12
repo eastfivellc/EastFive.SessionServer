@@ -189,18 +189,50 @@ namespace EastFive.Azure
                 () => onNotFound());
         }
 
-        public Task<TResult> GetAuthenticatedByIdAsync<TResult>(Guid authenticationRequestId,
+        public async Task<TResult> GetAuthenticatedByIdAsync<TResult>(Guid authenticationRequestId,
             Func<Uri,   // redirect 
                 Integration, 
                 TResult> onSuccess,
             Func<TResult> onNotFound)
+        {
+            return await this.dataContext.AzureStorageRepository.UpdateAsync<AuthenticationRequestDocument, TResult>(authenticationRequestId,
+                async (authenticationRequestStorage, saveAsync) =>
+                {
+                    if (!authenticationRequestStorage.LinkedAuthenticationId.HasValue)
+                        return onNotFound();
+
+                    if (!Uri.TryCreate(authenticationRequestStorage.RedirectUrl, UriKind.Absolute, out Uri discard))
+                    {
+                        authenticationRequestStorage.RedirectUrl = "https://shield.affirmhealth.com/profile#integrations";
+                        await saveAsync(authenticationRequestStorage);
+                    }
+
+                    return onSuccess(new Uri(authenticationRequestStorage.RedirectUrl),
+                        new Integration
+                        {
+                            authorizationId = authenticationRequestStorage.LinkedAuthenticationId.Value,
+                            integrationId = authenticationRequestId,
+                            method = authenticationRequestStorage.Method,
+                            parameters = authenticationRequestStorage.GetExtraParams(),
+                        });
+                },
+                () =>
+                {
+                    return onNotFound();
+                });
+        }
+
+        public Task<TResult> GetAuthenticatedByIdAsync<TResult>(Guid authenticationRequestId,
+           Func<Integration,
+                TResult> onSuccess,
+           Func<TResult> onNotFound)
         {
             return this.dataContext.AuthenticationRequests.FindByIdAsync(authenticationRequestId,
                 (authenticationRequestStorage) =>
                 {
                     if (!authenticationRequestStorage.authorizationId.HasValue)
                         return onNotFound();
-                    return onSuccess(authenticationRequestStorage.redirect,
+                    return onSuccess(
                         new Integration
                         {
                             authorizationId = authenticationRequestStorage.authorizationId.Value,

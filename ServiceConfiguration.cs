@@ -177,7 +177,7 @@ namespace EastFive.Security.SessionServer
         {
             var context = Context.LoadFromConfiguration();
             return await await context.Integrations.GetAuthenticatedByIdAsync(integrationId,
-                async (redirect, integration) =>
+                async (integration) =>
                 {
                     if (resourceType.IsNullOrWhiteSpace() || (!connections.ContainsKey(resourceType)))
                         return onFound(integration, new Azure.Synchronization.Connections[] { });
