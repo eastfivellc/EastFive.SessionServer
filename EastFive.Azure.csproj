@@ -221,7 +221,7 @@
     <Compile Include="Synchronization\Api\AdapterController.cs" />
     <Compile Include="Synchronization\Api\ConnectionController.cs" />
     <Compile Include="Synchronization\Api\ConnectorController.cs" />
-    <Compile Include="Api\Controllers\ContentController.cs" />
+    <Compile Include="Api\Resources\Content.cs" />
     <Compile Include="Api\Controllers\InternalIntegrationController.cs" />
     <Compile Include="Api\Controllers\InternalIntegrationResponseController.cs" />
     <Compile Include="Api\Controllers\ManifestController.cs" />

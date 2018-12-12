@@ -92,80 +92,16 @@ namespace EastFive.Security.SessionServer.Api
         public static Task<HttpResponseMessage> QueryAsync(this Resources.Queries.SamlCredentialQuery credential,
             HttpRequestMessage request, UrlHelper urlHelper)
         {
-            return request.GetActorIdClaimsAsync(ClaimsDefinitions.AccountIdClaimType,
-                (actorPerformingId, claims) => credential.ParseAsync(request,
-                    q => QueryByIdAsync(q.Id.ParamSingle(), request, urlHelper, actorPerformingId, claims),
-                    q => QueryByActorId(q.Actor.ParamSingle(), request, urlHelper, actorPerformingId, claims)));
+            throw new NotImplementedException();
         }
-
-        private static async Task<HttpResponseMessage> QueryByIdAsync(Guid passwordCredentialId,
-            HttpRequestMessage request, UrlHelper urlHelper,
-            Guid actorPerformingId, System.Security.Claims.Claim [] claims)
-        {
-            var context = request.GetSessionServerContext();
-            return await context.PasswordCredentials.GetPasswordCredentialAsync(passwordCredentialId,
-                    actorPerformingId, claims,
-                (passwordCredential) =>
-                {
-                    var response = request.CreateResponse(HttpStatusCode.OK,
-                        Convert(passwordCredential, urlHelper));
-                    return response;
-                },
-                () => request.CreateResponse(HttpStatusCode.NotFound),
-                () => request.CreateResponse(HttpStatusCode.NotFound),
-                (why) => request.CreateResponse(HttpStatusCode.NotFound));
-        }
-
-        private async static Task<HttpResponseMessage[]> QueryByActorId(Guid actorId,
-            HttpRequestMessage request, UrlHelper urlHelper,
-            Guid actorPerformingId, System.Security.Claims.Claim[] claims)
-        {
-            if (!await Library.configurationManager.CanAdministerCredentialAsync(actorId, actorPerformingId, claims))
-                return request.CreateResponse(HttpStatusCode.NotFound).AsEnumerable().ToArray();
-
-            var context = request.GetSessionServerContext();
-            return await context.PasswordCredentials.GetPasswordCredentialByActorAsync(
-                actorId,
-                (credentials) => credentials.Select(
-                    passwordCredential =>
-                    {
-                        var response = request.CreateResponse(HttpStatusCode.OK, 
-                            Convert(passwordCredential, urlHelper));
-                        return response;
-                    }).ToArray(),
-                () => request.CreateResponse(HttpStatusCode.NotFound).AsEnumerable().ToArray(),
-                (why) => request.CreateResponse(HttpStatusCode.ServiceUnavailable).AddReason(why).AsEnumerable().ToArray());
-        }
-
-        private static Resources.SamlCredential Convert(EastFive.Api.Azure.Credentials.PasswordCredential passwordCredential, UrlHelper urlHelper)
-        {
-            return new Resources.SamlCredential
-            {
-                Id = urlHelper.GetWebId<PasswordCredentialController>(passwordCredential.id),
-                Actor = passwordCredential.actorId,
-                UserId = passwordCredential.userId,
-            };
-        }
+        
 
         public static async Task<HttpResponseMessage> DeleteAsync(this Resources.Queries.SamlCredentialQuery credential,
             HttpRequestMessage request, UrlHelper urlHelper)
         {
-            return await credential.ParseAsync(request,
-                q => DeleteByIdAsync(q.Id.ParamSingle(), request, urlHelper));
+            throw new NotImplementedException();
         }
-
-        private static async Task<HttpResponseMessage> DeleteByIdAsync(Guid passwordCredentialId, HttpRequestMessage request, UrlHelper urlHelper)
-        {
-            var context = request.GetSessionServerContext();
-            return await context.PasswordCredentials.DeletePasswordCredentialAsync(passwordCredentialId,
-                () =>
-                {
-                    var response = request.CreateResponse(HttpStatusCode.NoContent);
-                    return response;
-                },
-                () => request.CreateResponse(HttpStatusCode.NotFound),
-                (why) => request.CreateResponse(HttpStatusCode.NotFound));
-        }
+        
 
         #endregion
     }

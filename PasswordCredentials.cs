@@ -52,9 +52,9 @@ namespace EastFive.Api.Azure.Credentials
         #region Password Credential
 
         public async Task<TResult> CreatePasswordCredentialsAsync<TResult>(Guid passwordCredentialId, Guid actorId,
-            string displayName, string username, bool isEmail, string token, bool forceChange,
-            DateTime? emailLastSent, Uri callbackUrl,
-            Guid performingActorId, System.Security.Claims.Claim[] claims,
+                string displayName, string username, bool isEmail, string token, bool forceChange,
+                DateTime? emailLastSent, Uri callbackUrl,
+                EastFive.Api.Controllers.Security security, AzureApplication application,
             Func<TResult> onSuccess,
             Func<TResult> credentialAlreadyExists,
             Func<Guid, TResult> onUsernameAlreadyInUse,
@@ -65,8 +65,7 @@ namespace EastFive.Api.Azure.Credentials
             Func<TResult> onServiceNotAvailable,
             Func<string, TResult> onFailure)
         {
-            if (!await Library.configurationManager.CanAdministerCredentialAsync(
-                actorId, performingActorId, claims))
+            if (!await application.CanAdministerCredentialAsync(actorId, security))
                 return onUnathorized();
             
             if (string.IsNullOrWhiteSpace(displayName))
@@ -188,7 +187,7 @@ namespace EastFive.Api.Azure.Credentials
         }
 
         internal async Task<TResult> GetPasswordCredentialAsync<TResult>(Guid passwordCredentialId,
-                Guid actorPerformingId, System.Security.Claims.Claim[] claims,
+                EastFive.Api.Controllers.Security security, AzureApplication application,
             Func<PasswordCredential, TResult> success,
             Func<TResult> notFound,
             Func<TResult> onUnauthorized,
@@ -197,7 +196,7 @@ namespace EastFive.Api.Azure.Credentials
             return await await this.dataContext.PasswordCredentials.FindPasswordCredentialAsync(passwordCredentialId,
                 async (actorId, loginId, lastSent) =>
                 {
-                    if (!await Library.configurationManager.CanAdministerCredentialAsync(actorId, actorPerformingId, claims))
+                    if (!await application.CanAdministerCredentialAsync(actorId, security))
                         return onUnauthorized();
                     
                     return await this.managmentProvider.GetAuthorizationAsync(loginId,
@@ -223,10 +222,15 @@ namespace EastFive.Api.Azure.Credentials
         }
 
         internal async Task<TResult> GetPasswordCredentialByActorAsync<TResult>(Guid actorId,
+                EastFive.Api.Controllers.Security security, AzureApplication application,
             Func<PasswordCredential[], TResult> success,
             Func<TResult> notFound,
+            Func<TResult> onUnauthorized,
             Func<string, TResult> onServiceNotAvailable)
         {
+            if (!await application.CanAdministerCredentialAsync(actorId, security))
+                return onUnauthorized();
+
             return await await this.dataContext.PasswordCredentials.FindPasswordCredentialByActorAsync(actorId,
                 async (credentials) =>
                 {
@@ -340,8 +344,8 @@ namespace EastFive.Api.Azure.Credentials
         }
 
         internal async Task<TResult> UpdatePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
-            string password, bool forceChange, DateTime? emailLastSent,
-            Guid performingActorId, System.Security.Claims.Claim[] claims,
+                string password, bool forceChange, DateTime? emailLastSent,
+                EastFive.Api.Controllers.Security security, AzureApplication application,
             Func<TResult> onSuccess,
             Func<TResult> onNotFound,
             Func<TResult> onUnathorized,
@@ -359,8 +363,7 @@ namespace EastFive.Api.Azure.Credentials
                     DiscriminatedDelegate<Guid, TResult, Task<TResult>> resultFailure =
                         (success, fail) => fail(onFailure(failureMessage));
 
-                    if (!await Library.configurationManager.CanAdministerCredentialAsync(
-                        actorId, performingActorId, claims))
+                    if (!await application.CanAdministerCredentialAsync(actorId, security))
                         return (success, fail) => fail(onUnathorized());
 
                     if (emailLastSent.HasValue &&
@@ -370,7 +373,8 @@ namespace EastFive.Api.Azure.Credentials
                         var resultGetLogin = await await managmentProvider.GetAuthorizationAsync(loginId,
                             async (loginInfo) =>
                             {
-                                var email = await Library.configurationManager.GetActorAdministrationEmailAsync(actorId, performingActorId, claims,
+                                var email = await Library.configurationManager.GetActorAdministrationEmailAsync(actorId, 
+                                        security.performingAsActorId, security.claims,
                                     address => address,
                                     () => string.Empty,
                                     () => string.Empty,
@@ -443,7 +447,7 @@ namespace EastFive.Api.Azure.Credentials
                     return await managmentProvider.UpdateAuthorizationAsync(loginId, password, forceChange,
                         () => onSuccess(),
                         (why) => onFailure(why),
-                        () => onFailure("service unavailable"),
+                        () => onServiceNotAvailable(),
                         (why) => onFailure(why));
                 },
                 (r) => r.ToTask());
@@ -512,13 +516,17 @@ namespace EastFive.Api.Azure.Credentials
         }
         
         internal async Task<TResult> DeletePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
+                EastFive.Api.Controllers.Security security, AzureApplication application,
             Func<TResult> success,
+            Func<TResult> onUnauthorized,
             Func<TResult> notFound,
             Func<string, TResult> onServiceNotAvailable)
         {
             return await await this.dataContext.PasswordCredentials.DeletePasswordCredentialAsync(passwordCredentialId,
                 async (loginId) =>
                 {
+                    if (!await application.CanAdministerCredentialAsync(loginId, security))
+                        return onUnauthorized();
                     return await managmentProvider.DeleteAuthorizationAsync(loginId,
                         success,
                         onServiceNotAvailable,

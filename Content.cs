@@ -21,7 +21,8 @@ namespace EastFive.Api.Azure
                 onCreated, onAlreadyExists);
         }
 
-        public static Task<TResult> FindContentByContentIdAsync<TResult>(Guid contentId, Claim[] claims,
+        public static Task<TResult> FindContentByContentIdAsync<TResult>(Guid contentId,
+                EastFive.Api.Controllers.Security security,
             Func<string, byte[], TResult> onFound,
             Func<TResult> onNotFound,
             Func<TResult> onNotAuthorized)

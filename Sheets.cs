@@ -42,7 +42,7 @@ namespace EastFive.Api.Azure.Credentials
             public const string resourceTypesKey = "resource_types";
             public const string sheetIdKey = "sheet_id";
 
-            public Type CallbackController => typeof(EastFive.Api.Azure.Controllers.ContentController);
+            public Type CallbackController => typeof(EastFive.Api.Azure.Resources.Content);
 
             public Uri GetLoginUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
             {
