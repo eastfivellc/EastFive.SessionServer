@@ -99,6 +99,15 @@ namespace EastFive.Azure.Synchronization.Persistence
             return $"{key}/{integrationId.ToString("N")}/{resourceType}".MD5HashGuid();
         }
 
+        public static Task<TResult> CreateAsync<TResult>(Adapter adapter,
+            Func<TResult> onSuccess,
+            Func<TResult> onAlreadyExists)
+        {
+            var document = Convert(adapter);
+            return AzureStorageRepository.Connection(
+               azureStorageRepository => azureStorageRepository.CreateAsync(adapter.adapterId, document, onSuccess, onAlreadyExists));
+        }
+
         public static Task<TResult> FindByIdAsync<TResult>(Guid adapterId,
             Func<Adapter, TResult> onFound,
             Func<TResult> onNotFound)
@@ -187,7 +196,6 @@ namespace EastFive.Azure.Synchronization.Persistence
             adapterDoc.SetIdentifiers(adapter.identifiers);
             return adapterDoc;
         }
-        
 
         public static Task<TResult> FindOrCreateAsync<TResult>(string key, Guid integrationId, string resourceType,
             Func<bool, Adapter, Func<Func<Adapter, Adapter>, Task<Adapter>>, Task<TResult>> onFound)
