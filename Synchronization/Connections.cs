@@ -540,6 +540,7 @@ namespace EastFive.Azure.Synchronization
                             connectorIds = new[] { connectorId },
                             integrationId = defaultInternalIntegrationId,
                             key = internalKey,
+                            resourceType = resourceType,
                         };
                         var externalKey = resourceIdKey.Value;
                         var adapterExternal = new Adapter
@@ -548,6 +549,7 @@ namespace EastFive.Azure.Synchronization
                             connectorIds = new[] { connectorId },
                             integrationId = externalSystemIntegrationId,
                             key = externalKey,
+                            resourceType = resourceType,
                         };
                         var connector = new Connector
                         {
