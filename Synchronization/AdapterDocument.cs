@@ -96,7 +96,8 @@ namespace EastFive.Azure.Synchronization.Persistence
 
         public static Guid GetId(string key, Guid integrationId, string resourceType)
         {
-            return $"{key}/{integrationId.ToString("N")}/{resourceType}".MD5HashGuid();
+            var id = $"{key}/{integrationId.ToString("N")}/{resourceType}".MD5HashGuid();
+            return id;
         }
 
         public static Task<TResult> CreateAsync<TResult>(Adapter adapter,

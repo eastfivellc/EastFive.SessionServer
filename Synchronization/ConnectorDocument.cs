@@ -603,7 +603,7 @@ namespace EastFive.Azure.Synchronization.Persistence
                 });
         }
 
-        internal static IEnumerableAsync<Guid> CreateBatch(IEnumerableAsync<Connector> adapterIds,
+        internal static IEnumerableAsync<Guid> CreateBatch(IEnumerableAsync<Connector> connectors,
                 Connector.SynchronizationMethod method)
         {
             return AzureStorageRepository.Connection(
@@ -611,7 +611,7 @@ namespace EastFive.Azure.Synchronization.Persistence
                 {
                     return connection
                         .CreateOrReplaceBatch(
-                                adapterIds
+                                connectors
                                     .Select(
                                         connector =>
                                         {
