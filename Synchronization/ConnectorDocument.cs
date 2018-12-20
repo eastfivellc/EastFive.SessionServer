@@ -150,9 +150,18 @@ namespace EastFive.Azure.Synchronization.Persistence
                 });
         }
 
+        public static Task<TResult> CreateWithoutAdapterUpdateAsync<TResult>(Guid connectorId,
+                Guid adapterInternalId, Guid adapterExternalId, Connector.SynchronizationMethod method, string resourceType,
+            Func<TResult> onCreated,
+            Func<TResult> onAlreadyExists,
+            Func<Connector, TResult> onRelationshipAlreadyExists)
+        {
+            return CreateWithoutAdapterUpdateAsync(connectorId, adapterExternalId, adapterExternalId, method, resourceType, null, onCreated, onAlreadyExists, onRelationshipAlreadyExists);
+        }
 
         public static Task<TResult> CreateWithoutAdapterUpdateAsync<TResult>(Guid connectorId,
                 Guid adapterInternalId, Guid adapterExternalId, Connector.SynchronizationMethod method, string resourceType,
+                DateTime? lastSynchronized,
             Func<TResult> onCreated,
             Func<TResult> onAlreadyExists,
             Func<Connector, TResult> onRelationshipAlreadyExists)
@@ -183,6 +192,7 @@ namespace EastFive.Azure.Synchronization.Persistence
                             return await await azureStorageRepository.CreateAsync(connectorId,
                                 new ConnectorDocument()
                                 {
+                                    LastSynchronized = lastSynchronized,
                                     LocalAdapter = adapterInternalId,
                                     RemoteAdapter = adapterExternalId,
                                     Method = Enum.GetName(typeof(Connector.SynchronizationMethod), method),

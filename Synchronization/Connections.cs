@@ -370,11 +370,14 @@ namespace EastFive.Azure.Synchronization
                     async (whenUpdated, adapterKeyUpdated) =>
                     {
                         await Persistence.ConnectorDocument.CreateWithoutAdapterUpdateAsync(connector.connectorId,
-                            localAdapter.adapterId, remoteAdapter.adapterId, Connector.SynchronizationMethod.ignore, localResourceType,
+                            localAdapter.adapterId, remoteAdapter.adapterId, Connector.SynchronizationMethod.ignore, localResourceType, whenUpdated,
                             () => true, () => false, (why) => false);
 
                         if (createdLocalAdapter)
+                        {
+                            localAdapter.connectorIds = localAdapter.connectorIds.Append(connectorId).ToArray();
                             createdLocalAdapter = await Persistence.AdapterDocument.CreateAsync(localAdapter, () => true, () => false);
+                        }
                         else
                         {
                             bool updated = await Persistence.AdapterDocument.UpdateAsync(localAdapter.adapterId,
