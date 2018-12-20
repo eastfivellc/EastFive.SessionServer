@@ -302,7 +302,7 @@ namespace EastFive.Azure.Synchronization
                             async (remoteConnector, remoteAdapter, updateAsync) =>
                             {
                                 var result = default(TResult);
-                                var matched = remoteAdapter.integrationId != remoteIntegrationId;
+                                var matched = remoteAdapter.integrationId == remoteIntegrationId;
                                 if (!matched)
                                     return new { matched, result };
 
@@ -339,8 +339,14 @@ namespace EastFive.Azure.Synchronization
                     .AsyncEnumerable()
                     .Where(item => item.matched)
                     .FirstAsync(
-                        (one) => one.result.AsTask(),
-                        () => createConnectorWithAdaptersAsync(localAdapter, false));
+                        (one) =>
+                        {
+                            return one.result.AsTask();
+                        },
+                        () =>
+                        {
+                            return createConnectorWithAdaptersAsync(localAdapter, false);
+                        });
             }
 
             Task<TResult> createConnectorWithAdaptersAsync(Adapter localAdapter, bool createdLocalAdapter)
@@ -391,14 +397,15 @@ namespace EastFive.Azure.Synchronization
             }
 
             return await await FindAdapterByKeyAsync(localResourceKey, localIntegrationId, localResourceType,
-                (localAdapter) => adapterFoundAsync(localAdapter),
+                (localAdapter) =>
+                {
+                    return adapterFoundAsync(localAdapter);
+                },
                 () =>
                 {
                     var localAdapter = new Adapter
                     {
-                        //THIS IS WHAT I CHANGED>.......
-                        adapterId = Guid.Parse(localResourceKey),
-
+                        adapterId = Persistence.AdapterDocument.GetId(localResourceKey, localIntegrationId, localResourceType),
                         connectorIds = new Guid[] { },
                         integrationId = remoteIntegrationId,
                         resourceType = localResourceType,
