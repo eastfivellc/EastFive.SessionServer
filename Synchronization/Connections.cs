@@ -295,17 +295,23 @@ namespace EastFive.Azure.Synchronization
             Func<TResult> onLocalAdapterNotFound)
         {
             return await await FindAdapterByKeyAsync(localResourceKey, localIntegrationId, localResourceType,
-                (localAdapter) => localAdapter.connectorIds
-                    .First(
-                        async (connectorId, next) => await await Persistence.ConnectorDocument.UpdateSynchronizationWithAdapterRemoteAsync<Task<TResult>>(connectorId, localAdapter,
-                            (remoteConnector, remoteAdapter, saveAsync) =>
+                (localAdapter) =>
+                {
+                    return localAdapter.connectorIds
+                        .First(
+                            async (connectorId, next) =>
                             {
-                                if (remoteAdapter.integrationId != remoteIntegrationId)
-                                    return next().AsTask();
-                                return onFound(remoteConnector, remoteAdapter, saveAsync).AsTask();
+                                return await await Persistence.ConnectorDocument.UpdateSynchronizationWithAdapterRemoteAsync<Task<TResult>>(connectorId, localAdapter,
+                                    (remoteConnector, remoteAdapter, saveAsync) =>
+                                    {
+                                        if (remoteAdapter.integrationId != remoteIntegrationId)
+                                            return next().AsTask();
+                                        return onFound(remoteConnector, remoteAdapter, saveAsync).AsTask();
+                                    },
+                                    next);
                             },
-                            next),
-                        () => onLocalAdapterNotFound().AsTask()),
+                            () => onLocalAdapterNotFound().AsTask());
+                },
                 onLocalAdapterNotFound.AsAsyncFunc());
         }
 
@@ -400,67 +406,59 @@ namespace EastFive.Azure.Synchronization
             Guid externalSystemIntegrationId, string resourceType,
             Connector.SynchronizationMethod method = Connector.SynchronizationMethod.ignore)
         {
-            // Pull this into a batch in case there are any misses in lining up adapters and connectors
-
-            return resourceIdKeys
-                .Batch()
+            var resourceIdKeyConnections = resourceIdKeys
                 .Select(
-                    batchResourceIdKeys => CreateOrReplaceBatchWrappedConnection(
-                        batchResourceIdKeys,
-                        externalSystemIntegrationId, resourceType, method))
-                .Await()
-                .SelectMany();
-        }
-
-        private static async Task<Guid[]> CreateOrReplaceBatchWrappedConnection(
-            KeyValuePair<Guid, string>[] resourceIdKeys,
-            Guid externalSystemIntegrationId, string resourceType,
-            Connector.SynchronizationMethod method)
-        {
-            var adaptersInternalTask = Persistence.AdapterDocument
-                .CreateOrUpdateBatch(
-                    resourceIdKeys
-                        .Distinct(resourceIdKey => resourceIdKey.Key)
-                        .Select(resourceIdKey => resourceIdKey.Key.ToString("N")),
-                    defaultInternalIntegrationId, resourceType)
-                .ToArrayAsync(); //.ToDictionary(adapter => Guid.Parse(adapter.key), adapter => adapter.adapterId);
-
-            var adaptersExternalTask = Persistence.AdapterDocument
-                .CreateOrUpdateBatch(
-                    resourceIdKeys
-                        .Distinct(resourceIdKey => resourceIdKey.Value)
-                        .Select(resourceIdKey => resourceIdKey.Value),
-                    defaultInternalIntegrationId, resourceType)
-                .ToArrayAsync(); // (adapter => adapter.key, adapter => adapter.adapterId);
-
-            var adaptersInternal = (await adaptersInternalTask)
-                .ToDictionary(
-                    adapter => adapter.key,
-                    adapter => adapter.adapterId);
-            var adaptersExternal = (await adaptersExternalTask)
-                .ToDictionary(
-                    adapter => adapter.key,
-                    adapter => adapter.adapterId);
-            var connectors = resourceIdKeys
-                .Where(resourceIdKey => adaptersInternal.ContainsKey(resourceIdKey.Key.ToString("N")))
-                .Where(resourceIdKey => adaptersExternal.ContainsKey(resourceIdKey.Value))
-                .Select(
-                    (resourceIdKey) =>
+                    resourceIdKey =>
                     {
-                        var adapterIdInternal = adaptersInternal[resourceIdKey.Key.ToString("N")];
-                        var adapterIdExternal = adaptersExternal[resourceIdKey.Value];
+                        var connectorId = Guid.NewGuid();
+                        var internalKey = resourceIdKey.Key.ToString("N");
+                        var adapterInternal = new Adapter
+                        {
+                            adapterId = Persistence.AdapterDocument.GetId(internalKey, defaultInternalIntegrationId, resourceType),
+                            connectorIds = new[] { connectorId },
+                            integrationId = defaultInternalIntegrationId,
+                            key = internalKey,
+                        };
+                        var externalKey = resourceIdKey.Value;
+                        var adapterExternal = new Adapter
+                        {
+                            adapterId = Persistence.AdapterDocument.GetId(externalKey, externalSystemIntegrationId, resourceType),
+                            connectorIds = new[] { connectorId },
+                            integrationId = externalSystemIntegrationId,
+                            key = externalKey,
+                        };
                         var connector = new Connector
                         {
-                            connectorId = Guid.NewGuid(),
-                            adapterInternalId = adapterIdInternal,
-                            adapterExternalId = adapterIdExternal,
+                            connectorId = connectorId,
+                            adapterInternalId = adapterInternal.adapterId,
+                            adapterExternalId = adapterExternal.adapterId,
                             synchronizationMethod = method,
                         };
-                        return connector;
+                        return adapterInternal.PairWithValue(adapterExternal).PairWithValue(connector);
                     });
 
-            return await Persistence.ConnectorDocument.CreateBatch(connectors, method)
+            var adaptersInternal = resourceIdKeyConnections
+                .Select(resourceIdKeyConnection => resourceIdKeyConnection.Key.Key) // Get internal adapters
+                .Distinct(internalAdapter => internalAdapter.key);
+            var adaptersInternalTask = Persistence.AdapterDocument
+                .CreateOrUpdateBatch(adaptersInternal,
+                    defaultInternalIntegrationId, resourceType)
                 .ToArrayAsync();
+            
+            var externalAdapters = resourceIdKeyConnections
+                .Select(resourceIdKeyConnection => resourceIdKeyConnection.Key.Value) // Get external adapters
+                .Distinct(externalAdapter => externalAdapter.key);
+            var adaptersExternalTask = Persistence.AdapterDocument
+                .CreateOrUpdateBatch(externalAdapters,
+                    externalSystemIntegrationId, resourceType)
+                .ToArrayAsync();
+
+            var connectors = resourceIdKeyConnections
+                .Select(resourceIdKeyConnection => resourceIdKeyConnection.Value) // Get connectors
+                .Distinct(externalAdapter => externalAdapter.connectorId);
+            return Persistence.ConnectorDocument.CreateBatch(connectors, method)
+                .JoinTask(adaptersInternalTask)
+                .JoinTask(adaptersExternalTask);
         }
 
         
