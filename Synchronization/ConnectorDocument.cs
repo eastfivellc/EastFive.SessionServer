@@ -156,7 +156,7 @@ namespace EastFive.Azure.Synchronization.Persistence
             Func<TResult> onAlreadyExists,
             Func<Connector, TResult> onRelationshipAlreadyExists)
         {
-            return CreateWithoutAdapterUpdateAsync(connectorId, adapterExternalId, adapterExternalId, method, resourceType, null, onCreated, onAlreadyExists, onRelationshipAlreadyExists);
+            return CreateWithoutAdapterUpdateAsync(connectorId, adapterInternalId, adapterExternalId, method, resourceType, null, onCreated, onAlreadyExists, onRelationshipAlreadyExists);
         }
 
         public static Task<TResult> CreateWithoutAdapterUpdateAsync<TResult>(Guid connectorId,
@@ -265,6 +265,28 @@ namespace EastFive.Azure.Synchronization.Persistence
                                 async (method) =>
                                 {
                                     connectorDoc.Method = Enum.GetName(typeof(Connector.SynchronizationMethod), method);
+                                    await saveAsync(connectorDoc);
+                                });
+                        },
+                        () => onConnectorDoesNotExist());
+                });
+        }
+
+        public static Task<TResult> ShimUpdateAsync<TResult>(Guid connectorId,
+            Func<Connector, Func<Guid, Guid, Task>, Task<TResult>> onUpdated,
+            Func<TResult> onConnectorDoesNotExist)
+        {
+            return AzureStorageRepository.Connection(
+                azureStorageRepository =>
+                {
+                    return azureStorageRepository.UpdateAsync<ConnectorDocument, TResult>(connectorId,
+                        (connectorDoc, saveAsync) =>
+                        {
+                            return onUpdated(Convert(connectorDoc),
+                                async (internalId, externalId) =>
+                                {
+                                    connectorDoc.LocalAdapter = internalId;
+                                    connectorDoc.RemoteAdapter = externalId;
                                     await saveAsync(connectorDoc);
                                 });
                         },

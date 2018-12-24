@@ -126,21 +126,22 @@ namespace EastFive.Azure.Synchronization
                             if (alreadyConnected)
                             {
                                 var connectorIdMutual = mutualConnections.First();
-                                var connector = new Connector
-                                {
-                                    connectorId = connectorIdMutual,
-                                    adapterExternalId = adapterExternal.adapterId,
-                                    adapterInternalId = adapterInternal.adapterId,
+                                //SHIM, corrects when connector incorrectly created with same external/internal adatper ids
+                                var connector = await Persistence.ConnectorDocument.ShimUpdateAsync(connectorIdMutual,
+                                    async (internalconn, saveAsync) =>
+                                    {
+                                        if (internalconn.adapterExternalId == internalconn.adapterInternalId)
+                                        {
+                                            internalconn.adapterInternalId = adapterInternal.adapterId;
+                                            internalconn.adapterExternalId = adapterExternal.adapterId;
+                                            await saveAsync(internalconn.adapterInternalId, internalconn.adapterExternalId);
+                                        }
+                                        return internalconn.AsOptional();
+                                    },
+                                    () => default(Connector?));
 
-                                    // BOLD assumptions based on this being a convenience method
-                                    createdBy = adapterInternal.adapterId,
-                                    synchronizationMethod = Connector.SynchronizationMethod.ignore,
-                                };
-                                //var isValid = await Persistence.ConnectorDocument.FindByIdAsync(connector.connectorId,
-                                //    cd => true,
-                                //    () => false);
-                                //if(isValid)
-                                    return onSuccess(connector);
+                                if (connector.HasValue)
+                                    return onSuccess(connector.Value);
                             }
                             
                             var connectorId = Guid.NewGuid();
