@@ -300,7 +300,31 @@ namespace EastFive.Azure.Synchronization.Persistence
                         });
                 });
         }
-        
+
+        internal static Task<TResult> ShimUpdateAsync<TResult>(Guid sourceAdapterId,
+            Func<Adapter, Func<Guid[], Guid, string, KeyValuePair<string, string>[], Task>, Task<TResult>> onFound,
+            Func<TResult> onNotFound)
+        {
+            return AzureStorageRepository.Connection(
+                azureStorageRepository =>
+                {
+                    return azureStorageRepository.UpdateAsync<AdapterDocument, TResult>(sourceAdapterId,
+                        (adapterDoc, saveAsync) =>
+                        {
+                            var adapter = Convert(adapterDoc);
+                            return onFound(adapter,
+                                (connectorIds, integrationId, name, identifiers) =>
+                                {
+                                    adapterDoc.SetConnectorIds(connectorIds);
+                                    adapterDoc.IntegrationId = integrationId;
+                                    adapterDoc.Name = name;
+                                    adapterDoc.SetIdentifiers(identifiers);
+                                    return saveAsync(adapterDoc);
+                                });
+                        });
+                });
+        }
+
         internal static Task<TResult> DeleteByIdAsync<TResult>(Guid synchronizationId,
             Func<TResult> onDeleted,
             Func<TResult> onNotFound)

@@ -380,6 +380,41 @@ namespace EastFive.Azure.Synchronization.Persistence
                     });
         }
 
+        internal static TResult ShimFindByLocalAdapterAsync<TResult>(Guid localAdapterId,
+            Func<IEnumerableAsync<KeyValuePair<Connector,Adapter>>, TResult> onSuccess)
+        {
+            return AzureStorageRepository.Connection(
+                azureStorageRepository =>
+                {
+                    var results = Enumerable
+                        .Range(-12,25)
+                        .Select(
+                            partitionKey =>
+                            {
+                                var query = new TableQuery<ConnectorDocument>().Where(TableQuery.CombineFilters(
+                                    TableQuery.GenerateFilterConditionForGuid("LocalAdapter", QueryComparisons.Equal, localAdapterId),
+                                    TableOperators.And,
+                                    TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, partitionKey.ToString())));
+                                return azureStorageRepository.FindAllAsync(query);
+                            })
+                        .SelectMany()
+                        .Select(
+                            connector =>
+                            {
+                                var remoteAdapterId = connector.RemoteAdapter;
+                                if (remoteAdapterId == default(Guid))
+                                    return EnumerableAsync.Empty<KeyValuePair<Connector, Adapter>>();
+                                return AdapterDocument
+                                    .FindByIdAsync(remoteAdapterId,
+                                        (adapter) => EnumerableAsync.EnumerableAsyncStart(Convert(connector).PairWithValue(adapter)),
+                                        () => EnumerableAsync.Empty<KeyValuePair<Connector, Adapter>>())
+                                    .FoldTask();
+                            })
+                        .SelectAsyncMany();
+                    return onSuccess(results);
+                });
+        }
+
         internal static Task<TResult> FindByAdapterWithConnectionAsync<TResult>(Guid adapterId,
             Func<Adapter, KeyValuePair<Connector, Adapter>[], TResult> onFound,
             Func<TResult> onAdapterNotFound)
@@ -442,6 +477,10 @@ namespace EastFive.Azure.Synchronization.Persistence
                             connectorDoc.RemoteAdapter,
                         (ConnectorDocument connectorDoc, AdapterDocument remoteAdapterDoc) =>
                         {
+                            // Connector was created incorrectly
+                            if (connectorDoc.LocalAdapter == connectorDoc.RemoteAdapter)
+                                return onNotFound();
+
                             var connector = Convert(connectorDoc);
                             return onFound(connector, AdapterDocument.Convert(remoteAdapterDoc));
                         },
@@ -774,8 +813,8 @@ namespace EastFive.Azure.Synchronization.Persistence
                         onAlreadyLocked:
                             async (retryCount, retryDuration, connSyncDoc, continueAquiring, force) =>
                             {
-                                var duration = ComputeDuration(connSyncDoc);
-                                var lockCompleteResponse = await onAlreadyLocked(retryCount, retryDuration, duration,
+                                var lastSyncDuration = ComputeDuration(connSyncDoc);
+                                var lockCompleteResponse = await onAlreadyLocked(retryCount, retryDuration, lastSyncDuration,
                                     async () =>
                                     {
                                         var lockResponse = await await continueAquiring();
