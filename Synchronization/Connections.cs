@@ -117,7 +117,7 @@ namespace EastFive.Azure.Synchronization
             Func<Connector, TResult> onSuccess)
         {
             return Persistence.AdapterDocument.FindOrCreateAsync(resourceKeyInternal, internalSystemItegrationId, resourceType,
-                (createdAdapterInteral, adapterInternal, saveAdapterInternalAsync) =>
+                (createdAdapterInternal, adapterInternal, saveAdapterInternalAsync) =>
                     Persistence.AdapterDocument.FindOrCreateAsync(resourceKeyExternalSystem, externalSystemIntegrationId, resourceType,
                         async (createdAdapterExternal, adapterExternal, saveAdapterExternalAsync) =>
                         {
@@ -141,7 +141,30 @@ namespace EastFive.Azure.Synchronization
                                     () => default(Connector?));
 
                                 if (connector.HasValue)
+                                {
+                                    if (createdAdapterInternal)
+                                        await saveAdapterInternalAsync(
+                                            (adapterInternalToUpdate) =>
+                                            {
+                                                adapterInternalToUpdate.connectorIds = adapterInternalToUpdate.connectorIds
+                                                    .Append(connector.Value.connectorId)
+                                                    .Distinct()
+                                                    .ToArray();
+                                                return adapterInternalToUpdate;
+                                            });
+                                    if (createdAdapterExternal)
+                                        await saveAdapterExternalAsync(
+                                            (adapterExternalToUpdate) =>
+                                            {
+                                                adapterExternalToUpdate.connectorIds = adapterExternalToUpdate.connectorIds
+                                                    .Append(connector.Value.connectorId)
+                                                    .Distinct()
+                                                    .ToArray();
+                                                return adapterExternalToUpdate;
+                                            });
+
                                     return onSuccess(connector.Value);
+                                }
                             }
                             
                             var connectorId = Guid.NewGuid();
@@ -376,7 +399,10 @@ namespace EastFive.Azure.Synchronization
 
                         if (createdLocalAdapter)
                         {
-                            localAdapter.connectorIds = localAdapter.connectorIds.Append(connectorId).ToArray();
+                            localAdapter.connectorIds = localAdapter.connectorIds
+                                .Append(connectorId)
+                                .Distinct()
+                                .ToArray();
                             createdLocalAdapter = await Persistence.AdapterDocument.CreateAsync(localAdapter, () => true, () => false);
                         }
                         else
@@ -417,9 +443,6 @@ namespace EastFive.Azure.Synchronization
                     return createConnectorWithAdaptersAsync(localAdapter, true);
                 });
         }
-
-
-        
 
         public static async Task<TResult> UpdateAdapterConnectorByKeyAsync<TResult>(string localResourceKey, Guid localIntegrationId, string localResourceType,
                 Guid remoteIntegrationId,
@@ -466,7 +489,10 @@ namespace EastFive.Azure.Synchronization
                                 await Persistence.AdapterDocument.ShimUpdateAsync(remoteAdapter.adapterId,
                                     async (remote, saveRemoteAsync) =>
                                     {
-                                        remote.connectorIds = remote.connectorIds.Append(connector.connectorId).ToArray();
+                                        remote.connectorIds = remote.connectorIds
+                                            .Append(connector.connectorId)
+                                            .Distinct()
+                                            .ToArray();
                                         remote.integrationId = remoteIntegrationId;
                                         await saveRemoteAsync(
                                             remote.connectorIds,
@@ -476,7 +502,10 @@ namespace EastFive.Azure.Synchronization
                                         return await Persistence.AdapterDocument.UpdateAsync(localAdapter.adapterId,
                                             async (local, saveLocalAsync) =>
                                             {
-                                                local.connectorIds = local.connectorIds.Append(connector.connectorId).ToArray();
+                                                local.connectorIds = local.connectorIds
+                                                    .Append(connector.connectorId)
+                                                    .Distinct()
+                                                    .ToArray();
                                                 await saveLocalAsync(
                                                     local.connectorIds,
                                                     local.name,
