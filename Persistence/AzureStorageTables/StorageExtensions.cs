@@ -12,8 +12,6 @@ using System.Threading.Tasks;
 
 namespace EastFive.Azure.Persistence.AzureStorageTables
 {
-    
-
     public static class StorageExtensions
     {
         public static Task<TResult> AzureStorageTableFindAsync<TEntity, TResult>(this Guid resourceId,
@@ -40,6 +38,12 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
 
             Func<Task> rollback = () => 1.AsTask();
             return rollback.TransactionResultSuccess<TResult>();
+        }
+
+        public static IRef<TEntity> IRefStorage<TEntity>(this Guid entityId)
+            where TEntity : struct
+        {
+            return new Ref<TEntity>(entityId);
         }
 
         public static Task<TResult> AzureStorageTableCreateAsync<TEntity, TResult>(this TEntity entity,

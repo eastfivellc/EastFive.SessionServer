@@ -72,7 +72,7 @@ namespace EastFive.Api.Azure.Credentials
                 onConfigurationNotAvailable);
         }
 
-        [IntegrationName("Password")]
+        [IntegrationName(IntegrationName)]
         public static async Task<TResult> InitializeAsync<TResult>(
             Func<IProvideAuthorization, TResult> onProvideAuthorization,
             Func<TResult> onProvideNothing,

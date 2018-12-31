@@ -68,67 +68,72 @@ namespace EastFive.Api.Azure.Credentials
             if (!await application.CanAdministerCredentialAsync(actorId, security))
                 return onUnathorized();
             
-            if (string.IsNullOrWhiteSpace(displayName))
-                displayName = "User";
+            return await await application.InstantiateAll<IProvideLoginManagement>()
+                .FirstAsync(
+                    async managmentProvider =>
+                    {
+                        if (string.IsNullOrWhiteSpace(displayName))
+                            displayName = "User";
 
-            var createLoginResult = await await managmentProvider.CreateAuthorizationAsync(displayName,
-                username, isEmail, token, forceChange,
-                async loginId =>
-                {
-                    var result = await await dataContext.PasswordCredentials.CreatePasswordCredentialAsync(
-                        passwordCredentialId, actorId, loginId, emailLastSent,
-                        async () =>
-                        {
-                            if (!isEmail || !emailLastSent.HasValue)
-                                return onSuccess();
+                        return await await managmentProvider.CreateAuthorizationAsync(displayName,
+                            username, isEmail, token, forceChange,
+                            async loginId =>
+                            {
+                                var result = await await dataContext.PasswordCredentials.CreatePasswordCredentialAsync(
+                                    passwordCredentialId, actorId, loginId, emailLastSent,
+                                    async () =>
+                                    {
+                                        if (!isEmail || !emailLastSent.HasValue)
+                                            return onSuccess();
 
-                            return await Web.Configuration.Settings.GetUri(EastFive.Security.SessionServer.Configuration.AppSettings.LandingPage,
-                                async (landingPage) =>
-                                {
-                                    var method = CredentialValidationMethodTypes.Password.ToString();
-                                    return await await context.Sessions.CreateLoginAsync(Guid.NewGuid(),
-                                        method, landingPage, landingPage,
-                                        (type) => callbackUrl,
-                                        async (authenticationRequest) =>
-                                        {
-                                            var loginUrl = authenticationRequest.loginUrl;
-                                            var resultMail = await SendInvitePasswordAsync(username, username, token, loginUrl,
-                                                onSuccess, onServiceNotAvailable, onFailure);
-                                            return resultMail;
-                                        },
-                                        "GUID not unique".AsFunctionException<Task<TResult>>(),
-                                        "Password system said not available while in use".AsFunctionException<Task<TResult>>(),
-                                        "Password system said not initialized while in use".AsFunctionException<string, Task<TResult>>(),
-                                        onFailure.AsAsyncFunc());
-                                },
-                                onFailure.AsAsyncFunc());
-                        },
-                        async () =>
-                            await managmentProvider.DeleteAuthorizationAsync(loginId,
-                                () => credentialAlreadyExists(),
-                                (why) => onFailure(why),
-                                () => onFailure("Service became unsupported after credentialAlreadyExists"),
-                                (why) => onFailure(why)),
-                        async () =>
-                            await managmentProvider.DeleteAuthorizationAsync(loginId,
-                                () => onRelationshipAlreadyExists(),
-                                (why) => onFailure(why),
-                                () => onFailure("Service became unsupported after onRelationshipAlreadyExists"),
-                                (why) => onFailure(why)),
-                        async () =>
-                            await managmentProvider.DeleteAuthorizationAsync(loginId,
-                                () => onRelationshipAlreadyExists(),
-                                (why) => onFailure(why),
-                                () => onFailure("Service became unsupported after onLoginAlreadyUsed"),
-                                (why) => onFailure(why)));
-                    return result;
-                },
-                (loginId) => onUsernameAlreadyInUse(loginId).ToTask(),
-                () => onPasswordInsufficent().ToTask(),
-                (why) => onFailure(why).ToTask(),
-                () => onFailure("Service not supported").ToTask(),
-                (why) => onFailure(why).ToTask());
-            return createLoginResult;
+                                        return await Web.Configuration.Settings.GetUri(EastFive.Security.SessionServer.Configuration.AppSettings.LandingPage,
+                                            async (landingPage) =>
+                                            {
+                                                var method = CredentialValidationMethodTypes.Password.ToString();
+                                                return await await context.Sessions.CreateLoginAsync(Guid.NewGuid(),
+                                                    method, landingPage, landingPage,
+                                                    (type) => callbackUrl,
+                                                    async (authenticationRequest) =>
+                                                    {
+                                                        var loginUrl = authenticationRequest.loginUrl;
+                                                        var resultMail = await SendInvitePasswordAsync(username, username, token, loginUrl,
+                                                            onSuccess, onServiceNotAvailable, onFailure);
+                                                        return resultMail;
+                                                    },
+                                                    "GUID not unique".AsFunctionException<Task<TResult>>(),
+                                                    "Password system said not available while in use".AsFunctionException<Task<TResult>>(),
+                                                    "Password system said not initialized while in use".AsFunctionException<string, Task<TResult>>(),
+                                                    onFailure.AsAsyncFunc());
+                                            },
+                                            onFailure.AsAsyncFunc());
+                                    },
+                                    async () =>
+                                        await managmentProvider.DeleteAuthorizationAsync(loginId,
+                                            () => credentialAlreadyExists(),
+                                            (why) => onFailure(why),
+                                            () => onFailure("Service became unsupported after credentialAlreadyExists"),
+                                            (why) => onFailure(why)),
+                                    async () =>
+                                        await managmentProvider.DeleteAuthorizationAsync(loginId,
+                                            () => onRelationshipAlreadyExists(),
+                                            (why) => onFailure(why),
+                                            () => onFailure("Service became unsupported after onRelationshipAlreadyExists"),
+                                            (why) => onFailure(why)),
+                                    async () =>
+                                        await managmentProvider.DeleteAuthorizationAsync(loginId,
+                                            () => onRelationshipAlreadyExists(),
+                                            (why) => onFailure(why),
+                                            () => onFailure("Service became unsupported after onLoginAlreadyUsed"),
+                                            (why) => onFailure(why)));
+                                return result;
+                            },
+                            (loginId) => onUsernameAlreadyInUse(loginId).ToTask(),
+                            () => onPasswordInsufficent().ToTask(),
+                            (why) => onFailure(why).ToTask(),
+                            () => onFailure("Service not supported").ToTask(),
+                            (why) => onFailure(why).ToTask());
+                    },
+                    onServiceNotAvailable.AsAsyncFunc());
         }
 
         public async Task<TResult> CreatePasswordCredentialsAsync<TResult>(Guid passwordCredentialId, Guid actorId,
