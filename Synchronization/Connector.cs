@@ -36,10 +36,16 @@ namespace EastFive.Azure.Synchronization
                                     sourceAdapterId, destinationAdapterId, flow, sourceAdapter.resourceType,
                                 async () =>
                                 {
-                                    await saveSourceAdapterAsync(sourceAdapter.connectorIds.Append(connectorId).ToArray(),
-                                            sourceAdapter.name, sourceAdapter.identifiers);
-                                    await saveDestinationAdapterAsync(destinationAdapter.connectorIds.Append(connectorId).ToArray(),
-                                            destinationAdapter.name, destinationAdapter.identifiers);
+                                    await saveSourceAdapterAsync(sourceAdapter.connectorIds
+                                        .Append(connectorId)
+                                        .Distinct()
+                                        .ToArray(),
+                                        sourceAdapter.name, sourceAdapter.identifiers);
+                                    await saveDestinationAdapterAsync(destinationAdapter.connectorIds
+                                        .Append(connectorId)
+                                        .Distinct()
+                                        .ToArray(),
+                                        destinationAdapter.name, destinationAdapter.identifiers);
                                     //var connector = new Connector()
                                     //{
                                     //    connectorId = connectorId,

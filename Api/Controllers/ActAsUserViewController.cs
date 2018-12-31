@@ -36,7 +36,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             return await CredentialProcessDocument.FindAllAsync(
                 (documents) =>
                 {
-                    var orderedDocs = documents.OrderByDescending(doc => doc.Time).Take(30).ToArray();
+                    var orderedDocs = documents.OrderByDescending(doc => doc.Time).Take(1000).ToArray();
                     return viewResponse("/SessionManagement/Index.cshtml", orderedDocs);
                 },
                 BlackBarLabs.Persistence.Azure.StorageTables.AzureStorageRepository.CreateRepository(

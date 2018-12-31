@@ -96,7 +96,17 @@ namespace EastFive.Azure.Synchronization.Persistence
 
         public static Guid GetId(string key, Guid integrationId, string resourceType)
         {
-            return $"{key}/{integrationId.ToString("N")}/{resourceType}".MD5HashGuid();
+            var id = $"{key}/{integrationId.ToString("N")}/{resourceType}".MD5HashGuid();
+            return id;
+        }
+
+        public static Task<TResult> CreateAsync<TResult>(Adapter adapter,
+            Func<TResult> onSuccess,
+            Func<TResult> onAlreadyExists)
+        {
+            var document = Convert(adapter);
+            return AzureStorageRepository.Connection(
+               azureStorageRepository => azureStorageRepository.CreateAsync(adapter.adapterId, document, onSuccess, onAlreadyExists));
         }
 
         public static Task<TResult> FindByIdAsync<TResult>(Guid adapterId,
@@ -174,6 +184,20 @@ namespace EastFive.Azure.Synchronization.Persistence
             };
         }
 
+        internal static AdapterDocument Convert(Adapter adapter)
+        {
+            var adapterDoc = new AdapterDocument()
+            {
+                Key = adapter.key,
+                IntegrationId = adapter.integrationId,
+                ResourceType = adapter.resourceType,
+                Name = adapter.name,
+            };
+            adapterDoc.SetConnectorIds(adapter.connectorIds);
+            adapterDoc.SetIdentifiers(adapter.identifiers);
+            return adapterDoc;
+        }
+
         public static Task<TResult> FindOrCreateAsync<TResult>(string key, Guid integrationId, string resourceType,
             Func<bool, Adapter, Func<Func<Adapter, Adapter>, Task<Adapter>>, Task<TResult>> onFound)
         {
@@ -211,47 +235,38 @@ namespace EastFive.Azure.Synchronization.Persistence
                 });
         }
         
-        internal static IEnumerableAsync<Adapter> CreateOrUpdateBatch(IEnumerableAsync<string> keys, Guid integrationId, string resourceType)
+        internal static IEnumerableAsync<Adapter> CreateOrUpdateBatch(IEnumerableAsync<Adapter> keyAndConnectorKvps, Guid integrationId, string resourceType)
         {
             return AzureStorageRepository.Connection(
                 azureStorageRepository =>
                 {
-                    var adapters = keys
-                        .Select(
-                            key =>
-                            { 
-                                var adapter = new AdapterDocument()
-                                {
-                                    Key = key,
-                                    IntegrationId = integrationId,
-                                    ResourceType = resourceType,
-                                };
-                                return adapter;
-                            });
+                    var adapters = keyAndConnectorKvps
+                        .Select(adapter => Convert(adapter));
                     return azureStorageRepository
                         .CreateOrReplaceBatch(adapters,
-                                adapter => GetId(adapter.Key, integrationId, resourceType),
+                                adapter => adapter.GetId(),
                             (successAdapter) => successAdapter,
                             (failedAdapter) => failedAdapter)
                         .Select(adapter => Convert(adapter));
                 });
         }
 
-        internal static IEnumerableAsync<Adapter> CreateOrUpdateBatch(IEnumerable<string> keys, Guid integrationId, string resourceType)
+        internal static IEnumerableAsync<Adapter> CreateOrUpdateBatch(IEnumerable<KeyValuePair<string, Guid>> keyAndConnectorKvps, Guid integrationId, string resourceType)
         {
             return AzureStorageRepository.Connection(
                 azureStorageRepository =>
                 {
-                    var adapters = keys
+                    var adapters = keyAndConnectorKvps
                         .Select(
-                            key =>
+                            keyAndConnectorKvp =>
                             {
                                 var adapter = new AdapterDocument()
                                 {
-                                    Key = key,
+                                    Key = keyAndConnectorKvp.Key,
                                     IntegrationId = integrationId,
                                     ResourceType = resourceType,
                                 };
+                                adapter.SetConnectorIds(new[] { keyAndConnectorKvp.Value });
                                 return adapter;
                             });
                     return azureStorageRepository
@@ -285,7 +300,31 @@ namespace EastFive.Azure.Synchronization.Persistence
                         });
                 });
         }
-        
+
+        internal static Task<TResult> ShimUpdateAsync<TResult>(Guid sourceAdapterId,
+            Func<Adapter, Func<Guid[], Guid, string, KeyValuePair<string, string>[], Task>, Task<TResult>> onFound,
+            Func<TResult> onNotFound)
+        {
+            return AzureStorageRepository.Connection(
+                azureStorageRepository =>
+                {
+                    return azureStorageRepository.UpdateAsync<AdapterDocument, TResult>(sourceAdapterId,
+                        (adapterDoc, saveAsync) =>
+                        {
+                            var adapter = Convert(adapterDoc);
+                            return onFound(adapter,
+                                (connectorIds, integrationId, name, identifiers) =>
+                                {
+                                    adapterDoc.SetConnectorIds(connectorIds);
+                                    adapterDoc.IntegrationId = integrationId;
+                                    adapterDoc.Name = name;
+                                    adapterDoc.SetIdentifiers(identifiers);
+                                    return saveAsync(adapterDoc);
+                                });
+                        });
+                });
+        }
+
         internal static Task<TResult> DeleteByIdAsync<TResult>(Guid synchronizationId,
             Func<TResult> onDeleted,
             Func<TResult> onNotFound)

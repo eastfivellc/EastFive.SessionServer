@@ -149,7 +149,7 @@ namespace EastFive.Security.SessionServer.Persistence
                     return onNotFound();
                 });
         }
-
+    
         public async Task<TResult> DeleteAsync<TResult>(Guid authenticationRequestId,
             Func<AuthenticationRequest, Func<Task>, Task<TResult>> onFound,
             Func<TResult> onNotFound)
