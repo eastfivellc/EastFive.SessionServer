@@ -636,13 +636,17 @@ namespace EastFive.Azure.Synchronization
         {
             var resourceIdKeyConnections = resourceIdKeys
                 .Select(
-                    resourceIdKey =>
+                    async resourceIdKey =>
                     {
-                        var connectorId = Guid.NewGuid();
                         var internalKey = resourceIdKey.Key.ToString("N");
+                        var adapterInternalId = Persistence.AdapterDocument.GetId(internalKey, defaultInternalIntegrationId, resourceType);
+                        var connectorIds = await Persistence.AdapterDocument.FindByIdAsync(adapterInternalId,
+                            (adapter) => adapter.connectorIds,
+                            () => new Guid[] { });
+                        var connectorId = connectorIds.Any() ? connectorIds.First() : Guid.NewGuid();
                         var adapterInternal = new Adapter
                         {
-                            adapterId = Persistence.AdapterDocument.GetId(internalKey, defaultInternalIntegrationId, resourceType),
+                            adapterId = adapterInternalId,
                             connectorIds = new[] { connectorId },
                             integrationId = defaultInternalIntegrationId,
                             key = internalKey,
@@ -665,7 +669,8 @@ namespace EastFive.Azure.Synchronization
                             synchronizationMethod = method,
                         };
                         return adapterInternal.PairWithValue(adapterExternal).PairWithValue(connector);
-                    });
+                    })
+                .Await();
 
             var connectors = resourceIdKeyConnections
                 .Select(resourceIdKeyConnection => resourceIdKeyConnection.Value); // Get connectors
