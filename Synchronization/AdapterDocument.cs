@@ -56,34 +56,91 @@ namespace EastFive.Azure.Synchronization.Persistence
 
         #region ConnectorIds
 
-        public byte[] ConnectorIds { get; set; }
+        public byte[] ConnectorIds
+        {
+            get
+            {
+                return new byte[] { };
+            }
+            set
+            {
+                SetConnectorIds(value.ToGuidsFromByteArray());
+            }
+        }
+
+        public byte[] ConnectorIds_00 { get; set; }
+        public byte[] ConnectorIds_01 { get; set; }
+        public byte[] ConnectorIds_02 { get; set; }
+        public byte[] ConnectorIds_03 { get; set; }
+        public byte[] ConnectorIds_04 { get; set; }
+        public byte[] ConnectorIds_05 { get; set; }
+        public byte[] ConnectorIds_06 { get; set; }
+        public byte[] ConnectorIds_07 { get; set; }
+        public byte[] ConnectorIds_08 { get; set; }
+        public byte[] ConnectorIds_09 { get; set; }
+        public byte[] ConnectorIds_10 { get; set; }
+        public byte[] ConnectorIds_11 { get; set; }
+        public byte[] ConnectorIds_12 { get; set; }
+        public byte[] ConnectorIds_13 { get; set; }
+        public byte[] ConnectorIds_14 { get; set; }
+        public byte[] ConnectorIds_15 { get; set; }
 
         internal Guid[] GetConnectorIds()
         {
-            return ConnectorIds.ToGuidsFromByteArray();
+            return typeof(AdapterDocument)
+                .GetProperties()
+                .Where(property => property.Name.StartsWith("ConnectorIds_"))
+                .SelectMany(property => ((byte[])property.GetValue(this)).ToGuidsFromByteArray())
+                .ToArray();
+            //return ConnectorIds.ToGuidsFromByteArray();
         }
 
-        internal bool SetConnectorIds(Guid [] connectorIds)
+        public bool SetConnectorIds(IEnumerable<Guid> connectorIds)
         {
-            this.ConnectorIds = connectorIds.ToByteArrayOfGuids();
+            var storageProperties = typeof(AdapterDocument)
+                .GetProperties()
+                .Where(property => property.Name.StartsWith("ConnectorIds_"))
+                .ToArray();
+
+            bool success = connectorIds
+                .Split(index => 4096)
+                .SelectReduce(storageProperties,
+                    (synchronizationDocumentIdSet, propertyInfosAvailable, next, skip) =>
+                    {
+                        var propertyInfo = propertyInfosAvailable.First();
+                        propertyInfo.SetValue(this, synchronizationDocumentIdSet.ToByteArrayOfGuids());
+                        return next(true, propertyInfosAvailable.Skip(1).ToArray());
+                    },
+                    (bool[] operated, System.Reflection.PropertyInfo[] propertyInfosAvailable) =>
+                    {
+                        foreach (var propertyInfo in propertyInfosAvailable)
+                        {
+                            propertyInfo.SetValue(this, default(byte[]));
+                        }
+                        return operated.All();
+                    });
             return true;
         }
 
-        internal bool AddConnectorId(Guid orderItemId)
+        internal bool AddConnectorId(Guid connectorId)
         {
-            var orderItems = this.GetConnectorIds();
-            if (orderItems.Contains(orderItemId))
+            var connectorIds = this.GetConnectorIds();
+            if (connectorIds.Contains(connectorId))
                 return false;
-            this.ConnectorIds = orderItems.Append(orderItemId).ToByteArrayOfGuids();
+            var updatedConnectorIds = connectorIds.Append(connectorId);
+            SetConnectorIds(updatedConnectorIds);
             return true;
         }
 
-        internal bool RemoveConnectorId(Guid orderItemId)
+        internal bool RemoveConnectorId(Guid connectorId)
         {
-            var orderItems = this.ConnectorIds.ToGuidsFromByteArray();
-            if (!orderItems.Contains(orderItemId))
+            var connectorIds = this.GetConnectorIds();
+            if (!connectorIds.Contains(connectorId))
                 return false;
-            this.ConnectorIds = orderItems.Where(oi => oi != orderItemId).ToByteArrayOfGuids();
+            var updatedConnectorIds = connectorIds
+                .Where(cId => cId != connectorId)
+                .Distinct();
+            SetConnectorIds(updatedConnectorIds);
             return true;
         }
 
