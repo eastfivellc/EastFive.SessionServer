@@ -7,6 +7,7 @@ using EastFive.Persistence.Azure.StorageTables.Driver;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -44,6 +45,14 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
             where TEntity : struct
         {
             return new Ref<TEntity>(entityId);
+        }
+
+        public static IEnumerableAsync<TEntity> StorageQuery<TEntity>(
+            this Expression<Func<TEntity, bool>> query)
+        {
+            return AzureTableDriverDynamic
+                .FromSettings()
+                .FindAll(query);
         }
 
         public static Task<TResult> AzureStorageTableCreateAsync<TEntity, TResult>(this TEntity entity,
