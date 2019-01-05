@@ -11,6 +11,7 @@ using System.Threading;
 using EastFive.Extensions;
 using System.Net.Http;
 using EastFive.Linq;
+using Microsoft.WindowsAzure.Storage;
 
 namespace EastFive.Messaging
 {
@@ -55,27 +56,7 @@ namespace EastFive.Messaging
                 },
                 (why) => why);
         }
-
-        //public static object GetStatus<TResult>(
-        //    Func<object, TResult> p)
-        //{
-        //    return Web.Configuration.Settings.GetString(
-        //            Configuration.MessageBusDefinitions.ServiceBusConnectionString,
-        //        async serviceBusConnectionString =>
-        //        {
-        //            var status = subscriptions
-        //                .Select(
-        //                    subscription =>
-        //                    {
-        //                        var receiveClient = new Microsoft.Azure.ServiceBus.QueueClient(serviceBusConnectionString, subscription);
-        //                        var x = new Microsoft.Azure.ServiceBus.SubscriptionClient(serviceBusConnectionString, subscription, Microsoft.Azure.ServiceBus.ReceiveMode.PeekLock);
-        //                        return "";
-        //                    })
-        //                .ToArray();
-        //            return p(status);
-        //        },
-        //        () => p(null));
-        //}
+        
 
         private static string GetSubscription()
         {
@@ -218,5 +199,40 @@ namespace EastFive.Messaging
                 onFailure.AsAsyncFunc()); 
 
         }
+        
+        public int Flush()
+        {
+            return Web.Configuration.Settings.GetString(
+                    //EastFive.Security.SessionServer.Configuration.AppSettings.ServiceBusConnectionString,
+                    EastFive.Azure.Persistence.AppSettings.Storage,
+                serviceBusConnectionString =>
+                {
+                    //serviceBusConnectionString = "Endpoint=sb://orderowl-dev.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=3jov5aySn+7VjiM4t391fHjxiFbYwBhBnq8exw6pCzs=";
+                    //serviceBusConnectionString = "DefaultEndpointsProtocol=https;AccountName=orderowl-dev;"
+                    var status = new string[] { };
+                    do
+                    {
+                        status = subscriptions
+                            .Where(
+                                subscription =>
+                                {
+                                    var storageAccount = CloudStorageAccount.Parse(serviceBusConnectionString);
+                                    var queueClient = storageAccount.CreateCloudQueueClient();
+                                    var queue = queueClient.GetQueueReference(subscription);
+                                    queue.FetchAttributes();
+                                    var count = queue.ApproximateMessageCount;
+                                    if (count > 0)
+                                        return true;
+
+                                    return false;
+                                })
+                            .ToArray();
+                    }
+                    while (status.Any());
+                    return status.Length;
+                },
+                (why) => -1);
+        }
+
     }
 }
