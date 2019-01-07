@@ -204,39 +204,38 @@ namespace EastFive.Messaging
         {
             Microsoft.ServiceBus.NamespaceManager manager;
             return Web.Configuration.Settings.GetString(
-                    //EastFive.Security.SessionServer.Configuration.AppSettings.ServiceBusConnectionString,
-                    EastFive.Azure.Persistence.AppSettings.Storage,
+                    EastFive.Security.SessionServer.Configuration.AppSettings.ServiceBusConnectionString,
+                    //EastFive.Azure.Persistence.AppSettings.Storage,
                 serviceBusConnectionString =>
                 {
-                    //var nsmgr = NamespaceManager.CreateFromConnectionString("conn string");
-                    //var topics = nsmgr.GetTopics();
-
-                    //foreach (var topic in topics)
-                    //{
-                    //    var subscriptions = nsmgr.GetSubscriptions(topic.Path);
-                    //    foreach (var subscription in subscriptions)
-                    //    {
-                    //        someStaticListOfAlerts.Add(new Alert(subscription.Name, () => (int)subscription.MessageCountDetails.ActiveMessageCount));
-                    //    }
-                    //}
+                    var nsmgr = Microsoft.ServiceBus.NamespaceManager.CreateFromConnectionString(serviceBusConnectionString);
+                    var topics = nsmgr.GetTopics();
                     
-                    var status = new string[] { };
+                    IEnumerable<bool> status = new bool[] { };
                     do
                     {
-                        status = subscriptions
-                            .Where(
-                                subscription =>
+                        status = topics
+                            .Select(
+                                topic =>
                                 {
-                                    var count = 0;
-                                    if (count > 0)
-                                        return true;
+                                    var subscriptions = nsmgr.GetSubscriptions(topic.Path);
+                                    foreach (var subscription in subscriptions)
+                                    {
+                                        var updatedSubscription = nsmgr.GetSubscription(topic.Path, subscription.Name);
+                                        var count = updatedSubscription.MessageCount;
 
+                                        // While this would make more sense, it does not work:
+                                        // https://stackoverflow.com/questions/43607450/azure-service-bus-messagecountdetails-activemessagecount-is-incorrect
+                                        // var count = subscription.MessageCountDetails.ActiveMessageCount;
+
+                                        if (count > 0)
+                                            return true;
+                                    }
                                     return false;
-                                })
-                            .ToArray();
+                                });
                     }
                     while (status.Any());
-                    return status.Length;
+                    return 1;
                 },
                 (why) => -1);
         }

@@ -55,7 +55,7 @@ namespace EastFive.Api.Azure.Credentials
             Func<string, TResult> onUnspecifiedConfiguration,
             Func<string, TResult> onFailure)
         {
-            return await EastFive.Web.Configuration.Settings.GetBase64Bytes(EastFive.Security.AppSettings.SAMLCertificate,
+            return await EastFive.Web.Configuration.Settings.GetBase64Bytes(EastFive.Azure.AppSettings.SAML.SAMLCertificate,
                 async (certBuffer) =>
                 {
                     var certificate = new X509Certificate2(certBuffer);
@@ -67,7 +67,7 @@ namespace EastFive.Api.Azure.Credentials
                     {
                         var nameId = tokens[SAMLProvider.SamlNameIDKey];
 
-                        return EastFive.Web.Configuration.Settings.GetString(EastFive.Security.AppSettings.SAMLLoginIdAttributeName,
+                        return EastFive.Web.Configuration.Settings.GetString(EastFive.Azure.AppSettings.SAML.SAMLLoginIdAttributeName,
                             (attributeName) =>
                             {
                                 //var attributes = assertion.Attributes

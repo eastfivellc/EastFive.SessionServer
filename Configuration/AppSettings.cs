@@ -15,6 +15,22 @@ namespace EastFive.Azure
         public const string ApplicationInsightsKey = "EastFive.Security.SessionServer.ApplicationInsightsKey";
 
         public const string SpaSiteLocation = "EastFive.Security.SessionServer.SpaSiteLocation";
+
+        [Config]
+        public static class SAML
+        {
+            [ConfigKey("The certificate the SAML provider offers. It is in base64 format. Only the public key is availble. " +
+                "It is used to verfiy the signature of the SAML assurtion.",
+                DeploymentOverrides.Suggested,
+                DeploymentSecurityConcern = false)]
+            public const string SAMLCertificate = "EastFive.Security.CredentialProvider.SAML.Certificate";
+            
+            [ConfigKey("The name of the attribute in the SAML assertion whoms value contains a unique key identifying the user. " + 
+                "This value is used to lookup the user in the local system.",
+                DeploymentOverrides.Optional,
+                DeploymentSecurityConcern = false)]
+            public const string SAMLLoginIdAttributeName = "EastFive.Security.CredentialProvider.SAML.LoginIdAttributeName";
+        }
     }
 }
 
