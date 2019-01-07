@@ -202,13 +202,24 @@ namespace EastFive.Messaging
         
         public int Flush()
         {
+            Microsoft.ServiceBus.NamespaceManager manager;
             return Web.Configuration.Settings.GetString(
                     //EastFive.Security.SessionServer.Configuration.AppSettings.ServiceBusConnectionString,
                     EastFive.Azure.Persistence.AppSettings.Storage,
                 serviceBusConnectionString =>
                 {
-                    //serviceBusConnectionString = "Endpoint=sb://orderowl-dev.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=3jov5aySn+7VjiM4t391fHjxiFbYwBhBnq8exw6pCzs=";
-                    //serviceBusConnectionString = "DefaultEndpointsProtocol=https;AccountName=orderowl-dev;"
+                    //var nsmgr = NamespaceManager.CreateFromConnectionString("conn string");
+                    //var topics = nsmgr.GetTopics();
+
+                    //foreach (var topic in topics)
+                    //{
+                    //    var subscriptions = nsmgr.GetSubscriptions(topic.Path);
+                    //    foreach (var subscription in subscriptions)
+                    //    {
+                    //        someStaticListOfAlerts.Add(new Alert(subscription.Name, () => (int)subscription.MessageCountDetails.ActiveMessageCount));
+                    //    }
+                    //}
+                    
                     var status = new string[] { };
                     do
                     {
@@ -216,11 +227,7 @@ namespace EastFive.Messaging
                             .Where(
                                 subscription =>
                                 {
-                                    var storageAccount = CloudStorageAccount.Parse(serviceBusConnectionString);
-                                    var queueClient = storageAccount.CreateCloudQueueClient();
-                                    var queue = queueClient.GetQueueReference(subscription);
-                                    queue.FetchAttributes();
-                                    var count = queue.ApproximateMessageCount;
+                                    var count = 0;
                                     if (count > 0)
                                         return true;
 
