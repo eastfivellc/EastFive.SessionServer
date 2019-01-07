@@ -127,7 +127,7 @@ namespace EastFive.Security.SessionServer.Api.Resources
         
         [HttpGet]
         public static async Task<HttpResponseMessage> QueryByIdAsync(
-                [Property(Name = IdPropertyName)]Guid credentialId,
+                [QueryParameter(Name = IdPropertyName)]Guid credentialId,
                 Context context, AzureApplication application,
                 EastFive.Api.Controllers.Security security,
                 UrlHelper urlHelper,
@@ -151,7 +151,7 @@ namespace EastFive.Security.SessionServer.Api.Resources
 
         [HttpGet]
         public async static Task<HttpResponseMessage> QueryByActorId(
-                [Property(Name = ActorPropertyName)]Guid actorId,
+                [QueryParameter(Name = ActorPropertyName)]Guid actorId,
                 Context context, AzureApplication application,
                 EastFive.Api.Controllers.Security security,
                 UrlHelper urlHelper,
