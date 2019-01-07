@@ -20,6 +20,7 @@ namespace EastFive.Messaging
         private const string MESSAGE_PROPERTY_KEY_MESSAGE_NAME = "MessageName";
         private static string[] subscriptions = new string[] { };
 
+        private bool processing = false;
         protected QueueProcessor(string subscription)
         {
             subscription = subscription.ToLower();
@@ -32,9 +33,21 @@ namespace EastFive.Messaging
                     // TODO: Create the topic if it does not exist already but swallow the errors if manage privilige is not available
 
                     Func<Microsoft.Azure.ServiceBus.Message, CancellationToken, Task> processMessagesAsync =
-                        (message, cancellationToken) =>
+                        async (message, cancellationToken) =>
                         {
-                            return ProcessAsync(message, receiveClient);
+                            try
+                            {
+                                processing = true;
+                                await ProcessAsync(message, receiveClient);
+                            }
+                            catch(Exception ex)
+                            {
+                                ex.Message.GetType();
+                            }
+                            finally
+                            {
+                                processing = false;
+                            }
                         };
 
                     var messageHandlerOptions = new Microsoft.Azure.ServiceBus.MessageHandlerOptions(ExceptionReceivedHandler)
@@ -129,8 +142,15 @@ namespace EastFive.Messaging
                     async () =>
                     {
                         //message.Complete();
-                        await client.CompleteAsync(message.SystemProperties.LockToken);
-                        return MessageProcessStatus.Complete;
+                        try
+                        {
+                            await client.CompleteAsync(message.SystemProperties.LockToken);
+                            return MessageProcessStatus.Complete;
+                        } catch(Microsoft.ServiceBus.Messaging.MessageLockLostException)
+                        {
+                            // TODO: Renue lock client.Loc message.Lock
+                            return MessageProcessStatus.Complete;
+                        }
                     },
                     async () =>
                     {
@@ -202,39 +222,51 @@ namespace EastFive.Messaging
         
         public int Flush()
         {
-            Microsoft.ServiceBus.NamespaceManager manager;
             return Web.Configuration.Settings.GetString(
                     EastFive.Security.SessionServer.Configuration.AppSettings.ServiceBusConnectionString,
                     //EastFive.Azure.Persistence.AppSettings.Storage,
                 serviceBusConnectionString =>
                 {
-                    var nsmgr = Microsoft.ServiceBus.NamespaceManager.CreateFromConnectionString(serviceBusConnectionString);
-                    var topics = nsmgr.GetTopics();
-                    
-                    IEnumerable<bool> status = new bool[] { };
                     do
                     {
-                        status = topics
-                            .Select(
-                                topic =>
-                                {
-                                    var subscriptions = nsmgr.GetSubscriptions(topic.Path);
-                                    foreach (var subscription in subscriptions)
-                                    {
-                                        var updatedSubscription = nsmgr.GetSubscription(topic.Path, subscription.Name);
-                                        var count = updatedSubscription.MessageCount;
+                        Thread.Sleep(1000);
+                    } while (processing);
 
-                                        // While this would make more sense, it does not work:
-                                        // https://stackoverflow.com/questions/43607450/azure-service-bus-messagecountdetails-activemessagecount-is-incorrect
-                                        // var count = subscription.MessageCountDetails.ActiveMessageCount;
+                    //var nsmgr = Microsoft.ServiceBus.NamespaceManager.CreateFromConnectionString(serviceBusConnectionString);
+                    //var subscription = subscriptions.First();
+                    //var connectionBuilder = new Microsoft.Azure.ServiceBus.ServiceBusConnectionStringBuilder(serviceBusConnectionString);
+                    //var manager = new Microsoft.Azure.ServiceBus.SubscriptionClient(connectionBuilder, subscription);
+                    //var receiveClient = new Microsoft.Azure.ServiceBus.QueueClient(serviceBusConnectionString, subscription);
+                    //var topicClient = new Microsoft.Azure.ServiceBus.TopicClient(serviceBusConnectionString, subscription);
+                    //topicClient.
+                    //var updatedSubscription = nsmgr.GetSubscription(subscription, subscription);
+                    //var count = updatedSubscription.MessageCount;
+                    //var receiveClient = new Microsoft.Azure.ServiceBus.QueueClient(serviceBusConnectionString, subscription);
+                    //do
+                    //{
+                    //    status = topics
+                    //        .Select(
+                    //            topic =>
+                    //            {
+                    //                var subscriptions = nsmgr.GetSubscriptions(topic.Path);
+                    //                foreach (var subscription in subscriptions)
+                    //                {
+                    //                    var updatedSubscription = nsmgr.GetSubscription(topic.Path, subscription.Name);
+                    //                    var count = updatedSubscription.MessageCount;
 
-                                        if (count > 0)
-                                            return true;
-                                    }
-                                    return false;
-                                });
-                    }
-                    while (status.Any());
+                    //                    // While this would make more sense, it does not work:
+                    //                    // https://stackoverflow.com/questions/43607450/azure-service-bus-messagecountdetails-activemessagecount-is-incorrect
+                    //                    // var count = subscription.MessageCountDetails.ActiveMessageCount;
+
+                    //                    if (count > 0)
+                    //                        return true;
+                    //                }
+                    //                return false;
+                    //            })
+                    //        .Where(b => b)
+                    //        .ToArray();
+                    //}
+                    //while (status.Any());
                     return 1;
                 },
                 (why) => -1);
