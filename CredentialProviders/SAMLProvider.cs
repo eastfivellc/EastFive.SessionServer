@@ -16,6 +16,7 @@ using EastFive.Api.Services;
 using System.Security.Claims;
 using EastFive.Security.SessionServer;
 using EastFive.Api.Azure.Credentials.Attributes;
+using EastFive.Serialization;
 
 namespace EastFive.Api.Azure.Credentials
 {
@@ -24,6 +25,7 @@ namespace EastFive.Api.Azure.Credentials
     {
         public const string IntegrationName = "SAML";
         public string Method => IntegrationName;
+        public Guid Id => System.Text.Encoding.UTF8.GetBytes(Method).MD5HashGuid();
 
         private DataContext dataContext;
         

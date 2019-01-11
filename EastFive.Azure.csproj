@@ -219,6 +219,11 @@
     <Compile Include="Api\Actions\InviteCredentialActions.cs" />
     <Compile Include="Api\Constants.cs" />
     <Compile Include="Attributes\ASTFVCPropertyAttribute.cs" />
+    <Compile Include="Auth\Authentication.cs" />
+    <Compile Include="Auth\AccountMapping.cs" />
+    <Compile Include="Auth\Authorization.cs" />
+    <Compile Include="Auth\IProvideIntegration.cs" />
+    <Compile Include="Auth\Session.cs" />
     <Compile Include="Credentials\IProvideAccountInformation.cs" />
     <Compile Include="IProvideIntegration.cs" />
     <Compile Include="Persistence\AzureStorageTables\StorageExtensions.cs" />

@@ -12,6 +12,7 @@ using EastFive.Api.Azure.Credentials;
 using EastFive.Api.Azure.Credentials.Attributes;
 using EastFive.Linq;
 using EastFive.Collections.Generic;
+using EastFive.Serialization;
 
 namespace EastFive.Api.Azure.Credentials
 {
@@ -202,9 +203,9 @@ namespace EastFive.Api.Azure.Credentials
 
         #region IProvideLogin
 
-        public Type CallbackController => typeof(Controllers.OpenIdResponseController);
+        public Guid Id =>  System.Text.Encoding.UTF8.GetBytes(Method).MD5HashGuid();
 
-        
+        public Type CallbackController => typeof(Controllers.OpenIdResponseController);
 
         //typeof(SessionServer.Api.Controllers.AADB2CResponseController);
 

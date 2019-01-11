@@ -18,6 +18,7 @@ using EastFive.Extensions;
 using EastFive.Linq;
 using System.IO;
 using EastFive.Security.SessionServer;
+using EastFive.Serialization;
 
 namespace EastFive.Api.Azure.Credentials
 {
@@ -38,7 +39,8 @@ namespace EastFive.Api.Azure.Credentials
         {
             public const string IntegrationName = "Sheets";
             public string Method => IntegrationName;
-            
+            public Guid Id => System.Text.Encoding.UTF8.GetBytes(Method).MD5HashGuid();
+
             public const string resourceTypesKey = "resource_types";
             public const string sheetIdKey = "sheet_id";
 

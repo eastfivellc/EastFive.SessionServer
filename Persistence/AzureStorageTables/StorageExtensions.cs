@@ -1,15 +1,17 @@
-﻿using BlackBarLabs;
-using EastFive.Async;
-using EastFive.Extensions;
-using EastFive.Linq;
-using EastFive.Linq.Async;
-using EastFive.Persistence.Azure.StorageTables.Driver;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
+
+using EastFive.Async;
+using EastFive.Extensions;
+using EastFive.Linq;
+using EastFive.Linq.Async;
+using EastFive.Linq.Expressions;
+using EastFive.Reflection;
+using EastFive.Persistence.Azure.StorageTables.Driver;
 
 namespace EastFive.Azure.Persistence.AzureStorageTables
 {
@@ -26,21 +28,6 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                     onDoesNotExists);
         }
 
-        public static async Task<ITransactionResult<TResult>> CheckAsync<T, TResult>(this IRef<T> value,
-            Func<TResult> onNotFound)
-            where T : struct
-        {
-            if (value.IsDefaultOrNull())
-                return onNotFound().TransactionResultFailure();
-
-            await value.ResolveAsync();
-            if (!value.value.HasValue)
-                return onNotFound().TransactionResultFailure();
-
-            Func<Task> rollback = () => 1.AsTask();
-            return rollback.TransactionResultSuccess<TResult>();
-        }
-
         public static IRef<TEntity> IRefStorage<TEntity>(this Guid entityId)
             where TEntity : struct
         {
@@ -55,20 +42,33 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                 .FindAll(query);
         }
 
-        public static Task<TResult> StorageUpdateAsync<TEntity, TResult>(this TEntity entity,
+        public static Task<TResult> StorageUpdateAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
             Func<TEntity, Func<TEntity, Task>, Task<TResult>> onUpdate,
             Func<TResult> onNotFound = default(Func<TResult>),
             StorageTables.Driver.AzureStorageDriver.RetryDelegateAsync<Task<TResult>> onTimeoutAsync =
                 default(StorageTables.Driver.AzureStorageDriver.RetryDelegateAsync<Task<TResult>>))
-            where TEntity : IReferenceable
+            where TEntity : struct, IReferenceable
         {
-            var documentId = entity.id;
+            var documentId = entityRef.id;
             return AzureTableDriverDynamic
                 .FromSettings()
                 .UpdateAsync(documentId, 
                     onUpdate,
                     onNotFound:onNotFound,
                     onTimeoutAsync:onTimeoutAsync);
+        }
+
+        public static Task<TResult> StorageDeleteAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
+            Func<TResult> onSuccess,
+            Func<TResult> onNotFound = default(Func<TResult>))
+            where TEntity : struct, IReferenceable
+        {
+            var documentId = entityRef.id;
+            return AzureTableDriverDynamic
+                .FromSettings()
+                .DeleteByIdAsync<TEntity, TResult>(documentId,
+                    onSuccess,
+                    onNotFound: onNotFound);
         }
 
         public static Task<TResult> StorageLockedUpdateAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
@@ -98,7 +98,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                     mutateUponLock:mutateUponLock);
         }
 
-        public static Task<TResult> AzureStorageTableCreateAsync<TEntity, TResult>(this TEntity entity,
+        public static Task<TResult> StorageCreateAsync<TEntity, TResult>(this TEntity entity,
             Func<Guid, TResult> onCreated,
             Func<TResult> onAlreadyExists)
         {
@@ -109,7 +109,78 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                     onAlreadyExists);
         }
 
-        public static async Task<ITransactionResult<TResult>> AzureStorageTableRollbackCreateAsync<TEntity, TResult>(this TEntity entity,
+        #region Transactions
+
+        public static async Task<ITransactionResult<TResult>> CheckAsync<T, TResult>(this IRef<T> value,
+            Func<TResult> onNotFound)
+            where T : struct
+        {
+            if (value.IsDefaultOrNull())
+                return onNotFound().TransactionResultFailure();
+
+            await value.ResolveAsync();
+            if (!value.value.HasValue)
+                return onNotFound().TransactionResultFailure();
+
+            Func<Task> rollback = () => 1.AsTask();
+            return rollback.TransactionResultSuccess<TResult>();
+        }
+
+        public static Task<ITransactionResult<TResult>> TransactionUpdateLinkN1Async<T, TLink, TResult>(this T value,
+            Func<T, IRef<TLink>> linkedOut,
+            Expression<Func<TLink, IRefs<T>>> linkedBack,
+            Func<TResult> onNotFound)
+            where T : struct, IReferenceable where TLink : struct, IReferenceable
+        {
+            var driver = AzureTableDriverDynamic
+                   .FromSettings();
+
+            var linkRef = linkedOut(value);
+            if (linkRef.IsDefaultOrNull())
+                return onNotFound().TransactionResultFailure().AsTask();
+
+            var xmemberExpr = (linkedBack.Body as MemberExpression);
+            if (xmemberExpr.IsDefaultOrNull())
+                throw new Exception($"`{linkedBack.Body}` is not a member expression");
+            var memberInfo = xmemberExpr.Member;
+            return linkRef.StorageUpdateAsync(
+                async (linkedValue, updateAsync) =>
+                {
+                    var linkRefsOld = (IRefs<T>)memberInfo.GetValue(linkedValue);
+
+                    if (linkRefsOld.ids.Contains(value.id))
+                    {
+                        Func<Task> rollback = () => 1.AsTask();
+                        return rollback.TransactionResultSuccess<TResult>();
+                    }
+
+                    var linkIdsNew = linkRefsOld.ids.Append(value.id).ToArray();
+                    var linkRefsNew = new Refs<T>(linkIdsNew);
+                    memberInfo.SetValue(ref linkedValue, linkRefsNew);
+                    await updateAsync(linkedValue);
+
+                    Func<Task> rollbackValues = 
+                        () => linkRef.StorageUpdateAsync(
+                            async (linkedValueRollback, updateAsyncRollback) =>
+                            {
+                                var linkRefsOldRollback = (IRefs<TLink>)memberInfo.GetValue(linkedValueRollback);
+                                if (linkRefsOld.ids.Contains(value.id))
+                                    return false;
+
+                                var linkIdsNewRollback = linkRefsOldRollback.ids.Where(id => id != value.id).ToArray();
+                                var linkRefsNewRollback = new Refs<TLink>(linkIdsNewRollback);
+                                memberInfo.SetValue(ref linkedValueRollback, linkRefsNewRollback);
+                                await updateAsyncRollback(linkedValueRollback);
+                                return true;
+                            },
+                            () => false);
+                    return rollbackValues.TransactionResultSuccess<TResult>();
+                },
+                () => onNotFound().TransactionResultFailure());
+            
+        }
+
+        public static async Task<ITransactionResult<TResult>> StorageCreateTransactionAsync<TEntity, TResult>(this TEntity entity,
             Func<TResult> onAlreadyExists)
         {
             var driver = AzureTableDriverDynamic
@@ -128,5 +199,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                     },
                     () => onAlreadyExists().TransactionResultFailure());
         }
+
+        #endregion
     }
 }

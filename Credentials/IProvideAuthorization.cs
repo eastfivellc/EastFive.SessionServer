@@ -11,6 +11,8 @@ namespace EastFive.Security.SessionServer
         
         Type CallbackController { get; }
 
+        Guid Id { get; }
+
         string Method { get; }
 
         /// <summary>

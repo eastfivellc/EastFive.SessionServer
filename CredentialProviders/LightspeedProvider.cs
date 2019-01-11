@@ -4,6 +4,7 @@ using BlackBarLabs.Linq;
 using EastFive.Api.Azure.Credentials.Attributes;
 using EastFive.Collections.Generic;
 using EastFive.Security.SessionServer;
+using EastFive.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,6 +21,7 @@ namespace EastFive.Api.Azure.Credentials
     {
         public const string IntegrationName = "Lightspeed";
         public string Method => IntegrationName;
+        public Guid Id => System.Text.Encoding.UTF8.GetBytes(Method).MD5HashGuid();
 
         #region Initialization
 

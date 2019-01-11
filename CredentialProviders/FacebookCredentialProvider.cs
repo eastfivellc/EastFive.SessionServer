@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using EastFive.Security.SessionServer;
 using BlackBarLabs.Extensions;
 using EastFive.Api.Azure.Credentials.Attributes;
+using EastFive.Serialization;
 
 namespace EastFive.Api.Azure.Credentials
 {
@@ -58,7 +59,9 @@ namespace EastFive.Api.Azure.Credentials
         }
 
         #region IProvideLogin
-        
+
+        public Guid Id => System.Text.Encoding.UTF8.GetBytes(Method).MD5HashGuid();
+
         public Uri GetLoginUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
         {
             throw new NotImplementedException();

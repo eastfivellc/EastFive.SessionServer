@@ -146,7 +146,7 @@ namespace EastFive.Messaging
                         {
                             await client.CompleteAsync(message.SystemProperties.LockToken);
                             return MessageProcessStatus.Complete;
-                        } catch(Microsoft.ServiceBus.Messaging.MessageLockLostException)
+                        } catch(Microsoft.Azure.ServiceBus.MessageLockLostException)
                         {
                             // TODO: Renue lock client.Loc message.Lock
                             return MessageProcessStatus.Complete;

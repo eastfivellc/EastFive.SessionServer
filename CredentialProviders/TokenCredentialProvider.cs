@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using EastFive.Security.SessionServer.Persistence;
 using EastFive.Api.Services;
 using EastFive.Security.SessionServer;
+using EastFive.Serialization;
 
 namespace EastFive.Api.Azure.Credentials
 {
@@ -14,6 +15,7 @@ namespace EastFive.Api.Azure.Credentials
     {
         public const string IntegrationName = "Token";
         public string Method => IntegrationName;
+        public Guid Id => System.Text.Encoding.UTF8.GetBytes(Method).MD5HashGuid();
 
         private const string subjectIdKey = "loginId";
 
