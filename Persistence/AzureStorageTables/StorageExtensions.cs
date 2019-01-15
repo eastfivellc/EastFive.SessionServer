@@ -52,10 +52,10 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
             var documentId = entityRef.id;
             return AzureTableDriverDynamic
                 .FromSettings()
-                .UpdateAsync(documentId, 
+                .UpdateAsync(documentId,
                     onUpdate,
-                    onNotFound:onNotFound,
-                    onTimeoutAsync:onTimeoutAsync);
+                    onNotFound: onNotFound,
+                    onTimeoutAsync: onTimeoutAsync);
         }
 
         public static Task<TResult> StorageDeleteAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
@@ -90,12 +90,12 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                 .LockedUpdateAsync(entityRef.id,
                         lockedPropertyExpression,
                     onLockAquired,
-                    onNotFound:onNotFound,
-                    onLockRejected:onLockRejected,
-                    onAlreadyLocked:onAlreadyLocked,
+                    onNotFound: onNotFound,
+                    onLockRejected: onLockRejected,
+                    onAlreadyLocked: onAlreadyLocked,
                     shouldLock: shouldLock,
-                    onTimeout:onTimeout,
-                    mutateUponLock:mutateUponLock);
+                    onTimeout: onTimeout,
+                    mutateUponLock: mutateUponLock);
         }
 
         public static Task<TResult> StorageCreateAsync<TEntity, TResult>(this TEntity entity,
@@ -124,6 +124,26 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
 
             Func<Task> rollback = () => 1.AsTask();
             return rollback.TransactionResultSuccess<TResult>();
+        }
+
+        public static async Task<ITransactionResult<TResult>> TransactionUpdateLinkN1Async<T, TLink, TResult>(this T value,
+            Func<T, IRefOptional<TLink>> linkedOutOptional,
+            Expression<Func<TLink, IRefs<T>>> linkedBack,
+            Func<TResult> onNotFound)
+            where T : struct, IReferenceable where TLink : struct, IReferenceable
+        {
+            var refOptional = linkedOutOptional(value);
+            if(!refOptional.HasValue)
+            {
+                Func<Task> rollbackValues =
+                        () => true.AsTask();
+                return rollbackValues.TransactionResultSuccess<TResult>();
+            }
+            var linkedOut = refOptional.Ref;
+            return await value.TransactionUpdateLinkN1Async(
+                (res) => linkedOut,
+                linkedBack,
+                onNotFound);
         }
 
         public static Task<ITransactionResult<TResult>> TransactionUpdateLinkN1Async<T, TLink, TResult>(this T value,
@@ -163,12 +183,12 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                         () => linkRef.StorageUpdateAsync(
                             async (linkedValueRollback, updateAsyncRollback) =>
                             {
-                                var linkRefsOldRollback = (IRefs<TLink>)memberInfo.GetValue(linkedValueRollback);
+                                var linkRefsOldRollback = (IRefs<T>)memberInfo.GetValue(linkedValueRollback);
                                 if (linkRefsOld.ids.Contains(value.id))
                                     return false;
 
                                 var linkIdsNewRollback = linkRefsOldRollback.ids.Where(id => id != value.id).ToArray();
-                                var linkRefsNewRollback = new Refs<TLink>(linkIdsNewRollback);
+                                var linkRefsNewRollback = new Refs<T>(linkIdsNewRollback);
                                 memberInfo.SetValue(ref linkedValueRollback, linkRefsNewRollback);
                                 await updateAsyncRollback(linkedValueRollback);
                                 return true;
