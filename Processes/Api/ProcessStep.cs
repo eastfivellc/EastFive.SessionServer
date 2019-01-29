@@ -123,7 +123,7 @@ namespace EastFive.Api.Azure.Resources
 
         [EastFive.Api.HttpPatch(Type = typeof(Resources.ProcessStep), MatchAllBodyParameters = false)]
         public static Task<HttpResponseMessage> UpdateProcessStepAsync(
-                [Property(Name = ProcessStep.IdPropertyName)]Guid processId,
+                [QueryParameter(Name = ProcessStep.IdPropertyName, CheckFileName = true)]Guid processId,
                 [PropertyOptional(Name = ProcessStep.ConfirmedByPropertyName)]Guid? confirmedById,
                 [PropertyOptional(Name = ProcessStep.ConfirmedWhenPropertyName)]DateTime? confirmedWhen,
                 [PropertyOptional(Name = ProcessStep.ResourceKeysPropertyName)]string[] resourceKeys,

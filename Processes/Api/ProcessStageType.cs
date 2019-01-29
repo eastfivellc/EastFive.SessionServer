@@ -122,7 +122,7 @@ namespace EastFive.Api.Azure.Resources
                 [Property(Name = Resources.ProcessStageType.ResourceTypesPropertyName)]Type[] resourceTypes,
                 EastFive.Api.Controllers.Security security, HttpRequestMessage request, UrlHelper url,
             CreatedResponse onCreated,
-            CreatedBodyResponse onCreatedAndModified,
+            CreatedBodyResponse<ProcessStageType> onCreatedAndModified,
             AlreadyExistsResponse onAlreadyExists,
             AlreadyExistsReferencedResponse onRelationshipAlreadyExists,
             ReferencedDocumentNotFoundResponse onReferenceNotFound,

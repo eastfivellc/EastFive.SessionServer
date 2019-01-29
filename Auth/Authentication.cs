@@ -37,7 +37,31 @@ namespace EastFive.Azure.Auth
         public string name;
 
         private UrlHelper urlHelper;
-        private Security.SessionServer.IProvideLogin loginProvider;
+
+        private Task<TResult> GetLoginProviderAsync<TResult>(Api.Azure.AzureApplication application,
+            Func<string, Security.SessionServer.IProvideLogin, TResult> onFound,
+            Func<TResult> onNotFound)
+        {
+            return GetLoginProviderAsync(this.id, application,
+                onFound,
+                onNotFound);
+        }
+
+        private static Task<TResult> GetLoginProviderAsync<TResult>(Guid authenticationId, Api.Azure.AzureApplication application,
+            Func<string, Security.SessionServer.IProvideLogin, TResult> onFound,
+            Func<TResult> onNotFound)
+        {
+            return application.LoginProviders
+                .Where(loginProvider => loginProvider.Value.Id == authenticationId)
+                .FirstAsync(
+                    (loginProviderKvp) =>
+                    {
+                        var loginProviderKey = loginProviderKvp.Key;
+                        var loginProvider = loginProviderKvp.Value;
+                        return onFound(loginProviderKey, loginProvider);
+                    },
+                    onNotFound);
+        }
 
         [HttpGet]
         public static Task<HttpResponseMessage> QueryAsync(
@@ -81,29 +105,38 @@ namespace EastFive.Azure.Auth
             Func<Authentication, TResult> onFound,
             Func<TResult> onNotFound)
         {
-            return application.LoginProviders
-                .Where(loginProvider => loginProvider.Value.Id == method.id)
-                .FirstAsync(
-                    (loginProviderKvp) =>
+            return GetLoginProviderAsync(method.id, application,
+                (key, loginProvider) =>
+                {
+                    var authentication = new Authentication
                     {
-                        var loginProvider = loginProviderKvp.Value;
-                        var authentication = new Authentication
-                        {
-                            authenticationId = new Ref<Authentication>(loginProvider.Id),
-                            name = loginProvider.Method,
-                            loginProvider = loginProvider,
-                            urlHelper = urlHelper,
-                        };
-                        return onFound(authentication);
-                    },
-                    onNotFound);
+                        authenticationId = new Ref<Authentication>(loginProvider.Id),
+                        name = loginProvider.Method,
+                        urlHelper = urlHelper,
+                    };
+                    return onFound(authentication);
+                },
+                onNotFound);
         }
 
-        internal Uri GetLoginUrl(Guid authorizationIdSecure, Uri responseLocation)
+        internal Task<Uri> GetLoginUrlAsync(Api.Azure.AzureApplication application, Guid authorizationIdSecure, Uri responseLocation)
         {
             var urlHelper = this.urlHelper;
-            return loginProvider.GetLoginUrl(authorizationIdSecure, responseLocation,
-                type => urlHelper.GetLocation(type));
+            var authenticationId = this.id;
+            return GetLoginProviderAsync(application,
+                (name, loginProvider) => loginProvider.GetLoginUrl(authorizationIdSecure, responseLocation,
+                    type => urlHelper.GetLocation(type)),
+                () => throw new Exception($"Login provider with id {authenticationId} does not exists."));
+        }
+
+        public Task<string> GetAuthorizationKeyAsync(Api.Azure.AzureApplication application, Dictionary<string, string> parameters)
+        {
+            var authenticationId = this.id;
+            return GetLoginProviderAsync(application,
+                (name, loginProvider) => loginProvider.ParseCredentailParameters(parameters,
+                    (authorizationKey, authenticationIdMaybe, scopeMaybeDiscard) => authorizationKey,
+                    why => throw new Exception(why)),
+                () => throw new Exception($"Login provider with id {authenticationId} does not exists."));
         }
     }
 }

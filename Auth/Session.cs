@@ -73,9 +73,10 @@ namespace EastFive.Azure.Auth
         [HttpPost] //(MatchAllBodyParameters = false)]
         public async static Task<HttpResponseMessage> CreateAsync(
                 [Property(Name = SessionIdPropertyName)]IRef<Session> sessionId,
-                [PropertyOptional(Name = AuthorizationPropertyName)]IRefOptional<Session> authorization,
+                [PropertyOptional(Name = AuthorizationPropertyName)]IRefOptional<Authorization> authorizationRefMaybe,
                 [Resource]Session session,
-            CreatedBodyResponse onCreated,
+                Api.Azure.AzureApplication application,
+            CreatedBodyResponse<Session> onCreated,
             AlreadyExistsResponse onAlreadyExists,
             ForbiddenResponse forbidden,
             ConfigurationFailureResponse onConfigurationFailure)
@@ -83,9 +84,12 @@ namespace EastFive.Azure.Auth
             session.refreshToken = Security.SecureGuid.Generate().ToString("N");
             // Null out the account in case it somehow got assigned.
             session.account = default(Guid?);
-            if (authorization.HasValue)
+            if (authorizationRefMaybe.HasValue)
             {
-                // TODO: Go dig up the account;
+                var authorizationRef = authorizationRefMaybe.Ref;
+                session.account = await GetSessionAcountAsync(authorizationRef, application,
+                    (id) => id,
+                    (why) => default(Guid?)); // TODO: Return appropriate error here.
             }
 
             return await session.StorageCreateAsync(
@@ -120,6 +124,52 @@ namespace EastFive.Azure.Auth
                         (why) => onConfigurationFailure("Missing", why));
                 },
                 () => onAlreadyExists());
+        }
+
+        private static async Task<TResult> GetSessionAcountAsync<TResult>(IRef<Authorization> authorizationRef,
+                Api.Azure.AzureApplication application,
+            Func<Guid, TResult> onSuccess,
+            Func<string, TResult> onFailure)
+        {
+            await authorizationRef.ResolveAsync();
+            var authorizationMaybe = authorizationRef.value;
+            if (!authorizationMaybe.HasValue)
+                return CheckSuperAdminBeforeFailure(authorizationRef, "Authorization not found.",
+                    onSuccess, onFailure);
+
+            var methodRef = authorizationMaybe.Value.Method;
+            await methodRef.ResolveAsync();
+            if (!methodRef.value.HasValue)
+                return CheckSuperAdminBeforeFailure(authorizationRef, "Authorization method is no longer valid on this system.",
+                    onSuccess, onFailure);
+
+            var method = methodRef.value.Value;
+            var authorizationKey = await method.GetAuthorizationKeyAsync(application, authorizationMaybe.Value.parameters);
+
+            throw new NotImplementedException();
+            // TODO: Go dig up the account;
+        }
+
+        private static TResult CheckSuperAdminBeforeFailure<TResult>( 
+                IRef<Authorization> authorizationRef, string failureMessage,
+            Func<Guid, TResult> onSuccess,
+            Func<string, TResult> onFailure)
+        {
+            var isSuperAdminAuth = Web.Configuration.Settings.GetGuid(EastFive.Api.AppSettings.AuthorizationIdSuperAdmin,
+                (authorizationIdSuperAdmin) =>
+                {
+                    if (authorizationIdSuperAdmin == authorizationRef.id)
+                        return true;
+                    return false;
+                },
+                why => false);
+
+            if (!isSuperAdminAuth)
+                return onFailure(failureMessage);
+
+            return Web.Configuration.Settings.GetGuid(EastFive.Api.AppSettings.ActorIdSuperAdmin,
+                (authorizationIdSuperAdmin) => onSuccess(authorizationIdSuperAdmin),
+                (dontCare) => onFailure(failureMessage));
         }
     }
 }

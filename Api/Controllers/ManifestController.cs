@@ -156,7 +156,6 @@ namespace EastFive.Api.Azure.Controllers
                 var results = types
                     .Where(type =>
                         typeof(BlackBarLabs.Api.Controllers.BaseController).IsAssignableFrom(type) ||
-                        typeof(EastFive.Api.Controllers.ApiController).IsAssignableFrom(type) ||
                         typeof(System.Web.Http.ApiController).IsAssignableFrom(type) ||
                         type.GetCustomAttribute<FunctionViewControllerAttribute, bool>((attrs) => true, () => false))
                     .ToArray();

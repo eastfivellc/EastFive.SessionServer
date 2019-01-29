@@ -34,7 +34,7 @@ namespace EastFive.Azure.Auth
         public const string AccountMappingIdPropertyName = "id";
         [ApiProperty(PropertyName = AccountMappingIdPropertyName)]
         [JsonProperty(PropertyName = AccountMappingIdPropertyName)]
-        [StorageProperty(IsRowKey = true, Name = AccountMappingIdPropertyName)]
+        [StorageProperty(Name = AccountMappingIdPropertyName)]
         public IRef<Authorization> accountMappingRef;
         
         public const string AccountPropertyName = "account";
@@ -87,7 +87,6 @@ namespace EastFive.Azure.Auth
             return await await Authentication.ById(methodRef, application, urlHelper,
                 async (authentication) =>
                 {
-                    var authorizationIdSecure = SecureGuid.Generate();
                     await authorizationRef.ResolveAsync();
                     if (!authorizationRef.value.HasValue)
                         return onAuthenticationDoesNotExist();

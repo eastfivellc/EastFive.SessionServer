@@ -23,6 +23,7 @@ using EastFive.Linq.Async;
 using BlackBarLabs.Linq.Async;
 using EastFive.Api.Controllers;
 using EastFive.Collections.Generic;
+using System.Linq.Expressions;
 
 namespace EastFive.Api.Azure
 {
@@ -269,6 +270,31 @@ namespace EastFive.Api.Azure
             return onMonitorUsingThisCallback(callback);
         }
 
+        public delegate Task<HttpResponseMessage> ExecuteAsyncDelegate(DateTime whenRequested, Action<double, string> updateProgress);
 
+        private class ExecuteAsyncWrapper : IExecuteAsync
+        {
+            public DateTime when;
+            public Expression<ExecuteAsyncDelegate> callback { get; set; }
+
+            public Task<HttpResponseMessage> InvokeAsync(Action<double> updateCallback)
+            {
+                return callback.Compile().Invoke(
+                    when,
+                    (progress, msg) =>
+                    {
+                        updateCallback(progress);
+                    });
+            }
+        }
+
+        public IExecuteAsync ExecuteBackground(
+            Expression<ExecuteAsyncDelegate> callback)
+        {
+            var wrapper = new ExecuteAsyncWrapper();
+            wrapper.callback = callback;
+            wrapper.when = DateTime.UtcNow;
+            return wrapper;
+        }
     }
 }

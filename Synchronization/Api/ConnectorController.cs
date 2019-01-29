@@ -87,7 +87,7 @@ namespace EastFive.Api.Controllers
                 [Property(Name = EastFive.Api.Resources.Connector.FlowPropertyName)]Connector.SynchronizationMethod Flow,
                 Security security, Context context, HttpRequestMessage request, UrlHelper url,
             CreatedResponse onCreated,
-            CreatedBodyResponse onCreatedAndModified,
+            CreatedBodyResponse<Resources.Connector> onCreatedAndModified,
             AlreadyExistsResponse onAlreadyExists,
             AlreadyExistsReferencedResponse onRelationshipAlreadyExists,
             ReferencedDocumentNotFoundResponse onReferenceNotFound,

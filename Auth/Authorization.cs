@@ -76,18 +76,19 @@ namespace EastFive.Azure.Auth
                 [Property(Name = LocationAuthorizationReturnPropertyName)]Uri LocationAuthenticationReturn,
                 [Resource]Authorization authorization,
                 Api.Azure.AzureApplication application, UrlHelper urlHelper,
-            CreatedBodyResponse onCreated,
+            CreatedBodyResponse<Authorization> onCreated,
             ForbiddenResponse forbidden,
             ReferencedDocumentDoesNotExistsResponse<Authentication> onAuthenticationDoesNotExist)
         {
             return await await Authentication.ById(method, application, urlHelper,
-                (authentication) =>
+                async (authentication) =>
                 {
                     var authorizationIdSecure = SecureGuid.Generate();
                     authorization.authorizationId = new Ref<Authorization>(authorizationIdSecure);
-                    authorization.LocationAuthentication = authentication.GetLoginUrl(authorizationIdSecure, authorization.LocationAuthenticationReturn);
+                    authorization.LocationAuthentication = await authentication.GetLoginUrlAsync(
+                        application, authorizationIdSecure, authorization.LocationAuthenticationReturn);
 
-                    return authorization.StorageCreateAsync(
+                    return await authorization.StorageCreateAsync(
                         createdId => onCreated(authorization),
                         () => throw new Exception("Secure Guid not unique"));
                 },

@@ -42,6 +42,14 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                 .FindAll(query);
         }
 
+        public static IEnumerableAsync<Microsoft.WindowsAzure.Storage.Table.TableResult> StorageQueryDelete<TEntity>(
+            this Expression<Func<TEntity, bool>> query)
+        {
+            return AzureTableDriverDynamic
+                .FromSettings()
+                .DeleteAll(query);
+        }
+
         public static Task<TResult> StorageUpdateAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
             Func<TEntity, Func<TEntity, Task>, Task<TResult>> onUpdate,
             Func<TResult> onNotFound = default(Func<TResult>),
