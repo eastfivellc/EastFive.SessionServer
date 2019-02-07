@@ -12,12 +12,14 @@ using Newtonsoft.Json;
 
 namespace EastFive.Api.Azure.Resources
 {
-    [FunctionViewController(Route = "Content", Resource=typeof(Content))]
-    public class Content
+    [FunctionViewController4(Route = "Content", Resource=typeof(Content))]
+    public struct Content : IReferenceable
     {
+        public Guid id => contentRef.id;
+
         public const string ContentIdPropertyName = "id";
         [JsonProperty(PropertyName = ContentIdPropertyName)]
-        public Guid Id { get; set; }
+        public IRef<Content> contentRef;
 
         public const string ContentPropertyName = "content";
         [JsonProperty(PropertyName = ContentPropertyName)]
@@ -42,7 +44,7 @@ namespace EastFive.Api.Azure.Resources
         [HttpPost]
         public static async Task<HttpResponseMessage> CreateContentAsync(
                 [QueryParameter(CheckFileName = true, Name = ContentIdPropertyName)]Guid contentId,
-                [QueryParameter(Name =ContentPropertyName)]ByteArrayContent content,
+                [QueryParameter(Name = ContentPropertyName)]ByteArrayContent content,
                 HttpRequestMessage request,
             CreatedResponse onCreated,
             AlreadyExistsResponse onAlreadyExists)
