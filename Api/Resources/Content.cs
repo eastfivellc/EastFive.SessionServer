@@ -56,6 +56,21 @@ namespace EastFive.Api.Azure.Resources
                 () => onAlreadyExists());
         }
 
+        [HttpPost]
+        public static async Task<HttpResponseMessage> CreateContentFormAsync(
+                [Property(Name = ContentIdPropertyName)]Guid contentId,
+                [Property(Name = ContentPropertyName)]byte[] contentBytes,
+                [Header(Content = ContentPropertyName)]System.Net.Http.Headers.MediaTypeHeaderValue mediaHeader,
+                HttpRequestMessage request,
+            CreatedResponse onCreated,
+            AlreadyExistsResponse onAlreadyExists)
+        {
+            var contentType = mediaHeader.MediaType;
+            return await EastFive.Api.Azure.Content.CreateContentAsync(contentId, contentType, contentBytes,
+                () => onCreated(),
+                () => onAlreadyExists());
+        }
+
         [HttpGet]
         public static async Task<HttpResponseMessage> QueryByContentIdAsync(
                 [QueryParameter(CheckFileName = true, Name = ContentIdPropertyName)]Guid contentId,
@@ -63,10 +78,9 @@ namespace EastFive.Api.Azure.Resources
                 [OptionalQueryParameter]int? height,
                 [OptionalQueryParameter]bool? fill,
             HttpRequestMessage request,
-            EastFive.Api.Controllers.Security security,
             System.Web.Http.Routing.UrlHelper url)
         {
-            var response = await EastFive.Api.Azure.Content.FindContentByContentIdAsync(contentId, security,
+            var response = await EastFive.Api.Azure.Content.FindContentByContentIdAsync(contentId,
                 (contentType, image) =>
                 {
                     if (contentType.StartsWith("video", StringComparison.InvariantCultureIgnoreCase) &&

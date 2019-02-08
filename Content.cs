@@ -22,6 +22,16 @@ namespace EastFive.Api.Azure
         }
 
         public static Task<TResult> FindContentByContentIdAsync<TResult>(Guid contentId,
+            Func<string, byte[], TResult> onFound,
+            Func<TResult> onNotFound,
+            Func<TResult> onNotAuthorized)
+        {
+            return Persistence.Content.FindContentByIdAsync(contentId,
+                onFound,
+                onNotFound);
+        }
+
+        public static Task<TResult> FindContentByContentIdAsync<TResult>(Guid contentId,
                 EastFive.Api.Controllers.Security security,
             Func<string, byte[], TResult> onFound,
             Func<TResult> onNotFound,
