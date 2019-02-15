@@ -28,7 +28,7 @@ namespace EastFive.Azure.Auth
     {
         public Guid id => sessionId.id;
 
-        public const string SessionIdPropertyName = "session_id";
+        public const string SessionIdPropertyName = "id";
         [ApiProperty(PropertyName = SessionIdPropertyName)]
         [JsonProperty(PropertyName = SessionIdPropertyName)]
         [StorageProperty(IsRowKey = true, Name = SessionIdPropertyName)]

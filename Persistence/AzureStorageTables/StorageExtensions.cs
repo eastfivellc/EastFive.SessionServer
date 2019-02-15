@@ -17,9 +17,22 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
 {
     public static class StorageExtensions
     {
-        public static Task<TResult> AzureStorageTableFindAsync<TEntity, TResult>(this Guid resourceId,
+
+        public static Task<TResult> StorageGetAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
             Func<TEntity, TResult> onFound,
-            Func<TResult> onDoesNotExists)
+            Func<TResult> onDoesNotExists = default(Func<TResult>))
+            where TEntity : struct, IReferenceable
+        {
+            return AzureTableDriverDynamic
+                .FromSettings()
+                .FindByIdAsync(entityRef.id,
+                    onFound,
+                    onDoesNotExists);
+        }
+
+        public static Task<TResult> StorageGetAsync<TEntity, TResult>(this Guid resourceId,
+            Func<TEntity, TResult> onFound,
+            Func<TResult> onDoesNotExists = default(Func<TResult>))
         {
             return AzureTableDriverDynamic
                 .FromSettings()
@@ -32,6 +45,12 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
             where TEntity : struct
         {
             return new Ref<TEntity>(entityId);
+        }
+
+        public static IRefObj<TEntity> IRefObjStorage<TEntity>(this Guid entityId)
+            where TEntity : class
+        {
+            return new RefObj<TEntity>(entityId);
         }
 
         public static IEnumerableAsync<TEntity> StorageQuery<TEntity>(
@@ -92,6 +111,33 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                 default(StorageTables.Driver.AzureStorageDriver.RetryDelegateAsync<Task<TResult>>),
             Func<TEntity, TEntity> mutateUponLock = default(Func<TEntity, TEntity>))
             where TEntity : struct
+        {
+            return AzureTableDriverDynamic
+                .FromSettings()
+                .LockedUpdateAsync(entityRef.id,
+                        lockedPropertyExpression,
+                    onLockAquired,
+                    onNotFound: onNotFound,
+                    onLockRejected: onLockRejected,
+                    onAlreadyLocked: onAlreadyLocked,
+                    shouldLock: shouldLock,
+                    onTimeout: onTimeout,
+                    mutateUponLock: mutateUponLock);
+        }
+
+        public static Task<TResult> StorageLockedUpdateAsync<TEntity, TResult>(this IRefObj<TEntity> entityRef,
+                Expression<Func<TEntity, DateTime?>> lockedPropertyExpression,
+            AzureTableDriverDynamic.WhileLockedDelegateAsync<TEntity, TResult> onLockAquired,
+            Func<Task<TResult>> onNotFound,
+            Func<TResult> onLockRejected = default(Func<TResult>),
+            AzureTableDriverDynamic.ContinueAquiringLockDelegateAsync<TEntity, TResult> onAlreadyLocked =
+                        default(AzureTableDriverDynamic.ContinueAquiringLockDelegateAsync<TEntity, TResult>),
+            AzureTableDriverDynamic.ConditionForLockingDelegateAsync<TEntity, TResult> shouldLock =
+                        default(AzureTableDriverDynamic.ConditionForLockingDelegateAsync<TEntity, TResult>),
+            StorageTables.Driver.AzureStorageDriver.RetryDelegateAsync<Task<TResult>> onTimeout =
+                default(StorageTables.Driver.AzureStorageDriver.RetryDelegateAsync<Task<TResult>>),
+            Func<TEntity, TEntity> mutateUponLock = default(Func<TEntity, TEntity>))
+            where TEntity : class
         {
             return AzureTableDriverDynamic
                 .FromSettings()
