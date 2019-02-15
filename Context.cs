@@ -244,7 +244,19 @@ namespace EastFive.Security.SessionServer
                 return health;
             }
         }
-        
+
+        private Azure.Monitoring monitoring;
+        public Azure.Monitoring Monitoring
+        {
+
+            get
+            {
+                if (default(Azure.Monitoring) == monitoring)
+                    monitoring = new Azure.Monitoring(this, DataContext);
+                return monitoring;
+            }
+        }
+
         #region Authorizations
 
         public delegate bool GetCredentialDelegate(CredentialValidationMethodTypes validationMethod, Uri provider, string userId, string userToken);

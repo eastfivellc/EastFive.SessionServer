@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using BlackBarLabs.Persistence.Azure;
@@ -53,6 +54,14 @@ namespace EastFive.Api.Azure.Monitoring
             return repo.CreateAsync(id, monthBucketedPartitionKey, doc,
                 () => onSuccess(),
                 () => throw new Exception("Guid not unique"));
+        }
+
+        public async static Task<TResult> GetByMonthAsync<TResult>(DateTime month,
+                AzureStorageRepository repo,
+            Func<IEnumerable<MonitoringDocument>, TResult> onFound)
+        {
+            var monthBucketedPartitionKey = GenerateMonthBucketedPartitionKey(month);
+            return onFound(await repo.FindAllByPartitionAsync<MonitoringDocument>(monthBucketedPartitionKey));
         }
 
         private static string GenerateMonthBucketedPartitionKey(DateTime date)

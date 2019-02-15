@@ -209,6 +209,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Api\Actions\MonitoringActions.cs" />
     <Compile Include="Api\Actions\AuthenticationRequestLinkActions.cs" />
     <Compile Include="Api\Actions\CredentialActions.cs" />
     <Compile Include="Api\Actions\SamlCredentialActions.cs" />
@@ -218,6 +219,9 @@
     <Compile Include="Api\Actions\TokenCredentialActions.cs" />
     <Compile Include="Api\Actions\InviteCredentialActions.cs" />
     <Compile Include="Api\Constants.cs" />
+    <Compile Include="Api\Controllers\MonitoringController.cs" />
+    <Compile Include="Api\Resources\Monitoring.cs" />
+    <Compile Include="Api\Resources\Queries\MonitoringQuery.cs" />
     <Compile Include="Attributes\ASTFVCPropertyAttribute.cs" />
     <Compile Include="Auth\Authentication.cs" />
     <Compile Include="Auth\AccountMapping.cs" />
@@ -226,6 +230,7 @@
     <Compile Include="Auth\IProvideIntegration.cs" />
     <Compile Include="Auth\Session.cs" />
     <Compile Include="Credentials\IProvideAccountInformation.cs" />
+    <Compile Include="Monitoring\Monitoring.cs" />
     <Compile Include="IProvideIntegration.cs" />
     <Compile Include="Persistence\AzureStorageTables\StorageExtensions.cs" />
     <Compile Include="Persistence\AzureStorageTables\Extensions\AzurePersistenceExtensions.cs" />
