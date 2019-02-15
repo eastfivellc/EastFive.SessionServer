@@ -12,10 +12,12 @@ using Microsoft.WindowsAzure.Storage.Table;
 using System.Runtime.Serialization;
 using EastFive.Linq;
 using EastFive.Serialization;
+using BlackBarLabs.Persistence.Azure.Attributes;
 
 namespace EastFive.Security.SessionServer.Persistence.Documents
 {
-    internal class ActorMappingsDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
+    [StorageResource(typeof(RemainderKeyGenerator), typeof(HexadecimalRangeKeyGenerator))]
+    public class ActorMappingsDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
     {
         #region Constructors
 

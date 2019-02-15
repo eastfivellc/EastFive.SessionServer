@@ -18,9 +18,11 @@ using EastFive.Linq;
 using BlackBarLabs.Persistence.Azure.StorageTables;
 using System.Runtime.Serialization;
 using EastFive.Linq.Async;
+using BlackBarLabs.Persistence.Azure.Attributes;
 
 namespace EastFive.Azure.Synchronization.Persistence
 {
+    [StorageResource(typeof(RemainderKeyGenerator), typeof(TwoPlaceHexadecimalRangeKeyGenerator))]
     public class AdapterDocument : TableEntity
     {
         [IgnoreDataMember]

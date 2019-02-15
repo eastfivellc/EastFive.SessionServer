@@ -13,10 +13,12 @@ using BlackBarLabs.Persistence.Azure.StorageTables;
 using BlackBarLabs.Linq;
 using EastFive.Serialization;
 using EastFive.Azure;
+using BlackBarLabs.Persistence.Azure.Attributes;
 
 namespace EastFive.Security.SessionServer.Persistence.Documents
 {
-    internal class AuthenticationRequestDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
+    [StorageResource(typeof(RemainderKeyGenerator), typeof(HexadecimalRangeKeyGenerator))]
+    public class AuthenticationRequestDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
     {
         [IgnoreDataMember]
         [IgnoreProperty]
