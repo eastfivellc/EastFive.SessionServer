@@ -17,7 +17,7 @@ using BlackBarLabs.Persistence.Azure.Attributes;
 
 namespace EastFive.Security.SessionServer.Persistence.Documents
 {
-    [StorageResource(typeof(RemainderKeyGenerator), typeof(HexadecimalRangeKeyGenerator))]
+    [StorageResource(typeof(RemainderKeyGenerator), typeof(ListKeyGenerator))]
     public class AuthenticationRequestDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
     {
         [IgnoreDataMember]

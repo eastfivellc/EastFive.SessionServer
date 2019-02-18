@@ -5,7 +5,7 @@ using System.Runtime.Serialization;
 
 namespace EastFive.Security.SessionServer.Persistence.Documents
 {
-    [StorageResource(typeof(RemainderKeyGenerator), typeof(HexadecimalRangeKeyGenerator))]
+    [StorageResource(typeof(RemainderKeyGenerator), typeof(ListKeyGenerator))]
     public class CredentialMappingDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
     {
         #region Properties
