@@ -1,4 +1,5 @@
-﻿using EastFive.Serialization;
+﻿using BlackBarLabs.Persistence.Azure.Attributes;
+using EastFive.Serialization;
 using Microsoft.WindowsAzure.Storage.Table;
 using System;
 using System.Collections.Generic;
@@ -6,7 +7,8 @@ using System.Runtime.Serialization;
 
 namespace EastFive.Security.SessionServer.Persistence.Documents
 {
-    internal class AccessDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
+    [StorageResource(typeof(RemainderKeyGenerator), typeof(ListKeyGenerator))]
+    public class AccessDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
     {
         [IgnoreDataMember]
         [IgnoreProperty]

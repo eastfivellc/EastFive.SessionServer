@@ -1,10 +1,12 @@
-﻿using Microsoft.WindowsAzure.Storage.Table;
+﻿using BlackBarLabs.Persistence.Azure.Attributes;
+using Microsoft.WindowsAzure.Storage.Table;
 using System;
 using System.Runtime.Serialization;
 
 namespace EastFive.Security.SessionServer.Persistence.Documents
 {
-    internal class CredentialMappingDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
+    [StorageResource(typeof(RemainderKeyGenerator), typeof(ListKeyGenerator))]
+    public class CredentialMappingDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
     {
         #region Properties
         

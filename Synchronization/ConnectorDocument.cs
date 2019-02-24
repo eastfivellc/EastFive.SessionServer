@@ -19,10 +19,10 @@ using BlackBarLabs.Persistence.Azure.StorageTables;
 using System.Runtime.Serialization;
 using BlackBarLabs.Linq.Async;
 using EastFive.Linq.Async;
+using BlackBarLabs.Persistence.Azure.Attributes;
 
 namespace EastFive.Azure.Synchronization.Persistence
 {
-
     public class ConnectorSynchronizationDocument : TableEntity
     {
         [IgnoreDataMember]
@@ -34,6 +34,7 @@ namespace EastFive.Azure.Synchronization.Persistence
         public bool Locked { get; set; }
     }
 
+    [StorageResource(typeof(RemainderKeyGenerator), typeof(TwoPlaceHexadecimalRangeKeyGenerator))]
     public class ConnectorDocument : TableEntity
     {
         [IgnoreDataMember]
