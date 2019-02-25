@@ -14,6 +14,8 @@ using System.Web.Mvc;
 
 namespace EastFive.Security.SessionServer.Api.Controllers
 {
+
+
     [FunctionViewController(Resource = typeof(CredentialProcessDocument), Route = "SessionManagement")]
     public class ActAsUserViewController : Controller
     {
@@ -22,22 +24,45 @@ namespace EastFive.Security.SessionServer.Api.Controllers
             return View("~/Views/ActAsUser/");
         }
 
+        public class SessionManagementDetails
+        {
+            public CredentialProcessDocument[] CredentialDocuments;
+            public IDictionary<Guid, string> AccountIdToNameLookup;
+        }
+
         [EastFive.Api.HttpGet]
         public static async Task<HttpResponseMessage> SessionManagement(
             [OptionalQueryParameter(Name = "ApiKeySecurity")]string apiSecurityKey,
-            EastFive.Api.Controllers.ApiSecurity security,
-            //EastFive.Api.Azure.AzureApplication application,
+            EastFive.Api.Azure.AzureApplication application,
             UnauthorizedResponse onUnauthorized,
             ViewFileResponse viewResponse)
 
         {
-            //if (!await application.IsAdminAsync(security))
-            //    return onUnauthorized();
-            return await CredentialProcessDocument.FindAllAsync(
-                (documents) =>
+            return await await CredentialProcessDocument.FindAllAsync(
+                async documents =>
                 {
                     var orderedDocs = documents.OrderByDescending(doc => doc.Time).Take(1000).ToArray();
-                    return viewResponse("/SessionManagement/Index.cshtml", orderedDocs);
+
+                    var details = new SessionManagementDetails() { };
+                    details.CredentialDocuments = orderedDocs;
+                    details.AccountIdToNameLookup = await orderedDocs
+                        .Select(doc => doc.AuthorizationId)
+                        .Distinct()
+                        .Select(
+                            async authId =>
+                            {
+                                var fullName = await application.GetActorNameDetailsAsync(authId,
+                                    (username, firstName, lastName) =>
+                                    {
+                                        return $"{firstName} {lastName}";
+                                    },
+                                    () => string.Empty);
+                                return fullName.PairWithKey(authId);
+                            })
+                            .AsyncEnumerable()
+                            .ToDictionaryAsync();
+
+                    return viewResponse("/SessionManagement/Index.cshtml", details);
                 },
                 BlackBarLabs.Persistence.Azure.StorageTables.AzureStorageRepository.CreateRepository(
                     EastFive.Azure.AppSettings.ASTConnectionStringKey));

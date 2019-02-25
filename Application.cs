@@ -165,6 +165,13 @@ namespace EastFive.Api.Azure
             return Security.SessionServer.Library.configurationManager.GetActorLink(actorId, url);
         }
 
+        internal virtual Task<TResult> GetActorNameDetailsAsync<TResult>(Guid actorId,
+            Func<string, string, string, TResult> onActorFound,
+            Func<TResult> onActorNotFound)
+        {
+            return Security.SessionServer.Library.configurationManager.GetActorNameDetailsAsync(actorId, onActorFound, onActorNotFound);
+        }
+
         public virtual async Task<TResult> GetRedirectUriAsync<TResult>(
                 IProvideAuthorization authorizationProvider,
                 string validationType,

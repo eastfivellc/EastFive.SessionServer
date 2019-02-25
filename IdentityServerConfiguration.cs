@@ -51,6 +51,13 @@ namespace EastFive.Security.SessionServer
             return urlHelper.GetWebId<TActorController>(actorId);
         }
 
+        public virtual async Task<TResult> GetActorNameDetailsAsync<TResult>(Guid actorId,
+            Func<string, string, string, TResult> onActorFound,
+            Func<TResult> onActorNotFound)
+        {
+            return onActorNotFound();
+        }
+
         public virtual async Task<TResult> GetRedirectUriAsync<TResult>(Context context,
                 string validationType,
                 AuthenticationActions action,

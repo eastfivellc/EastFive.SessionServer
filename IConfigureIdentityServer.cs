@@ -38,5 +38,9 @@ namespace EastFive.Security.SessionServer
             Func<TResult> onActorNotFound,
             Func<TResult> onNoEmail,
             Func<string, TResult> onFailure);
+
+        Task<TResult> GetActorNameDetailsAsync<TResult>(Guid actorId,
+            Func<string, string, string, TResult> onActorFound,
+            Func<TResult> onActorNotFound);
     }
 }
