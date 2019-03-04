@@ -228,6 +228,7 @@
     <Compile Include="Auth\AuthenticationAccountMapping.cs" />
     <Compile Include="Auth\Authorization.cs" />
     <Compile Include="Auth\IProvideIntegration.cs" />
+    <Compile Include="Auth\Redirection.cs" />
     <Compile Include="Auth\Session.cs" />
     <Compile Include="Credentials\IProvideAccountInformation.cs" />
     <Compile Include="Monitoring\Monitoring.cs" />
