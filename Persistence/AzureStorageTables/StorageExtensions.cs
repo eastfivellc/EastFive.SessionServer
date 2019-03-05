@@ -57,6 +57,14 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                     onDoesNotExists);
         }
 
+        public static IEnumerableAsync<TEntity> StorageGet<TEntity>(this IRefs<TEntity> entityRefs)
+            where TEntity : struct, IReferenceable
+        {
+            return AzureTableDriverDynamic
+                .FromSettings()
+                .FindByIdsAsync<TEntity>(entityRefs.ids);
+        }
+
         public static IRef<TEntity> IRefStorage<TEntity>(this Guid entityId)
             where TEntity : struct
         {
