@@ -11,6 +11,7 @@ using EastFive.Api;
 using EastFive.Api.Controllers;
 using EastFive.Azure.Persistence.AzureStorageTables;
 using EastFive.Collections.Generic;
+using EastFive.Extensions;
 using EastFive.Linq;
 using EastFive.Linq.Async;
 using EastFive.Persistence;
@@ -41,6 +42,7 @@ namespace EastFive.Azure.Auth
         public IRefOptional<Authorization> authorization { get; set; }
 
         public const string AccountPropertyName = "account";
+        [JsonProperty(PropertyName = AccountPropertyName)]
         [StorageProperty(Name = AccountPropertyName)]
         public Guid? account { get; set; }
 
@@ -70,6 +72,28 @@ namespace EastFive.Azure.Auth
         [StorageProperty(Name = RefreshTokenPropertyName)]
         public string refreshToken;
 
+        private static async Task<IDictionary<string, string>> GetClaimsAsync(
+            Api.Azure.AzureApplication application, IRefOptional<Authorization> authorizationRefMaybe)
+        {
+            if (!authorizationRefMaybe.HasValue)
+                return new Dictionary<string, string>();
+            var authorizationRef = authorizationRefMaybe.Ref;
+
+            return await EastFive.Web.Configuration.Settings.GetString(
+                EastFive.Api.AppSettings.ActorIdClaimType,
+                (accountIdClaimType) =>
+                {
+                    return GetSessionAcountAsync(authorizationRef, application,
+                        (accountId) =>
+                            new Dictionary<string, string>()
+                            {
+                                { accountIdClaimType, accountId.ToString() }
+                            },
+                        (why) => new Dictionary<string, string>());
+                },
+                (why) => (new Dictionary<string, string>()).AsTask());
+        }
+
         [HttpPost] //(MatchAllBodyParameters = false)]
         public async static Task<HttpResponseMessage> CreateAsync(
                 [Property(Name = SessionIdPropertyName)]IRef<Session> sessionId,
@@ -82,48 +106,28 @@ namespace EastFive.Azure.Auth
             ConfigurationFailureResponse onConfigurationFailure)
         {
             session.refreshToken = Security.SecureGuid.Generate().ToString("N");
-            // Null out the account in case it somehow got assigned.
-            session.account = default(Guid?);
-            if (authorizationRefMaybe.HasValue)
-            {
-                var authorizationRef = authorizationRefMaybe.Ref;
-                session.account = await GetSessionAcountAsync(authorizationRef, application,
-                    (id) => id,
-                    (why) => default(Guid?)); // TODO: Return appropriate error here.
-            }
-
-            return await session.StorageCreateAsync(
+            
+            return await await session.StorageCreateAsync(
                 (sessionIdCreated) =>
                 {
-                    var claims = new Dictionary<string, string>();
-                    return EastFive.Web.Configuration.Settings.GetString(
-                        EastFive.Api.AppSettings.ActorIdClaimType,
-                        (accountIdClaimType) =>
+                    return Web.Configuration.Settings.GetUri(
+                            EastFive.Security.AppSettings.TokenScope,
+                        async scope =>
                         {
-                            if (session.account.HasValue)
-                            {
-                                var accountId = session.account.Value;
-                                claims.AddOrReplace(accountIdClaimType, accountId.ToString());
-                            }
-                            return Web.Configuration.Settings.GetUri(
-                                EastFive.Security.AppSettings.TokenScope,
-                                scope =>
+                            var claims = await GetClaimsAsync(application, authorizationRefMaybe);
+                            return BlackBarLabs.Security.Tokens.JwtTools.CreateToken(sessionId.id,
+                                scope, TimeSpan.FromDays(365.0), claims, // TODO: Expiration time from .Config
+                                (tokenNew) =>
                                 {
-                                    return BlackBarLabs.Security.Tokens.JwtTools.CreateToken(sessionId.id,
-                                            scope, TimeSpan.FromDays(365.0), claims, // TODO: Expiration time from .Config
-                                        (tokenNew) =>
-                                        {
-                                            session.token = tokenNew;
-                                            return onCreated(session);
-                                        },
-                                        (missingConfig) => onConfigurationFailure("Missing", missingConfig),
-                                        (configName, issue) => onConfigurationFailure(configName, issue));
+                                    session.token = tokenNew;
+                                    return onCreated(session);
                                 },
-                                (why) => onConfigurationFailure("Missing", why));
+                                (missingConfig) => onConfigurationFailure("Missing", missingConfig),
+                                (configName, issue) => onConfigurationFailure(configName, issue));
                         },
-                        (why) => onConfigurationFailure("Missing", why));
+                        (why) => onConfigurationFailure("Missing", why).AsTask());
                 },
-                () => onAlreadyExists());
+                () => onAlreadyExists().AsTask());
         }
 
         private static async Task<TResult> GetSessionAcountAsync<TResult>(IRef<Authorization> authorizationRef,

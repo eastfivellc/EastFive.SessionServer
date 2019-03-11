@@ -22,13 +22,14 @@ using Newtonsoft.Json;
 namespace EastFive.Azure.Auth
 {
     [DataContract]
-    [FunctionViewController(
+    [FunctionViewController4(
         Route = "AccountMapping",
         Resource = typeof(AccountMapping),
         ContentType = "x-application/auth-account-mapping",
         ContentTypeVersion = "0.1")]
     public struct AccountMapping : IReferenceable
     {
+        [JsonIgnore]
         public Guid id => accountMappingRef.id;
 
         public const string AccountMappingIdPropertyName = "id";
@@ -55,6 +56,7 @@ namespace EastFive.Azure.Auth
         [StorageProperty(Name = AuthorizationPropertyName)]
         public IRef<Authorization> authorization { get; set; }
 
+        [JsonIgnore]
         [StorageProperty(IsRowKey =true, Name = "AccountMethodLookup")]
         public Guid accountMethodLookup
         {
@@ -69,8 +71,9 @@ namespace EastFive.Azure.Auth
         }
 
         public const string ParametersPropertyName = "parameters";
+        [JsonIgnore]
         [StorageProperty(Name = ParametersPropertyName)]
-        public Dictionary<string, string> parameters;
+        public IDictionary<string, string> parameters;
 
         [Api.HttpPost] //(MatchAllBodyParameters = false)]
         public async static Task<HttpResponseMessage> CreateAsync(
