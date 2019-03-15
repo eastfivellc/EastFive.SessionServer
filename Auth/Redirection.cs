@@ -16,13 +16,15 @@ using Microsoft.ApplicationInsights;
 using EastFive.Extensions;
 using EastFive.Security.SessionServer;
 using EastFive.Api.Azure;
+using EastFive.Azure.Persistence.AzureStorageTables;
 
 namespace EastFive.Azure.Auth
 {
     public class Redirection
     {
         public static Task<TResult> ProcessRequestAsync<TResult>(
-                string method, IDictionary<string, string> values,
+                EastFive.Azure.Auth.Authentication authentication, 
+                IDictionary<string, string> values,
                 AzureApplication application, HttpRequestMessage request,
                 System.Web.Http.Routing.UrlHelper urlHelper,
             Func<Uri, object, TResult> onRedirect,
@@ -36,119 +38,96 @@ namespace EastFive.Azure.Auth
             var requestId = Guid.NewGuid();
 
             return authorizationRequestManager.CredentialValidation<TResult>(requestId, application,
-                    method, values,
+                    authentication.authenticationId, values,
                 () =>
                 {
                     var baseUri = request.RequestUri;
-                    return AuthenticationAsync(requestId, method, values, baseUri, application,
+                    return AuthenticationAsync(requestId, authentication, values, baseUri, application,
                         onRedirect,
-                        onResponse);
+                        onResponse,
+                        onResponse,
+                        () => onResponse("Authorization not found"));
                 },
                 (why) => onResponse(why));
         }
 
         public async static Task<TResult> AuthenticationAsync<TResult>(Guid requestId,
-                string method, IDictionary<string, string> values, Uri baseUri,
+                EastFive.Azure.Auth.Authentication authentication, IDictionary<string, string> values, Uri baseUri,
                 AzureApplication application,
             Func<Uri, object, TResult> onRedirect,
-            Func<string, TResult> onResponse)
+            Func<string, TResult> onResponse,
+            Func<string, TResult> onBadResponse,
+            Func<TResult> onAuthorizationNotFound)
         {
             var context = application.AzureContext;
             var authorizationRequestManager = application.AuthorizationRequestManager;
             var telemetry = application.Telemetry;
-            Func<string, TResult> onStop = (why) => onResponse(why);
-            return await await context.Sessions.CreateOrUpdateWithAuthenticationAsync(
-                    application, method, values,
+            return await await authentication.RedeemTokenAsync(values, application,
+                async (externalAccountKey, authorizationRef, loginProvider, extraParams) =>
+                {
+                    return await await authorizationRef.StorageGetAsync(
+                        async authorization =>
+                        {
+                            return await await AccountMapping.FindByMethodAndKeyAsync(authentication.authenticationId, externalAccountKey,
+                                    authorization,
+                                internalAccountId =>
+                                {
+                                    return CreateLoginResponse(requestId,
+                                            internalAccountId, values, 
+                                            authentication, authorization,
+                                            baseUri,
+                                            application, loginProvider,
+                                        onRedirect,
+                                        onBadResponse,
+                                        telemetry);
+                                },
+                                async () =>
+                                {
+                                    return await await UnmappedCredentailAsync(externalAccountKey, values,
+                                        authentication, authorization,
+                                        loginProvider, application, baseUri,
 
-            #region LOGIN
-                (sessionId, authorizationId, token, refreshToken, action, provider, extraParams, redirectUrl) =>
-                    authorizationRequestManager.CreatedAuthenticationLoginAsync(requestId, application, sessionId, authorizationId,
-                            token, refreshToken, method, action, provider, extraParams, redirectUrl,
-                        () => CreateResponse(application, provider, method, action, sessionId, authorizationId,
-                                token, refreshToken, extraParams, baseUri, redirectUrl,
-                            onRedirect,
-                            onResponse,
-                            telemetry),
-                        onStop),
-            #endregion
+                                        // Create mapping
+                                        async (internalAccountId) =>
+                                        {
+                                            return await AccountMapping.CreateByMethodAndKeyAsync(authorization.Method, externalAccountKey,
+                                                internalAccountId,
+                                                () =>
+                                                {
+                                                    return CreateLoginResponse(requestId,
+                                                            internalAccountId, values, 
+                                                            authentication, authorization, 
+                                                            baseUri,
+                                                            application, loginProvider,
+                                                        onRedirect,
+                                                        onBadResponse,
+                                                        telemetry);
+                                                });
+                                        },
 
-            #region LOGOUT
-                (redirectUrl, reason, provider, extraParams) =>
-                        authorizationRequestManager.CreatedAuthenticationLogoutAsync(requestId, application,
-                                reason, method, provider, extraParams, redirectUrl,
-                            async () =>
-                            {
-                                if (redirectUrl.IsDefaultOrNull())
-                                    return Web.Configuration.Settings.GetUri(Security.SessionServer.Configuration.AppSettings.LandingPage,
-                                            (redirect) => onRedirect(redirectUrl, reason),
-                                            (why) => onResponse($"Location was null"));
-                                if (redirectUrl.Query.IsNullOrWhiteSpace())
-                                    redirectUrl = redirectUrl.SetQueryParam("cache", Guid.NewGuid().ToString("N"));
-                                return await onRedirect(redirectUrl, reason).AsTask();
-                            },
-                            onStop),
-            #endregion
-
-            #region UNMAPPED USER
-                async (subject, credentialProvider, extraParams, createMappingAsync) =>
-                        authorizationRequestManager.CredentialUnmappedAsync<TResult>(requestId, application,
-                                subject, method, credentialProvider, extraParams, createMappingAsync,
-                            (createMappingNewAsync) => UnmappedCredentailAsync(application,
-                                credentialProvider, method, subject, extraParams, baseUri,
-                                createMappingNewAsync,
-                                onRedirect,
-                                onResponse,
-                                telemetry),
-                            onStop),
-            #endregion
-
-            #region Errors
-
-                    async (why) =>
-                    {
-                        var message = $"Invalid token:{why}";
-                        //await saveAuthLogAsync(false, message, values);
-                        telemetry.TrackException(new ResponseException());
-                        return onResponse($"Invalid token:{why}");
-                    },
-                    async (why) =>
-                    {
-                        var message = $"Cannot create session because service is unavailable: {why}";
-                        //await saveAuthLogAsync(false, message, values);
-                        telemetry.TrackException(new ResponseException(message));
-                        return onResponse(why);
-                    },
-                    async (why) =>
-                    {
-                        var message = $"Cannot create session because service is unavailable: {why}";
-                        //await saveAuthLogAsync(false, message, values);
-                        telemetry.TrackException(new ResponseException(message));
-                        return onResponse(why);
-                    },
-                    async (why) =>
-                    {
-                        var message = $"General failure: {why}";
-                        //await saveAuthLogAsync(false, message, values);
-                        telemetry.TrackException(new ResponseException(message));
-                        return onResponse(why);
-                    });
-
-            #endregion
+                                        onResponse.AsAsyncFunc(),
+                                        telemetry);
+                                });
+                        });
+                },
+                (authorizationRef, extraparams) => throw new NotImplementedException(),
+                (why) => onBadResponse(why).AsTask());
         }
 
-        public static Task<TResult> CreateResponse<TResult>(AzureApplication application, IProvideAuthorization authorizationProvider,
-            string method, AuthenticationActions action,
-            Guid sessionId, Guid? authorizationId, string jwtToken, string refreshToken,
-            IDictionary<string, string> extraParams, Uri baseUri, Uri redirectUrl,
+        public static Task<TResult> CreateLoginResponse<TResult>(Guid requestId,
+                Guid accountId, IDictionary<string, string> extraParams,
+                Authentication method, Authorization authorization,
+                Uri baseUri,
+                AzureApplication application, IProvideAuthorization authorizationProvider,
             Func<Uri, object, TResult> onRedirect,
             Func<string, TResult> onBadResponse,
             TelemetryClient telemetry)
         {
-            return application.GetRedirectUriAsync(authorizationProvider,
-                    method, action,
-                    sessionId, authorizationId, jwtToken, refreshToken, extraParams,
+            return application.GetRedirectUriAsync(requestId, 
+                    accountId, extraParams,
+                    method, authorization,
                     baseUri,
-                    redirectUrl,
+                    authorizationProvider,
                 (redirectUrlSelected) =>
                 {
                     telemetry.TrackEvent($"CreateResponse - redirectUrlSelected1: {redirectUrlSelected.AbsolutePath}");
@@ -169,46 +148,19 @@ namespace EastFive.Azure.Auth
                 });
         }
 
-        public static async Task<TResult> UnmappedCredentailAsync<TResult>(AzureApplication application,
-                IProvideAuthorization authorizationProvider, string method, string subject, IDictionary<string, string> extraParams,
+        public static async Task<TResult> UnmappedCredentailAsync<TResult>(
+                string subject, IDictionary<string, string> extraParams,
+                EastFive.Azure.Auth.Authentication authentication, Authorization authorization,
+                IProvideAuthorization authorizationProvider, 
+                AzureApplication application,
                 Uri baseUri,
-                Func<Guid,
-                        Func<Guid, string, string, AuthenticationActions, Uri, Task<Task<TResult>>>,
-                        Func<string, Task<TResult>>, Task<Task<TResult>>> createMappingAsync,
-            Func<Uri, object, TResult> onRedirect,
+            Func<Guid,Task<TResult>> createMappingAsync,
             Func<string, TResult> onResponse,
             TelemetryClient telemetry)
         {
-            return await await application.OnUnmappedUserAsync(method, authorizationProvider, subject, extraParams,
-                async (authorizationId) =>
-                {
-                    //await updatingAuthLogTask;
-                    telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Creating Authentication.");
-                    //updatingAuthLogTask = saveAuthLogAsync(true, $"New user mapping requested:{subject}/{credentialProvider.GetType().FullName}[{authorizationId}]", extraParams);
-                    return await await createMappingAsync(authorizationId,
-                        async (sessionId, jwtToken, refreshToken, action, redirectUrl) =>
-                        {
-                            //await updatingAuthLogTask;
-                            //await saveAuthLogAsync(true, $"New user mapping requested:{subject}/{credentialProvider.GetType().FullName}[{authorizationId}]", extraParams);
-                            telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Created Authentication.  Creating response.");
-                            var resp = CreateResponse(application, authorizationProvider, method, action,
-                                    sessionId, authorizationId, jwtToken, refreshToken, extraParams,
-                                    baseUri, redirectUrl,
-                                onRedirect,
-                                onResponse,
-                                telemetry);
-                            //await updatingAuthLogTask;
-                            return resp;
-                        },
-                        async (why) =>
-                        {
-                            //await updatingAuthLogTask;
-                            //await saveAuthLogAsync(true, $"Failure to create user mapping requested:{subject}/{credentialProvider.GetType().FullName}[{authorizationId}]: {why}", extraParams);
-                            var message = $"Failure to connect token to a user in this system: {why}";
-                            telemetry.TrackException(new ResponseException(message));
-                            return onResponse(message);
-                        });
-                },
+            return await await application.OnUnmappedUserAsync(subject, extraParams,
+                    authentication, authorization, authorizationProvider,
+                (accountId) => createMappingAsync(accountId),
                 () =>
                 {
                     var message = "Token is not connected to a user in this system";

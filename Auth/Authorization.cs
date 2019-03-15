@@ -16,6 +16,7 @@ using EastFive.Extensions;
 using EastFive.Linq;
 using EastFive.Linq.Async;
 using EastFive.Persistence;
+using EastFive.Persistence.Azure.StorageTables;
 using EastFive.Security;
 using EastFive.Security.SessionServer;
 using EastFive.Security.SessionServer.Exceptions;
@@ -25,11 +26,12 @@ using Newtonsoft.Json;
 namespace EastFive.Azure.Auth
 {
     [DataContract]
-    [FunctionViewController(
+    [FunctionViewController4(
         Route = "XAuthorization",
         Resource = typeof(Authorization),
         ContentType = "x-application/auth-authorization",
         ContentTypeVersion = "0.1")]
+    [StorageTable]
     public struct Authorization : IReferenceable
     {
         public Guid id => authorizationId.id;
@@ -37,42 +39,43 @@ namespace EastFive.Azure.Auth
         public const string AuthorizationIdPropertyName = "id";
         [ApiProperty(PropertyName = AuthorizationIdPropertyName)]
         [JsonProperty(PropertyName = AuthorizationIdPropertyName)]
-        [StorageProperty(IsRowKey = true, Name = AuthorizationIdPropertyName)]
+        [RowKey]
+        [StandardParititionKey]
         public IRef<Authorization> authorizationId;
         
         public const string MethodPropertyName = "method";
         [ApiProperty(PropertyName = MethodPropertyName)]
         [JsonProperty(PropertyName = MethodPropertyName)]
-        [StorageProperty(Name = MethodPropertyName)]
+        [Storage(Name = MethodPropertyName)]
         public IRef<Authentication> Method { get; set; }
 
         public const string LocationLogoutPropertyName = "location_logout";
         [ApiProperty(PropertyName = LocationLogoutPropertyName)]
         [JsonProperty(PropertyName = LocationLogoutPropertyName)]
-        [StorageProperty(Name = LocationLogoutPropertyName)]
+        [Storage(Name = LocationLogoutPropertyName)]
         public Uri LocationLogout { get; set; }
 
         public const string LocationLogoutReturnPropertyName = "location_logout_return";
         [ApiProperty(PropertyName = LocationLogoutReturnPropertyName)]
         [JsonProperty(PropertyName = LocationLogoutReturnPropertyName)]
-        [StorageProperty(Name = LocationLogoutReturnPropertyName)]
+        [Storage(Name = LocationLogoutReturnPropertyName)]
         public Uri LocationLogoutReturn { get; set; }
 
         public const string LocationAuthorizationPropertyName = "location_authentication";
         [ApiProperty(PropertyName = LocationAuthorizationPropertyName)]
         [JsonProperty(PropertyName = LocationAuthorizationPropertyName)]
-        [StorageProperty(Name = LocationAuthorizationPropertyName)]
+        [Storage(Name = LocationAuthorizationPropertyName)]
         public Uri LocationAuthentication { get; set; }
 
         public const string LocationAuthorizationReturnPropertyName = "location_authentication_return";
         [ApiProperty(PropertyName = LocationAuthorizationReturnPropertyName)]
         [JsonProperty(PropertyName = LocationAuthorizationReturnPropertyName)]
-        [StorageProperty(Name = LocationAuthorizationReturnPropertyName)]
+        [Storage(Name = LocationAuthorizationReturnPropertyName)]
         public Uri LocationAuthenticationReturn { get; set; }
 
         public const string ParametersPropertyName = "parameters";
         [JsonIgnore]
-        [StorageProperty(Name = ParametersPropertyName)]
+        [Storage(Name = ParametersPropertyName)]
         public Dictionary<string, string> parameters;
 
         [Api.HttpPost] //(MatchAllBodyParameters = false)]
@@ -86,13 +89,12 @@ namespace EastFive.Azure.Auth
             ForbiddenResponse forbidden,
             ReferencedDocumentDoesNotExistsResponse<Authentication> onAuthenticationDoesNotExist)
         {
-            return await await Authentication.ById(method, application, urlHelper,
+            return await await Authentication.ById(method, application,
                 async (authentication) =>
                 {
-                    var authorizationIdSecure = SecureGuid.Generate();
-                    authorization.authorizationId = new Ref<Authorization>(authorizationIdSecure);
+                    var authorizationIdSecure = authentication.authenticationId;
                     authorization.LocationAuthentication = await authentication.GetLoginUrlAsync(
-                        application, authorizationIdSecure, authorization.LocationAuthenticationReturn);
+                        application, urlHelper, authorizationIdSecure.id, authorization.LocationAuthenticationReturn);
 
                     return await authorization.StorageCreateAsync(
                         createdId => onCreated(authorization),
@@ -101,5 +103,31 @@ namespace EastFive.Azure.Auth
                 () => onAuthenticationDoesNotExist().AsTask());
         }
 
+        public async Task<TResult> ParseCredentailParameters<TResult>(
+                Api.Azure.AzureApplication application,
+            Func<string, IProvideLogin, TResult> onSuccess,
+            Func<string, TResult> onFailure)
+        {
+            var parameters = this.parameters;
+            return await await Authentication.ById(this.Method, application, // TODO: Cleanup 
+                (method) =>
+                {
+                    return application.LoginProviders
+                        .SelectValues()
+                        .Where(loginProvider => loginProvider.Method == method.name)
+                        .FirstAsync(
+                            (loginProvider) =>
+                            {
+                                return loginProvider.ParseCredentailParameters(parameters,
+                                    (userKey, authorizationId, deprecatedId) =>
+                                    {
+                                        return onSuccess(userKey, loginProvider);
+                                    },
+                                    (why) => onFailure(why));
+                            },
+                            () => onFailure("Method does not match any existing authentication."));
+                },
+                () => onFailure("Authentication not found").AsTask());
+        }
     }
 }

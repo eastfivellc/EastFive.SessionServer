@@ -1,4 +1,5 @@
-﻿using EastFive.Extensions;
+﻿using EastFive.Azure.Auth;
+using EastFive.Extensions;
 using EastFive.Security.SessionServer;
 using System;
 using System.Collections.Generic;
@@ -12,14 +13,14 @@ namespace EastFive.Api.Azure.Credentials
     class AzureStorageTablesLogAuthorizationRequestManager : IManageAuthorizationRequests
     {
         public async Task<TResult> CredentialValidation<TResult>(Guid requestId, 
-                AzureApplication application,
-                string method, IDictionary<string, string> values, 
-            Func<Task<TResult>> onContinue,
+            AzureApplication application, IRef<Authentication> method,
+            IDictionary<string, string> values, 
+            Func<Task<TResult>> onContinue, 
             Func<string, TResult> onStop)
         {
             var doc = new CredentialProcessDocument()
             {
-                Method = method,
+                Method = method.id.ToString(),
                 Message = "CREDENTIAL VALIDATION REQUESTED",
                 Time = DateTime.UtcNow.Ticks,
             };
@@ -141,5 +142,6 @@ namespace EastFive.Api.Azure.Credentials
                 application.AzureContext.DataContext.AzureStorageRepository);
             
         }
+
     }
 }

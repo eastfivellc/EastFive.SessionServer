@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Net.Http;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
+using System.Web.Http.Routing;
 using BlackBarLabs.Api.Resources;
 using BlackBarLabs.Extensions;
 using EastFive.Api;
@@ -135,23 +136,32 @@ namespace EastFive.Azure.Auth
             Func<Guid, TResult> onSuccess,
             Func<string, TResult> onFailure)
         {
-            await authorizationRef.ResolveAsync();
-            var authorizationMaybe = authorizationRef.value;
-            if (!authorizationMaybe.HasValue)
-                return CheckSuperAdminBeforeFailure(authorizationRef, "Authorization not found.",
-                    onSuccess, onFailure);
-
-            var methodRef = authorizationMaybe.Value.Method;
-            await methodRef.ResolveAsync();
-            if (!methodRef.value.HasValue)
-                return CheckSuperAdminBeforeFailure(authorizationRef, "Authorization method is no longer valid on this system.",
-                    onSuccess, onFailure);
-
-            var method = methodRef.value.Value;
-            var authorizationKey = await method.GetAuthorizationKeyAsync(application, authorizationMaybe.Value.parameters);
-
-            throw new NotImplementedException();
-            // TODO: Go dig up the account;
+            return await await authorizationRef.StorageGetAsync(
+                async (authorization) =>
+                {
+                    var methodRef = authorization.Method;
+                    return await await Authentication.ById(methodRef, application,
+                        async method =>
+                        {
+                            var authorizationKey = await method.GetAuthorizationKeyAsync(application, authorization.parameters);
+                            return await Auth.AccountMapping.FindByMethodAndKeyAsync(method.authenticationId, authorizationKey,
+                                    authorization,
+                                accountId => onSuccess(accountId),
+                                () => onFailure("No mapping to that account."));
+                        },
+                        () =>
+                        {
+                            return CheckSuperAdminBeforeFailure(authorizationRef,
+                                    "Authorization method is no longer valid on this system.",
+                                onSuccess, onFailure).AsTask();
+                        });
+                },
+                () =>
+                {
+                    return CheckSuperAdminBeforeFailure(authorizationRef, "Authorization not found.",
+                        onSuccess, onFailure).AsTask();
+                });
+          
         }
 
         private static TResult CheckSuperAdminBeforeFailure<TResult>( 

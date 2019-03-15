@@ -1,4 +1,5 @@
-﻿using EastFive.Security.SessionServer;
+﻿using EastFive.Azure.Auth;
+using EastFive.Security.SessionServer;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +13,7 @@ namespace EastFive.Api.Azure.Credentials
     {
         Task<TResult> CredentialValidation<TResult>(Guid requestId,
                 AzureApplication application,
-                string method, IDictionary<string, string> values,
+                IRef<EastFive.Azure.Auth.Authentication> method, IDictionary<string, string> values,
             Func<Task<TResult>> onContinue,
             Func<string, TResult> onStop);
 

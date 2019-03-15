@@ -24,6 +24,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
     }
 
     [RoutePrefix("aadb2c")]
+    [Obsolete("Use EastFive.Azure.Auth.Redirection")]
     public class ResponseController : Azure.Controllers.BaseController
     {
         public virtual async Task<IHttpActionResult> Get([FromUri]ResponseResult result)
@@ -35,13 +36,14 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             
             var kvps = Request.GetQueryNameValuePairs();
 
-            return await Request.GetApplication(
-                httpApp => ProcessRequestAsync(httpApp as AzureApplication, Enum.GetName(typeof(CredentialValidationMethodTypes), result.method), this.Request.RequestUri, kvps.ToDictionary(),
-                    (location, why) => Redirect(location),
-                    (code, body, reason) => this.Request.CreateResponse(code, body)
-                        .AddReason(reason)
-                        .ToActionResult()),
-                () => this.Request.CreateResponse(HttpStatusCode.OK, "Application is not an EastFive.Azure application.").ToActionResult().ToTask());
+            throw new NotImplementedException();
+            //return await Request.GetApplication(
+            //    httpApp => ProcessRequestAsync(httpApp as AzureApplication, Enum.GetName(typeof(CredentialValidationMethodTypes), result.method), this.Request.RequestUri, kvps.ToDictionary(),
+            //        (location, why) => Redirect(location),
+            //        (code, body, reason) => this.Request.CreateResponse(code, body)
+            //            .AddReason(reason)
+            //            .ToActionResult()),
+            //    () => this.Request.CreateResponse(HttpStatusCode.OK, "Application is not an EastFive.Azure application.").ToActionResult().ToTask());
         }
 
         public virtual async Task<IHttpActionResult> Post([FromUri]ResponseResult result)
@@ -63,16 +65,18 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                     () => (new KeyValuePair<string, string>()).AsArray().ToTask()));
             var allrequestParams = kvps.Concat(bodyValues).ToDictionary();
 
-            return await Request.GetApplication(
-                httpApp => ProcessRequestAsync(httpApp as AzureApplication, Enum.GetName(typeof(CredentialValidationMethodTypes), result.method), this.Request.RequestUri, allrequestParams,
-                    (location, why) => Redirect(location),
-                    (code, body, reason) => this.Request.CreateResponse(code, body)
-                        .AddReason(reason)
-                        .ToActionResult()),
-                () => this.Request.CreateResponse(HttpStatusCode.OK, "Application is not an EastFive.Azure application.").ToActionResult().ToTask());
+            throw new NotImplementedException();
+            //return await Request.GetApplication(
+            //    httpApp => ProcessRequestAsync(httpApp as AzureApplication, Enum.GetName(typeof(CredentialValidationMethodTypes), result.method), this.Request.RequestUri, allrequestParams,
+            //        (location, why) => Redirect(location),
+            //        (code, body, reason) => this.Request.CreateResponse(code, body)
+            //            .AddReason(reason)
+            //            .ToActionResult()),
+            //    () => this.Request.CreateResponse(HttpStatusCode.OK, "Application is not an EastFive.Azure application.").ToActionResult().ToTask());
         }
         
-        public async static Task<TResult> ProcessRequestAsync<TResult>(AzureApplication application, string method, Uri baseUri, IDictionary<string, string> values,
+        public async static Task<TResult> ProcessRequestAsync<TResult>(AzureApplication application, 
+                string method, Uri baseUri, IDictionary<string, string> values,
             Func<Uri, string, TResult> onRedirect,
             Func<HttpStatusCode, string, string, TResult> onResponse)
         {
@@ -83,11 +87,12 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             
             var requestId = Guid.NewGuid();
 
-            return await authorizationRequestManager.CredentialValidation<TResult>(requestId, application,
-                    method, values,
-                () => AuthenticationAsync(requestId, method, values, baseUri, application,
-                    onRedirect, onResponse),
-                (why) => onResponse(HttpStatusCode.ServiceUnavailable, why, why));
+            throw new NotImplementedException();
+            //return await authorizationRequestManager.CredentialValidation<TResult>(requestId, application,
+            //        method, values,
+            //    () => AuthenticationAsync(requestId, method, values, baseUri, application,
+            //        onRedirect, onResponse),
+            //    (why) => onResponse(HttpStatusCode.ServiceUnavailable, why, why));
         }
 
         public async static Task<TResult> AuthenticationAsync<TResult>(Guid requestId, 
@@ -173,34 +178,35 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             Func<HttpStatusCode, string, string, TResult> onResponse,
             TelemetryClient telemetry)
         {
-            
-            var redirectResponse = await application.GetRedirectUriAsync(authorizationProvider,
-                    method, action,
-                    sessionId, authorizationId, jwtToken, refreshToken, extraParams,
-                    baseUri,
-                    redirectUrl,
-                (redirectUrlSelected) =>
-                {
-                    telemetry.TrackEvent($"CreateResponse - redirectUrlSelected1: {redirectUrlSelected.AbsolutePath}");
-                    telemetry.TrackEvent($"CreateResponse - redirectUrlSelected2: {redirectUrlSelected.AbsoluteUri}");
-                    return onRedirect(redirectUrlSelected, null);
-                },
-                (paramName, why) =>
-                {
-                    var message = $"Invalid parameter while completing login: {paramName} - {why}";
-                    telemetry.TrackException(new ResponseException(message));
-                    return onResponse(HttpStatusCode.BadRequest, message, why);
-                },
-                (why) =>
-                {
-                    var message = $"General failure while completing login: {why}";
-                    telemetry.TrackException(new ResponseException(message));
-                    return onResponse(HttpStatusCode.BadRequest, message, why);
-                });
 
-            var msg = redirectResponse;
-            telemetry.TrackEvent($"CreateResponse - {msg}");
-            return redirectResponse;
+            throw new NotImplementedException();
+            //var redirectResponse = await application.GetRedirectUriAsync(authorizationProvider,
+            //        method, action,
+            //        sessionId, authorizationId, jwtToken, refreshToken, extraParams,
+            //        baseUri,
+            //        redirectUrl,
+            //    (redirectUrlSelected) =>
+            //    {
+            //        telemetry.TrackEvent($"CreateResponse - redirectUrlSelected1: {redirectUrlSelected.AbsolutePath}");
+            //        telemetry.TrackEvent($"CreateResponse - redirectUrlSelected2: {redirectUrlSelected.AbsoluteUri}");
+            //        return onRedirect(redirectUrlSelected, null);
+            //    },
+            //    (paramName, why) =>
+            //    {
+            //        var message = $"Invalid parameter while completing login: {paramName} - {why}";
+            //        telemetry.TrackException(new ResponseException(message));
+            //        return onResponse(HttpStatusCode.BadRequest, message, why);
+            //    },
+            //    (why) =>
+            //    {
+            //        var message = $"General failure while completing login: {why}";
+            //        telemetry.TrackException(new ResponseException(message));
+            //        return onResponse(HttpStatusCode.BadRequest, message, why);
+            //    });
+
+            //var msg = redirectResponse;
+            //telemetry.TrackEvent($"CreateResponse - {msg}");
+            //return redirectResponse;
         }
 
         public static async Task<TResult> UnmappedCredentailAsync<TResult>(AzureApplication application,
@@ -213,42 +219,43 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             Func<HttpStatusCode, string, string, TResult> onResponse,
             TelemetryClient telemetry)
         {
-            return await await application.OnUnmappedUserAsync<Task<TResult>>(method, authorizationProvider, subject, extraParams,
-                async (authorizationId) =>
-                {
-                    //await updatingAuthLogTask;
-                    telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Creating Authentication.");
-                    //updatingAuthLogTask = saveAuthLogAsync(true, $"New user mapping requested:{subject}/{credentialProvider.GetType().FullName}[{authorizationId}]", extraParams);
-                    return await await createMappingAsync(authorizationId,
-                        async (sessionId, jwtToken, refreshToken, action, redirectUrl) =>
-                        {
-                            //await updatingAuthLogTask;
-                            //await saveAuthLogAsync(true, $"New user mapping requested:{subject}/{credentialProvider.GetType().FullName}[{authorizationId}]", extraParams);
-                            telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Created Authentication.  Creating response.");
-                            var resp = CreateResponse(application, authorizationProvider, method, action, 
-                                    sessionId, authorizationId, jwtToken, refreshToken, extraParams, 
-                                    baseUri, redirectUrl,
-                                onRedirect, 
-                                onResponse,
-                                telemetry);
-                            //await updatingAuthLogTask;
-                            return resp;
-                        },
-                        async (why) =>
-                        {
-                            //await updatingAuthLogTask;
-                            //await saveAuthLogAsync(true, $"Failure to create user mapping requested:{subject}/{credentialProvider.GetType().FullName}[{authorizationId}]: {why}", extraParams);
-                            var message = $"Failure to connect token to a user in this system: {why}";
-                            telemetry.TrackException(new ResponseException(message));
-                            return onResponse(HttpStatusCode.Conflict, message, message);
-                        });
-                },
-                () =>
-                {
-                    var message = "Token is not connected to a user in this system";
-                    telemetry.TrackException(new ResponseException(message));
-                    return onResponse(HttpStatusCode.Conflict, message, message).ToTask();
-                });
+            throw new NotImplementedException();
+            //return await await application.OnUnmappedUserAsync<Task<TResult>>(method, authorizationProvider, subject, extraParams,
+            //    async (authorizationId) =>
+            //    {
+            //        //await updatingAuthLogTask;
+            //        telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Creating Authentication.");
+            //        //updatingAuthLogTask = saveAuthLogAsync(true, $"New user mapping requested:{subject}/{credentialProvider.GetType().FullName}[{authorizationId}]", extraParams);
+            //        return await await createMappingAsync(authorizationId,
+            //            async (sessionId, jwtToken, refreshToken, action, redirectUrl) =>
+            //            {
+            //                //await updatingAuthLogTask;
+            //                //await saveAuthLogAsync(true, $"New user mapping requested:{subject}/{credentialProvider.GetType().FullName}[{authorizationId}]", extraParams);
+            //                telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Created Authentication.  Creating response.");
+            //                var resp = CreateResponse(application, authorizationProvider, method, action, 
+            //                        sessionId, authorizationId, jwtToken, refreshToken, extraParams, 
+            //                        baseUri, redirectUrl,
+            //                    onRedirect, 
+            //                    onResponse,
+            //                    telemetry);
+            //                //await updatingAuthLogTask;
+            //                return resp;
+            //            },
+            //            async (why) =>
+            //            {
+            //                //await updatingAuthLogTask;
+            //                //await saveAuthLogAsync(true, $"Failure to create user mapping requested:{subject}/{credentialProvider.GetType().FullName}[{authorizationId}]: {why}", extraParams);
+            //                var message = $"Failure to connect token to a user in this system: {why}";
+            //                telemetry.TrackException(new ResponseException(message));
+            //                return onResponse(HttpStatusCode.Conflict, message, message);
+            //            });
+            //    },
+            //    () =>
+            //    {
+            //        var message = "Token is not connected to a user in this system";
+            //        telemetry.TrackException(new ResponseException(message));
+            //        return onResponse(HttpStatusCode.Conflict, message, message).ToTask();
+            //    });
         }
     }
 }
