@@ -223,8 +223,9 @@
     <Compile Include="Api\Resources\Monitoring.cs" />
     <Compile Include="Api\Resources\Queries\MonitoringQuery.cs" />
     <Compile Include="Attributes\ASTFVCPropertyAttribute.cs" />
+    <Compile Include="Auth\Integration.cs" />
     <Compile Include="Auth\CredentialProviders\AdminLogin.cs" />
-    <Compile Include="Auth\Authentication.cs" />
+    <Compile Include="Auth\Method.cs" />
     <Compile Include="Auth\AccountMapping.cs" />
     <Compile Include="Auth\AuthenticationAccountMapping.cs" />
     <Compile Include="Auth\Authorization.cs" />

@@ -59,7 +59,7 @@ namespace EastFive.Azure.Auth
         public const string MethodPropertyName = "method";
         [JsonIgnore]
         [Storage(Name = MethodPropertyName)]
-        public IRef<Authentication> Method { get; set; }
+        public IRef<Method> Method { get; set; }
 
         public const string AccountPropertyName = "account";
         [ApiProperty(PropertyName = AccountPropertyName)]
@@ -95,14 +95,14 @@ namespace EastFive.Azure.Auth
             public const string MethodPropertyName = "method";
             [JsonIgnore]
             [Storage]
-            public IRef<Authentication> Method { get; set; }
+            public IRef<Method> Method { get; set; }
 
             [JsonIgnore]
             [Storage]
             public IRef<AccountMapping> accountMappingId;
 
             public static IRef<AccountMappingLookup> GetLookup(
-                IRef<Authentication> method, string accountkey)
+                IRef<Method> method, string accountkey)
             {
                 var composeId = method.id
                     .ComposeGuid(accountkey.MD5HashGuid());
@@ -149,7 +149,7 @@ namespace EastFive.Azure.Auth
             return await await authorizationRef.StorageGetAsync(
                 async authorization =>
                 {
-                    accountMapping.Method = authorization.Method;
+                    accountMapping.Method = authorization.Method; // method is used in the .mappingId
                     var authorizationLookup = new AuthorizationLookup
                     {
                         accountMappingRef = accountMapping.mappingId,
@@ -158,7 +158,6 @@ namespace EastFive.Azure.Auth
                     return await await authorizationLookup.StorageCreateAsync(
                         async (idDiscard) =>
                         {
-                            accountMapping.Method = authorization.Method;
                             accountMapping.accountMappingLookup = await await authorization.ParseCredentailParameters(
                                     application,
                                 (accountKey, loginProvider) =>
@@ -191,14 +190,53 @@ namespace EastFive.Azure.Auth
                 () => onAuthenticationDoesNotExist().AsTask());
         }
 
-        internal static Task<TResult> CreateByMethodAndKeyAsync<TResult>(IRef<Authentication> method, 
+        internal static async Task<TResult> CreateByMethodAndKeyAsync<TResult>(Authorization authorization, 
                 string externalAccountKey, Guid internalAccountId,
-            Func<TResult> onCreated)
+            Func<TResult> onCreated,
+            Func<string, TResult> onFailure)
         {
-            throw new NotImplementedException();
-        }
+            var accountMapping = new AccountMapping()
+            {
+                accountId = internalAccountId,
+            };
+            accountMapping.Method = authorization.Method; // method is used in the .mappingId
+            var authorizationLookup = new AuthorizationLookup
+            {
+                accountMappingRef = accountMapping.mappingId,
+                authorizationLookupRef = authorization.authorizationId,
+            };
+            bool created = await authorizationLookup.StorageCreateAsync(
+                (idDiscard) =>
+                {
+                    return true;
+                },
+                () =>
+                {
+                    // I guess this is cool... 
+                    return false;
+                });
 
-        internal static async Task<TResult> FindByMethodAndKeyAsync<TResult>(IRef<Authentication> authenticationId, string authorizationKey,
+            var lookup = new AccountMappingLookup()
+            {
+                accountkey = externalAccountKey,
+                accountMappingId = accountMapping.mappingId,
+                Method = authorization.Method,
+            };
+            accountMapping.accountMappingLookup = await lookup.StorageCreateAsync(
+                (discard) => new RefOptional<AccountMappingLookup>(
+                    lookup.accountMappingLookupId),
+                () => new RefOptional<AccountMappingLookup>());
+
+            return await accountMapping.StorageCreateAsync(
+                createdId =>
+                {
+                    return onCreated();
+                },
+                () => onFailure("Account is already mapped to that authentication."));
+        }
+    
+
+        internal static async Task<TResult> FindByMethodAndKeyAsync<TResult>(IRef<Method> authenticationId, string authorizationKey,
                 Authorization authorization,
             Func<Guid, TResult> onFound,
             Func<TResult> onNotFound)

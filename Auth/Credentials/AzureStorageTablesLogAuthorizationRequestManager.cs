@@ -13,7 +13,7 @@ namespace EastFive.Api.Azure.Credentials
     class AzureStorageTablesLogAuthorizationRequestManager : IManageAuthorizationRequests
     {
         public async Task<TResult> CredentialValidation<TResult>(Guid requestId, 
-            AzureApplication application, IRef<Authentication> method,
+            AzureApplication application, IRef<Method> method,
             IDictionary<string, string> values, 
             Func<Task<TResult>> onContinue, 
             Func<string, TResult> onStop)

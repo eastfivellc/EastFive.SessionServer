@@ -12,7 +12,7 @@ namespace EastFive.Api.Azure.Credentials
     {
         public Task<TResult> CredentialValidation<TResult>(Guid requestId,
                 AzureApplication application,
-                IRef<EastFive.Azure.Auth.Authentication> method, IDictionary<string, string> values,
+                IRef<EastFive.Azure.Auth.Method> method, IDictionary<string, string> values,
             Func<Task<TResult>> onContinue,
             Func<string, TResult> onStop)
         {

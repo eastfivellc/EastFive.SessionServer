@@ -47,19 +47,7 @@ namespace EastFive.Azure.Auth
         [ApiProperty(PropertyName = MethodPropertyName)]
         [JsonProperty(PropertyName = MethodPropertyName)]
         [Storage(Name = MethodPropertyName)]
-        public IRef<Authentication> Method { get; set; }
-
-        public const string LocationLogoutPropertyName = "location_logout";
-        [ApiProperty(PropertyName = LocationLogoutPropertyName)]
-        [JsonProperty(PropertyName = LocationLogoutPropertyName)]
-        [Storage(Name = LocationLogoutPropertyName)]
-        public Uri LocationLogout { get; set; }
-
-        public const string LocationLogoutReturnPropertyName = "location_logout_return";
-        [ApiProperty(PropertyName = LocationLogoutReturnPropertyName)]
-        [JsonProperty(PropertyName = LocationLogoutReturnPropertyName)]
-        [Storage(Name = LocationLogoutReturnPropertyName)]
-        public Uri LocationLogoutReturn { get; set; }
+        public IRef<Method> Method { get; set; }
 
         public const string LocationAuthorizationPropertyName = "location_authentication";
         [ApiProperty(PropertyName = LocationAuthorizationPropertyName)]
@@ -73,23 +61,47 @@ namespace EastFive.Azure.Auth
         [Storage(Name = LocationAuthorizationReturnPropertyName)]
         public Uri LocationAuthenticationReturn { get; set; }
 
+        public const string LocationLogoutPropertyName = "location_logout";
+        [ApiProperty(PropertyName = LocationLogoutPropertyName)]
+        [JsonProperty(PropertyName = LocationLogoutPropertyName)]
+        [Storage(Name = LocationLogoutPropertyName)]
+        public Uri LocationLogout { get; set; }
+
+        public const string LocationLogoutReturnPropertyName = "location_logout_return";
+        [ApiProperty(PropertyName = LocationLogoutReturnPropertyName)]
+        [JsonProperty(PropertyName = LocationLogoutReturnPropertyName)]
+        [Storage(Name = LocationLogoutReturnPropertyName)]
+        public Uri LocationLogoutReturn { get; set; }
+
         public const string ParametersPropertyName = "parameters";
         [JsonIgnore]
         [Storage(Name = ParametersPropertyName)]
-        public Dictionary<string, string> parameters;
+        public IDictionary<string, string> parameters;
+
+        [Api.HttpGet] //(MatchAllBodyParameters = false)]
+        public static Task<HttpResponseMessage> GetAsync(
+                [QueryParameter(CheckFileName = true, Name = AuthorizationIdPropertyName)]IRef<Authorization> authorizationRef,
+                Api.Azure.AzureApplication application, UrlHelper urlHelper,
+            ContentTypeResponse<Authorization> onFound,
+            NotFoundResponse onNotFound)
+        {
+            return authorizationRef.StorageGetAsync(
+                (authorization) => onFound(authorization),
+                () => onNotFound());
+        }
 
         [Api.HttpPost] //(MatchAllBodyParameters = false)]
         public async static Task<HttpResponseMessage> CreateAsync(
                 [Property(Name = AuthorizationIdPropertyName)]Guid authorizationId,
-                [Property(Name = MethodPropertyName)]IRef<Authentication> method,
+                [Property(Name = MethodPropertyName)]IRef<Method> method,
                 [Property(Name = LocationAuthorizationReturnPropertyName)]Uri LocationAuthenticationReturn,
                 [Resource]Authorization authorization,
                 Api.Azure.AzureApplication application, UrlHelper urlHelper,
             CreatedBodyResponse<Authorization> onCreated,
             ForbiddenResponse forbidden,
-            ReferencedDocumentDoesNotExistsResponse<Authentication> onAuthenticationDoesNotExist)
+            ReferencedDocumentDoesNotExistsResponse<Method> onAuthenticationDoesNotExist)
         {
-            return await await Authentication.ById(method, application,
+            return await await Auth.Method.ById(method, application,
                 async (authentication) =>
                 {
                     var authorizationIdSecure = authentication.authenticationId;
@@ -109,7 +121,7 @@ namespace EastFive.Azure.Auth
             Func<string, TResult> onFailure)
         {
             var parameters = this.parameters;
-            return await await Authentication.ById(this.Method, application, // TODO: Cleanup 
+            return await await Auth.Method.ById(this.Method, application, // TODO: Cleanup 
                 (method) =>
                 {
                     return application.LoginProviders
@@ -119,7 +131,7 @@ namespace EastFive.Azure.Auth
                             (loginProvider) =>
                             {
                                 return loginProvider.ParseCredentailParameters(parameters,
-                                    (userKey, authorizationId, deprecatedId) =>
+                                    (string userKey, Guid? authorizationId, Guid? deprecatedId) =>
                                     {
                                         return onSuccess(userKey, loginProvider);
                                     },

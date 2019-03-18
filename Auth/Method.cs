@@ -19,10 +19,10 @@ namespace EastFive.Azure.Auth
     [DataContract]
     [FunctionViewController(
         Route = "Authentication",
-        Resource = typeof(Authentication),
+        Resource = typeof(Method),
         ContentType = "x-application/auth-authentication",
         ContentTypeVersion = "0.1")]
-    public struct Authentication
+    public struct Method
     {
         public Guid id => authenticationId.id;
 
@@ -30,7 +30,7 @@ namespace EastFive.Azure.Auth
         [ApiProperty(PropertyName = AuthenticationIdPropertyName)]
         [JsonProperty(PropertyName = AuthenticationIdPropertyName)]
         [StorageProperty(IsRowKey = true, Name = AuthenticationIdPropertyName)]
-        public IRef<Authentication> authenticationId;
+        public IRef<Method> authenticationId;
 
         public const string NamePropertyName = "name";
         [ApiProperty(PropertyName = NamePropertyName)]
@@ -66,16 +66,16 @@ namespace EastFive.Azure.Auth
         [HttpGet]
         public static Task<HttpResponseMessage> QueryAsync(
             Api.Azure.AzureApplication application,
-            MultipartResponseAsync<Authentication> onContent)
+            MultipartResponseAsync<Method> onContent)
         {
             return onContent(
                 application.LoginProviders
                     .Select(
                         (loginProvider) =>
                         {
-                            return new Authentication
+                            return new Method
                             {
-                                authenticationId = new Ref<Authentication>(loginProvider.Value.Id),
+                                authenticationId = new Ref<Method>(loginProvider.Value.Id),
                                 name = loginProvider.Value.Method,
                             };
                         }));
@@ -85,32 +85,32 @@ namespace EastFive.Azure.Auth
         public static Task<HttpResponseMessage> QueryByIntegrationAsync(
             [QueryParameter(Name = "integration")]IRef<Integration> integrationRef,
             Api.Azure.AzureApplication application,
-            MultipartResponseAsync<Authentication> onContent)
+            MultipartResponseAsync<Method> onContent)
         {
             var integrationProviders = application.LoginProviders
                 .Where(loginProvider => loginProvider.GetType().IsSubClassOfGeneric(typeof(IProvideIntegration)))
                 .Select(
                     (loginProvider) =>
                     {
-                        return new Authentication
+                        return new Method
                         {
-                            authenticationId = new Ref<Authentication>(loginProvider.Value.Id),
+                            authenticationId = new Ref<Method>(loginProvider.Value.Id),
                             name = loginProvider.Value.Method,
                         };
                     });
             return onContent(integrationProviders);
         }
 
-        internal static Task<TResult> ById<TResult>(IRef<Authentication> method, Api.Azure.AzureApplication application,
-            Func<Authentication, TResult> onFound,
+        internal static Task<TResult> ById<TResult>(IRef<Method> method, Api.Azure.AzureApplication application,
+            Func<Method, TResult> onFound,
             Func<TResult> onNotFound)
         {
             return GetLoginProviderAsync(method.id, application,
                 (key, loginProvider) =>
                 {
-                    var authentication = new Authentication
+                    var authentication = new Method
                     {
-                        authenticationId = new Ref<Authentication>(loginProvider.Id),
+                        authenticationId = new Ref<Method>(loginProvider.Id),
                         name = loginProvider.Method,
                     };
                     return onFound(authentication);
@@ -118,7 +118,7 @@ namespace EastFive.Azure.Auth
                 onNotFound);
         }
 
-        public static Task<Authentication> ByMethodName(string methodName, Api.Azure.AzureApplication application)
+        public static Task<Method> ByMethodName(string methodName, Api.Azure.AzureApplication application)
         {
             return application.LoginProviders
                 .SelectValues()
@@ -126,9 +126,9 @@ namespace EastFive.Azure.Auth
                 .FirstAsync(
                     (loginProvider) =>
                     {
-                        return new Authentication
+                        return new Method
                         {
-                            authenticationId = new Ref<Authentication>(loginProvider.Id),
+                            authenticationId = new Ref<Method>(loginProvider.Id),
                             name = loginProvider.Method,
                         };
                     },
@@ -182,12 +182,12 @@ namespace EastFive.Azure.Auth
                 () => throw new Exception($"Login provider with id {authenticationId} does not exists."));
         }
 
-        public Task<string> GetAuthorizationKeyAsync(Api.Azure.AzureApplication application, Dictionary<string, string> parameters)
+        public Task<string> GetAuthorizationKeyAsync(Api.Azure.AzureApplication application, IDictionary<string, string> parameters)
         {
             var authenticationId = this.id;
             return GetLoginProviderAsync(application,
                 (name, loginProvider) => loginProvider.ParseCredentailParameters(parameters,
-                    (authorizationKey, authenticationIdMaybe, scopeMaybeDiscard) => authorizationKey,
+                    (externalUserKey, authenticationIdMaybe, scopeMaybeDiscard) => externalUserKey,
                     why => throw new Exception(why)),
                 () => throw new Exception($"Login provider with id {authenticationId} does not exists."));
         }

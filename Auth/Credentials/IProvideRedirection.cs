@@ -9,7 +9,7 @@ namespace EastFive.Api.Azure.Credentials
     {
         Task<TResult> GetRedirectUriAsync<TResult>(
                 Guid accountId, IDictionary<string, string> authParams,
-                EastFive.Azure.Auth.Authentication method, EastFive.Azure.Auth.Authorization authorization,
+                EastFive.Azure.Auth.Method method, EastFive.Azure.Auth.Authorization authorization,
                 Uri baseUri,
                 EastFive.Api.Azure.AzureApplication application,
             Func<Uri, TResult> onSuccess,

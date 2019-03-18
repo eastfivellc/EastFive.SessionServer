@@ -148,7 +148,7 @@ namespace EastFive.Api.Azure
         
         public virtual async Task<TResult> OnUnmappedUserAsync<TResult>(
                 string subject, IDictionary<string, string> extraParameters,
-                EastFive.Azure.Auth.Authentication authentication, EastFive.Azure.Auth.Authorization authorization,
+                EastFive.Azure.Auth.Method authentication, EastFive.Azure.Auth.Authorization authorization,
                 IProvideAuthorization authorizationProvider,
             Func<Guid, TResult> onCreatedMapping,
             Func<TResult> onNoChange)
@@ -184,7 +184,7 @@ namespace EastFive.Api.Azure
 
         public virtual async Task<TResult> GetRedirectUriAsync<TResult>(Guid requestId,
                 Guid accountId, IDictionary<string, string> authParams,
-                EastFive.Azure.Auth.Authentication method, EastFive.Azure.Auth.Authorization authorization,
+                EastFive.Azure.Auth.Method method, EastFive.Azure.Auth.Authorization authorization,
                 Uri baseUri,
                 IProvideAuthorization authorizationProvider,
             Func<Uri, TResult> onSuccess,
@@ -222,7 +222,7 @@ namespace EastFive.Api.Azure
 
         private async Task<TResult> ComputeRedirect<TResult>(Guid requestId,
                 Guid accountId, IDictionary<string, string> authParams,
-                EastFive.Azure.Auth.Authentication method, EastFive.Azure.Auth.Authorization authorization,
+                EastFive.Azure.Auth.Method method, EastFive.Azure.Auth.Authorization authorization,
                 Uri baseUri,
                 IProvideAuthorization authorizationProvider,
             Func<Uri, TResult> onSuccess,
