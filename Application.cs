@@ -24,6 +24,8 @@ using BlackBarLabs.Linq.Async;
 using EastFive.Api.Controllers;
 using EastFive.Collections.Generic;
 using System.Linq.Expressions;
+using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.WindowsAzure.Storage;
 
 namespace EastFive.Api.Azure
 {
@@ -111,7 +113,37 @@ namespace EastFive.Api.Azure
                     .ToDictionary();
             }
         }
-        
+
+        public virtual async Task SendQueueMessageAsync(string queueName, byte[] byteContent)
+        {
+            var queue = EastFive.Web.Configuration.Settings.GetString("EastFive.Azure.StorageTables.ConnectionString",
+                (connString) =>
+                {
+                    var storageAccount = CloudStorageAccount.Parse(connString);
+                    var queueClient = storageAccount.CreateCloudQueueClient();
+                    return queueClient.GetQueueReference(queueName);
+                },
+                (why) => throw new Exception(why));
+
+            var message = new CloudQueueMessage(byteContent);
+            await queue.AddMessageAsync(message);
+        }
+
+        public virtual async Task SendStringQueueMessageAsync(string queueName, string stringContent)
+        {
+            var queue = EastFive.Web.Configuration.Settings.GetString("EastFive.Azure.StorageTables.ConnectionString",
+                (connString) =>
+                {
+                    var storageAccount = CloudStorageAccount.Parse(connString);
+                    var queueClient = storageAccount.CreateCloudQueueClient();
+                    return queueClient.GetQueueReference(queueName);
+                },
+                (why) => throw new Exception(why));
+
+            var message = new CloudQueueMessage(stringContent);
+            await queue.AddMessageAsync(message);
+        }
+
         protected override async Task<Initialized> InitializeAsync()
         {
             return await base.InitializeAsync();
