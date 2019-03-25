@@ -16,6 +16,7 @@ using EastFive.Extensions;
 using EastFive.Linq;
 using EastFive.Linq.Async;
 using EastFive.Persistence;
+using EastFive.Persistence.Azure.StorageTables;
 using Newtonsoft.Json;
 
 namespace EastFive.Azure.Auth
@@ -26,6 +27,7 @@ namespace EastFive.Azure.Auth
         Resource = typeof(Session),
         ContentType = "x-application/auth-session",
         ContentTypeVersion = "0.1")]
+    [StorageTable]
     public struct Session : IReferenceable
     {
         public Guid id => sessionId.id;
@@ -33,18 +35,19 @@ namespace EastFive.Azure.Auth
         public const string SessionIdPropertyName = "id";
         [ApiProperty(PropertyName = SessionIdPropertyName)]
         [JsonProperty(PropertyName = SessionIdPropertyName)]
-        [StorageProperty(IsRowKey = true, Name = SessionIdPropertyName)]
+        [RowKey]
+        [StandardParititionKey]
         public IRef<Session> sessionId;
 
         public const string AuthorizationPropertyName = "authorization";
         [ApiProperty(PropertyName = AuthorizationPropertyName)]
         [JsonProperty(PropertyName = AuthorizationPropertyName)]
-        [StorageProperty(Name = AuthorizationPropertyName)]
+        [Storage(Name = AuthorizationPropertyName)]
         public IRefOptional<Authorization> authorization { get; set; }
 
         public const string AccountPropertyName = "account";
         [JsonProperty(PropertyName = AccountPropertyName)]
-        [StorageProperty(Name = AccountPropertyName)]
+        [Storage(Name = AccountPropertyName)]
         public Guid? account { get; set; }
 
         public const string HeaderNamePropertyName = "header_name";
@@ -70,7 +73,7 @@ namespace EastFive.Azure.Auth
         public const string RefreshTokenPropertyName = "refresh_token";
         [ApiProperty(PropertyName = RefreshTokenPropertyName)]
         [JsonProperty(PropertyName = RefreshTokenPropertyName)]
-        [StorageProperty(Name = RefreshTokenPropertyName)]
+        [Storage(Name = RefreshTokenPropertyName)]
         public string refreshToken;
 
         private static async Task<TResult> GetClaimsAsync<TResult>(
@@ -178,6 +181,21 @@ namespace EastFive.Azure.Auth
                         (why) => onConfigurationFailure("Missing", why).AsTask());
                 },
                 onNotFound:() => onNotFound());
+        }
+
+        [HttpDelete]
+        public static Task<HttpResponseMessage> DeleteAsync(
+                [QueryParameter(CheckFileName =true, Name = SessionIdPropertyName)]IRef<Session> sessionRef,
+                Api.Azure.AzureApplication application,
+            NoContentResponse onDeleted,
+            NotFoundResponse onNotFound)
+        {
+            return sessionRef.StorageDeleteAsync(
+                () =>
+                {
+                    return onDeleted();
+                },
+                onNotFound: () => onNotFound());
         }
 
         private static async Task<TResult> GetSessionAcountAsync<TResult>(IRef<Authorization> authorizationRef,

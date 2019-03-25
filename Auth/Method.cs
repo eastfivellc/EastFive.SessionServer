@@ -18,7 +18,7 @@ namespace EastFive.Azure.Auth
 {
     [DataContract]
     [FunctionViewController(
-        Route = "Authentication",
+        Route = "AuthenticationMethod",
         Resource = typeof(Method),
         ContentType = "x-application/auth-authentication",
         ContentTypeVersion = "0.1")]
@@ -51,8 +51,13 @@ namespace EastFive.Azure.Auth
             Func<string, Security.SessionServer.IProvideLogin, TResult> onFound,
             Func<TResult> onNotFound)
         {
+            var debug = application.LoginProviders.ToArrayAsync().Result;
             return application.LoginProviders
-                .Where(loginProvider => loginProvider.Value.Id == authenticationId)
+                .Where(
+                    loginProvider =>
+                    {
+                        return loginProvider.Value.Id == authenticationId;
+                    })
                 .FirstAsync(
                     (loginProviderKvp) =>
                     {

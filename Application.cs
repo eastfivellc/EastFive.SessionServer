@@ -232,7 +232,7 @@ namespace EastFive.Api.Azure
                     onFailure);
 
             var redirectionProvider = authorizationProvider as Credentials.IProvideRedirection;
-            return await await redirectionProvider.GetRedirectUriAsync(accountId, authParams,
+            return await await redirectionProvider.GetRedirectUriAsync(accountId, authorizationProvider, authParams,
                         method, authorization,
                         baseUri, this,
                     (redirectUri) =>
