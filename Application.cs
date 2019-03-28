@@ -24,6 +24,8 @@ using BlackBarLabs.Linq.Async;
 using EastFive.Api.Controllers;
 using EastFive.Collections.Generic;
 using System.Linq.Expressions;
+using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.WindowsAzure.Storage;
 
 namespace EastFive.Api.Azure
 {
@@ -92,7 +94,11 @@ namespace EastFive.Api.Azure
             {
                 return this.InstantiateAll<IProvideLogin>()
                     .Where(loginProvider => !loginProvider.IsDefaultOrNull())
-                    .Select(loginProvider => loginProvider.PairWithKey(loginProvider.Method))
+                    .Select(
+                        loginProvider =>
+                        {
+                            return loginProvider.PairWithKey(loginProvider.Method);
+                        })
                     .ToDictionary();
             }
         }
@@ -107,7 +113,37 @@ namespace EastFive.Api.Azure
                     .ToDictionary();
             }
         }
-        
+
+        public virtual async Task SendQueueMessageAsync(string queueName, byte[] byteContent)
+        {
+            var queue = EastFive.Web.Configuration.Settings.GetString("EastFive.Azure.StorageTables.ConnectionString",
+                (connString) =>
+                {
+                    var storageAccount = CloudStorageAccount.Parse(connString);
+                    var queueClient = storageAccount.CreateCloudQueueClient();
+                    return queueClient.GetQueueReference(queueName);
+                },
+                (why) => throw new Exception(why));
+
+            var message = new CloudQueueMessage(byteContent);
+            await queue.AddMessageAsync(message);
+        }
+
+        public virtual async Task SendStringQueueMessageAsync(string queueName, string stringContent)
+        {
+            var queue = EastFive.Web.Configuration.Settings.GetString("EastFive.Azure.StorageTables.ConnectionString",
+                (connString) =>
+                {
+                    var storageAccount = CloudStorageAccount.Parse(connString);
+                    var queueClient = storageAccount.CreateCloudQueueClient();
+                    return queueClient.GetQueueReference(queueName);
+                },
+                (why) => throw new Exception(why));
+
+            var message = new CloudQueueMessage(stringContent);
+            await queue.AddMessageAsync(message);
+        }
+
         protected override async Task<Initialized> InitializeAsync()
         {
             return await base.InitializeAsync();
@@ -142,14 +178,20 @@ namespace EastFive.Api.Azure
                 onCredentialSystemNotAvailable);
         }
         
-        public virtual async Task<TResult> OnUnmappedUserAsync<TResult>(string method, IProvideAuthorization authorizationProvider, string subject, IDictionary<string, string> extraParameters, 
+        public virtual async Task<TResult> OnUnmappedUserAsync<TResult>(
+                string subject, IDictionary<string, string> extraParameters,
+                EastFive.Azure.Auth.Method authentication, EastFive.Azure.Auth.Authorization authorization,
+                IProvideAuthorization authorizationProvider,
             Func<Guid, TResult> onCreatedMapping,
             Func<TResult> onNoChange)
         {
             if (authorizationProvider is Credentials.IProvideAccountInformation)
             {
-                return await(authorizationProvider as Credentials.IProvideAccountInformation)
-                    .CreateAccount(this, method, authorizationProvider, subject, extraParameters,
+                var accountInfoProvider = authorizationProvider as Credentials.IProvideAccountInformation;
+                return await accountInfoProvider
+                    .CreateAccount(subject, extraParameters,
+                            authentication, authorization,
+                            this,
                         onCreatedMapping,
                         onNoChange);
             }
@@ -172,35 +214,36 @@ namespace EastFive.Api.Azure
             return Security.SessionServer.Library.configurationManager.GetActorNameDetailsAsync(actorId, onActorFound, onActorNotFound);
         }
 
-        public virtual async Task<TResult> GetRedirectUriAsync<TResult>(
-                IProvideAuthorization authorizationProvider,
-                string validationType,
-                AuthenticationActions action,
-                Guid requestId,
-                Guid? authorizationId,
-                string token, string refreshToken,
-                IDictionary<string, string> authParams,
+        public virtual async Task<TResult> GetRedirectUriAsync<TResult>(Guid requestId,
+                Guid accountId, IDictionary<string, string> authParams,
+                EastFive.Azure.Auth.Method method, EastFive.Azure.Auth.Authorization authorization,
                 Uri baseUri,
-                Uri redirectUriFromPost,
+                IProvideAuthorization authorizationProvider,
             Func<Uri, TResult> onSuccess,
             Func<string, string, TResult> onInvalidParameter,
             Func<string, TResult> onFailure)
         {
             if(!(authorizationProvider is Credentials.IProvideRedirection))
-                return await ComputeRedirect(requestId, authorizationId, token, refreshToken, redirectUriFromPost, authParams,
-                        onSuccess,
-                        onInvalidParameter,
-                        onFailure);
+                return await ComputeRedirect(requestId, accountId, authParams, 
+                        method, authorization,
+                        baseUri, authorizationProvider,
+                    onSuccess,
+                    onInvalidParameter,
+                    onFailure);
 
-            return await await (authorizationProvider as Credentials.IProvideRedirection).GetRedirectUriAsync(this, authorizationId, requestId, token, refreshToken,
-                        authParams, 
+            var redirectionProvider = authorizationProvider as Credentials.IProvideRedirection;
+            return await await redirectionProvider.GetRedirectUriAsync(accountId, authorizationProvider, authParams,
+                        method, authorization,
+                        baseUri, this,
                     (redirectUri) =>
                     {
                         var fullUri = new Uri(baseUri, redirectUri);
-                        var redirectDecorated = this.SetRedirectParameters(fullUri, requestId, authorizationId, token, refreshToken);
+                        var redirectDecorated = this.SetRedirectParameters(requestId, authorization, fullUri);
                         return onSuccess(redirectDecorated).AsTask();
                     },
-                    () => ComputeRedirect(requestId, authorizationId, token, refreshToken, redirectUriFromPost, authParams,
+                    () => ComputeRedirect(requestId, accountId, authParams,
+                            method, authorization,
+                            baseUri, authorizationProvider,
                         onSuccess,
                         onInvalidParameter,
                         onFailure),
@@ -209,19 +252,18 @@ namespace EastFive.Api.Azure
             
         }
 
-        private async Task<TResult> ComputeRedirect<TResult>(
-                Guid requestId,
-                Guid? authorizationId,
-                string token, string refreshToken,
-                Uri redirectUriFromPost,
-                IDictionary<string, string> authParams,
+        private async Task<TResult> ComputeRedirect<TResult>(Guid requestId,
+                Guid accountId, IDictionary<string, string> authParams,
+                EastFive.Azure.Auth.Method method, EastFive.Azure.Auth.Authorization authorization,
+                Uri baseUri,
+                IProvideAuthorization authorizationProvider,
             Func<Uri, TResult> onSuccess,
             Func<string, string, TResult> onInvalidParameter,
             Func<string, TResult> onFailure)
         {
-            if (!redirectUriFromPost.IsDefault())
+            if (!authorization.LocationAuthenticationReturn.IsDefaultOrNull())
             {
-                var redirectUrl = SetRedirectParameters(redirectUriFromPost, requestId, authorizationId, token, refreshToken);
+                var redirectUrl = SetRedirectParameters(requestId, authorization, authorization.LocationAuthenticationReturn);
                 return onSuccess(redirectUrl);
             }
 
@@ -231,27 +273,27 @@ namespace EastFive.Api.Azure
                 var redirectUriString = authParams[Security.SessionServer.Configuration.AuthorizationParameters.RedirectUri];
                 if (!Uri.TryCreate(redirectUriString, UriKind.Absolute, out redirectUri))
                     return onInvalidParameter("REDIRECT", $"BAD URL in redirect call:{redirectUriString}");
-                var redirectUrl = SetRedirectParameters(redirectUri, requestId, authorizationId, token, refreshToken);
+                var redirectUrl = SetRedirectParameters(requestId, authorization, redirectUri);
                 return onSuccess(redirectUrl);
             }
 
             return await EastFive.Web.Configuration.Settings.GetUri(
                 EastFive.Security.SessionServer.Configuration.AppSettings.LandingPage,
-                (redirectUri) =>
+                (redirectUriLandingPage) =>
                 {
-                    var redirectUrl = SetRedirectParameters(redirectUri, requestId, authorizationId, token, refreshToken);
+                    var redirectUrl = SetRedirectParameters(requestId, authorization, redirectUriLandingPage);
                     return onSuccess(redirectUrl);
                 },
                 (why) => onFailure(why)).ToTask();
         }
 
-        protected Uri SetRedirectParameters(Uri redirectUri, Guid requestId, Guid? authorizationId, string token, string refreshToken)
+        protected Uri SetRedirectParameters(Guid requestId, EastFive.Azure.Auth.Authorization authorization, Uri redirectUri)
         {
             var redirectUrl = redirectUri
                 //.SetQueryParam(parameterAuthorizationId, authorizationId.Value.ToString("N"))
                 //.SetQueryParam(parameterToken, token)
                 //.SetQueryParam(parameterRefreshToken, refreshToken)
-                .SetQueryParam(AzureApplication.QueryRequestIdentfier, requestId.ToString());
+                .SetQueryParam(AzureApplication.QueryRequestIdentfier, authorization.authorizationId.id.ToString());
             return redirectUrl;
         }
 

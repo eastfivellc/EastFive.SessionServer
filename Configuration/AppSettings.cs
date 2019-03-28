@@ -17,6 +17,8 @@ namespace EastFive.Azure
 
         public const string SpaSiteLocation = "EastFive.Security.SessionServer.SpaSiteLocation";
 
+        public const string AdminLoginRsaKey = "EastFive.Azure.Auth.AdminLoginRsaKey";
+
         [Config]
         public static class SAML
         {

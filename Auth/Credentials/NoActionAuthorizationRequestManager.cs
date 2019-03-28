@@ -10,8 +10,9 @@ namespace EastFive.Api.Azure.Credentials
 {
     class NoActionAuthorizationRequestManager : IManageAuthorizationRequests
     {
-        public Task<TResult> CredentialValidation<TResult>(string method, 
-            IDictionary<string, string> values, 
+        public Task<TResult> CredentialValidation<TResult>(Guid requestId,
+                AzureApplication application,
+                IRef<EastFive.Azure.Auth.Method> method, IDictionary<string, string> values,
             Func<Task<TResult>> onContinue,
             Func<string, TResult> onStop)
         {
