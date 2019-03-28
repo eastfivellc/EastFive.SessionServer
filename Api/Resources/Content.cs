@@ -12,14 +12,19 @@ using Newtonsoft.Json;
 
 namespace EastFive.Api.Azure.Resources
 {
-    [FunctionViewController4(Route = "Content", Resource=typeof(Content))]
-    public struct Content : IReferenceable
+    [FunctionViewController4(
+        Route = "Content",
+        Resource = typeof(Content),
+        ContentType = "x-application/content",
+        ContentTypeVersion = "0.1")]
+    public class Content : IReferenceable
     {
+        [JsonIgnore]
         public Guid id => contentRef.id;
 
         public const string ContentIdPropertyName = "id";
         [JsonProperty(PropertyName = ContentIdPropertyName)]
-        public IRef<Content> contentRef;
+        public IRefObj<Content> contentRef;
 
         public const string ContentPropertyName = "content";
         [JsonProperty(PropertyName = ContentPropertyName)]
