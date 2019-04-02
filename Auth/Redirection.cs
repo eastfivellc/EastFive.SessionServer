@@ -119,7 +119,7 @@ namespace EastFive.Azure.Auth
                     {
                         var authorization = new Authorization
                         {
-                            authorizationId = new Ref<Authorization>(Security.SecureGuid.Generate()),
+                            authorizationRef = new Ref<Authorization>(Security.SecureGuid.Generate()),
                             Method = authentication.authenticationId,
                             parameters = extraParams,
                         };

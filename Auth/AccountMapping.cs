@@ -203,7 +203,7 @@ namespace EastFive.Azure.Auth
             var authorizationLookup = new AuthorizationLookup
             {
                 accountMappingRef = accountMapping.mappingId,
-                authorizationLookupRef = authorization.authorizationId,
+                authorizationLookupRef = authorization.authorizationRef,
             };
             bool created = await authorizationLookup.StorageCreateAsync(
                 (idDiscard) =>

@@ -293,7 +293,7 @@ namespace EastFive.Api.Azure
                 //.SetQueryParam(parameterAuthorizationId, authorizationId.Value.ToString("N"))
                 //.SetQueryParam(parameterToken, token)
                 //.SetQueryParam(parameterRefreshToken, refreshToken)
-                .SetQueryParam(AzureApplication.QueryRequestIdentfier, authorization.authorizationId.id.ToString());
+                .SetQueryParam(AzureApplication.QueryRequestIdentfier, authorization.authorizationRef.id.ToString());
             return redirectUrl;
         }
 

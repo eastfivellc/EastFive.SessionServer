@@ -7,6 +7,7 @@ using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using System.Web.Http.Routing;
 using BlackBarLabs.Api;
+using EastFive;
 using EastFive.Api;
 using EastFive.Api.Controllers;
 using EastFive.Azure.Persistence.AzureStorageTables;
@@ -32,33 +33,17 @@ namespace EastFive.Azure.Auth
     public struct Integration : IReferenceable
     {
         [JsonIgnore]
-        public Guid id => integrationId;
+        public Guid id => integrationRef.id;
 
-        public const string AccountMappingIdPropertyName = "id";
-        [ApiProperty(PropertyName = AccountMappingIdPropertyName)]
-        [JsonProperty(PropertyName = AccountMappingIdPropertyName)]
-        [Storage]
-        public Guid integrationId;
-
+        public const string IntegrationIdPropertyName = "id";
+        [ApiProperty(PropertyName = IntegrationIdPropertyName)]
+        [JsonProperty(PropertyName = IntegrationIdPropertyName)]
         [RowKey]
         [StandardParititionKey]
+        public IRef<Integration> integrationRef;
+        
         [JsonIgnore]
-        public IRef<Integration> mappingId
-        {
-            get
-            {
-                var composeId = this.Method.id
-                    .ComposeGuid(this.accountId);
-                return new Ref<Integration>(composeId);
-            }
-            set
-            {
-            }
-        }
-
-        public const string MethodPropertyName = "method";
-        [JsonIgnore]
-        [Storage(Name = MethodPropertyName)]
+        [Storage]
         public IRef<Method> Method { get; set; }
 
         public const string AccountPropertyName = "account";
@@ -66,50 +51,7 @@ namespace EastFive.Azure.Auth
         [JsonProperty(PropertyName = AccountPropertyName)]
         [Storage(Name = AccountPropertyName)]
         public Guid accountId { get; set; }
-
-        [StorageTable]
-        public struct IntegrationLookup : IReferenceable
-        {
-            [JsonIgnore]
-            public Guid id => integrationLookupId.id;
-
-            [RowKey]
-            [StandardParititionKey]
-            [JsonIgnore]
-            public IRef<IntegrationLookup> integrationLookupId
-            {
-                get
-                {
-                    return GetLookup(this.Method, this.accountId);
-                }
-                set
-                {
-                }
-            }
-
-            public const string AccountKeyPropertyName = "account";
-            [JsonIgnore]
-            [Storage]
-            public Guid accountId { get; set; }
-
-            public const string MethodPropertyName = "method";
-            [JsonIgnore]
-            [Storage]
-            public IRef<Method> Method { get; set; }
-
-            [JsonIgnore]
-            [Storage]
-            public IRef<Integration> integrationId;
-
-            public static IRef<IntegrationLookup> GetLookup(
-                IRef<Method> method, Guid accountId)
-            {
-                var composeId = method.id
-                    .ComposeGuid(accountId);
-                return new Ref<IntegrationLookup>(composeId);
-            }
-        }
-
+        
         [StorageTable]
         public struct AuthorizationIntegrationLookup : IReferenceable
         {
@@ -126,22 +68,36 @@ namespace EastFive.Azure.Auth
             public IRef<Integration> integrationMappingRef;
         }
 
+        [StorageTable]
+        public struct AccountIntegrationLookup : IReferenceable
+        {
+            [JsonIgnore]
+            public Guid id => accountIntegrationLookupRef.id;
+
+            [RowKey]
+            [StandardParititionKey]
+            [JsonIgnore]
+            public IRef<AccountIntegrationLookup> accountIntegrationLookupRef;
+
+            [JsonIgnore]
+            [Storage]
+            public IRefs<Integration> integrationRefs;
+        }
+
         public const string AuthorizationPropertyName = "authorization";
         [ApiProperty(PropertyName = AuthorizationPropertyName)]
         [JsonProperty(PropertyName = AuthorizationPropertyName)]
         [Storage(Name = AuthorizationPropertyName)]
         public IRefOptional<Authorization> authorization { get; set; }
-
-        [Storage]
-        public IRefOptional<IntegrationLookup> integrationLookup { get; set; }
-
+        
         [Api.HttpPost] //(MatchAllBodyParameters = false)]
         public async static Task<HttpResponseMessage> CreateAsync(
                 [Property(Name = AccountPropertyName)]Guid accountId,
-                [Property(Name = AuthorizationPropertyName)]IRef<Authorization> authorizationRef,
+                [PropertyOptional(Name = AuthorizationPropertyName)]IRef<Authorization> authorizationRefMaybe,
                 [Resource]Integration integration,
                 Api.Azure.AzureApplication application, EastFive.Api.Controllers.Security security,
             CreatedResponse onCreated,
+            AlreadyExistsResponse onAlreadyExists,
             ForbiddenResponse forbidden,
             ReferencedDocumentDoesNotExistsResponse<Authorization> onAuthenticationDoesNotExist,
             GeneralConflictResponse onFailure)
@@ -149,124 +105,136 @@ namespace EastFive.Azure.Auth
             if (!await application.CanAdministerCredentialAsync(accountId, security))
                 return forbidden();
 
-            return await await authorizationRef.StorageGetAsync(
-                async authorization =>
+            return await await authorizationRefMaybe.StorageGetAsync(
+                authorization =>
                 {
-                    integration.Method = authorization.Method; // method is used in the .mappingId
-                    var authorizationLookup = new AuthorizationIntegrationLookup
-                    {
-                        integrationMappingRef = integration.mappingId,
-                        authorizationLookupRef = authorizationRef,
-                    };
-                    return await await authorizationLookup.StorageCreateAsync(
-                        async (idDiscard) =>
-                        {
-                            integration.integrationLookup = await await authorization.ParseCredentailParameters(
-                                    application,
-                                (accountKey, loginProvider) =>
-                                {
-                                    var lookup = new IntegrationLookup()
-                                    {
-                                        accountId = accountId,
-                                        integrationId = integration.mappingId,
-                                        Method = authorization.Method,
-                                    };
-                                    return lookup.StorageCreateAsync(
-                                        (discard) => new RefOptional<IntegrationLookup>(
-                                            lookup.integrationLookupId),
-                                        () => new RefOptional<IntegrationLookup>());
-                                },
-                                (why) =>
-                                {
-                                    var amLookupMaybe = new RefOptional<IntegrationLookup>();
-                                    return amLookupMaybe.AsTask();
-                                });
-                            return await integration.StorageCreateAsync(
-                                createdId =>
-                                {
-                                    return onCreated();
-                                },
-                                () =>
-                                {
-                                    return forbidden().AddReason("Account is already mapped to that authentication.");
-                                });
-                        },
-                        () => onFailure("Authorization is already mapped to another account.").AsTask());
+                    // TODO? This
+                    // var accountIdDidMatch = await await authorization.ParseCredentailParameters(
+                    return CreateWithAuthorization(integration, authorization,
+                            accountId,
+                        () => onCreated(),
+                        () => onAlreadyExists(),
+                        (why) => onFailure(why));
                 },
-                () => onAuthenticationDoesNotExist().AsTask());
+                async () =>
+                {
+                    return await await integration.StorageCreateAsync(
+                        discard =>
+                        {
+                            return SaveAccountLookupAsync(accountId, integration,
+                                () => onCreated());
+                        },
+                        () => onAlreadyExists().AsTask());
+                });
+        }
+
+        private static async Task<TResult> CreateWithAuthorization<TResult>(
+            Integration integration, Authorization authorization,
+            Guid accountId,
+            Func<TResult> onCreated,
+            Func<TResult> onAlreadyExists,
+            Func<string, TResult> onFailure)
+        {
+            integration.Method = authorization.Method; // method is used in the .mappingId
+            var authorizationLookup = new AuthorizationIntegrationLookup
+            {
+                integrationMappingRef = integration.integrationRef,
+                authorizationLookupRef = authorization.authorizationRef,
+            };
+            return await await authorizationLookup.StorageCreateAsync(
+                async (idDiscardAuthorizationLookup) =>
+                {
+                    return await await integration.StorageCreateAsync(
+                        discard =>
+                        {
+                            return SaveAccountLookupAsync(accountId, integration, onCreated);
+                        },
+                        () => onAlreadyExists().AsTask());
+                },
+                () =>
+                {
+                    // TODO: Check if mapping is to this integration and reply already created.
+                    return onFailure("Authorization is already mapped to another integration.").AsTask();
+                });
+        }
+
+        private static async Task<TResult> SaveAccountLookupAsync<TResult>(
+                Guid accountId, Integration integration,
+            Func<TResult> onCreated)
+        {
+            var accountLookupRef = new Ref<AccountIntegrationLookup>(accountId);
+            return await accountLookupRef.StorageCreateOrUpdateAsync(
+                async (created, accountLookup, saveAsync) =>
+                {
+                    accountLookup.integrationRefs = accountLookup.integrationRefs.IsDefaultOrNull() ?
+                        integration.integrationRef.id.AsArray().AsRefs<Integration>()
+                        :
+                        accountLookup.integrationRefs.ids
+                            .Append(integration.integrationRef.id)
+                            .AsRefs<Integration>();
+                    await saveAsync(accountLookup);
+                    return onCreated();
+                });
         }
 
         public static async Task<TResult> CreateByMethodAndKeyAsync<TResult>(IRef<Method> method, 
-                Guid internalAccountId, IDictionary<string, string> parameters,
+                Guid accountId, IDictionary<string, string> parameters,
             Func<TResult> onCreated,
             Func<string, TResult> onFailure)
         {
+            var authorizationRef = new Ref<Authorization>(Guid.NewGuid());
             var authorization = new Authorization
             {
-                authorizationId = new Ref<Authorization>(Guid.NewGuid()),
+                authorizationRef = authorizationRef,
                 parameters = parameters,
                 Method = method,
             };
             return await await authorization.StorageCreateAsync<Authorization, Task<TResult>>(
-                async (discardId) =>
+                (discardId) =>
                 {
-                    var integration = new Integration()
+                    var integration = new Integration
                     {
-                        integrationId = Guid.NewGuid(),
-                        accountId  = internalAccountId,
+                        integrationRef = Guid.NewGuid().AsRef<Integration>(),
+                        accountId = accountId,
+                        authorization = authorizationRef.Optional(),
                         Method = method,
-                        authorization = new RefOptional<Authorization>(authorization.authorizationId),
                     };
-                    integration.Method = authorization.Method; // method is used in the .mappingId
-                    var authorizationLookup = new AuthorizationIntegrationLookup
-                    {
-                        integrationMappingRef = integration.mappingId,
-                        authorizationLookupRef = authorization.authorizationId,
-                    };
-                    return await await authorizationLookup.StorageCreateAsync(
-                        async (idDiscard) =>
-                        {
-                            var lookup = new IntegrationLookup()
-                            {
-                                accountId = internalAccountId,
-                                integrationId = integration.mappingId,
-                                Method = authorization.Method,
-                            };
-                            integration.integrationLookup = await lookup.StorageCreateAsync(
-                                (discard) => new RefOptional<IntegrationLookup>(
-                                    lookup.integrationLookupId),
-                                () => new RefOptional<IntegrationLookup>());
-
-                            return await integration.StorageCreateAsync(
-                                createdId =>
-                                {
-                                    return onCreated();
-                                },
-                                () => throw new Exception("Guid not unique"));
-                        },
-                        () => onFailure("Authorization is already mapped to another account.").AsTask());
+                    return CreateWithAuthorization(integration, authorization,
+                            accountId,
+                        () => onCreated(),
+                        () => throw new Exception("Guid not unique"),
+                        (why) => onFailure(why));
                 },
                 () => throw new Exception("Guid not unique"));
         }
 
-        public static async Task<TResult> GetParametersByAccountIdAsync<TResult>(IRef<Method> authenticationId, Guid accountId,
-            Func<Integration, IDictionary<string, string>, TResult> onFound,
+        public static async Task<TResult> GetParametersByAccountIdAsync<TResult>(IRef<Method> methodId, Guid accountId,
+            Func<IEnumerableAsync<KeyValuePair<Integration, Authorization>>, TResult> onFound,
             Func<TResult> onNotFound)
         {
-            var lookupRef = IntegrationLookup.GetLookup(authenticationId, accountId);
-            return await await lookupRef.StorageGetAsync(
-                async lookup =>
+            var accountIntegrationLookupRef = new Ref<AccountIntegrationLookup>(accountId);
+            return await accountIntegrationLookupRef.StorageGetAsync(
+                accountIntegrationLookup =>
                 {
-                    return await await lookup.integrationId.StorageGetAsync(
-                        integration =>
-                        {
-                            return integration.authorization.StorageGetAsync(
-                                authorization => onFound(integration, authorization.parameters),
-                                () => onNotFound());
-                        },
-                        onNotFound.AsAsyncFunc());
+                    var integrationsKvp = accountIntegrationLookup.integrationRefs
+                        .StorageGet()
+                        .Where(integration => integration.Method.id == methodId.id)
+                        .Where(integration => integration.authorization.HasValue)
+                        .Select(
+                            integration =>
+                            {
+                                return integration.authorization.StorageGetAsync(
+                                    authorization =>
+                                    {
+                                        return authorization.PairWithKey(integration);
+                                    },
+                                    () => default(KeyValuePair<Integration, Authorization>?));
+                            })
+                        .Await()
+                        .SelectWhereHasValue();
+                    return onFound(integrationsKvp);
                 },
-                onNotFound.AsAsyncFunc());
+                onNotFound);
         }
     }
 }
