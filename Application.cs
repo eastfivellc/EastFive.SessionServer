@@ -224,7 +224,7 @@ namespace EastFive.Api.Azure
             Func<string, TResult> onFailure)
         {
             if(!(authorizationProvider is Credentials.IProvideRedirection))
-                return await ComputeRedirect(requestId, accountId, authParams, 
+                return await ComputeRedirectAsync(requestId, accountId, authParams, 
                         method, authorization,
                         baseUri, authorizationProvider,
                     onSuccess,
@@ -235,13 +235,13 @@ namespace EastFive.Api.Azure
             return await await redirectionProvider.GetRedirectUriAsync(accountId, authorizationProvider, authParams,
                         method, authorization,
                         baseUri, this,
-                    (redirectUri) =>
+                    async (redirectUri) =>
                     {
-                        var fullUri = new Uri(baseUri, redirectUri);
+                        var fullUri = await ResolveAbsoluteUrlAsync(baseUri, redirectUri, accountId);
                         var redirectDecorated = this.SetRedirectParameters(requestId, authorization, fullUri);
-                        return onSuccess(redirectDecorated).AsTask();
+                        return onSuccess(redirectDecorated);
                     },
-                    () => ComputeRedirect(requestId, accountId, authParams,
+                    () => ComputeRedirectAsync(requestId, accountId, authParams,
                             method, authorization,
                             baseUri, authorizationProvider,
                         onSuccess,
@@ -252,7 +252,13 @@ namespace EastFive.Api.Azure
             
         }
 
-        private async Task<TResult> ComputeRedirect<TResult>(Guid requestId,
+        public virtual Task<Uri> ResolveAbsoluteUrlAsync(Uri requestUri, Uri relativeUri, Guid accountId)
+        {
+            var fullUri = new Uri(requestUri, relativeUri);
+            return fullUri.AsTask();
+        }
+
+        private async Task<TResult> ComputeRedirectAsync<TResult>(Guid requestId,
                 Guid accountId, IDictionary<string, string> authParams,
                 EastFive.Azure.Auth.Method method, EastFive.Azure.Auth.Authorization authorization,
                 Uri baseUri,
@@ -293,7 +299,7 @@ namespace EastFive.Api.Azure
                 //.SetQueryParam(parameterAuthorizationId, authorizationId.Value.ToString("N"))
                 //.SetQueryParam(parameterToken, token)
                 //.SetQueryParam(parameterRefreshToken, refreshToken)
-                .SetQueryParam(AzureApplication.QueryRequestIdentfier, authorization.authorizationId.id.ToString());
+                .SetQueryParam(AzureApplication.QueryRequestIdentfier, authorization.authorizationRef.id.ToString());
             return redirectUrl;
         }
 

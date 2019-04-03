@@ -34,14 +34,14 @@ namespace EastFive.Azure.Auth
     [StorageTable]
     public struct Authorization : IReferenceable
     {
-        public Guid id => authorizationId.id;
+        public Guid id => authorizationRef.id;
 
         public const string AuthorizationIdPropertyName = "id";
         [ApiProperty(PropertyName = AuthorizationIdPropertyName)]
         [JsonProperty(PropertyName = AuthorizationIdPropertyName)]
         [RowKey]
         [StandardParititionKey]
-        public IRef<Authorization> authorizationId;
+        public IRef<Authorization> authorizationRef;
         
         public const string MethodPropertyName = "method";
         [ApiProperty(PropertyName = MethodPropertyName)]

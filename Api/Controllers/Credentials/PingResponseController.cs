@@ -23,28 +23,37 @@ using EastFive.Extensions;
 using EastFive.Api.Controllers;
 using EastFive.Collections.Generic;
 using Newtonsoft.Json;
+using EastFive.Azure.Auth;
 
 namespace EastFive.Api.Azure.Credentials.Controllers
 {
     [RoutePrefix("aadb2c")]
-    [FunctionViewController(Route="PingResponse")]
-    public class PingResponse
+    [FunctionViewController4(
+        Route="PingResponse",
+        Resource = typeof(PingResponse),
+        ContentType = "x-application/ping-response",
+        ContentTypeVersion = "0.1")]
+    public class PingResponse : EastFive.Azure.Auth.Redirection
     {
         public const string TokenIdPropertyName = PingProvider.TokenId;
+        [ApiProperty(PropertyName = TokenIdPropertyName)]
         [JsonProperty(PropertyName = TokenIdPropertyName)]
         public string tokenid { get; set; }
 
         public const string AgentIdPropertyName = PingProvider.AgentId;
+        [ApiProperty(PropertyName = AgentIdPropertyName)]
         [JsonProperty(PropertyName = AgentIdPropertyName)]
         public string agentid { get; set; }
 
         [HttpGet(MatchAllParameters = false)]
-        public static Task<HttpResponseMessage> Get(
+        public static async Task<HttpResponseMessage> Get(
                 [QueryParameter(Name = TokenIdPropertyName)]string tokenId,
                 [QueryParameter(Name = AgentIdPropertyName)]string agentId,
                 AzureApplication application,
                 HttpRequestMessage request,
-            RedirectResponse redirectResponse)
+                System.Web.Http.Routing.UrlHelper urlHelper,
+            RedirectResponse onRedirectResponse,
+            BadRequestResponse onBadRequest)
         {
             //The way this works...
             //1.  User clicks Third Party Applications\AffirmHealth over in Athena.
@@ -62,12 +71,13 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             //return request.CreateResponse(HttpStatusCode.OK).ToTask();
             //return ParsePingResponseAsync(query.tokenid, query.agentid);
 
-            return ResponseController.ProcessRequestAsync(application,
-                Enum.GetName(typeof(CredentialValidationMethodTypes), CredentialValidationMethodTypes.Ping),
-                request.RequestUri,
-                request.GetQueryNameValuePairs().ToDictionary(),
-                (redirect, why) => redirectResponse(redirect, why),
-                (httpStatusCode, message, reason) => request.CreateResponse(httpStatusCode, message).AddReason(reason));
+            var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), CredentialValidationMethodTypes.Ping);
+            var method = await EastFive.Azure.Auth.Method.ByMethodName(methodName, application);
+            return await Redirection.ProcessRequestAsync(method, 
+                    request.GetQueryNameValuePairs().ToDictionary(), 
+                    application, request, urlHelper,
+                (redirect, why) => onRedirectResponse(redirect, "success"),
+                (why) => onBadRequest().AddReason(why));
         }
     }
 }
