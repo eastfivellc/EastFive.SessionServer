@@ -75,7 +75,7 @@ namespace EastFive.Azure.Auth
                                     authorization.parameters = extraParams;
                                     await saveAsync(authorization);
                                     return await CreateLoginResponse(requestId,
-                                            internalAccountId, values,
+                                            internalAccountId, extraParams,
                                             authentication, authorization,
                                             baseUri,
                                             application, loginProvider,
@@ -85,7 +85,7 @@ namespace EastFive.Azure.Auth
                                 },
                                 async () =>
                                 {
-                                    return await await UnmappedCredentailAsync(externalAccountKey, values,
+                                    return await await UnmappedCredentialAsync(externalAccountKey, extraParams,
                                         authentication, authorization,
                                         loginProvider, application, baseUri,
 
@@ -99,7 +99,7 @@ namespace EastFive.Azure.Auth
                                                 () =>
                                                 {
                                                     return CreateLoginResponse(requestId,
-                                                            internalAccountId, values,
+                                                            internalAccountId, extraParams,
                                                             authentication, authorization,
                                                             baseUri,
                                                             application, loginProvider,
@@ -183,7 +183,7 @@ namespace EastFive.Azure.Auth
                 });
         }
 
-        public static async Task<TResult> UnmappedCredentailAsync<TResult>(
+        public static async Task<TResult> UnmappedCredentialAsync<TResult>(
                 string subject, IDictionary<string, string> extraParams,
                 EastFive.Azure.Auth.Method authentication, Authorization authorization,
                 IProvideAuthorization authorizationProvider, 
