@@ -76,7 +76,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
         }
         
         public async static Task<TResult> ProcessRequestAsync<TResult>(AzureApplication application, 
-                string method, Uri baseUri, IDictionary<string, string> values,
+                string methodName, Uri baseUri, IDictionary<string, string> values,
             Func<Uri, string, TResult> onRedirect,
             Func<HttpStatusCode, string, string, TResult> onResponse)
         {
@@ -87,12 +87,12 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             
             var requestId = Guid.NewGuid();
 
-            throw new NotImplementedException();
-            //return await authorizationRequestManager.CredentialValidation<TResult>(requestId, application,
-            //        method, values,
-            //    () => AuthenticationAsync(requestId, method, values, baseUri, application,
-            //        onRedirect, onResponse),
-            //    (why) => onResponse(HttpStatusCode.ServiceUnavailable, why, why));
+            var method = await EastFive.Azure.Auth.Method.ByMethodName(methodName, application);
+            return await authorizationRequestManager.CredentialValidation<TResult>(requestId, application,
+                    method.authenticationId, values,
+                () => AuthenticationAsync(requestId, methodName, values, baseUri, application,
+                    onRedirect, onResponse),
+                (why) => onResponse(HttpStatusCode.ServiceUnavailable, why, why));
         }
 
         public async static Task<TResult> AuthenticationAsync<TResult>(Guid requestId, 
@@ -178,7 +178,6 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             Func<HttpStatusCode, string, string, TResult> onResponse,
             TelemetryClient telemetry)
         {
-
             throw new NotImplementedException();
             //var redirectResponse = await application.GetRedirectUriAsync(authorizationProvider,
             //        method, action,
