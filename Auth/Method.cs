@@ -13,11 +13,12 @@ using EastFive.Api.Controllers;
 using System.Runtime.Serialization;
 using EastFive.Extensions;
 using EastFive.Collections.Generic;
+using EastFive.Persistence.Azure.StorageTables;
 
 namespace EastFive.Azure.Auth
 {
     [DataContract]
-    [FunctionViewController(
+    [FunctionViewController4(
         Route = "AuthenticationMethod",
         Resource = typeof(Method),
         ContentType = "x-application/auth-authentication-method",
@@ -29,13 +30,14 @@ namespace EastFive.Azure.Auth
         public const string AuthenticationIdPropertyName = "id";
         [ApiProperty(PropertyName = AuthenticationIdPropertyName)]
         [JsonProperty(PropertyName = AuthenticationIdPropertyName)]
-        [StorageProperty(IsRowKey = true, Name = AuthenticationIdPropertyName)]
+        [RowKey]
+        [StandardParititionKey]
         public IRef<Method> authenticationId;
 
         public const string NamePropertyName = "name";
         [ApiProperty(PropertyName = NamePropertyName)]
         [JsonProperty(PropertyName = NamePropertyName)]
-        [StorageProperty(Name = NamePropertyName)]
+        [Storage(Name = NamePropertyName)]
         public string name;
 
         private Task<TResult> GetLoginProviderAsync<TResult>(Api.Azure.AzureApplication application,
@@ -51,7 +53,7 @@ namespace EastFive.Azure.Auth
             Func<string, Security.SessionServer.IProvideLogin, TResult> onFound,
             Func<TResult> onNotFound)
         {
-            var debug = application.LoginProviders.ToArrayAsync().Result;
+            //var debug = application.LoginProviders.ToArrayAsync().Result;
             return application.LoginProviders
                 .Where(
                     loginProvider =>

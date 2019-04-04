@@ -98,7 +98,7 @@ namespace EastFive.Azure.Auth
                 [Resource]Authorization authorization,
                 Api.Azure.AzureApplication application, UrlHelper urlHelper,
             CreatedBodyResponse<Authorization> onCreated,
-            ForbiddenResponse forbidden,
+            AlreadyExistsResponse onAlreadyExists,
             ReferencedDocumentDoesNotExistsResponse<Method> onAuthenticationDoesNotExist)
         {
             return await await Auth.Method.ById(method, application,
@@ -110,7 +110,7 @@ namespace EastFive.Azure.Auth
 
                     return await authorization.StorageCreateAsync(
                         createdId => onCreated(authorization),
-                        () => throw new Exception("Secure Guid not unique"));
+                        () => onAlreadyExists());
                 },
                 () => onAuthenticationDoesNotExist().AsTask());
         }
