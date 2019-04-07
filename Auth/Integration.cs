@@ -164,6 +164,11 @@ namespace EastFive.Azure.Auth
         {
             var accountLookupRef = new Ref<AccountIntegrationLookup>(accountId);
             return await accountLookupRef.StorageCreateOrUpdateAsync(
+                (accountLookup) =>
+                {
+                    accountLookup.accountIntegrationLookupRef = accountLookupRef;
+                    return accountLookup;
+                },
                 async (created, accountLookup, saveAsync) =>
                 {
                     accountLookup.integrationRefs = accountLookup.integrationRefs.IsDefaultOrNull() ?

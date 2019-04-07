@@ -114,6 +114,20 @@ namespace EastFive.Api.Azure
             }
         }
 
+        public virtual async Task SendServiceBusMessageAsync(string queueName, string stringContent)
+        {
+            var client = EastFive.Web.Configuration.Settings.GetString(EastFive.Security.SessionServer.Configuration.AppSettings.ServiceBusConnectionString,
+                (connectionString) =>
+                {
+                    return new Microsoft.Azure.ServiceBus.QueueClient(connectionString, queueName);
+                },
+                (why) => throw new Exception(why));
+
+            var byteArray = Encoding.UTF8.GetBytes(stringContent);
+            var message = new Microsoft.Azure.ServiceBus.Message(byteArray);
+            await client.SendAsync(message);
+        }
+
         public virtual async Task SendQueueMessageAsync(string queueName, byte[] byteContent)
         {
             var queue = EastFive.Web.Configuration.Settings.GetString("EastFive.Azure.StorageTables.ConnectionString",

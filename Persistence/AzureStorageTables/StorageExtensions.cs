@@ -148,13 +148,14 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
         }
 
         public static Task<TResult> StorageCreateOrUpdateAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
+            Func<TEntity,TEntity> setId,
             Func<bool, TEntity, Func<TEntity, Task>, Task<TResult>> onCreated)
             where TEntity : struct, IReferenceable
         {
             var documentId = entityRef.id;
             return AzureTableDriverDynamic
                 .FromSettings()
-                .UpdateOrCreatesAsync<TEntity, TResult>(documentId,
+                .UpdateOrCreatesAsync<TEntity, TResult>(documentId, setId,
                     onCreated);
         }
 

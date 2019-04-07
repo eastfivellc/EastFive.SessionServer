@@ -1,6 +1,7 @@
 ﻿using BlackBarLabs.Api;
 using BlackBarLabs.Extensions;
 using EastFive.Api.Controllers;
+using EastFive.Extensions;
 using EastFive.Security.SessionServer;
 using EastFive.Security.SessionServer.Api.Resources;
 using Newtonsoft.Json;
@@ -85,16 +86,37 @@ namespace EastFive.Api.Azure.Credentials.Resources
             NotFoundResponse onNotFound,
             GeneralFailureResponse onFailure)
         {
-            return await context.Sessions.GetAsync(authenticationRequestId,
+            return await await context.Sessions.GetAsync(authenticationRequestId,
                     (type) => urlHelper.GetLocation(type), 
                     application,
                 (authenticationRequest) =>
                 {
                     var resource = Convert(authenticationRequest, urlHelper);
-                    return onFound(resource);
+                    return onFound(resource).AsTask();
                 },
-                (why) => onNotFound().AddReason(why),
-                (why) => onFailure(why));
+                (why) =>
+                {
+                    var sessionId = Guid.NewGuid();
+                    var sessionRef = sessionId.AsRef<EastFive.Azure.Auth.Session>();
+                    var authRef = authenticationRequestId.AsRef<EastFive.Azure.Auth.Authorization>().Optional();
+                    return EastFive.Azure.Auth.Session.CreateAsync(sessionRef, authRef, 
+                        new EastFive.Azure.Auth.Session
+                        {
+                            sessionId = sessionRef,
+                            authorization = authRef,
+                        }, application,
+                        (content, contentType) =>
+                        {
+                            dynamic dynSession = content;
+                            EastFive.Azure.Auth.Session xSession = dynSession;
+                            var session = Convert(xSession, urlHelper);
+                            return onFound(session, contentType);
+                        },
+                        () => onFailure("already exists"),
+                        () => onFailure("forbidden"),
+                        (configurationValue, message) => onFailure($"{configurationValue}: {message}"));
+                },
+                (why) => onFailure(why).AsTask());
         }
 
         private static Resources.Session Convert(Security.SessionServer.Session authenticationRequest, UrlHelper urlHelper)
@@ -112,6 +134,18 @@ namespace EastFive.Api.Azure.Credentials.Resources
                 LocationAuthenticationReturn = authenticationRequest.redirectUrl,
                 LocationLogout = authenticationRequest.logoutUrl,
                 LocationLogoutReturn = authenticationRequest.redirectLogoutUrl,
+            };
+        }
+
+        private static Resources.Session Convert(EastFive.Azure.Auth.Session authenticationRequest, UrlHelper urlHelper)
+        {
+            return new Resources.Session
+            {
+                Id = urlHelper.GetWebId<Controllers.SessionController>(authenticationRequest.id),
+                AuthorizationId = authenticationRequest.account,
+                HeaderName = authenticationRequest.HeaderName,
+                Token = authenticationRequest.token,
+                RefreshToken = authenticationRequest.refreshToken,
             };
         }
 
