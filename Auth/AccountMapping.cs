@@ -140,12 +140,15 @@ namespace EastFive.Azure.Auth
                 [Property(Name = AccountPropertyName)]Guid accountId,
                 [Property(Name = AuthorizationPropertyName)]IRef<Authorization> authorizationRef,
                 [Resource]AccountMapping accountMapping,
-                Api.Azure.AzureApplication application,
+                Api.Azure.AzureApplication application, Api.Controllers.Security security,
             CreatedResponse onCreated,
-            ForbiddenResponse forbidden,
+            ForbiddenResponse onForbidden,
+            UnauthorizedResponse onUnauthorized,
             ReferencedDocumentDoesNotExistsResponse<Authorization> onAuthenticationDoesNotExist,
             GeneralConflictResponse onFailure)
         {
+            if (!await application.CanAdministerCredentialAsync(accountId, security))
+                return onUnauthorized();
             return await await authorizationRef.StorageGetAsync(
                 async authorization =>
                 {
@@ -183,7 +186,7 @@ namespace EastFive.Azure.Auth
                                 {
                                     return onCreated();
                                 },
-                                () => forbidden().AddReason("Account is already mapped to that authentication."));
+                                () => onForbidden().AddReason("Account is already mapped to that authentication."));
                         },
                         () => onFailure("Authorization is already mapped to another account.").AsTask());
                 },

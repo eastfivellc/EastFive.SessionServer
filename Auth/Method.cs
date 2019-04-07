@@ -180,12 +180,18 @@ namespace EastFive.Azure.Auth
                 (why) => onFailure(why));
         }
 
-        internal Task<Uri> GetLoginUrlAsync(Api.Azure.AzureApplication application, UrlHelper urlHelper, Guid authorizationIdSecure, Uri responseLocation)
+        internal Task<Uri> GetLoginUrlAsync(Api.Azure.AzureApplication application,
+            UrlHelper urlHelper, Guid authorizationIdSecure)
         {
             var authenticationId = this.id;
             return GetLoginProviderAsync(application,
-                (name, loginProvider) => loginProvider.GetLoginUrl(authorizationIdSecure, responseLocation,
-                    type => urlHelper.GetLocation(type)),
+                (name, loginProvider) =>
+                {
+                    var redirectionResource = loginProvider.CallbackController;
+                    var redirectionLocation = urlHelper.GetLocation(redirectionResource);
+                    return loginProvider.GetLoginUrl(authorizationIdSecure, redirectionLocation,
+                        type => urlHelper.GetLocation(type));
+                },
                 () => throw new Exception($"Login provider with id {authenticationId} does not exists."));
         }
 

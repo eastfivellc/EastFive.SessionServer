@@ -164,9 +164,10 @@ namespace EastFive.Azure.Auth
                             return await await GetClaimsAsync(application, authorizationRefMaybe,
                                 async (claims, accountIdMaybe) =>
                                 {
+                                    sessionStorage.authorization = authorizationRefMaybe;
                                     sessionStorage.account = accountIdMaybe;
                                     return await BlackBarLabs.Security.Tokens.JwtTools.CreateToken(sessionRef.id,
-                                        scope, TimeSpan.FromDays(365.0), claims, // TODO: Expiration time from .Config
+                                            scope, TimeSpan.FromDays(365.0), claims, // TODO: Expiration time from .Config
                                         async (tokenNew) =>
                                         {
                                             sessionStorage.token = tokenNew;

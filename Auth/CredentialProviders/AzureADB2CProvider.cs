@@ -205,12 +205,13 @@ namespace EastFive.Api.Azure.Credentials
 
         public Guid Id =>  System.Text.Encoding.UTF8.GetBytes(Method).MD5HashGuid();
 
-        public Type CallbackController => typeof(Controllers.OpenIdResponseController);
+        public Type CallbackController => typeof(EastFive.Azure.Auth.CredentialProviders.AzureADB2C.OpenIdRedirection);
 
         //typeof(SessionServer.Api.Controllers.AADB2CResponseController);
 
         public Uri GetLoginUrl(Guid state, Uri responseLocation, Func<Type, Uri> controllerToLocation)
         {
+            //var responseLocation = controllerToLocation(typeof());
             return GetUrl(this.loginEndpoint, state, responseLocation);
         }
 

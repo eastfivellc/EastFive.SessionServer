@@ -109,8 +109,13 @@ namespace EastFive.Azure.Auth
                                                 },
                                                 (why) => onResponse(why).AsTask());
                                         },
-
-                                        onResponse.AsAsyncFunc(),
+                                        async (why) =>
+                                        {
+                                            // Save params so they can be used later
+                                            authorization.parameters = extraParams;
+                                            await saveAsync(authorization);
+                                            return onResponse(why);
+                                        },
                                         telemetry);
                                 });
                     }

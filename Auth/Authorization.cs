@@ -104,9 +104,9 @@ namespace EastFive.Azure.Auth
             return await await Auth.Method.ById(method, application,
                 async (authentication) =>
                 {
-                    var authorizationIdSecure = authentication.authenticationId;
+                    //var authorizationIdSecure = authentication.authenticationId;
                     authorization.LocationAuthentication = await authentication.GetLoginUrlAsync(
-                        application, urlHelper, authorizationIdSecure.id, authorization.LocationAuthenticationReturn);
+                        application, urlHelper, authorizationId);
 
                     return await authorization.StorageCreateAsync(
                         createdId => onCreated(authorization),
