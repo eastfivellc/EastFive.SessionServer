@@ -226,6 +226,7 @@
     <Compile Include="Auth\CredentialProviders\AzureADB2C\OpenIdRedirection.cs" />
     <Compile Include="Auth\Integration.cs" />
     <Compile Include="Auth\CredentialProviders\AdminLogin.cs" />
+    <Compile Include="Auth\IProvideSession.cs" />
     <Compile Include="Auth\Method.cs" />
     <Compile Include="Auth\AccountMapping.cs" />
     <Compile Include="Auth\AuthenticationAccountMapping.cs" />

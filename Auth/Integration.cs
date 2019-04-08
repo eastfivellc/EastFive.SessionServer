@@ -49,7 +49,7 @@ namespace EastFive.Azure.Auth
         public const string AccountPropertyName = "account";
         [ApiProperty(PropertyName = AccountPropertyName)]
         [JsonProperty(PropertyName = AccountPropertyName)]
-        [Storage(Name = AccountPropertyName)]
+        [Storage]
         public Guid accountId { get; set; }
         
         [StorageTable]
@@ -89,7 +89,43 @@ namespace EastFive.Azure.Auth
         [JsonProperty(PropertyName = AuthorizationPropertyName)]
         [Storage(Name = AuthorizationPropertyName)]
         public IRefOptional<Authorization> authorization { get; set; }
-        
+
+        [Api.HttpGet] //(MatchAllBodyParameters = false)]
+        public async static Task<HttpResponseMessage> GetByAccountAsync(
+                [Property(Name = IntegrationIdPropertyName)]Guid accountId,
+                Api.Azure.AzureApplication application, EastFive.Api.Controllers.Security security,
+            MultipartResponseAsync<Integration> onContents,
+            ReferencedDocumentNotFoundResponse<object> onAccountNotFound,
+            UnauthorizedResponse onUnauthorized)
+        {
+            if (!await application.CanAdministerCredentialAsync(accountId, security))
+                return onUnauthorized();
+            var accountIntegrationLookupRef = new Ref<AccountIntegrationLookup>(accountId);
+            return await await accountIntegrationLookupRef.StorageGetAsync(
+                accountIntegrationLookup =>
+                {
+                    var integrations = accountIntegrationLookup.integrationRefs
+                        .StorageGet()
+                        .Where(integration => integration.authorization.HasValue)
+                        .Select(
+                            integration =>
+                            {
+                                return integration.authorization.StorageGetAsync(
+                                    authorization =>
+                                    {
+                                        return authorization.PairWithKey(integration);
+                                    },
+                                    () => default(KeyValuePair<Integration, Authorization>?));
+                            })
+                        .Await()
+                        .SelectWhereHasValue()
+                        .SelectKeys();
+                    return onContents(integrations);
+                },
+                () => onAccountNotFound().AsTask());
+
+        }
+
         [Api.HttpPost] //(MatchAllBodyParameters = false)]
         public async static Task<HttpResponseMessage> CreateAsync(
                 [Property(Name = AccountPropertyName)]Guid accountId,
@@ -126,6 +162,59 @@ namespace EastFive.Azure.Auth
                         },
                         () => onAlreadyExists().AsTask());
                 });
+        }
+
+        [Api.HttpPatch] //(MatchAllBodyParameters = false)]
+        public async static Task<HttpResponseMessage> UpdateAsync(
+                [Property(Name = IntegrationIdPropertyName)]IRef<Integration> integrationRef,
+                [PropertyOptional(Name = AuthorizationPropertyName)]IRef<Authorization> authorizationRefMaybe,
+                Api.Azure.AzureApplication application, EastFive.Api.Controllers.Security security,
+            ContentTypeResponse<Integration> onUpdated,
+            NotFoundResponse onNotFound,
+            NotModifiedResponse onNotModified,
+            ForbiddenResponse onForbidden,
+            ReferencedDocumentDoesNotExistsResponse<Authorization> onAuthenticationDoesNotExist,
+            UnauthorizedResponse onUnauthorized)
+        {
+            return await integrationRef.StorageUpdateAsync(
+                async (integration, saveAsync) =>
+                {
+                    var accountId = integration.accountId;
+                    if (!await application.CanAdministerCredentialAsync(accountId, security))
+                        return onUnauthorized();
+
+                    return await await authorizationRefMaybe.StorageGetAsync(
+                        async authorization =>
+                        {
+                            // TODO? This
+                            // var accountIdDidMatch = await await authorization.ParseCredentailParameters(
+                            integration.Method = authorization.Method; // method is used in the .mappingId
+                            var authorizationLookup = new AuthorizationIntegrationLookup
+                            {
+                                integrationMappingRef = integration.integrationRef,
+                                authorizationLookupRef = authorization.authorizationRef,
+                            };
+                            return await await authorizationLookup.StorageCreateAsync(
+                                async (idDiscardAuthorizationLookup) =>
+                                {
+                                    await saveAsync(integration);
+                                    return await SaveAccountLookupAsync(accountId, integration,
+                                        () => onUpdated(integration));
+                                },
+                                () =>
+                                {
+                                    // TODO: Check if mapping is to this integration and reply already created.
+                                    return onForbidden().AddReason("Authorization is already in use.").AsTask();
+                                });
+                        },
+                        () =>
+                        {
+                            return onNotModified().AsTask();
+                        });
+
+                },
+                () => onNotFound());
+
         }
 
         private static async Task<TResult> CreateWithAuthorization<TResult>(

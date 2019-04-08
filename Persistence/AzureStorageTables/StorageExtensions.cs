@@ -42,6 +42,21 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                     onDoesNotExists);
         }
 
+        public static TResult StorageGetBy<TRefEntity, TEntity, TResult>(this IRef<TRefEntity> entityRef,
+                Expression<Func<TEntity, IRef<TRefEntity>>> by,
+            Func<IEnumerableAsync<TEntity>, TResult> onFound,
+            Func<TResult> onRefNotFound = default(Func<TResult>))
+            where TEntity : struct, IReferenceable
+            where TRefEntity : struct, IReferenceable
+        {
+            return AzureTableDriverDynamic
+                .FromSettings()
+                .FindBy(entityRef,
+                        by,
+                    onFound,
+                    onRefNotFound);
+        }
+
         public static Task<TResult> StorageGetAsync<TEntity, TResult>(this IRefObj<TEntity> entityRefObj,
             Func<TEntity, TResult> onFound,
             Func<TResult> onDoesNotExists = default(Func<TResult>))
@@ -155,7 +170,8 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
             var documentId = entityRef.id;
             return AzureTableDriverDynamic
                 .FromSettings()
-                .UpdateOrCreatesAsync<TEntity, TResult>(documentId, setId,
+                .UpdateOrCreateAsync<TEntity, TResult>(documentId,
+                    setId,
                     onCreated);
         }
 

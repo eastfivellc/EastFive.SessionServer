@@ -14,6 +14,8 @@ using System.Runtime.Serialization;
 using EastFive.Extensions;
 using EastFive.Collections.Generic;
 using EastFive.Persistence.Azure.StorageTables;
+using EastFive.Azure.Persistence.AzureStorageTables;
+using BlackBarLabs.Extensions;
 
 namespace EastFive.Azure.Auth
 {
@@ -89,23 +91,73 @@ namespace EastFive.Azure.Auth
         }
 
         [HttpGet]
-        public static Task<HttpResponseMessage> QueryByIntegrationAsync(
+        public static async Task<HttpResponseMessage> QueryByIntegrationAsync(
             [QueryParameter(Name = "integration")]IRef<Integration> integrationRef,
             Api.Azure.AzureApplication application,
-            MultipartResponseAsync<Method> onContent)
+            MultipartResponseAsync<Method> onContent,
+            ReferencedDocumentNotFoundResponse<Integration> onIntegrationNotFound)
         {
-            var integrationProviders = application.LoginProviders
-                .Where(loginProvider => loginProvider.GetType().IsSubClassOfGeneric(typeof(IProvideIntegration)))
-                .Select(
-                    (loginProvider) =>
-                    {
-                        return new Method
-                        {
-                            authenticationId = new Ref<Method>(loginProvider.Value.Id),
-                            name = loginProvider.Value.Method,
-                        };
-                    });
-            return onContent(integrationProviders);
+            return await await integrationRef.StorageGetAsync(
+                integration =>
+                {
+                    var integrationProviders = application.LoginProviders
+                        .Where(loginProvider => loginProvider.Value.GetType().IsSubClassOfGeneric(typeof(IProvideIntegration)))
+                        .Select(
+                            async loginProvider =>
+                            {
+                                var supportsIntegration = await (loginProvider.Value as IProvideIntegration).SupportsIntegrationAsync(integration);
+                                return supportsIntegration.PairWithValue(loginProvider);
+                            })
+                        .Await()
+                        .Where(kvp => kvp.Key)
+                        .SelectValues()
+                        .Select(
+                            (loginProvider) =>
+                            {
+                                return new Method
+                                {
+                                    authenticationId = new Ref<Method>(loginProvider.Value.Id),
+                                    name = loginProvider.Value.Method,
+                                };
+                            });
+                    return onContent(integrationProviders);
+                },
+                () => onIntegrationNotFound().AsTask());
+        }
+
+        [HttpGet]
+        public static async Task<HttpResponseMessage> QueryBySessionAsync(
+                [QueryParameter(Name = "session")]IRef<Session> sessionRef,
+                Api.Azure.AzureApplication application,
+            MultipartResponseAsync<Method> onContent,
+            ReferencedDocumentNotFoundResponse<Integration> onIntegrationNotFound)
+        {
+            return await await sessionRef.StorageGetAsync(
+                session =>
+                {
+                    var integrationProviders = application.LoginProviders
+                        .Where(loginProvider => loginProvider.Value.GetType().IsSubClassOfGeneric(typeof(IProvideSession)))
+                        .Select(
+                            async loginProvider =>
+                            {
+                                var supportsIntegration = await (loginProvider.Value as IProvideSession).SupportsSessionAsync(session);
+                                return supportsIntegration.PairWithValue(loginProvider);
+                            })
+                        .Await()
+                        .Where(kvp => kvp.Key)
+                        .SelectValues()
+                        .Select(
+                            (loginProvider) =>
+                            {
+                                return new Method
+                                {
+                                    authenticationId = new Ref<Method>(loginProvider.Value.Id),
+                                    name = loginProvider.Value.Method,
+                                };
+                            });
+                    return onContent(integrationProviders);
+                },
+                () => onIntegrationNotFound().AsTask());
         }
 
         internal static Task<TResult> ById<TResult>(IRef<Method> method, Api.Azure.AzureApplication application,

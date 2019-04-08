@@ -8,5 +8,6 @@ namespace EastFive.Azure.Auth
 {
     public interface IProvideIntegration
     {
+        Task<bool> SupportsIntegrationAsync(Integration integration);
     }
 }

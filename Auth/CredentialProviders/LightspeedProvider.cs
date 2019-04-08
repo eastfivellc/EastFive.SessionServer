@@ -2,7 +2,9 @@
 using BlackBarLabs.Extensions;
 using BlackBarLabs.Linq;
 using EastFive.Api.Azure.Credentials.Attributes;
+using EastFive.Azure.Auth;
 using EastFive.Collections.Generic;
+using EastFive.Extensions;
 using EastFive.Security.SessionServer;
 using EastFive.Serialization;
 using System;
@@ -17,7 +19,7 @@ using System.Threading.Tasks;
 namespace EastFive.Api.Azure.Credentials
 {
     [IntegrationName(IntegrationName)]
-    public class LightspeedProvider : IProvideLogin
+    public class LightspeedProvider : IProvideLogin, EastFive.Azure.Auth.IProvideIntegration, IProvideSession
     {
         public const string IntegrationName = "Lightspeed";
         public string Method => IntegrationName;
@@ -292,8 +294,16 @@ namespace EastFive.Api.Azure.Credentials
                 new Dictionary<string, string>() { { "AutoIntegrateProducts", "When true, the system pick the best match for products when a mapping does not exists." } }).ToTask();
         }
 
+        public Task<bool> SupportsIntegrationAsync(Integration integration)
+        {
+            return true.AsTask();
+        }
+
         #endregion
 
-
+        public Task<bool> SupportsSessionAsync(EastFive.Azure.Auth.Session session)
+        {
+            return true.AsTask();
+        }
     }
 }

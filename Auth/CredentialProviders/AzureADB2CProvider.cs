@@ -13,11 +13,13 @@ using EastFive.Api.Azure.Credentials.Attributes;
 using EastFive.Linq;
 using EastFive.Collections.Generic;
 using EastFive.Serialization;
+using EastFive.Azure.Auth;
+using EastFive.Extensions;
 
 namespace EastFive.Api.Azure.Credentials
 {
     [IntegrationName(IntegrationName)]
-    public class AzureADB2CProvider : IProvideLogin, IProvideLoginManagement
+    public class AzureADB2CProvider : IProvideLogin, IProvideLoginManagement, IProvideSession
     {
         public const string IntegrationName = "Password";
         public string Method => IntegrationName;
@@ -357,8 +359,12 @@ namespace EastFive.Api.Azure.Credentials
         {
             return onSuccess(new Dictionary<string, string>(), new Dictionary<string, Type>(), new Dictionary<string, string>()).ToTask();
         }
-        
+
         #endregion
 
+        public Task<bool> SupportsSessionAsync(EastFive.Azure.Auth.Session session)
+        {
+            return true.AsTask();
+        }
     }
 }

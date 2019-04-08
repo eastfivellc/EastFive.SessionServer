@@ -107,8 +107,7 @@ namespace EastFive.Api.Azure.Credentials.Resources
                         }, application,
                         (content, contentType) =>
                         {
-                            dynamic dynSession = content;
-                            EastFive.Azure.Auth.Session xSession = dynSession;
+                            var xSession = (EastFive.Azure.Auth.Session)content;
                             var session = Convert(xSession, urlHelper);
                             return onFound(session, contentType);
                         },
