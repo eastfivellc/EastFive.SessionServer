@@ -16,6 +16,7 @@ using EastFive.Collections.Generic;
 using EastFive.Persistence.Azure.StorageTables;
 using EastFive.Azure.Persistence.AzureStorageTables;
 using BlackBarLabs.Extensions;
+using BlackBarLabs.Api;
 
 namespace EastFive.Azure.Auth
 {
@@ -93,13 +94,22 @@ namespace EastFive.Azure.Auth
         [HttpGet]
         public static async Task<HttpResponseMessage> QueryByIntegrationAsync(
             [QueryParameter(Name = "integration")]IRef<Integration> integrationRef,
-            Api.Azure.AzureApplication application,
+            Api.Azure.AzureApplication application, EastFive.Api.Controllers.Security security,
             MultipartResponseAsync<Method> onContent,
-            ReferencedDocumentNotFoundResponse<Integration> onIntegrationNotFound)
+            ReferencedDocumentNotFoundResponse<Integration> onIntegrationNotFound, 
+            ForbiddenResponse onForbidden,
+            UnauthorizedResponse onUnauthorized)
         {
             return await await integrationRef.StorageGetAsync(
-                integration =>
+                async (integration) =>
                 {
+                    var accountId = integration.accountId;
+                    if (!await application.CanAdministerCredentialAsync(accountId, security))
+                        return onUnauthorized();
+
+                    if (integration.authorization.HasValue)
+                        return onForbidden().AddReason("Authorization already established");
+
                     var integrationProviders = application.LoginProviders
                         .Where(loginProvider => loginProvider.Value.GetType().IsSubClassOfGeneric(typeof(IProvideIntegration)))
                         .Select(
@@ -120,7 +130,7 @@ namespace EastFive.Azure.Auth
                                     name = loginProvider.Value.Method,
                                 };
                             });
-                    return onContent(integrationProviders);
+                    return await onContent(integrationProviders);
                 },
                 () => onIntegrationNotFound().AsTask());
         }
@@ -160,7 +170,7 @@ namespace EastFive.Azure.Auth
                 () => onIntegrationNotFound().AsTask());
         }
 
-        internal static Task<TResult> ById<TResult>(IRef<Method> method, Api.Azure.AzureApplication application,
+        public static Task<TResult> ById<TResult>(IRef<Method> method, Api.Azure.AzureApplication application,
             Func<Method, TResult> onFound,
             Func<TResult> onNotFound)
         {
