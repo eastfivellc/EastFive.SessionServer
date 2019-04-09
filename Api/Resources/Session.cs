@@ -113,7 +113,8 @@ namespace EastFive.Api.Azure.Credentials.Resources
                         },
                         () => onFailure("already exists"),
                         () => onFailure("forbidden"),
-                        (configurationValue, message) => onFailure($"{configurationValue}: {message}"));
+                        (configurationValue, message) => onFailure($"{configurationValue}: {message}"),
+                        (why2) => onFailure(why2));
                 },
                 (why) => onFailure(why).AsTask());
         }

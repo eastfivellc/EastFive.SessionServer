@@ -260,14 +260,17 @@ namespace EastFive.Azure.Auth
                 () => throw new Exception($"Login provider with id {authenticationId} does not exists."));
         }
 
-        public Task<string> GetAuthorizationKeyAsync(Api.Azure.AzureApplication application, IDictionary<string, string> parameters)
+        public Task<TResult> GetAuthorizationKeyAsync<TResult>(Api.Azure.AzureApplication application,
+            IDictionary<string, string> parameters,
+            Func<string, TResult> onAuthorizeKey,
+            Func<string, TResult> onFailure,
+            Func<TResult> loginMethodNoLongerSupported)
         {
-            var authenticationId = this.id;
             return GetLoginProviderAsync(application,
                 (name, loginProvider) => loginProvider.ParseCredentailParameters(parameters,
-                    (externalUserKey, authenticationIdMaybe, scopeMaybeDiscard) => externalUserKey,
-                    why => throw new Exception(why)),
-                () => throw new Exception($"Login provider with id {authenticationId} does not exists."));
+                    (externalUserKey, authenticationIdMaybe, scopeMaybeDiscard) => onAuthorizeKey(externalUserKey),
+                    why => onFailure(why)),
+                () => loginMethodNoLongerSupported());
         }
     }
 }
