@@ -100,36 +100,16 @@ namespace EastFive.Azure.Auth
         {
             if (!await application.CanAdministerCredentialAsync(accountId, security))
                 return onUnauthorized();
-            var accountIntegrationLookupRef = new Ref<AccountIntegrationLookup>(accountId);
-            return await await accountIntegrationLookupRef.StorageGetAsync(
-                accountIntegrationLookup =>
-                {
-                    var integrations = accountIntegrationLookup.integrationRefs
-                        .StorageGet()
-                        .Where(integration => integration.authorization.HasValue)
-                        .Select(
-                            integration =>
-                            {
-                                return integration.authorization.StorageGetAsync(
-                                    authorization =>
-                                    {
-                                        return authorization.PairWithKey(integration);
-                                    },
-                                    () => default(KeyValuePair<Integration, Authorization>?));
-                            })
-                        .Await()
-                        .SelectWhereHasValue()
-                        .SelectKeys();
-                    return onContents(integrations);
-                },
-                () => onAccountNotFound().AsTask());
 
+            return await await GetIntegrationsByAccountAsync(accountId,
+                (kvps) => onContents(kvps.SelectKeys()),
+                () => onAccountNotFound().AsTask());
         }
 
         [Api.HttpPost] //(MatchAllBodyParameters = false)]
         public async static Task<HttpResponseMessage> CreateAsync(
                 [Property(Name = AccountPropertyName)]Guid accountId,
-                [PropertyOptional(Name = AuthorizationPropertyName)]IRef<Authorization> authorizationRefMaybe,
+                [PropertyOptional(Name = AuthorizationPropertyName)]IRefOptional<Authorization> authorizationRefMaybe,
                 [Resource]Integration integration,
                 Api.Azure.AzureApplication application, EastFive.Api.Controllers.Security security,
             CreatedResponse onCreated,
@@ -167,7 +147,7 @@ namespace EastFive.Azure.Auth
         [Api.HttpPatch] //(MatchAllBodyParameters = false)]
         public async static Task<HttpResponseMessage> UpdateAsync(
                 [Property(Name = IntegrationIdPropertyName)]IRef<Integration> integrationRef,
-                [PropertyOptional(Name = AuthorizationPropertyName)]IRef<Authorization> authorizationRefMaybe,
+                [PropertyOptional(Name = AuthorizationPropertyName)]IRefOptional<Authorization> authorizationRefMaybe,
                 Api.Azure.AzureApplication application, EastFive.Api.Controllers.Security security,
             ContentTypeResponse<Integration> onUpdated,
             NotFoundResponse onNotFound,
@@ -215,6 +195,34 @@ namespace EastFive.Azure.Auth
                 },
                 () => onNotFound());
 
+        }
+
+        public static Task<TResult> GetIntegrationsByAccountAsync<TResult>(Guid accountId,
+            Func<IEnumerableAsync<KeyValuePair<Integration,Authorization>>, TResult> onSuccess,
+            Func<TResult> onAccountNotFound)
+        {
+            var accountIntegrationLookupRef = new Ref<AccountIntegrationLookup>(accountId);
+            return accountIntegrationLookupRef.StorageGetAsync(
+                accountIntegrationLookup =>
+                {
+                    var kvps = accountIntegrationLookup.integrationRefs
+                        .StorageGet()
+                        .Where(integration => integration.authorization.HasValue)
+                        .Select(
+                            integration =>
+                            {
+                                return integration.authorization.StorageGetAsync(
+                                    authorization =>
+                                    {
+                                        return authorization.PairWithKey(integration);
+                                    },
+                                    () => default(KeyValuePair<Integration, Authorization>?));
+                            })
+                        .Await()
+                        .SelectWhereHasValue();
+                    return onSuccess(kvps);
+                },
+                () => onAccountNotFound());
         }
 
         private static async Task<TResult> CreateWithAuthorization<TResult>(
