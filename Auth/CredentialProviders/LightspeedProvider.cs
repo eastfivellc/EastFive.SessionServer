@@ -301,9 +301,18 @@ namespace EastFive.Api.Azure.Credentials
 
         #endregion
 
+        #region IProvideIntegration
+
         public Task<bool> SupportsSessionAsync(EastFive.Azure.Auth.Session session)
         {
             return true.AsTask();
         }
+
+        public string GetDefaultName(IDictionary<string, string> extraParams)
+        {
+            return Method;
+        }
+
+        #endregion
     }
 }
