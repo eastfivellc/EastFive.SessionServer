@@ -116,6 +116,12 @@ namespace EastFive.Azure.Auth
                                             await saveAsync(authorization);
                                             return onResponse(why);
                                         },
+                                        async (interceptionUrl) =>
+                                        {
+                                            authorization.parameters = extraParams;
+                                            await saveAsync(authorization);
+                                            return onRedirect(interceptionUrl, null);
+                                        },
                                         telemetry);
                                 });
                     }
@@ -152,6 +158,37 @@ namespace EastFive.Azure.Auth
                 },
                 (authorizationRef, extraparams) => throw new NotImplementedException(),
                 (why) => onBadResponse(why).AsTask());
+        }
+
+        public static async Task<TResult> MapAccountAsync<TResult>(Authorization authorization,
+            Guid internalAccountId, string externalAccountKey,
+            Guid requestId,
+            Uri baseUri,
+            AzureApplication application,
+            Func<Uri, TResult> onRedirect,
+            Func<string, TResult> onFailure,
+            TelemetryClient telemetry)
+        {
+            return await await AccountMapping.CreateByMethodAndKeyAsync(authorization, externalAccountKey,
+                internalAccountId,
+                async () =>
+                {
+                    return await await Method.ById(authorization.Method, application,
+                        method =>
+                        {
+                            var loginProvider = default(IProvideLogin); // TODO:
+                            return CreateLoginResponse(requestId,
+                                    internalAccountId, authorization.parameters,
+                                    method, authorization,
+                                    baseUri,
+                                    application, loginProvider,
+                                (url, obj) => onRedirect(url),
+                                onFailure,
+                                telemetry);
+                        },
+                        () => onFailure("Method no longer suppored.").AsTask());
+                },
+                (why) => onFailure(why).AsTask());
         }
 
         public static Task<TResult> CreateLoginResponse<TResult>(Guid requestId,
@@ -196,11 +233,13 @@ namespace EastFive.Azure.Auth
                 Uri baseUri,
             Func<Guid,Task<TResult>> createMappingAsync,
             Func<string, TResult> onResponse,
+            Func<Uri, TResult> onInterceptProcess,
             TelemetryClient telemetry)
         {
             return await await application.OnUnmappedUserAsync(subject, extraParams,
                     authentication, authorization, authorizationProvider,
                 (accountId) => createMappingAsync(accountId),
+                (callback) => onInterceptProcess(callback).AsTask(),
                 () =>
                 {
                     var message = "Token is not connected to a user in this system";
