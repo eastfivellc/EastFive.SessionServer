@@ -92,7 +92,7 @@ namespace EastFive.Azure.Auth
 
         [Api.HttpGet] //(MatchAllBodyParameters = false)]
         public async static Task<HttpResponseMessage> GetByAccountAsync(
-                [Property(Name = IntegrationIdPropertyName)]Guid accountId,
+                [QueryParameter(Name = AccountPropertyName)]Guid accountId,
                 Api.Azure.AzureApplication application, EastFive.Api.Controllers.Security security,
             MultipartResponseAsync<Integration> onContents,
             ReferencedDocumentNotFoundResponse<object> onAccountNotFound,
@@ -142,6 +142,46 @@ namespace EastFive.Azure.Auth
                         },
                         () => onAlreadyExists().AsTask());
                 });
+        }
+
+        [HttpDelete]
+        public static async Task<HttpResponseMessage> DeleteAsync(
+        [UpdateId(CheckFileName = true, Name = IntegrationIdPropertyName)]IRef<Integration> integrationRef,
+                Api.Azure.AzureApplication application, EastFive.Api.Controllers.Security security,
+            NoContentResponse onDeleted,
+            NotFoundResponse onNotFound,
+            ForbiddenResponse forbidden)
+        {
+            var integrationMaybe = await integrationRef.StorageGetAsync(i => i, () => default(Integration?));
+            if (!integrationMaybe.HasValue)
+                return onNotFound();
+
+            var integration = integrationMaybe.Value;
+            if (!await application.CanAdministerCredentialAsync(integration.accountId, security))
+                return forbidden();
+
+            return await await integrationRef.StorageDeleteAsync(
+                async () =>
+                {
+                    if (integration.authorization.HasValue)
+                    {
+                        var authorizationId = integration.authorization.id.Value;
+                        var authorizationLookupRef = authorizationId.AsRef<AuthorizationIntegrationLookup>();
+                        await authorizationLookupRef.StorageDeleteAsync(() => true);
+                    }
+                    var accountIntegrationRef = integration.accountId.AsRef<AccountIntegrationLookup>();
+                    await accountIntegrationRef.StorageUpdateAsync(
+                        async (accountLookup, saveAsync) =>
+                        {
+                            accountLookup.integrationRefs = accountLookup.integrationRefs.ids
+                                .Where(id => id != integration.id)
+                                .AsRefs<Integration>();
+                            await saveAsync(accountLookup);
+                            return true;
+                        });
+                    return onDeleted();
+                },
+                () => onNotFound().AsTask());
         }
 
         [Api.HttpPatch] //(MatchAllBodyParameters = false)]
