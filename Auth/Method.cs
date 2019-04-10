@@ -16,6 +16,7 @@ using EastFive.Collections.Generic;
 using EastFive.Persistence.Azure.StorageTables;
 using EastFive.Azure.Persistence.AzureStorageTables;
 using BlackBarLabs.Extensions;
+using BlackBarLabs.Api;
 
 namespace EastFive.Azure.Auth
 {
@@ -72,6 +73,7 @@ namespace EastFive.Azure.Auth
                     onNotFound);
         }
 
+        [Obsolete]
         [HttpGet]
         public static Task<HttpResponseMessage> QueryAsync(
             Api.Azure.AzureApplication application,
@@ -93,19 +95,29 @@ namespace EastFive.Azure.Auth
         [HttpGet]
         public static async Task<HttpResponseMessage> QueryByIntegrationAsync(
             [QueryParameter(Name = "integration")]IRef<Integration> integrationRef,
-            Api.Azure.AzureApplication application,
+            Api.Azure.AzureApplication application, EastFive.Api.Controllers.Security security,
             MultipartResponseAsync<Method> onContent,
-            ReferencedDocumentNotFoundResponse<Integration> onIntegrationNotFound)
+            ReferencedDocumentNotFoundResponse<Integration> onIntegrationNotFound, 
+            ForbiddenResponse onForbidden,
+            UnauthorizedResponse onUnauthorized)
         {
             return await await integrationRef.StorageGetAsync(
-                integration =>
+                async (integration) =>
                 {
+                    var accountId = integration.accountId;
+                    if (!await application.CanAdministerCredentialAsync(accountId, security))
+                        return onUnauthorized();
+
+                    if (integration.authorization.HasValue)
+                        return onForbidden().AddReason("Authorization already established");
+
                     var integrationProviders = application.LoginProviders
                         .Where(loginProvider => loginProvider.Value.GetType().IsSubClassOfGeneric(typeof(IProvideIntegration)))
                         .Select(
                             async loginProvider =>
                             {
-                                var supportsIntegration = await (loginProvider.Value as IProvideIntegration).SupportsIntegrationAsync(integration);
+                                var integrationProvider = loginProvider.Value as IProvideIntegration;
+                                var supportsIntegration = await integrationProvider.SupportsIntegrationAsync(integration);
                                 return supportsIntegration.PairWithValue(loginProvider);
                             })
                         .Await()
@@ -114,13 +126,14 @@ namespace EastFive.Azure.Auth
                         .Select(
                             (loginProvider) =>
                             {
+                                var integrationProvider = loginProvider.Value as IProvideIntegration;
                                 return new Method
                                 {
                                     authenticationId = new Ref<Method>(loginProvider.Value.Id),
-                                    name = loginProvider.Value.Method,
+                                    name = integrationProvider.GetDefaultName(new Dictionary<string,string>()),
                                 };
                             });
-                    return onContent(integrationProviders);
+                    return await onContent(integrationProviders);
                 },
                 () => onIntegrationNotFound().AsTask());
         }
@@ -160,7 +173,7 @@ namespace EastFive.Azure.Auth
                 () => onIntegrationNotFound().AsTask());
         }
 
-        internal static Task<TResult> ById<TResult>(IRef<Method> method, Api.Azure.AzureApplication application,
+        public static Task<TResult> ById<TResult>(IRef<Method> method, Api.Azure.AzureApplication application,
             Func<Method, TResult> onFound,
             Func<TResult> onNotFound)
         {
@@ -247,14 +260,17 @@ namespace EastFive.Azure.Auth
                 () => throw new Exception($"Login provider with id {authenticationId} does not exists."));
         }
 
-        public Task<string> GetAuthorizationKeyAsync(Api.Azure.AzureApplication application, IDictionary<string, string> parameters)
+        public Task<TResult> GetAuthorizationKeyAsync<TResult>(Api.Azure.AzureApplication application,
+            IDictionary<string, string> parameters,
+            Func<string, TResult> onAuthorizeKey,
+            Func<string, TResult> onFailure,
+            Func<TResult> loginMethodNoLongerSupported)
         {
-            var authenticationId = this.id;
             return GetLoginProviderAsync(application,
                 (name, loginProvider) => loginProvider.ParseCredentailParameters(parameters,
-                    (externalUserKey, authenticationIdMaybe, scopeMaybeDiscard) => externalUserKey,
-                    why => throw new Exception(why)),
-                () => throw new Exception($"Login provider with id {authenticationId} does not exists."));
+                    (externalUserKey, authenticationIdMaybe, scopeMaybeDiscard) => onAuthorizeKey(externalUserKey),
+                    why => onFailure(why)),
+                () => loginMethodNoLongerSupported());
         }
     }
 }

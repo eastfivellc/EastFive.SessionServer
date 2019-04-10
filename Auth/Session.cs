@@ -78,7 +78,8 @@ namespace EastFive.Azure.Auth
 
         private static async Task<TResult> GetClaimsAsync<TResult>(
             Api.Azure.AzureApplication application, IRefOptional<Authorization> authorizationRefMaybe,
-            Func<IDictionary<string, string>, Guid?, TResult> onClaims)
+            Func<IDictionary<string, string>, Guid?, TResult> onClaims,
+            Func<string, TResult> onFailure)
         {
             if (!authorizationRefMaybe.HasValue)
                 return onClaims(new Dictionary<string, string>(), default(Guid?));
@@ -97,7 +98,7 @@ namespace EastFive.Azure.Auth
                             };
                             return onClaims(claims, accountId);
                         },
-                        (why) => onClaims(new Dictionary<string, string>(), default(Guid?)));
+                        onFailure);
                 },
                 (why) => onClaims(new Dictionary<string, string>(), default(Guid?)).AsTask());
         }
@@ -111,7 +112,8 @@ namespace EastFive.Azure.Auth
             CreatedBodyResponse<Session> onCreated,
             AlreadyExistsResponse onAlreadyExists,
             ForbiddenResponse forbidden,
-            ConfigurationFailureResponse onConfigurationFailure)
+            ConfigurationFailureResponse onConfigurationFailure,
+            GeneralConflictResponse onFailure)
         {
             session.refreshToken = Security.SecureGuid.Generate().ToString("N");
 
@@ -137,22 +139,24 @@ namespace EastFive.Azure.Auth
                                         (configName, issue) => onConfigurationFailure(configName, issue));
                                 },
                                 () => onAlreadyExists());
-                        });
+                        },
+                        (why) => onFailure(why).AsTask());
                 },
                 (why) => onConfigurationFailure("Missing", why).AsTask());
                 
         }
 
         [HttpPatch]
-        public static Task<HttpResponseMessage> UpdateAsync(
-                [Property(Name = SessionIdPropertyName)]IRef<Session> sessionRef,
+        public static Task<HttpResponseMessage> UpdateBodyAsync(
+                [UpdateId(CheckFileName = true, Name = SessionIdPropertyName)]IRef<Session> sessionRef,
                 [PropertyOptional(Name = AuthorizationPropertyName)]IRefOptional<Authorization> authorizationRefMaybe,
                 [Resource]Session sessionPatch,
                 Api.Azure.AzureApplication application,
             ContentTypeResponse<Session> onUpdated,
             NotFoundResponse onNotFound,
             ForbiddenResponse forbidden,
-            ConfigurationFailureResponse onConfigurationFailure)
+            ConfigurationFailureResponse onConfigurationFailure,
+            GeneralConflictResponse onFailure)
         {
             return sessionRef.StorageUpdateAsync(
                 (sessionStorage, saveSessionAsync) =>
@@ -176,17 +180,17 @@ namespace EastFive.Azure.Auth
                                         },
                                         (missingConfig) => onConfigurationFailure("Missing", missingConfig).AsTask(),
                                         (configName, issue) => onConfigurationFailure(configName, issue).AsTask());
-
-                                });
+                                },
+                                why => onFailure(why).AsTask());
                         },
                         (why) => onConfigurationFailure("Missing", why).AsTask());
                 },
-                onNotFound:() => onNotFound());
+                onNotFound: () => onNotFound());
         }
 
         [HttpDelete]
         public static Task<HttpResponseMessage> DeleteAsync(
-                [QueryParameter(CheckFileName =true, Name = SessionIdPropertyName)]IRef<Session> sessionRef,
+                [UpdateId(CheckFileName =true, Name = SessionIdPropertyName)]IRef<Session> sessionRef,
                 Api.Azure.AzureApplication application,
             NoContentResponse onDeleted,
             NotFoundResponse onNotFound)
@@ -211,11 +215,16 @@ namespace EastFive.Azure.Auth
                     return await await Method.ById(methodRef, application,
                         async method =>
                         {
-                            var externalUserKey = await method.GetAuthorizationKeyAsync(application, authorization.parameters);
-                            return await Auth.AccountMapping.FindByMethodAndKeyAsync(method.authenticationId, externalUserKey,
-                                    authorization,
-                                accountId => onSuccess(accountId),
-                                () => onFailure("No mapping to that account."));
+                            return await await method.GetAuthorizationKeyAsync(application, authorization.parameters,
+                                (externalUserKey) =>
+                                {
+                                    return Auth.AccountMapping.FindByMethodAndKeyAsync(method.authenticationId, externalUserKey,
+                                            authorization,
+                                        accountId => onSuccess(accountId),
+                                        () => onFailure("No mapping to that account."));
+                                },
+                                onFailure.AsAsyncFunc(),
+                                () => onFailure("This login method is no longer supported.").AsTask());
                         },
                         () =>
                         {

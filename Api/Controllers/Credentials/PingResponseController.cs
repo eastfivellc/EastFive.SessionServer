@@ -53,7 +53,8 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                 HttpRequestMessage request,
                 System.Web.Http.Routing.UrlHelper urlHelper,
             RedirectResponse onRedirectResponse,
-            BadRequestResponse onBadRequest)
+            BadRequestResponse onBadRequest,
+            ExecuteBackgroundResponseAsync onBackgroundProcess)
         {
             //The way this works...
             //1.  User clicks Third Party Applications\AffirmHealth over in Athena.
