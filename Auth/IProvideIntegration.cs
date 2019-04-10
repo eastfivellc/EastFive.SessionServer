@@ -8,6 +8,8 @@ namespace EastFive.Azure.Auth
 {
     public interface IProvideIntegration
     {
+        string GetDefaultName(IDictionary<string, string> extraParams);
+
         Task<bool> SupportsIntegrationAsync(Integration integration);
     }
 }

@@ -73,6 +73,7 @@ namespace EastFive.Azure.Auth
                     onNotFound);
         }
 
+        [Obsolete]
         [HttpGet]
         public static Task<HttpResponseMessage> QueryAsync(
             Api.Azure.AzureApplication application,
@@ -115,7 +116,8 @@ namespace EastFive.Azure.Auth
                         .Select(
                             async loginProvider =>
                             {
-                                var supportsIntegration = await (loginProvider.Value as IProvideIntegration).SupportsIntegrationAsync(integration);
+                                var integrationProvider = loginProvider.Value as IProvideIntegration;
+                                var supportsIntegration = await integrationProvider.SupportsIntegrationAsync(integration);
                                 return supportsIntegration.PairWithValue(loginProvider);
                             })
                         .Await()
@@ -124,10 +126,11 @@ namespace EastFive.Azure.Auth
                         .Select(
                             (loginProvider) =>
                             {
+                                var integrationProvider = loginProvider.Value as IProvideIntegration;
                                 return new Method
                                 {
                                     authenticationId = new Ref<Method>(loginProvider.Value.Id),
-                                    name = loginProvider.Value.Method,
+                                    name = integrationProvider.GetDefaultName(new Dictionary<string,string>()),
                                 };
                             });
                     return await onContent(integrationProviders);

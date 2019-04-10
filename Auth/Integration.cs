@@ -169,6 +169,7 @@ namespace EastFive.Azure.Auth
                             // TODO? This
                             // var accountIdDidMatch = await await authorization.ParseCredentailParameters(
                             integration.Method = authorization.Method; // method is used in the .mappingId
+                            integration.authorization = authorizationRefMaybe;
                             var authorizationLookup = new AuthorizationIntegrationLookup
                             {
                                 integrationMappingRef = integration.integrationRef,
@@ -273,6 +274,7 @@ namespace EastFive.Azure.Auth
                         :
                         accountLookup.integrationRefs.ids
                             .Append(integration.integrationRef.id)
+                            .Distinct()
                             .AsRefs<Integration>();
                     await saveAsync(accountLookup);
                     return onCreated();

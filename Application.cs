@@ -197,6 +197,7 @@ namespace EastFive.Api.Azure
                 EastFive.Azure.Auth.Method authentication, EastFive.Azure.Auth.Authorization authorization,
                 IProvideAuthorization authorizationProvider,
             Func<Guid, TResult> onCreatedMapping,
+            Func<Uri, TResult> onInterceptProcess,
             Func<TResult> onNoChange)
         {
             if (authorizationProvider is Credentials.IProvideAccountInformation)
@@ -207,6 +208,7 @@ namespace EastFive.Api.Azure
                             authentication, authorization,
                             this,
                         onCreatedMapping,
+                        onInterceptProcess,
                         onNoChange);
             }
             return onNoChange();
