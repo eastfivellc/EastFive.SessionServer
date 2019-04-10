@@ -312,6 +312,7 @@ namespace EastFive.Azure.Auth
                 {
                     var integrationsKvp = accountIntegrationLookup.integrationRefs
                         .StorageGet()
+                        .Where(integration => integration.Method != null)
                         .Where(integration => integration.Method.id == methodId.id)
                         .Where(integration => integration.authorization.HasValue)
                         .Select(
