@@ -85,7 +85,7 @@ namespace EastFive.Azure.Auth
                         {
                             return new Method
                             {
-                                authenticationId = new Ref<Method>(loginProvider.Value.Id),
+                                authenticationId = loginProvider.Value.Id.AsRef<Method>(),
                                 name = loginProvider.Value.Method,
                             };
                         }));
