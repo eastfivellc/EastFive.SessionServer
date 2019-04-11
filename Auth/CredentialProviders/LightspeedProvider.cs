@@ -294,7 +294,7 @@ namespace EastFive.Api.Azure.Credentials
                 new Dictionary<string, string>() { { "AutoIntegrateProducts", "When true, the system pick the best match for products when a mapping does not exists." } }).ToTask();
         }
 
-        public Task<bool> SupportsIntegrationAsync(Integration integration)
+        public Task<bool> SupportsIntegrationAsync(Guid accountId)
         {
             return true.AsTask();
         }
