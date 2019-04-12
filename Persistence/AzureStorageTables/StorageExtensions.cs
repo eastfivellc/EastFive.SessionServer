@@ -14,6 +14,7 @@ using EastFive.Reflection;
 using EastFive.Persistence.Azure.StorageTables.Driver;
 using BlackBarLabs.Persistence.Azure.StorageTables;
 using BlackBarLabs.Persistence.Azure;
+using Microsoft.WindowsAzure.Storage.Table;
 
 namespace EastFive.Azure.Persistence.AzureStorageTables
 {
@@ -312,7 +313,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
         }
 
         public static Task<TResult> StorageCreateAsync<TEntity, TResult>(this TEntity entity,
-            Func<Guid, TResult> onCreated,
+            Func<EastFive.Persistence.Azure.StorageTables.IAzureStorageTableEntity<TEntity>, TResult> onCreated,
             Func<TResult> onAlreadyExists)
         {
             return AzureTableDriverDynamic
@@ -488,11 +489,11 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                 .FromSettings();
             return await driver
                 .CreateAsync(entity,
-                    (resourceId) =>
+                    (tableEntity) =>
                     {
                         Func<Task> rollback = (() =>
                         {
-                            return driver.DeleteByIdAsync<TEntity, bool>(resourceId,
+                            return driver.DeleteAsync<TEntity, bool>(tableEntity.RowKey, tableEntity.PartitionKey,
                                 () => true,
                                 () => false);
                         });

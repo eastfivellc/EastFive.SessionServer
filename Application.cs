@@ -348,6 +348,8 @@ namespace EastFive.Api.Azure
             public DateTime when;
             public Expression<ExecuteAsyncDelegate> callback { get; set; }
 
+            public bool ForceBackground => false;
+
             public Task<HttpResponseMessage> InvokeAsync(Action<double> updateCallback)
             {
                 return callback.Compile().Invoke(
