@@ -266,7 +266,7 @@ namespace EastFive.Azure.Auth
                 () => onAccountNotFound());
         }
 
-        private static async Task<TResult> CreateWithAuthorization<TResult>(
+        public static async Task<TResult> CreateWithAuthorization<TResult>(
             Integration integration, Authorization authorization,
             Guid accountId,
             Func<TResult> onCreated,
