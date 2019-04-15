@@ -323,7 +323,7 @@ namespace EastFive.Azure.Auth
 
         public static async Task<TResult> CreateByMethodAndKeyAsync<TResult>(IRef<Method> method, 
                 Guid accountId, IDictionary<string, string> parameters,
-            Func<Integration, TResult> onCreated,
+            Func<Integration, Authorization, TResult> onCreated,
             Func<string, TResult> onFailure)
         {
             var authorizationRef = new Ref<Authorization>(SecureGuid.Generate());
@@ -345,7 +345,7 @@ namespace EastFive.Azure.Auth
                     };
                     return CreateWithAuthorization(integration, authorization,
                             accountId,
-                        () => onCreated(integration),
+                        () => onCreated(integration, authorization),
                         () => throw new Exception("Guid not unique"),
                         (why) => onFailure(why));
                 },
