@@ -1,6 +1,7 @@
 ﻿using BlackBarLabs.Api;
 using BlackBarLabs.Extensions;
 using EastFive.Api.Controllers;
+using EastFive.Azure.Persistence.AzureStorageTables;
 using EastFive.Extensions;
 using EastFive.Security.SessionServer;
 using EastFive.Security.SessionServer.Api.Resources;
@@ -55,6 +56,15 @@ namespace EastFive.Api.Azure.Credentials.Resources
             var credentialId = authenticationRequest.Id.ToGuid();
             if (!credentialId.HasValue)
                 return request.CreateResponse(HttpStatusCode.BadRequest).AddReason("Id must have value");
+
+            var authorization = new EastFive.Azure.Auth.Authorization
+            {
+                authorizationRef = authenticationRequest.Id.UUID.AsRef<EastFive.Azure.Auth.Authorization>(),
+                LocationAuthenticationReturn = authenticationRequest.LocationAuthentication,
+            };
+            bool authCreated = await authorization.StorageCreateAsync(
+                (discard) => true,
+                () => false);
 
             var method = authenticationRequest.Method;
             return await context.Sessions.CreateLoginAsync(credentialId.Value,
