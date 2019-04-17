@@ -237,7 +237,7 @@ namespace EastFive.Azure.Auth
             TelemetryClient telemetry)
         {
             return await await application.OnUnmappedUserAsync(subject, extraParams,
-                    authentication, authorization, authorizationProvider,
+                    authentication, authorization, authorizationProvider, baseUri,
                 (accountId) => createMappingAsync(accountId),
                 (callback) => onInterceptProcess(callback).AsTask(),
                 () =>
