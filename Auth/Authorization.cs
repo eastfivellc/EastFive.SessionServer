@@ -115,6 +115,23 @@ namespace EastFive.Azure.Auth
                 () => onAuthenticationDoesNotExist().AsTask());
         }
 
+        [Api.HttpPatch] //(MatchAllBodyParameters = false)]
+        public async static Task<HttpResponseMessage> UpdateAsync(
+                [Property(Name = AuthorizationIdPropertyName)]IRef<Authorization> authorizationRef,
+                [Property(Name = LocationLogoutReturnPropertyName)]Uri locationLogoutReturn,
+            NoContentResponse onUpdated,
+            AlreadyExistsResponse onNotFound)
+        {
+            return await authorizationRef.StorageUpdateAsync(
+                async (authorization, saveAsync) =>
+                {
+                    authorization.LocationLogoutReturn = locationLogoutReturn;
+                    await saveAsync(authorization);
+                    return onUpdated();
+                },
+                () => onNotFound());
+        }
+
         public async Task<TResult> ParseCredentailParameters<TResult>(
                 Api.Azure.AzureApplication application,
             Func<string, IProvideLogin, TResult> onSuccess,

@@ -135,6 +135,29 @@ namespace EastFive.Azure.Auth
         [Storage]
         public IRefOptional<AccountMappingLookup> accountMappingLookup { get; set; }
 
+        //[Api.HttpPost(MatchAllBodyParameters = true)]
+        //public async static Task<HttpResponseMessage> CreateInviteAsync(
+        //        [Property(Name = AccountPropertyName)]Guid accountId,
+        //        [Property(Name = MethodPropertyName)]IRef<Method> method,
+        //        [Resource]AccountMapping accountMapping,
+        //        Api.Azure.AzureApplication application, Api.Controllers.Security security,
+        //    CreatedResponse onCreated,
+        //    ForbiddenResponse onForbidden,
+        //    UnauthorizedResponse onUnauthorized,
+        //    ReferencedDocumentDoesNotExistsResponse<Authorization> onAuthenticationDoesNotExist,
+        //    GeneralConflictResponse onFailure)
+        //{
+        //    if (!await application.CanAdministerCredentialAsync(accountId, security))
+        //        return onUnauthorized();
+
+        //    return await accountMapping.StorageCreateAsync(
+        //        createdId =>
+        //        {
+        //            return onCreated();
+        //        },
+        //        () => onForbidden().AddReason("Account is already mapped to that authentication."));
+        //}
+
         [Api.HttpPost] //(MatchAllBodyParameters = false)]
         public async static Task<HttpResponseMessage> CreateAsync(
                 [Property(Name = AccountPropertyName)]Guid accountId,

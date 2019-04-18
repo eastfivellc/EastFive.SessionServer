@@ -223,6 +223,7 @@
     <Compile Include="Api\Resources\Monitoring.cs" />
     <Compile Include="Api\Resources\Queries\MonitoringQuery.cs" />
     <Compile Include="Attributes\ASTFVCPropertyAttribute.cs" />
+    <Compile Include="Auth\Invite.cs" />
     <Compile Include="Auth\CredentialProviders\AzureADB2C\OpenIdRedirection.cs" />
     <Compile Include="Auth\Integration.cs" />
     <Compile Include="Auth\CredentialProviders\AdminLogin.cs" />
