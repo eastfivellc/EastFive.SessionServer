@@ -178,7 +178,7 @@ namespace EastFive.Api.Azure
             Func<TResult> onCredentialSystemNotAvailable,
             Func<string, TResult> onFailure)
         {
-            return await this.AuthorizationProviders.TryGetValue(method,
+            return await this.AuthorizationProviders.TryGetValueAsync(method,
                 onSuccess,
                 onCredentialSystemNotAvailable);
         }
@@ -189,7 +189,7 @@ namespace EastFive.Api.Azure
             Func<string, TResult> onFailure)
         {
             // this.InitializationWait();
-            return await this.LoginProviders.TryGetValue(method,
+            return await this.LoginProviders.TryGetValueAsync(method,
                 onSuccess,
                 onCredentialSystemNotAvailable);
         }
