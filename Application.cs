@@ -287,8 +287,11 @@ namespace EastFive.Api.Azure
         {
             if (!authorization.LocationAuthenticationReturn.IsDefaultOrNull())
             {
-                var redirectUrl = SetRedirectParameters(requestId, authorization, authorization.LocationAuthenticationReturn);
-                return onSuccess(redirectUrl);
+                if (authorization.LocationAuthenticationReturn.IsAbsoluteUri)
+                {
+                    var redirectUrl = SetRedirectParameters(requestId, authorization, authorization.LocationAuthenticationReturn);
+                    return onSuccess(redirectUrl);
+                }
             }
 
             if (null != authParams && authParams.ContainsKey(Security.SessionServer.Configuration.AuthorizationParameters.RedirectUri))

@@ -65,6 +65,7 @@ namespace EastFive.Azure.Auth
                    (authorization) => true;
             var redirections = allQuery
                 .StorageQuery()
+                .Where(authorization => !authorization.Method.IsDefaultOrNull())
                 .Select(
                     async authorization =>
                     {
