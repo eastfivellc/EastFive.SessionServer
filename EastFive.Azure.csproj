@@ -234,6 +234,7 @@
     <Compile Include="Auth\Authorization.cs" />
     <Compile Include="Auth\IProvideIntegration.cs" />
     <Compile Include="Auth\Redirection.cs" />
+    <Compile Include="Auth\RedirectionManager.cs" />
     <Compile Include="Auth\Session.cs" />
     <Compile Include="Auth\Credentials\IProvideAccountInformation.cs" />
     <Compile Include="Monitoring\Monitoring.cs" />

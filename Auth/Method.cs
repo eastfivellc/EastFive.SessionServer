@@ -17,6 +17,7 @@ using EastFive.Persistence.Azure.StorageTables;
 using EastFive.Azure.Persistence.AzureStorageTables;
 using BlackBarLabs.Extensions;
 using BlackBarLabs.Api;
+using EastFive.Security.SessionServer;
 
 namespace EastFive.Azure.Auth
 {
@@ -237,6 +238,28 @@ namespace EastFive.Azure.Auth
                         };
                     },
                     () => throw new Exception($"Login provider `{methodName}` is not enabled."));
+        }
+
+        public async Task<TResult> ParseTokenAsync<TResult>(IDictionary<string, string> parameters, 
+            Api.Azure.AzureApplication application,
+            Func<string, IRefOptional<Authorization>, IProvideLogin, TResult> onParsed,
+            Func<string, TResult> onFailure)
+        {
+            var methodName = this.name;
+            var matchingLoginProviders = await application.LoginProviders
+                .SelectValues()
+                .Where(loginProvider => loginProvider.Method == methodName)
+                .ToArrayAsync();
+            if (!matchingLoginProviders.Any())
+                return onFailure("Method does not match any existing authentication.");
+            var matchingLoginProvider = matchingLoginProviders.First();
+
+            return matchingLoginProvider.ParseCredentailParameters(parameters,
+                (externalId, authorizationIdMaybe, lookupDiscard) =>
+                {
+                    return onParsed(externalId, authorizationIdMaybe.AsRefOptional<Authorization>(), matchingLoginProvider);
+                },
+                onFailure);
         }
 
         public async Task<TResult> RedeemTokenAsync<TResult>(

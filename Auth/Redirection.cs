@@ -22,6 +22,7 @@ namespace EastFive.Azure.Auth
 {
     public class Redirection
     {
+
         public static Task<TResult> ProcessRequestAsync<TResult>(
                 EastFive.Azure.Auth.Method authentication, 
                 IDictionary<string, string> values,
@@ -65,67 +66,6 @@ namespace EastFive.Azure.Auth
             return await await authentication.RedeemTokenAsync(values, application,
                 async (externalAccountKey, authorizationRefMaybe, loginProvider, extraParams) =>
                 {
-                    async Task<TResult> ProcessAsync(Authorization authorization,
-                        Func<Authorization, Task> saveAsync)
-                    {
-                        return await await AccountMapping.FindByMethodAndKeyAsync(authentication.authenticationId, externalAccountKey,
-                                    authorization,
-                                async internalAccountId =>
-                                {
-                                    authorization.parameters = extraParams;
-                                    await saveAsync(authorization);
-                                    return await CreateLoginResponse(requestId,
-                                            internalAccountId, extraParams,
-                                            authentication, authorization,
-                                            baseUri,
-                                            application, loginProvider,
-                                        onRedirect,
-                                        onBadResponse,
-                                        telemetry);
-                                },
-                                async () =>
-                                {
-                                    return await await UnmappedCredentialAsync(externalAccountKey, extraParams,
-                                        authentication, authorization,
-                                        loginProvider, application, baseUri,
-
-                                        // Create mapping
-                                        async (internalAccountId) =>
-                                        {
-                                            authorization.parameters = extraParams;
-                                            await saveAsync(authorization);
-                                            return await AccountMapping.CreateByMethodAndKeyAsync(authorization, externalAccountKey,
-                                                internalAccountId,
-                                                () =>
-                                                {
-                                                    return CreateLoginResponse(requestId,
-                                                            internalAccountId, extraParams,
-                                                            authentication, authorization,
-                                                            baseUri,
-                                                            application, loginProvider,
-                                                        onRedirect,
-                                                        onBadResponse,
-                                                        telemetry);
-                                                },
-                                                (why) => onResponse(why).AsTask());
-                                        },
-                                        async (why) =>
-                                        {
-                                            // Save params so they can be used later
-                                            authorization.parameters = extraParams;
-                                            await saveAsync(authorization);
-                                            return onResponse(why);
-                                        },
-                                        async (interceptionUrl) =>
-                                        {
-                                            authorization.parameters = extraParams;
-                                            await saveAsync(authorization);
-                                            return onRedirect(interceptionUrl, null);
-                                        },
-                                        telemetry);
-                                });
-                    }
-
                     if (!authorizationRefMaybe.HasValue)
                     {
                         var authorization = new Authorization
@@ -135,21 +75,33 @@ namespace EastFive.Azure.Auth
                             parameters = extraParams,
                         };
                         return await ProcessAsync(authorization,
-                            async (authorizationUpdated) =>
-                            {
-                                bool created = await authorizationUpdated.StorageCreateAsync(
-                                    authIdDiscard =>
-                                    {
-                                        return true;
-                                    },
-                                    () => throw new Exception("Secure guid not unique"));
-                            });
+                                async (authorizationUpdated) =>
+                                {
+                                    bool created = await authorizationUpdated.StorageCreateAsync(
+                                        authIdDiscard =>
+                                        {
+                                            return true;
+                                        },
+                                        () => throw new Exception("Secure guid not unique"));
+                                },
+                                authentication, externalAccountKey, extraParams,
+                                requestId, baseUri, application, loginProvider,
+                            onRedirect,
+                            onResponse,
+                            onBadResponse,
+                                telemetry);
                     }
                     var authorizationRef = authorizationRefMaybe.Ref;
                     return await authorizationRef.StorageUpdateAsync(
                         async (authorization, saveAsync) =>
                         {
-                            return await ProcessAsync(authorization, saveAsync);
+                            return await ProcessAsync(authorization, saveAsync,
+                                authentication, externalAccountKey, extraParams,
+                                requestId, baseUri, application, loginProvider,
+                                onRedirect,
+                                onResponse,
+                                onBadResponse,
+                                    telemetry);
                         },
                         () =>
                         {
@@ -158,6 +110,74 @@ namespace EastFive.Azure.Auth
                 },
                 (authorizationRef, extraparams) => throw new NotImplementedException(),
                 (why) => onBadResponse(why).AsTask());
+        }
+
+        public static async Task<TResult> ProcessAsync<TResult>(Authorization authorization,
+                Func<Authorization, Task> saveAsync,
+                Method authentication, string externalAccountKey,
+                IDictionary<string, string> extraParams,
+                Guid requestId, Uri baseUri, AzureApplication application, IProvideLogin loginProvider,
+            Func<Uri, object, TResult> onRedirect,
+            Func<string, TResult> onResponse,
+            Func<string, TResult> onBadResponse,
+            TelemetryClient telemetry)
+        {
+            return await await AccountMapping.FindByMethodAndKeyAsync(authentication.authenticationId, externalAccountKey,
+                    authorization,
+                async internalAccountId =>
+                {
+                    authorization.parameters = extraParams;
+                    await saveAsync(authorization);
+                    return await CreateLoginResponse(requestId,
+                                internalAccountId, extraParams,
+                                authentication, authorization,
+                                baseUri,
+                                application, loginProvider,
+                            onRedirect,
+                            onBadResponse,
+                            telemetry);
+                },
+                async () =>
+                {
+                        return await await UnmappedCredentialAsync(externalAccountKey, extraParams,
+                            authentication, authorization,
+                            loginProvider, application, baseUri,
+
+                            // Create mapping
+                            async (internalAccountId) =>
+                            {
+                                authorization.parameters = extraParams;
+                                await saveAsync(authorization);
+                                return await AccountMapping.CreateByMethodAndKeyAsync(authorization, externalAccountKey,
+                                    internalAccountId,
+                                    () =>
+                                    {
+                                        return CreateLoginResponse(requestId,
+                                                internalAccountId, extraParams,
+                                                authentication, authorization,
+                                                baseUri,
+                                                application, loginProvider,
+                                            onRedirect,
+                                            onBadResponse,
+                                            telemetry);
+                                    },
+                                    (why) => onResponse(why).AsTask());
+                            },
+                            async (why) =>
+                            {
+                                            // Save params so they can be used later
+                                            authorization.parameters = extraParams;
+                                await saveAsync(authorization);
+                                return onResponse(why);
+                            },
+                            async (interceptionUrl) =>
+                            {
+                                authorization.parameters = extraParams;
+                                await saveAsync(authorization);
+                                return onRedirect(interceptionUrl, null);
+                            },
+                            telemetry);
+                });
         }
 
         public static async Task<TResult> MapAccountAsync<TResult>(Authorization authorization,
