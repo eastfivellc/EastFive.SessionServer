@@ -43,7 +43,7 @@ namespace EastFive.Azure.Auth
         [Storage(Name = NamePropertyName)]
         public string name;
 
-        private Task<TResult> GetLoginProviderAsync<TResult>(Api.Azure.AzureApplication application,
+        public Task<TResult> GetLoginProviderAsync<TResult>(Api.Azure.AzureApplication application,
             Func<string, Security.SessionServer.IProvideLogin, TResult> onFound,
             Func<TResult> onNotFound)
         {
