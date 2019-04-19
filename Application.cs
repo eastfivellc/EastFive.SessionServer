@@ -130,17 +130,19 @@ namespace EastFive.Api.Azure
 
         public virtual async Task SendQueueMessageAsync(string queueName, byte[] byteContent)
         {
-            var queue = EastFive.Web.Configuration.Settings.GetString("EastFive.Azure.StorageTables.ConnectionString",
+            var appQueue = EastFive.Web.Configuration.Settings.GetString("EastFive.Azure.StorageTables.ConnectionString",
                 (connString) =>
                 {
                     var storageAccount = CloudStorageAccount.Parse(connString);
                     var queueClient = storageAccount.CreateCloudQueueClient();
-                    return queueClient.GetQueueReference(queueName);
+                    var queue = queueClient.GetQueueReference(queueName);
+                    queue.CreateIfNotExists();
+                    return queue;
                 },
                 (why) => throw new Exception(why));
 
             var message = new CloudQueueMessage(byteContent);
-            await queue.AddMessageAsync(message);
+            await appQueue.AddMessageAsync(message);
         }
 
         public virtual async Task SendStringQueueMessageAsync(string queueName, string stringContent)
@@ -176,7 +178,7 @@ namespace EastFive.Api.Azure
             Func<TResult> onCredentialSystemNotAvailable,
             Func<string, TResult> onFailure)
         {
-            return await this.AuthorizationProviders.TryGetValue(method,
+            return await this.AuthorizationProviders.TryGetValueAsync(method,
                 onSuccess,
                 onCredentialSystemNotAvailable);
         }
@@ -187,7 +189,7 @@ namespace EastFive.Api.Azure
             Func<string, TResult> onFailure)
         {
             // this.InitializationWait();
-            return await this.LoginProviders.TryGetValue(method,
+            return await this.LoginProviders.TryGetValueAsync(method,
                 onSuccess,
                 onCredentialSystemNotAvailable);
         }
@@ -195,7 +197,7 @@ namespace EastFive.Api.Azure
         public virtual async Task<TResult> OnUnmappedUserAsync<TResult>(
                 string subject, IDictionary<string, string> extraParameters,
                 EastFive.Azure.Auth.Method authentication, EastFive.Azure.Auth.Authorization authorization,
-                IProvideAuthorization authorizationProvider,
+                IProvideAuthorization authorizationProvider, Uri baseUri,
             Func<Guid, TResult> onCreatedMapping,
             Func<Uri, TResult> onInterceptProcess,
             Func<TResult> onNoChange)
@@ -205,7 +207,7 @@ namespace EastFive.Api.Azure
                 var accountInfoProvider = authorizationProvider as Credentials.IProvideAccountInformation;
                 return await accountInfoProvider
                     .CreateAccount(subject, extraParameters,
-                            authentication, authorization,
+                            authentication, authorization, baseUri,
                             this,
                         onCreatedMapping,
                         onInterceptProcess,
@@ -347,6 +349,8 @@ namespace EastFive.Api.Azure
         {
             public DateTime when;
             public Expression<ExecuteAsyncDelegate> callback { get; set; }
+
+            public bool ForceBackground => false;
 
             public Task<HttpResponseMessage> InvokeAsync(Action<double> updateCallback)
             {

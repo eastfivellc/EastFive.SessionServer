@@ -10,6 +10,6 @@ namespace EastFive.Azure.Auth
     {
         string GetDefaultName(IDictionary<string, string> extraParams);
 
-        Task<bool> SupportsIntegrationAsync(Integration integration);
+        Task<bool> SupportsIntegrationAsync(Guid accountId);
     }
 }

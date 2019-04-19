@@ -174,17 +174,24 @@ namespace EastFive.Azure.Auth
                 async () =>
                 {
                     return await await Method.ById(authorization.Method, application,
-                        method =>
+                        async method =>
                         {
-                            var loginProvider = default(IProvideLogin); // TODO:
-                            return CreateLoginResponse(requestId,
-                                    internalAccountId, authorization.parameters,
-                                    method, authorization,
-                                    baseUri,
-                                    application, loginProvider,
-                                (url, obj) => onRedirect(url),
-                                onFailure,
-                                telemetry);
+                            return await await method.GetLoginProviderAsync(application,
+                                (loginProviderMethodName, loginProvider) =>
+                                {
+                                    return CreateLoginResponse(requestId,
+                                           internalAccountId, authorization.parameters,
+                                           method, authorization,
+                                           baseUri,
+                                           application, loginProvider,
+                                       (url, obj) => onRedirect(url),
+                                       onFailure,
+                                       telemetry);
+                                },
+                                () =>
+                                {
+                                    return onFailure("Login provider is no longer supported by the system").AsTask();
+                                });
                         },
                         () => onFailure("Method no longer suppored.").AsTask());
                 },
@@ -237,7 +244,7 @@ namespace EastFive.Azure.Auth
             TelemetryClient telemetry)
         {
             return await await application.OnUnmappedUserAsync(subject, extraParams,
-                    authentication, authorization, authorizationProvider,
+                    authentication, authorization, authorizationProvider, baseUri,
                 (accountId) => createMappingAsync(accountId),
                 (callback) => onInterceptProcess(callback).AsTask(),
                 () =>

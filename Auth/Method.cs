@@ -43,7 +43,7 @@ namespace EastFive.Azure.Auth
         [Storage(Name = NamePropertyName)]
         public string name;
 
-        private Task<TResult> GetLoginProviderAsync<TResult>(Api.Azure.AzureApplication application,
+        public Task<TResult> GetLoginProviderAsync<TResult>(Api.Azure.AzureApplication application,
             Func<string, Security.SessionServer.IProvideLogin, TResult> onFound,
             Func<TResult> onNotFound)
         {
@@ -86,7 +86,7 @@ namespace EastFive.Azure.Auth
                         {
                             return new Method
                             {
-                                authenticationId = new Ref<Method>(loginProvider.Value.Id),
+                                authenticationId = loginProvider.Value.Id.AsRef<Method>(),
                                 name = loginProvider.Value.Method,
                             };
                         }));
@@ -97,9 +97,8 @@ namespace EastFive.Azure.Auth
             [QueryParameter(Name = "integration")]IRef<Integration> integrationRef,
             Api.Azure.AzureApplication application, EastFive.Api.Controllers.Security security,
             MultipartResponseAsync<Method> onContent,
-            ReferencedDocumentNotFoundResponse<Integration> onIntegrationNotFound, 
-            ForbiddenResponse onForbidden,
-            UnauthorizedResponse onUnauthorized)
+            UnauthorizedResponse onUnauthorized,
+            ReferencedDocumentNotFoundResponse<Integration> onIntegrationNotFound)
         {
             return await await integrationRef.StorageGetAsync(
                 async (integration) =>
@@ -108,16 +107,13 @@ namespace EastFive.Azure.Auth
                     if (!await application.CanAdministerCredentialAsync(accountId, security))
                         return onUnauthorized();
 
-                    if (integration.authorization.HasValue)
-                        return onForbidden().AddReason("Authorization already established");
-
                     var integrationProviders = application.LoginProviders
                         .Where(loginProvider => loginProvider.Value.GetType().IsSubClassOfGeneric(typeof(IProvideIntegration)))
                         .Select(
                             async loginProvider =>
                             {
                                 var integrationProvider = loginProvider.Value as IProvideIntegration;
-                                var supportsIntegration = await integrationProvider.SupportsIntegrationAsync(integration);
+                                var supportsIntegration = await integrationProvider.SupportsIntegrationAsync(accountId);
                                 return supportsIntegration.PairWithValue(loginProvider);
                             })
                         .Await()
@@ -130,12 +126,48 @@ namespace EastFive.Azure.Auth
                                 return new Method
                                 {
                                     authenticationId = new Ref<Method>(loginProvider.Value.Id),
-                                    name = integrationProvider.GetDefaultName(new Dictionary<string,string>()),
+                                    name = integrationProvider.GetDefaultName(new Dictionary<string, string>()),
                                 };
                             });
                     return await onContent(integrationProviders);
+
                 },
                 () => onIntegrationNotFound().AsTask());
+        }
+
+        [HttpGet]
+        public static async Task<HttpResponseMessage> QueryByIntegrationAsync(
+            [QueryParameter(Name = "integration_account")]Guid accountId,
+            Api.Azure.AzureApplication application, EastFive.Api.Controllers.Security security,
+            MultipartResponseAsync<Method> onContent,
+            UnauthorizedResponse onUnauthorized)
+        {
+            if (!await application.CanAdministerCredentialAsync(accountId, security))
+                return onUnauthorized();
+
+            var integrationProviders = application.LoginProviders
+                .Where(loginProvider => loginProvider.Value.GetType().IsSubClassOfGeneric(typeof(IProvideIntegration)))
+                .Select(
+                    async loginProvider =>
+                    {
+                        var integrationProvider = loginProvider.Value as IProvideIntegration;
+                        var supportsIntegration = await integrationProvider.SupportsIntegrationAsync(accountId);
+                        return supportsIntegration.PairWithValue(loginProvider);
+                    })
+                .Await()
+                .Where(kvp => kvp.Key)
+                .SelectValues()
+                .Select(
+                    (loginProvider) =>
+                    {
+                        var integrationProvider = loginProvider.Value as IProvideIntegration;
+                        return new Method
+                        {
+                            authenticationId = new Ref<Method>(loginProvider.Value.Id),
+                            name = integrationProvider.GetDefaultName(new Dictionary<string,string>()),
+                        };
+                    });
+            return await onContent(integrationProviders);
         }
 
         [HttpGet]
