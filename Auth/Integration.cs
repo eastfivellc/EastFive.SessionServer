@@ -210,13 +210,8 @@ namespace EastFive.Azure.Auth
                             // var accountIdDidMatch = await await authorization.ParseCredentailParameters(
                             integration.Method = authorization.Method; // method is used in the .mappingId
                             integration.authorization = authorizationRefMaybe;
-                            var authorizationLookup = new AuthorizationIntegrationLookup
-                            {
-                                integrationMappingRef = integration.integrationRef,
-                                authorizationLookupRef = authorization.authorizationRef,
-                            };
-                            return await await authorizationLookup.StorageCreateAsync(
-                                async (idDiscardAuthorizationLookup) =>
+                            return await await SaveAuthorizationLookupAsync(integration.integrationRef, authorization.authorizationRef,
+                                async () =>
                                 {
                                     await saveAsync(integration);
                                     return await SaveAccountLookupAsync(accountId, integration,
@@ -266,6 +261,20 @@ namespace EastFive.Azure.Auth
                 () => onAccountNotFound());
         }
 
+        public static Task<TResult> SaveAuthorizationLookupAsync<TResult>(IRef<Integration> integrationRef, IRef<Authorization> authorizationRef,
+            Func<TResult> onCreated,
+            Func<TResult> onAlreadyExists)
+        {
+            var authorizationLookup = new AuthorizationIntegrationLookup
+            {
+                integrationMappingRef = integrationRef,
+                authorizationLookupRef = authorizationRef,
+            };
+            return authorizationLookup.StorageCreateAsync(
+                (discardAuthorizationLookup) => onCreated(),
+                onAlreadyExists);
+        }
+
         public static async Task<TResult> CreateWithAuthorization<TResult>(
             Integration integration, Authorization authorization,
             Guid accountId,
@@ -274,13 +283,8 @@ namespace EastFive.Azure.Auth
             Func<string, TResult> onFailure)
         {
             integration.Method = authorization.Method; // method is used in the .mappingId
-            var authorizationLookup = new AuthorizationIntegrationLookup
-            {
-                integrationMappingRef = integration.integrationRef,
-                authorizationLookupRef = authorization.authorizationRef,
-            };
-            return await await authorizationLookup.StorageCreateAsync(
-                async (idDiscardAuthorizationLookup) =>
+            return await await SaveAuthorizationLookupAsync(integration.integrationRef, authorization.authorizationRef,
+                async () =>
                 {
                     return await await integration.StorageCreateAsync(
                         discard =>
@@ -323,7 +327,7 @@ namespace EastFive.Azure.Auth
 
         public static async Task<TResult> CreateByMethodAndKeyAsync<TResult>(IRef<Method> method, 
                 Guid accountId, IDictionary<string, string> parameters,
-            Func<Integration, TResult> onCreated,
+            Func<Integration, Authorization, TResult> onCreated,
             Func<string, TResult> onFailure)
         {
             var authorizationRef = new Ref<Authorization>(SecureGuid.Generate());
@@ -345,7 +349,7 @@ namespace EastFive.Azure.Auth
                     };
                     return CreateWithAuthorization(integration, authorization,
                             accountId,
-                        () => onCreated(integration),
+                        () => onCreated(integration, authorization),
                         () => throw new Exception("Guid not unique"),
                         (why) => onFailure(why));
                 },

@@ -197,7 +197,7 @@ namespace EastFive.Api.Azure
         public virtual async Task<TResult> OnUnmappedUserAsync<TResult>(
                 string subject, IDictionary<string, string> extraParameters,
                 EastFive.Azure.Auth.Method authentication, EastFive.Azure.Auth.Authorization authorization,
-                IProvideAuthorization authorizationProvider,
+                IProvideAuthorization authorizationProvider, Uri baseUri,
             Func<Guid, TResult> onCreatedMapping,
             Func<Uri, TResult> onInterceptProcess,
             Func<TResult> onNoChange)
@@ -207,7 +207,7 @@ namespace EastFive.Api.Azure
                 var accountInfoProvider = authorizationProvider as Credentials.IProvideAccountInformation;
                 return await accountInfoProvider
                     .CreateAccount(subject, extraParameters,
-                            authentication, authorization,
+                            authentication, authorization, baseUri,
                             this,
                         onCreatedMapping,
                         onInterceptProcess,
