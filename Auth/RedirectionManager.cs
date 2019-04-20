@@ -47,6 +47,12 @@ namespace EastFive.Azure.Auth
         [Storage]
         public string message { get; set; }
 
+        public const string When = "when";
+        [ApiProperty(PropertyName = When)]
+        [JsonProperty(PropertyName = When)]
+        [Storage]
+        public DateTime when { get; set; }
+
         public const string Redirection = "redirection";
         [ApiProperty(PropertyName = Redirection)]
         [JsonProperty(PropertyName = Redirection)]
@@ -85,6 +91,7 @@ namespace EastFive.Azure.Auth
                                             {
                                                 return new RedirectionManager
                                                 {
+                                                    when = authorization.lastModified,
                                                     message = $"Ready:{externalId}",
                                                     authorization = authorization.authorizationRef.Optional(),
                                                     redirection = uri,
@@ -102,7 +109,7 @@ namespace EastFive.Azure.Auth
                                 message = "Method no longer supported",
                             }.AsTask());
                     })
-                .Await();
+                .Parallel();
             return onContent(redirections);
         }
 

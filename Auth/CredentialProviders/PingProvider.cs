@@ -98,7 +98,7 @@ namespace EastFive.Api.Azure.Credentials
                                 {
                                     dynamic stuff = null;
                                     stuff = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(content);
-                                    string subject = (string)stuff["pingone.subject"];
+                                    string subject = (string)stuff[Subject];
                                     //string subject = stuff.pingone.subject;
                                     var hash = SHA512.Create().ComputeHash(System.Text.Encoding.UTF8.GetBytes(subject));
                                     var loginId = new Guid(hash.Take(16).ToArray());
@@ -125,7 +125,10 @@ namespace EastFive.Api.Azure.Credentials
             Func<string, Guid?, Guid?, TResult> onSuccess, 
             Func<string, TResult> onFailure)
         {
-            string subject = responseParams["pingone.subject"];
+            if (!responseParams.ContainsKey(Subject))
+                return onFailure("Missing pingone.subject");
+
+            string subject = responseParams[Subject];
             var hash = SHA512.Create().ComputeHash(System.Text.Encoding.UTF8.GetBytes(subject));
             var loginId = new Guid(hash.Take(16).ToArray());
 

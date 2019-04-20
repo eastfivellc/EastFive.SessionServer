@@ -42,6 +42,9 @@ namespace EastFive.Azure.Auth
         [RowKey]
         [StandardParititionKey]
         public IRef<Authorization> authorizationRef;
+
+        [LastModified]
+        public DateTime lastModified;
         
         public const string MethodPropertyName = "method";
         [ApiProperty(PropertyName = MethodPropertyName)]
