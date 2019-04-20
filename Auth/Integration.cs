@@ -150,7 +150,7 @@ namespace EastFive.Azure.Auth
                 Api.Azure.AzureApplication application, EastFive.Api.Controllers.Security security,
             NoContentResponse onDeleted,
             NotFoundResponse onNotFound,
-            ForbiddenResponse forbidden)
+            ForbiddenResponse onForbidden)
         {
             var integrationMaybe = await integrationRef.StorageGetAsync(i => i, () => default(Integration?));
             if (!integrationMaybe.HasValue)
@@ -158,30 +158,9 @@ namespace EastFive.Azure.Auth
 
             var integration = integrationMaybe.Value;
             if (!await application.CanAdministerCredentialAsync(integration.accountId, security))
-                return forbidden();
+                return onForbidden();
 
-            return await await integrationRef.StorageDeleteAsync(
-                async () =>
-                {
-                    if (integration.authorization.HasValue)
-                    {
-                        var authorizationId = integration.authorization.id.Value;
-                        var authorizationLookupRef = authorizationId.AsRef<AuthorizationIntegrationLookup>();
-                        await authorizationLookupRef.StorageDeleteAsync(() => true);
-                    }
-                    var accountIntegrationRef = integration.accountId.AsRef<AccountIntegrationLookup>();
-                    await accountIntegrationRef.StorageUpdateAsync(
-                        async (accountLookup, saveAsync) =>
-                        {
-                            accountLookup.integrationRefs = accountLookup.integrationRefs.ids
-                                .Where(id => id != integration.id)
-                                .AsRefs<Integration>();
-                            await saveAsync(accountLookup);
-                            return true;
-                        });
-                    return onDeleted();
-                },
-                () => onNotFound().AsTask());
+            return await DeleteInternalAsync(integrationRef, application, () => onDeleted(), () => onNotFound());
         }
 
         [Api.HttpPatch] //(MatchAllBodyParameters = false)]
@@ -231,6 +210,40 @@ namespace EastFive.Azure.Auth
                 },
                 () => onNotFound());
 
+        }
+
+        public static async Task<TResult> DeleteInternalAsync<TResult>(
+                IRef<Integration> integrationRef, Api.Azure.AzureApplication application, 
+            Func<TResult> onDeleted,
+            Func<TResult> onNotFound)
+        {
+            var integrationMaybe = await integrationRef.StorageGetAsync(i => i, () => default(Integration?));
+            if (!integrationMaybe.HasValue)
+                return onNotFound();
+
+            var integration = integrationMaybe.Value;
+            return await await integrationRef.StorageDeleteAsync(
+                async () =>
+                {
+                    if (integration.authorization.HasValue)
+                    {
+                        var authorizationId = integration.authorization.id.Value;
+                        var authorizationLookupRef = authorizationId.AsRef<AuthorizationIntegrationLookup>();
+                        await authorizationLookupRef.StorageDeleteAsync(() => true);
+                    }
+                    var accountIntegrationRef = integration.accountId.AsRef<AccountIntegrationLookup>();
+                    await accountIntegrationRef.StorageUpdateAsync(
+                        async (accountLookup, saveAsync) =>
+                        {
+                            accountLookup.integrationRefs = accountLookup.integrationRefs.ids
+                                .Where(id => id != integration.id)
+                                .AsRefs<Integration>();
+                            await saveAsync(accountLookup);
+                            return true;
+                        });
+                    return onDeleted();
+                },
+                () => onNotFound().AsTask());
         }
 
         public static Task<TResult> GetIntegrationsByAccountAsync<TResult>(Guid accountId,
