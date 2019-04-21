@@ -338,36 +338,55 @@ namespace EastFive.Azure.Auth
                 });
         }
 
-        public static async Task<TResult> CreateByMethodAndKeyAsync<TResult>(IRef<Method> method, 
+        public static async Task<TResult> CreateByMethodAndKeyAsync<TResult>(IRef<Integration> integrationRef, 
+                IRef<Authorization> authorizationRef, IRef<Method> methodRef,
                 Guid accountId, IDictionary<string, string> parameters,
             Func<Integration, Authorization, TResult> onCreated,
+            Func<TResult> onIntegrationAlreadyExists,
+            Func<TResult> onAuthorizationAlreadyExists,
             Func<string, TResult> onFailure)
         {
-            var authorizationRef = new Ref<Authorization>(SecureGuid.Generate());
             var authorization = new Authorization
             {
                 authorizationRef = authorizationRef,
                 parameters = parameters,
-                Method = method,
+                Method = methodRef,
             };
             return await await authorization.StorageCreateAsync<Authorization, Task<TResult>>(
                 (discardId) =>
                 {
                     var integration = new Integration
                     {
-                        integrationRef = Guid.NewGuid().AsRef<Integration>(),
+                        integrationRef = integrationRef,
                         accountId = accountId,
                         authorization = authorizationRef.Optional(),
-                        Method = method,
+                        Method = methodRef,
                     };
                     return CreateWithAuthorization(integration, authorization,
                             accountId,
                         () => onCreated(integration, authorization),
-                        () => throw new Exception("Guid not unique"),
+                        () => onIntegrationAlreadyExists(),
                         (why) => onFailure(why));
                 },
-                () => throw new Exception("Guid not unique"));
+                () => onAuthorizationAlreadyExists().AsTask());
         }
+
+        public static Task<TResult> CreateByMethodAndKeyAsync<TResult>(IRef<Method> methodRef,
+                Guid accountId, IDictionary<string, string> parameters,
+            Func<Integration, Authorization, TResult> onCreated,
+            Func<string, TResult> onFailure)
+        {
+            return CreateByMethodAndKeyAsync(
+                Guid.NewGuid().AsRef<Integration>(),
+                SecureGuid.Generate().AsRef<Authorization>(),
+                methodRef,
+                accountId,
+                parameters,
+                onCreated,
+                () => throw new Exception("Guid not unique"),
+                () => throw new Exception("Guid not unique"),
+                onFailure);
+        }                
 
         public static async Task<TResult> GetParametersByAccountIdAsync<TResult>(IRef<Method> methodId, Guid accountId,
             Func<IEnumerableAsync<KeyValuePair<Integration, Authorization>>, TResult> onFound,
