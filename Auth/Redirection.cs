@@ -24,7 +24,7 @@ namespace EastFive.Azure.Auth
     {
 
         public static Task<TResult> ProcessRequestAsync<TResult>(
-                EastFive.Azure.Auth.Method authentication, 
+                EastFive.Azure.Auth.Method method, 
                 IDictionary<string, string> values,
                 AzureApplication application, HttpRequestMessage request,
                 System.Web.Http.Routing.UrlHelper urlHelper,
@@ -39,11 +39,11 @@ namespace EastFive.Azure.Auth
             var requestId = Guid.NewGuid();
 
             return authorizationRequestManager.CredentialValidation<TResult>(requestId, application,
-                    authentication.authenticationId, values,
+                    method.authenticationId, values,
                 () =>
                 {
                     var baseUri = request.RequestUri;
-                    return AuthenticationAsync(requestId, authentication, values, baseUri, application,
+                    return AuthenticationAsync(requestId, method, values, baseUri, application,
                         onRedirect,
                         onResponse,
                         onResponse,
