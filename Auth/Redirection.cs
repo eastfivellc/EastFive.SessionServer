@@ -60,7 +60,6 @@ namespace EastFive.Azure.Auth
             Func<string, TResult> onBadResponse,
             Func<TResult> onAuthorizationNotFound)
         {
-            var context = application.AzureContext;
             var authorizationRequestManager = application.AuthorizationRequestManager;
             var telemetry = application.Telemetry;
             return await await authentication.RedeemTokenAsync(values, application,
