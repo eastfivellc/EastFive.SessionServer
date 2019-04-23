@@ -62,6 +62,7 @@ namespace EastFive.Azure.Auth
         [Api.HttpGet]
         public static Task<HttpResponseMessage> GetAllSecureAsync(
                 [QueryParameter(Name = "ApiKeySecurity")]string apiSecurityKey,
+                [QueryParameter(Name = "method")]IRef<Method> methodRef,
                 ApiSecurity apiSecurity,
                 AzureApplication application,
                 HttpRequestMessage request,
@@ -72,6 +73,7 @@ namespace EastFive.Azure.Auth
             var redirections = allQuery
                 .StorageQuery()
                 .Where(authorization => !authorization.Method.IsDefaultOrNull())
+                .Where(authorization => authorization.Method.id == methodRef.id)
                 .Select(
                     async authorization =>
                     {
