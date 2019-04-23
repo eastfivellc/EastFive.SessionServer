@@ -60,23 +60,37 @@ namespace EastFive.Azure.Auth
         public Uri redirection { get; set; }
 
         [Api.HttpGet]
-        public static Task<HttpResponseMessage> GetAllSecureAsync(
+        public async static Task<HttpResponseMessage> GetAllSecureAsync(
                 [QueryParameter(Name = "ApiKeySecurity")]string apiSecurityKey,
                 [QueryParameter(Name = "method")]IRef<Method> methodRef,
+                [OptionalQueryParameter(Name = "successOnly")]bool successOnly,
                 ApiSecurity apiSecurity,
                 AzureApplication application,
                 HttpRequestMessage request,
-            MultipartResponseAsync<RedirectionManager> onContent)
+            ContentTypeResponse<RedirectionManager> onContent)
         {
             Expression<Func<Authorization, bool>> allQuery =
                    (authorization) => true;
-            var redirections = allQuery
+            var redirections = await allQuery
                 .StorageQuery()
                 .Where(authorization => !authorization.Method.IsDefaultOrNull())
                 .Where(authorization => authorization.Method.id == methodRef.id)
                 .Select(
                     async authorization =>
                     {
+                        RedirectionManager? Failure(string why)
+                        {
+                            if (successOnly)
+                                return default(RedirectionManager?);
+
+                            return new RedirectionManager
+                            {
+                                authorization = authorization.authorizationRef.Optional(),
+                                message = why,
+                                when = authorization.lastModified
+                            };
+                        }
+
                         return await await Method.ById(authorization.Method, application,
                             async method =>
                             {
@@ -99,20 +113,18 @@ namespace EastFive.Azure.Auth
                                                     redirection = uri,
                                                 };
                                             },
-                                            (why) => new RedirectionManager { authorization = authorization.authorizationRef.Optional(), message = why },
-                                            (why) => new RedirectionManager { authorization = authorization.authorizationRef.Optional(), message = why },
+                                            Failure,
+                                            Failure,
                                             application.Telemetry);
                                     },
-                                    why => (new RedirectionManager { authorization = authorization.authorizationRef.Optional(), message = why }).AsTask());
+                                    (why) => Failure(why).AsTask());
                             },
-                            () => new RedirectionManager()
-                            {
-                                authorization = authorization.authorizationRef.Optional(),
-                                message = "Method no longer supported",
-                            }.AsTask());
+                            () => Failure("Method no longer supported").AsTask());
                     })
-                .Parallel();
-            return onContent(redirections);
+                .Parallel()
+                .SelectWhereHasValue()
+                .OrderByDescendingAsync(item => item.when);
+            return onContent(redirections.ToArray());
         }
 
         [Api.HttpGet]
