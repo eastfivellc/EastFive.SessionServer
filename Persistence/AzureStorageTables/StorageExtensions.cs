@@ -314,7 +314,9 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
 
         public static Task<TResult> StorageCreateAsync<TEntity, TResult>(this TEntity entity,
             Func<EastFive.Persistence.Azure.StorageTables.IAzureStorageTableEntity<TEntity>, TResult> onCreated,
-            Func<TResult> onAlreadyExists)
+            Func<TResult> onAlreadyExists,
+            Expression<Func<TEntity, TResult>>[] onModificationFailures = 
+                default(Expression<Func<TEntity, TResult>>[]))
         {
             return AzureTableDriverDynamic
                 .FromSettings()
