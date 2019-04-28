@@ -54,7 +54,7 @@ namespace EastFive.Api.Azure.Credentials
         public async Task<TResult> CreatePasswordCredentialsAsync<TResult>(Guid passwordCredentialId, Guid actorId,
                 string displayName, string username, bool isEmail, string token, bool forceChange,
                 DateTime? emailLastSent, Uri callbackUrl,
-                EastFive.Api.Controllers.Security security, AzureApplication application,
+                EastFive.Api.Controllers.SessionToken security, AzureApplication application,
             Func<TResult> onSuccess,
             Func<TResult> credentialAlreadyExists,
             Func<Guid, TResult> onUsernameAlreadyInUse,
@@ -192,7 +192,7 @@ namespace EastFive.Api.Azure.Credentials
         }
 
         internal async Task<TResult> GetPasswordCredentialAsync<TResult>(Guid passwordCredentialId,
-                EastFive.Api.Controllers.Security security, AzureApplication application,
+                EastFive.Api.Controllers.SessionToken security, AzureApplication application,
             Func<PasswordCredential, TResult> success,
             Func<TResult> notFound,
             Func<TResult> onUnauthorized,
@@ -227,7 +227,7 @@ namespace EastFive.Api.Azure.Credentials
         }
 
         internal async Task<TResult> GetPasswordCredentialByActorAsync<TResult>(Guid actorId,
-                EastFive.Api.Controllers.Security security, AzureApplication application,
+                EastFive.Api.Controllers.SessionToken security, AzureApplication application,
             Func<PasswordCredential[], TResult> success,
             Func<TResult> notFound,
             Func<TResult> onUnauthorized,
@@ -350,13 +350,15 @@ namespace EastFive.Api.Azure.Credentials
 
         internal async Task<TResult> UpdatePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
                 string password, bool forceChange, DateTime? emailLastSent,
-                EastFive.Api.Controllers.Security security, AzureApplication application,
+                EastFive.Api.Controllers.SessionToken security, AzureApplication application,
             Func<TResult> onSuccess,
             Func<TResult> onNotFound,
             Func<TResult> onUnathorized,
             Func<TResult> onServiceNotAvailable,
             Func<string, TResult> onFailure)
         {
+            if (!security.accountIdMaybe.HasValue)
+                return onUnathorized();
             var resultUpdatePassword = await dataContext.PasswordCredentials.UpdatePasswordCredentialAsync(passwordCredentialId,
                 async (actorId, loginId, emailLastSentCurrent, updateEmailLastSentAsync)  =>
                 {
@@ -379,12 +381,12 @@ namespace EastFive.Api.Azure.Credentials
                             async (loginInfo) =>
                             {
                                 var email = await Library.configurationManager.GetActorAdministrationEmailAsync(actorId, 
-                                        security.performingAsActorId, security.claims,
+                                        security.accountIdMaybe.Value, security.claims,
                                     address => address,
                                     () => string.Empty,
                                     () => string.Empty,
                                     (why) => string.Empty);
-                                if (string.IsNullOrWhiteSpace(email))
+                                if (email.IsNullOrWhiteSpace())
                                 {
                                     email = loginInfo.GetEmail(
                                         address => address,
@@ -521,7 +523,7 @@ namespace EastFive.Api.Azure.Credentials
         }
         
         internal async Task<TResult> DeletePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
-                EastFive.Api.Controllers.Security security, AzureApplication application,
+                EastFive.Api.Controllers.SessionToken security, AzureApplication application,
             Func<TResult> success,
             Func<TResult> onUnauthorized,
             Func<TResult> notFound,

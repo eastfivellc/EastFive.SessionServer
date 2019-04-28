@@ -15,6 +15,7 @@ using EastFive.Persistence.Azure.StorageTables.Driver;
 using BlackBarLabs.Persistence.Azure.StorageTables;
 using BlackBarLabs.Persistence.Azure;
 using Microsoft.WindowsAzure.Storage.Table;
+using EastFive.Persistence.Azure;
 
 namespace EastFive.Azure.Persistence.AzureStorageTables
 {
@@ -315,14 +316,15 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
         public static Task<TResult> StorageCreateAsync<TEntity, TResult>(this TEntity entity,
             Func<EastFive.Persistence.Azure.StorageTables.IAzureStorageTableEntity<TEntity>, TResult> onCreated,
             Func<TResult> onAlreadyExists,
-            Expression<Func<TEntity, TResult>>[] onModificationFailures = 
-                default(Expression<Func<TEntity, TResult>>[]))
+            IHandleFailedModifications<TResult>[] onModificationFailures =
+                default(IHandleFailedModifications<TResult>[]))
         {
             return AzureTableDriverDynamic
                 .FromSettings()
                 .CreateAsync(entity,
                     onCreated,
-                    onAlreadyExists);
+                    onAlreadyExists,
+                    onModificationFailures: onModificationFailures);
         }
 
         public static Task<TResult> StorageReplaceAsync<TEntity, TResult>(this TEntity entity,

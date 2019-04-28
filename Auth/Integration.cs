@@ -93,7 +93,7 @@ namespace EastFive.Azure.Auth
         [Api.HttpGet] //(MatchAllBodyParameters = false)]
         public async static Task<HttpResponseMessage> GetByAccountAsync(
                 [QueryParameter(Name = AccountPropertyName)]Guid accountId,
-                Api.Azure.AzureApplication application, EastFive.Api.Controllers.Security security,
+                Api.Azure.AzureApplication application, SessionToken security,
             MultipartResponseAsync<Integration> onContents,
             ReferencedDocumentNotFoundResponse<object> onAccountNotFound,
             UnauthorizedResponse onUnauthorized)
@@ -111,7 +111,7 @@ namespace EastFive.Azure.Auth
                 [Property(Name = AccountPropertyName)]Guid accountId,
                 [PropertyOptional(Name = AuthorizationPropertyName)]IRefOptional<Authorization> authorizationRefMaybe,
                 [Resource]Integration integration,
-                Api.Azure.AzureApplication application, EastFive.Api.Controllers.Security security,
+                Api.Azure.AzureApplication application, EastFive.Api.Controllers.SessionToken security,
             CreatedResponse onCreated,
             AlreadyExistsResponse onAlreadyExists,
             ForbiddenResponse forbidden,
@@ -147,7 +147,7 @@ namespace EastFive.Azure.Auth
         [HttpDelete]
         public static async Task<HttpResponseMessage> DeleteAsync(
         [UpdateId(CheckFileName = true, Name = IntegrationIdPropertyName)]IRef<Integration> integrationRef,
-                Api.Azure.AzureApplication application, EastFive.Api.Controllers.Security security,
+                Api.Azure.AzureApplication application, EastFive.Api.Controllers.SessionToken security,
             NoContentResponse onDeleted,
             NotFoundResponse onNotFound,
             ForbiddenResponse onForbidden)
@@ -167,7 +167,7 @@ namespace EastFive.Azure.Auth
         public async static Task<HttpResponseMessage> UpdateAsync(
                 [Property(Name = IntegrationIdPropertyName)]IRef<Integration> integrationRef,
                 [PropertyOptional(Name = AuthorizationPropertyName)]IRefOptional<Authorization> authorizationRefMaybe,
-                Api.Azure.AzureApplication application, EastFive.Api.Controllers.Security security,
+                Api.Azure.AzureApplication application, EastFive.Api.Controllers.SessionToken security,
             ContentTypeResponse<Integration> onUpdated,
             NotFoundResponse onNotFound,
             NotModifiedResponse onNotModified,

@@ -46,10 +46,13 @@ namespace EastFive.Api.Azure
                 (httpApp, request, parameterInfo, onCreatedSessionContext) => onCreatedSessionContext(this.AzureContext));
         }
 
-        public virtual async Task<bool> CanAdministerCredentialAsync(Guid actorInQuestion, Api.Controllers.Security security)
+        public virtual async Task<bool> CanAdministerCredentialAsync(Guid actorInQuestion, Api.Controllers.SessionToken security)
         {
-            if (actorInQuestion == security.performingAsActorId)
-                return true;
+            if (security.accountIdMaybe.HasValue)
+            {
+                if (actorInQuestion == security.accountIdMaybe.Value)
+                    return true;
+            }
 
             if (await IsAdminAsync(security))
                 return true;
@@ -57,14 +60,17 @@ namespace EastFive.Api.Azure
             return false;
         }
 
-        public virtual Task<bool> IsAdminAsync(Api.Controllers.Security security)
+        public virtual Task<bool> IsAdminAsync(SessionToken security)
         {
             return EastFive.Web.Configuration.Settings.GetGuid(
                 EastFive.Api.AppSettings.ActorIdSuperAdmin,
                 (actorIdSuperAdmin) =>
                 {
-                    if (actorIdSuperAdmin == security.performingAsActorId)
-                        return true;
+                    if (security.accountIdMaybe.HasValue)
+                    {
+                        if (actorIdSuperAdmin == security.accountIdMaybe.Value)
+                            return true;
+                    }
 
                     return false;
                 },
