@@ -45,6 +45,7 @@ namespace EastFive.Azure.Auth.CredentialProviders.AzureADB2C
                 AzureApplication application, UrlHelper urlHelper,
                 HttpRequestMessage request,
             RedirectResponse redirectResponse,
+            ServiceUnavailableResponse onCouldNotConnect,
             BadRequestResponse onBadRequest)
         {
             var parameters = request.RequestUri.ParseQuery();
@@ -56,6 +57,7 @@ namespace EastFive.Azure.Auth.CredentialProviders.AzureADB2C
                     application,
                     request, urlHelper,
                 (redirect, why) => redirectResponse(redirect, "success"),
+                (why) => onCouldNotConnect().AddReason(why),
                 (why) => onBadRequest().AddReason(why));
         }
 
@@ -66,6 +68,7 @@ namespace EastFive.Azure.Auth.CredentialProviders.AzureADB2C
                 AzureApplication application, UrlHelper urlHelper,
                 HttpRequestMessage request,
             RedirectResponse redirectResponse,
+            ServiceUnavailableResponse onCouldNotConnect,
             BadRequestResponse onBadRequest)
         {
             var parameters = new Dictionary<string, string>
@@ -81,6 +84,7 @@ namespace EastFive.Azure.Auth.CredentialProviders.AzureADB2C
                     application,
                     request, urlHelper,
                 (redirect, why) => redirectResponse(redirect, "success"),
+                (why) => onCouldNotConnect().AddReason(why),
                 (why) => onBadRequest().AddReason(why));
         }
     }

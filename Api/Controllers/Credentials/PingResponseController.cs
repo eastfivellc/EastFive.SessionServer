@@ -54,6 +54,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                 System.Web.Http.Routing.UrlHelper urlHelper,
             RedirectResponse onRedirectResponse,
             BadRequestResponse onBadRequest,
+            HtmlResponse onCouldNotConnect,
             ExecuteBackgroundResponseAsync onBackgroundProcess)
         {
             //The way this works...
@@ -78,6 +79,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                     request.GetQueryNameValuePairs().ToDictionary(), 
                     application, request, urlHelper,
                 (redirect, why) => onRedirectResponse(redirect, "success"),
+                (why) => onCouldNotConnect($"<html><title>PING/ATHENA credential service offline</title><body>Could not connect to PING (the authorization service used by Athena) to verify the provided link. We will work with them to resolve the issue. Please report:<code>{why}</code> to Affirm Health if the issue persists.</body></html>"),
                 (why) => onBadRequest().AddReason(why));
         }
     }

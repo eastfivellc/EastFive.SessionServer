@@ -92,27 +92,45 @@ namespace EastFive.Api.Azure.Credentials
                                     new HttpMethod("GET"), tokenUrl);
                                 request.Headers.Add("Cookie", "agentid=" + agentId);
                                 //request.Content.Headers.ContentType = new MediaTypeHeaderValue("text/plain;charset=utf-8");
-                                var response = await httpClient.SendAsync(request);
-                                var content = await response.Content.ReadAsStringAsync();
-                                if (response.StatusCode == HttpStatusCode.OK)
+                                try
                                 {
-                                    dynamic stuff = null;
-                                    stuff = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(content);
-                                    string subject = (string)stuff[Subject];
-                                    //string subject = stuff.pingone.subject;
-                                    var hash = SHA512.Create().ComputeHash(System.Text.Encoding.UTF8.GetBytes(subject));
-                                    var loginId = new Guid(hash.Take(16).ToArray());
-                                    loginId = Guid.NewGuid();  //KDH - Take out
-                                    var extraParamsWithTokenValues = new Dictionary<string, string>(extraParams);
-                                    foreach (var item in stuff)
+                                    var response = await httpClient.SendAsync(request);
+                                    var content = await response.Content.ReadAsStringAsync();
+                                    if (response.StatusCode == HttpStatusCode.OK)
                                     {
-                                        extraParamsWithTokenValues.Add(item.Key.ToString(), item.Value.ToString());
+                                        dynamic stuff = null;
+                                        try
+                                        {
+                                            stuff = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(content);
+                                        }
+                                        catch (Newtonsoft.Json.JsonReaderException)
+                                        {
+                                            return onCouldNotConnect($"PING Returned non-json response:{content}");
+                                        }
+                                        string subject = (string)stuff[Subject];
+                                        //string subject = stuff.pingone.subject;
+                                        var hash = SHA512.Create().ComputeHash(System.Text.Encoding.UTF8.GetBytes(subject));
+                                        var loginId = new Guid(hash.Take(16).ToArray());
+                                        loginId = Guid.NewGuid();  //KDH - Take out
+                                        var extraParamsWithTokenValues = new Dictionary<string, string>(extraParams);
+                                        foreach (var item in stuff)
+                                        {
+                                            extraParamsWithTokenValues.Add(item.Key.ToString(), item.Value.ToString());
+                                        }
+                                        return onSuccess(subject, default(Guid?), loginId, extraParamsWithTokenValues);
                                     }
-                                    return onSuccess(subject, default(Guid?), loginId, extraParamsWithTokenValues);
+                                    else
+                                    {
+                                        return onFailure($"{content} TokenId: {tokenId}, AgentId: {agentId}");
+                                    }
                                 }
-                                else
+                                catch (System.Net.Http.HttpRequestException ex)
                                 {
-                                    return onFailure($"{content} TokenId: {tokenId}, AgentId: {agentId}");
+                                    return onCouldNotConnect($"{ex.GetType().FullName}:{ex.Message}");
+                                }
+                                catch(Exception exGeneral)
+                                {
+                                    return onCouldNotConnect(exGeneral.Message);
                                 }
                             }
                         },

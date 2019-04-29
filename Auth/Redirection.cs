@@ -29,6 +29,7 @@ namespace EastFive.Azure.Auth
                 AzureApplication application, HttpRequestMessage request,
                 System.Web.Http.Routing.UrlHelper urlHelper,
             Func<Uri, object, TResult> onRedirect,
+            Func<string, TResult> onCouldNotConnect,
             Func<string, TResult> onResponse)
         {
             var authorizationRequestManager = application.AuthorizationRequestManager;
@@ -46,6 +47,7 @@ namespace EastFive.Azure.Auth
                     return AuthenticationAsync(requestId, method, values, baseUri, application,
                         onRedirect,
                         onResponse,
+                        onCouldNotConnect,
                         onResponse,
                         () => onResponse("Authorization not found"));
                 },
@@ -57,6 +59,7 @@ namespace EastFive.Azure.Auth
                 AzureApplication application,
             Func<Uri, object, TResult> onRedirect,
             Func<string, TResult> onResponse,
+            Func<string, TResult> onCouldNotConnect,
             Func<string, TResult> onBadResponse,
             Func<TResult> onAuthorizationNotFound)
         {
@@ -108,6 +111,7 @@ namespace EastFive.Azure.Auth
                         });
                 },
                 (authorizationRef, extraparams) => throw new NotImplementedException(),
+                (why) => onCouldNotConnect(why).AsTask(),
                 (why) => onBadResponse(why).AsTask());
         }
 

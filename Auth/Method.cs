@@ -267,6 +267,7 @@ namespace EastFive.Azure.Auth
                 Api.Azure.AzureApplication application,
             Func<string, IRefOptional<Authorization>, Security.SessionServer.IProvideLogin, IDictionary<string, string>, TResult> onSuccess,
             Func<Guid?, IDictionary<string, string>, TResult> onLogout,
+            Func<string, TResult> onCouldNotConnect,
             Func<string, TResult> onFailure)
         {
             var methodName = this.name;
@@ -295,7 +296,7 @@ namespace EastFive.Azure.Auth
                 },
                 (authorizationId, extraParams) => onLogout(authorizationId, extraParams),
                 (why) => onFailure(why),
-                (why) => onFailure(why),
+                (why) => onCouldNotConnect(why),
                 (why) => onFailure(why),
                 (why) => onFailure(why));
         }
