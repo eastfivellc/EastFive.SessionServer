@@ -27,7 +27,7 @@ namespace EastFive.Azure.Auth
         Resource = typeof(Method),
         ContentType = "x-application/auth-authentication-method",
         ContentTypeVersion = "0.1")]
-    public struct Method
+    public struct Method : IReferenceable
     {
         public Guid id => authenticationId.id;
 

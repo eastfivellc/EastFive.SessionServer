@@ -18,12 +18,11 @@ namespace EastFive.Azure.Persistence
                     return httpApp.Bind(typeof(Guid), content,
                         (id) =>
                         {
-                            var instantiatableType = typeof(Ref<>).MakeGenericType(resourceType);
+                            var instantiatableType = typeof(EastFive.Ref<>).MakeGenericType(resourceType);
                             var instance = Activator.CreateInstance(instantiatableType, new object[] { id });
                             return onBound(instance);
                         },
                         (why) => onFailure(why));
-
                 });
             httpApp.AddOrUpdateGenericBinding(
                 typeof(IRefs<>),

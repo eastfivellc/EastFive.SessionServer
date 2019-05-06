@@ -23,7 +23,7 @@ namespace EastFive.Azure.Auth
         Resource = typeof(RedirectionManager),
         ContentType = "x-application/auth-redirection-manager",
         ContentTypeVersion = "0.1")]
-    public struct RedirectionManager
+    public struct RedirectionManager : IReferenceable
     {
         [JsonIgnore]
         public Guid id => redirectionManagerRef.id;

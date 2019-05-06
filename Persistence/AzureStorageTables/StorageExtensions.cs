@@ -94,18 +94,6 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                 .FindByIdsAsync<TEntity>(entityRefs.ids);
         }
 
-        public static IRef<TEntity> IRefStorage<TEntity>(this Guid entityId)
-            where TEntity : struct
-        {
-            return new Ref<TEntity>(entityId);
-        }
-
-        public static IRefObj<TEntity> IRefObjStorage<TEntity>(this Guid entityId)
-            where TEntity : class
-        {
-            return new RefObj<TEntity>(entityId);
-        }
-
         public static IEnumerableAsync<TEntity> StorageQuery<TEntity>(
             this Expression<Func<TEntity, bool>> query)
         {
@@ -271,34 +259,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
             StorageTables.Driver.AzureStorageDriver.RetryDelegateAsync<Task<TResult>> onTimeout =
                 default(StorageTables.Driver.AzureStorageDriver.RetryDelegateAsync<Task<TResult>>),
             Func<TEntity, TEntity> mutateUponLock = default(Func<TEntity, TEntity>))
-            where TEntity : struct
-        {
-            return AzureTableDriverDynamic
-                .FromSettings()
-                .LockedUpdateAsync(entityRef.id,
-                        lockedPropertyExpression,
-                    onLockAquired,
-                    onNotFound: onNotFound,
-                    onLockRejected: onLockRejected,
-                    onAlreadyLocked: onAlreadyLocked,
-                    shouldLock: shouldLock,
-                    onTimeout: onTimeout,
-                    mutateUponLock: mutateUponLock);
-        }
-
-        public static Task<TResult> StorageLockedUpdateAsync<TEntity, TResult>(this IRefObj<TEntity> entityRef,
-                Expression<Func<TEntity, DateTime?>> lockedPropertyExpression,
-            AzureTableDriverDynamic.WhileLockedDelegateAsync<TEntity, TResult> onLockAquired,
-            Func<Task<TResult>> onNotFound,
-            Func<TResult> onLockRejected = default(Func<TResult>),
-            AzureTableDriverDynamic.ContinueAquiringLockDelegateAsync<TEntity, TResult> onAlreadyLocked =
-                        default(AzureTableDriverDynamic.ContinueAquiringLockDelegateAsync<TEntity, TResult>),
-            AzureTableDriverDynamic.ConditionForLockingDelegateAsync<TEntity, TResult> shouldLock =
-                        default(AzureTableDriverDynamic.ConditionForLockingDelegateAsync<TEntity, TResult>),
-            StorageTables.Driver.AzureStorageDriver.RetryDelegateAsync<Task<TResult>> onTimeout =
-                default(StorageTables.Driver.AzureStorageDriver.RetryDelegateAsync<Task<TResult>>),
-            Func<TEntity, TEntity> mutateUponLock = default(Func<TEntity, TEntity>))
-            where TEntity : class
+            where TEntity : IReferenceable
         {
             return AzureTableDriverDynamic
                 .FromSettings()
@@ -345,17 +306,18 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
 
         public static async Task<ITransactionResult<TResult>> CheckAsync<T, TResult>(this IRef<T> value,
             Func<TResult> onNotFound)
-            where T : struct
+            where T : struct, IReferenceable
         {
             if (value.IsDefaultOrNull())
                 return onNotFound().TransactionResultFailure();
 
-            await value.ResolveAsync();
-            if (!value.value.HasValue)
-                return onNotFound().TransactionResultFailure();
-
-            Func<Task> rollback = () => 1.AsTask();
-            return rollback.TransactionResultSuccess<TResult>();
+            return await value.StorageGetAsync(
+                valueValue =>
+                {
+                    Func<Task> rollback = () => 1.AsTask();
+                    return rollback.TransactionResultSuccess<TResult>();
+                },
+                () => onNotFound().TransactionResultFailure());
         }
 
         public static async Task<ITransactionResult<TResult>> TransactionUpdateLinkN1Async<T, TLink, TResult>(this T value,
@@ -376,60 +338,6 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                 (res) => linkedOut,
                 linkedBack,
                 onNotFound);
-        }
-
-        public static Task<ITransactionResult<TResult>> TransactionUpdateLinkN1Async<T, TLink, TResult>(this T value,
-            Func<T, IRefObj<TLink>> linkedOut,
-            Expression<Func<TLink, IReferences>> linkedBack,
-            Func<TResult> onNotFound)
-            where T : class, IReferenceable where TLink : class, IReferenceable
-        {
-            var driver = AzureTableDriverDynamic
-                   .FromSettings();
-
-            var linkRef = linkedOut(value);
-            if (linkRef.IsDefaultOrNull())
-                return onNotFound().TransactionResultFailure().AsTask();
-
-            var xmemberExpr = (linkedBack.Body as MemberExpression);
-            if (xmemberExpr.IsDefaultOrNull())
-                throw new Exception($"`{linkedBack.Body}` is not a member expression");
-            var memberInfo = xmemberExpr.Member;
-            return linkRef.StorageUpdateAsync(
-                async (linkedValue, updateAsync) =>
-                {
-                    var linkRefsOld = (IReferences)memberInfo.GetValue(linkedValue);
-
-                    if (linkRefsOld.ids.Contains(value.id))
-                    {
-                        Func<Task> rollback = () => 1.AsTask();
-                        return rollback.TransactionResultSuccess<TResult>();
-                    }
-
-                    var linkIdsNew = linkRefsOld.ids.Append(value.id).ToArray();
-                    var linkRefsNew = new RefObjs<T>(linkIdsNew);
-                    memberInfo.SetValue(ref linkedValue, linkRefsNew);
-                    await updateAsync(linkedValue);
-
-                    Func<Task> rollbackValues =
-                        () => linkRef.StorageUpdateAsync(
-                            async (linkedValueRollback, updateAsyncRollback) =>
-                            {
-                                var linkRefsOldRollback = (IRefObjs<T>)memberInfo.GetValue(linkedValueRollback);
-                                if (linkRefsOld.ids.Contains(value.id))
-                                    return false;
-
-                                var linkIdsNewRollback = linkRefsOldRollback.ids.Where(id => id != value.id).ToArray();
-                                var linkRefsNewRollback = new RefObjs<T>(linkIdsNewRollback);
-                                memberInfo.SetValue(ref linkedValueRollback, linkRefsNewRollback);
-                                await updateAsyncRollback(linkedValueRollback);
-                                return true;
-                            },
-                            () => false);
-                    return rollbackValues.TransactionResultSuccess<TResult>();
-                },
-                () => onNotFound().TransactionResultFailure());
-
         }
 
         public static Task<ITransactionResult<TResult>> TransactionUpdateLinkN1Async<T, TLink, TResult>(this T value,

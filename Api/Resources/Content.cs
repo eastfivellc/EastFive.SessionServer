@@ -24,7 +24,7 @@ namespace EastFive.Api.Azure.Resources
 
         public const string ContentIdPropertyName = "id";
         [JsonProperty(PropertyName = ContentIdPropertyName)]
-        public IRefObj<Content> contentRef;
+        public IRef<Content> contentRef;
 
         public const string ContentPropertyName = "content";
         [JsonProperty(PropertyName = ContentPropertyName)]
