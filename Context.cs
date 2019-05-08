@@ -26,7 +26,6 @@ namespace EastFive.Security.SessionServer
         
         public Context(Func<Security.SessionServer.Persistence.DataContext> dataContextCreateFunc)
         {
-            dataContextCreateFunc.ValidateArgumentIsNotNull("dataContextCreateFunc");
             this.dataContextCreateFunc = dataContextCreateFunc;
         }
 
@@ -230,18 +229,6 @@ namespace EastFive.Security.SessionServer
                 if (loginProviders.IsDefault())
                     loginProviders = new LoginProviders(this, DataContext);
                 return loginProviders;
-            }
-        }
-
-        private Health health;
-        public Health Health
-        {
-
-            get
-            {
-                if (default(Health) == health)
-                    health = new Health(this, DataContext);
-                return health;
             }
         }
 
