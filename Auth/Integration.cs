@@ -349,8 +349,9 @@ namespace EastFive.Azure.Auth
             var authorization = new Authorization
             {
                 authorizationRef = authorizationRef,
-                parameters = parameters,
                 Method = methodRef,
+                parameters = parameters,
+                authorized = true,
             };
             return await await authorization.StorageCreateAsync<Authorization, Task<TResult>>(
                 (discardId) =>

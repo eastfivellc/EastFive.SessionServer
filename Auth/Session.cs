@@ -50,6 +50,19 @@ namespace EastFive.Azure.Auth
         [Storage(Name = AccountPropertyName)]
         public Guid? account { get; set; }
 
+        /// <summary>
+        /// Determines if the session is authorized.
+        /// </summary>
+        /// <remarks>
+        ///   The presence of .authorization is insufficent for this
+        ///   determination because the referenced authorization may
+        ///   not have been executed.
+        /// </remarks>
+        public const string AuthorizedTokenPropertyName = "authorized";
+        [ApiProperty(PropertyName = AuthorizedTokenPropertyName)]
+        [JsonProperty(PropertyName = AuthorizedTokenPropertyName)]
+        public bool authorized;
+
         public const string HeaderNamePropertyName = "header_name";
         [ApiProperty(PropertyName = HeaderNamePropertyName)]
         [JsonProperty(PropertyName = HeaderNamePropertyName)]
@@ -76,13 +89,14 @@ namespace EastFive.Azure.Auth
         [Storage(Name = RefreshTokenPropertyName)]
         public string refreshToken;
 
+
         private static async Task<TResult> GetClaimsAsync<TResult>(
             Api.Azure.AzureApplication application, IRefOptional<Authorization> authorizationRefMaybe,
-            Func<IDictionary<string, string>, Guid?, TResult> onClaims,
+            Func<IDictionary<string, string>, Guid?, bool, TResult> onClaims,
             Func<string, TResult> onFailure)
         {
             if (!authorizationRefMaybe.HasValue)
-                return onClaims(new Dictionary<string, string>(), default(Guid?));
+                return onClaims(new Dictionary<string, string>(), default(Guid?), false);
             var authorizationRef = authorizationRefMaybe.Ref;
 
             return await EastFive.Web.Configuration.Settings.GetString(
@@ -90,17 +104,58 @@ namespace EastFive.Azure.Auth
                 (accountIdClaimType) =>
                 {
                     return GetSessionAcountAsync(authorizationRef, application,
-                        (accountId) =>
+                        (accountId, authorized) =>
                         {
                             var claims = new Dictionary<string, string>()
                             {
                                 { accountIdClaimType, accountId.ToString() }
                             };
-                            return onClaims(claims, accountId);
+                            return onClaims(claims, accountId, authorized);
                         },
-                        onFailure);
+                        (why, authorized) => onClaims(new Dictionary<string, string>(), default(Guid?), authorized));
                 },
-                (why) => onClaims(new Dictionary<string, string>(), default(Guid?)).AsTask());
+                (why) => onClaims(new Dictionary<string, string>(), default(Guid?), false).AsTask());
+        }
+
+        [Api.HttpGet] //(MatchAllBodyParameters = false)]
+        public static async Task<HttpResponseMessage> GetAsync(
+                [QueryParameter(Name = SessionIdPropertyName, CheckFileName =true)]IRef<Session> sessionRef,
+                EastFive.Api.Controllers.SessionToken security,
+                Api.Azure.AzureApplication application, UrlHelper urlHelper,
+            ContentTypeResponse<Session> onFound,
+            NotFoundResponse onNotFound,
+            UnauthorizedResponse onUnauthorized,
+            ConfigurationFailureResponse onConfigurationFailure)
+        {
+            if (security.sessionId != sessionRef.id)
+                return onUnauthorized();
+            return await await sessionRef.StorageGetAsync(
+                (session) =>
+                {
+                    return Web.Configuration.Settings.GetUri(
+                            EastFive.Security.AppSettings.TokenScope,
+                        scope =>
+                        {
+                            return GetClaimsAsync(application, session.authorization,
+                                (claims, accountIdMaybe, authorized) =>
+                                {
+                                    session.account = accountIdMaybe;
+                                    session.authorized = authorized;
+                                    return BlackBarLabs.Security.Tokens.JwtTools.CreateToken(session.id,
+                                            scope, TimeSpan.FromDays(365.0), claims, // TODO: Expiration time from .Config
+                                        (tokenNew) =>
+                                        {
+                                            session.token = tokenNew;
+                                            return onFound(session);
+                                        },
+                                        (missingConfig) => onConfigurationFailure("Missing", missingConfig),
+                                        (configName, issue) => onConfigurationFailure(configName, issue));
+                                },
+                                (why) => onNotFound());
+                        },
+                        (why) => onConfigurationFailure("Missing", why).AsTask());
+                },
+                () => onNotFound().AsTask());
         }
 
         [HttpPost] //(MatchAllBodyParameters = false)]
@@ -122,9 +177,10 @@ namespace EastFive.Azure.Auth
                 async scope =>
                 {
                     return await await GetClaimsAsync(application, authorizationRefMaybe,
-                        (claims, accountIdMaybe) =>
+                        (claims, accountIdMaybe, authorized) =>
                         {
                             session.account = accountIdMaybe;
+                            session.authorized = authorized;
                             return session.StorageCreateAsync(
                                 (sessionIdCreated) =>
                                 {
@@ -166,9 +222,10 @@ namespace EastFive.Azure.Auth
                         async scope =>
                         {
                             return await await GetClaimsAsync(application, authorizationRefMaybe,
-                                async (claims, accountIdMaybe) =>
+                                async (claims, accountIdMaybe, authorized) =>
                                 {
                                     sessionStorage.authorization = authorizationRefMaybe;
+                                    sessionStorage.authorized = authorized;
                                     sessionStorage.account = accountIdMaybe;
                                     return await BlackBarLabs.Security.Tokens.JwtTools.CreateToken(sessionRef.id,
                                             scope, TimeSpan.FromDays(365.0), claims, // TODO: Expiration time from .Config
@@ -205,8 +262,8 @@ namespace EastFive.Azure.Auth
 
         private static async Task<TResult> GetSessionAcountAsync<TResult>(IRef<Authorization> authorizationRef,
                 Api.Azure.AzureApplication application,
-            Func<Guid, TResult> onSuccess,
-            Func<string, TResult> onFailure)
+            Func<Guid, bool, TResult> onSuccess,
+            Func<string, bool, TResult> onFailure)
         {
             return await await authorizationRef.StorageGetAsync(
                 async (authorization) =>
@@ -220,31 +277,31 @@ namespace EastFive.Azure.Auth
                                 {
                                     return Auth.AccountMapping.FindByMethodAndKeyAsync(method.authenticationId, externalUserKey,
                                             authorization,
-                                        accountId => onSuccess(accountId),
-                                        () => onFailure("No mapping to that account."));
+                                        accountId => onSuccess(accountId, authorization.authorized),
+                                        () => onFailure("No mapping to that account.", authorization.authorized));
                                 },
-                                onFailure.AsAsyncFunc(),
-                                () => onFailure("This login method is no longer supported.").AsTask());
+                                (why) => onFailure(why, authorization.authorized).AsTask(),
+                                () => onFailure("This login method is no longer supported.", false).AsTask());
                         },
                         () =>
                         {
                             return CheckSuperAdminBeforeFailure(authorizationRef,
-                                    "Authorization method is no longer valid on this system.",
+                                    "Authorization method is no longer valid on this system.", authorization.authorized,
                                 onSuccess, onFailure).AsTask();
                         });
                 },
                 () =>
                 {
-                    return CheckSuperAdminBeforeFailure(authorizationRef, "Authorization not found.",
+                    return CheckSuperAdminBeforeFailure(authorizationRef, "Authorization not found.", false,
                         onSuccess, onFailure).AsTask();
                 });
           
         }
 
         private static TResult CheckSuperAdminBeforeFailure<TResult>( 
-                IRef<Authorization> authorizationRef, string failureMessage,
-            Func<Guid, TResult> onSuccess,
-            Func<string, TResult> onFailure)
+                IRef<Authorization> authorizationRef, string failureMessage, bool authorized,
+            Func<Guid, bool, TResult> onSuccess,
+            Func<string, bool, TResult> onFailure)
         {
             var isSuperAdminAuth = Web.Configuration.Settings.GetGuid(EastFive.Api.AppSettings.AuthorizationIdSuperAdmin,
                 (authorizationIdSuperAdmin) =>
@@ -256,11 +313,11 @@ namespace EastFive.Azure.Auth
                 why => false);
 
             if (!isSuperAdminAuth)
-                return onFailure(failureMessage);
+                return onFailure(failureMessage, authorized);
 
             return Web.Configuration.Settings.GetGuid(EastFive.Api.AppSettings.ActorIdSuperAdmin,
-                (authorizationIdSuperAdmin) => onSuccess(authorizationIdSuperAdmin),
-                (dontCare) => onFailure(failureMessage));
+                (authorizationIdSuperAdmin) => onSuccess(authorizationIdSuperAdmin, authorized),
+                (dontCare) => onFailure(failureMessage, authorized));
         }
     }
 }
