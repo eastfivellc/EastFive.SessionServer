@@ -27,7 +27,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
         {
             return AzureTableDriverDynamic
                 .FromSettings()
-                .FindByIdAsync<TEntity, TResult>(resourceId,
+                .FindByIdAsync(resourceId,
                     onFound,
                     onDoesNotExists);
         }

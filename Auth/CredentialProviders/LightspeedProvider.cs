@@ -71,7 +71,7 @@ namespace EastFive.Api.Azure.Credentials
         {
             return await LoadFromConfig(
                 (provider) => onProvideAuthorization(provider),
-                (why) => onFailure(why)).ToTask();
+                (why) => onFailure(why)).AsTask();
         }
 
         #endregion

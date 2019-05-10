@@ -43,12 +43,5 @@ namespace EastFive.Security.SessionServer
             Func<string, Guid?, Guid?, TResult> onSuccess,
             Func<string, TResult> onFailure);
 
-        [Obsolete("Moving to each login provided have a custom route for configuration")]
-        Task<TResult> UserParametersAsync<TResult>(Guid actorId, System.Security.Claims.Claim[] claims, IDictionary<string, string> extraParams,
-            Func<
-                IDictionary<string, string>, //Key, label
-                IDictionary<string, Type>,   //Key, type
-                IDictionary<string, string>, //Key, description
-                TResult> onSuccess);
     }
 }

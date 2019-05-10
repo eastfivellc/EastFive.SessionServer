@@ -350,7 +350,12 @@ namespace EastFive.Azure.Auth
             {
                 authorizationRef = authorizationRef,
                 parameters = parameters,
+<<<<<<< Updated upstream
                 Method = methodRef,
+=======
+                authorized = true,
+                accountIdMaybe = accountId,
+>>>>>>> Stashed changes
             };
             return await await authorization.StorageCreateAsync<Authorization, Task<TResult>>(
                 (discardId) =>

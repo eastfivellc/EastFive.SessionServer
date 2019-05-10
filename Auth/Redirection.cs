@@ -125,11 +125,17 @@ namespace EastFive.Azure.Auth
             Func<string, TResult> onBadResponse,
             TelemetryClient telemetry)
         {
+<<<<<<< Updated upstream
+=======
+            authorization.authorized = true;
+            authorization.LocationAuthentication = null;
+>>>>>>> Stashed changes
             return await await AccountMapping.FindByMethodAndKeyAsync(authentication.authenticationId, externalAccountKey,
                     authorization,
                 async internalAccountId =>
                 {
                     authorization.parameters = extraParams;
+                    authorization.accountIdMaybe = internalAccountId;
                     await saveAsync(authorization);
                     return await CreateLoginResponse(requestId,
                                 internalAccountId, extraParams,
@@ -145,6 +151,46 @@ namespace EastFive.Azure.Auth
                         return await await UnmappedCredentialAsync(externalAccountKey, extraParams,
                             authentication, authorization,
                             loginProvider, application, baseUri,
+<<<<<<< Updated upstream
+=======
+                            
+                        // Create mapping
+                        async (internalAccountId) =>
+                        {
+                            authorization.parameters = extraParams;
+                            authorization.accountIdMaybe = internalAccountId;
+                            await saveAsync(authorization);
+                            return await await AccountMapping.CreateByMethodAndKeyAsync(authorization, externalAccountKey,
+                                internalAccountId,
+                                () =>
+                                {
+                                    return CreateLoginResponseAsync(requestId,
+                                            internalAccountId, extraParams,
+                                            authentication, authorization,
+                                            baseUri,
+                                            application, loginProvider,
+                                        onRedirect,
+                                        onGeneralFailure,
+                                        telemetry);
+                                },
+                                (why) => onGeneralFailure(why).AsTask());
+                        },
+
+                        // Allow self serve
+                        async () =>
+                        {
+                            authorization.parameters = extraParams;
+                            await saveAsync(authorization);
+                            return await CreateLoginResponseAsync(requestId,
+                                    default(Guid?), extraParams,
+                                    authentication, authorization,
+                                    baseUri,
+                                    application, loginProvider,
+                                onRedirect,
+                                onGeneralFailure,
+                                    telemetry);
+                        },
+>>>>>>> Stashed changes
 
                             // Create mapping
                             async (internalAccountId) =>

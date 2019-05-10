@@ -164,15 +164,19 @@ namespace EastFive.Azure
                     return await Context.GetLoginProvider(authenticationRequestStorage.method,
                         async (provider) =>
                         {
+                            if (!(provider is EastFive.Azure.Auth.IProvideIntegration))
+                                return onFailure("provider is not of type EastFive.Azure.Auth.IProvideIntegration");
+
                             var extraParams = authenticationRequestStorage.extraParams;
-                            return await await provider.UserParametersAsync(authenticationRequestStorage.authorizationId.Value, null, extraParams,
-                                async (labels, types, descriptions) =>
-                                {
-                                    var callbackUrl = callbackUrlFunc(provider.CallbackController);
-                                    var loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackUrl, callbackUrlFunc);
-                                    var authenticationRequest = await Convert(authenticationRequestStorage, provider, loginUrl, extraParams, labels, types, descriptions);
-                                    return onSuccess(authenticationRequest);
-                                });
+                            return await await (provider as EastFive.Azure.Auth.IProvideIntegration)
+                                .UserParametersAsync(authenticationRequestStorage.authorizationId.Value, null, extraParams,
+                                    async (labels, types, descriptions) =>
+                                    {
+                                        var callbackUrl = callbackUrlFunc(provider.CallbackController);
+                                        var loginUrl = provider.GetLoginUrl(authenticationRequestId, callbackUrl, callbackUrlFunc);
+                                        var authenticationRequest = await Convert(authenticationRequestStorage, provider, loginUrl, extraParams, labels, types, descriptions);
+                                        return onSuccess(authenticationRequest);
+                                    });
                         },
                         () => onFailure("The credential provider for this request is no longer enabled in this system").ToTask(),
                         (why) => onFailure(why).ToTask());
@@ -256,16 +260,18 @@ namespace EastFive.Azure
                 return onUnathorized();
 
             var integrations = await ServiceConfiguration.loginProviders
+                .Where(ap => ap.Value is EastFive.Azure.Auth.IProvideIntegration)
                 .Select(
                     async ap => await await this.dataContext.Integrations.FindAsync<Task<Session?>>(actorId, ap.Key,
                         async (authenticationRequestId) =>
                         {
                             var provider = ap.Value;
+                            var integrationProvider = provider as EastFive.Azure.Auth.IProvideIntegration;
                             var method = ap.Key;
                             return await await this.dataContext.AuthenticationRequests.FindByIdAsync(authenticationRequestId,
                                 async (authRequest) =>
                                 {
-                                    return await await provider.UserParametersAsync(actorId, null, null,
+                                    return await await integrationProvider.UserParametersAsync(actorId, null, null,
                                         async (labels, types, descriptions) =>
                                         {
                                             var callbackUrl = callbackUrlFunc(provider.CallbackController);
@@ -282,7 +288,7 @@ namespace EastFive.Azure
                                     return await await this.dataContext.AuthenticationRequests.CreateAsync(integrationId, method, AuthenticationActions.link, default(Uri), default(Uri),
                                         async () =>
                                         {
-                                            return await await provider.UserParametersAsync(actorId, null, null,
+                                            return await await integrationProvider.UserParametersAsync(actorId, null, null,
                                                 async (labels, types, descriptions) =>
                                                 {
                                                     var callbackUrl = callbackUrlFunc(provider.CallbackController);
@@ -496,13 +502,17 @@ namespace EastFive.Azure
             return Context.GetLoginProvider(method,
                 async (provider) =>
                 {
-                    var userHash = await provider.UserParametersAsync(actingAsUser, claims, extraParams,
-                        (labels, types, descriptions) =>
-                        {
-                            return labels.SelectKeys().Concat(types.SelectKeys()).Concat(descriptions.SelectKeys())
-                                .Distinct()
-                                .AsHashSet(StringComparer.InvariantCultureIgnoreCase);
-                        });
+                    if (!(provider is EastFive.Azure.Auth.IProvideIntegration))
+                        return onFailure("provider is not of type EastFive.Azure.Auth.IProvideIntegration");
+
+                    var userHash = await (provider as EastFive.Azure.Auth.IProvideIntegration)
+                        .UserParametersAsync(actingAsUser, claims, extraParams,
+                            (labels, types, descriptions) =>
+                            {
+                                return labels.SelectKeys().Concat(types.SelectKeys()).Concat(descriptions.SelectKeys())
+                                    .Distinct()
+                                    .AsHashSet(StringComparer.InvariantCultureIgnoreCase);
+                            });
 
                     var mergedExtraParams = extraParams
                         .Aggregate(

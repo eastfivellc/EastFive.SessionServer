@@ -81,15 +81,55 @@ namespace EastFive.Azure.Auth
         [Storage(Name = ParametersPropertyName)]
         public IDictionary<string, string> parameters;
 
+<<<<<<< Updated upstream
+=======
+        [Storage]
+        public bool authorized;
+
+        [Storage]
+        public bool expired;
+
+        [Storage]
+        public Guid? accountIdMaybe;
+
+>>>>>>> Stashed changes
         [Api.HttpGet] //(MatchAllBodyParameters = false)]
         public static Task<HttpResponseMessage> GetAsync(
                 [QueryParameter(CheckFileName = true, Name = AuthorizationIdPropertyName)]IRef<Authorization> authorizationRef,
                 Api.Azure.AzureApplication application, UrlHelper urlHelper,
+                EastFive.Api.Controllers.Security? securityMaybe,
             ContentTypeResponse<Authorization> onFound,
-            NotFoundResponse onNotFound)
+            NotFoundResponse onNotFound,
+            UnauthorizedResponse onUnauthorized,
+            BadRequestResponse onBadRequest)
         {
+<<<<<<< Updated upstream
             return authorizationRef.StorageGetAsync(
                 (authorization) => onFound(authorization),
+=======
+            return authorizationRef.StorageUpdateAsync(
+                async (authorization, saveAsync) =>
+                {
+                    if(!securityMaybe.HasValue)
+                    {
+                        if (authorization.authorized)
+                        {
+                            if (authorization.expired)
+                                return onBadRequest();
+                            if (authorization.lastModified - DateTime.UtcNow > TimeSpan.FromMinutes(1.0))
+                                return onBadRequest();
+                            authorization.expired = true;
+                            await saveAsync(authorization);
+                            return onFound(authorization);
+                        }
+                    }
+                    if (authorization.authorized)
+                    {
+
+                    }
+                    return onFound(authorization);
+                },
+>>>>>>> Stashed changes
                 () => onNotFound());
         }
 
@@ -120,6 +160,34 @@ namespace EastFive.Azure.Auth
 
         [Api.HttpPatch] //(MatchAllBodyParameters = false)]
         public async static Task<HttpResponseMessage> UpdateAsync(
+<<<<<<< Updated upstream
+=======
+                [UpdateId(Name = AuthorizationIdPropertyName)]IRef<Authorization> authorizationRef,
+                [Property(Name = LocationLogoutReturnPropertyName)]Uri locationLogoutReturn,
+                EastFive.Api.Controllers.Security? securityMaybe,
+            NoContentResponse onUpdated,
+            AlreadyExistsResponse onNotFound,
+            UnauthorizedResponse onUnauthorized)
+        {
+            return await authorizationRef.StorageUpdateAsync(
+                async (authorization, saveAsync) =>
+                {
+                    if(authorization.authorized)
+                    {
+                        if (!securityMaybe.HasValue)
+                            return onUnauthorized();
+                    }
+                    // TODO: IF authorized, LocationAuthentication should not be set
+                    authorization.LocationLogoutReturn = locationLogoutReturn;
+                    await saveAsync(authorization);
+                    return onUpdated();
+                },
+                () => onNotFound());
+        }
+
+        [Api.HttpDelete] //(MatchAllBodyParameters = false)]
+        public async static Task<HttpResponseMessage> DeleteAsync(
+>>>>>>> Stashed changes
                 [Property(Name = AuthorizationIdPropertyName)]IRef<Authorization> authorizationRef,
                 [Property(Name = LocationLogoutReturnPropertyName)]Uri locationLogoutReturn,
             NoContentResponse onUpdated,
