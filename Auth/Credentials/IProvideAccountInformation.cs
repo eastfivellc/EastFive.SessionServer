@@ -14,6 +14,7 @@ namespace EastFive.Api.Azure.Credentials
                 Method authentication, Authorization authorization, Uri baseUri,
                 EastFive.Api.Azure.AzureApplication webApiApplication,
             Func<Guid, TResult> onCreatedMapping,
+            Func<TResult> onAllowSelfServeAccounts,
             Func<Uri, TResult> onInterceptProcess,
             Func<TResult> onNoChange);
     }

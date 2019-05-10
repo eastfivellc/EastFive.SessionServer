@@ -44,9 +44,10 @@ namespace EastFive.Azure.Auth.CredentialProviders.AzureADB2C
                 //[QueryParameter(Name = ProvideLoginMock.extraParamToken)]string token,
                 AzureApplication application, UrlHelper urlHelper,
                 HttpRequestMessage request,
-            RedirectResponse redirectResponse,
-            ServiceUnavailableResponse onCouldNotConnect,
-            BadRequestResponse onBadRequest)
+            RedirectResponse onRedirectResponse,
+            ServiceUnavailableResponse onNoServiceResponse,
+            BadRequestResponse onBadCredentials,
+            GeneralConflictResponse onFailure)
         {
             var parameters = request.RequestUri.ParseQuery();
             var authentication = await EastFive.Azure.Auth.Method.ByMethodName(
@@ -56,9 +57,10 @@ namespace EastFive.Azure.Auth.CredentialProviders.AzureADB2C
                     parameters,
                     application,
                     request, urlHelper,
-                (redirect, why) => redirectResponse(redirect, "success"),
-                (why) => onCouldNotConnect().AddReason(why),
-                (why) => onBadRequest().AddReason(why));
+                (redirect) => onRedirectResponse(redirect, "success"),
+                (why) => onBadCredentials().AddReason($"Bad credentials:{why}"),
+                (why) => onNoServiceResponse().AddReason(why),
+                (why) => onFailure(why));
         }
 
         [HttpPost(MatchAllParameters = false)]
@@ -67,9 +69,10 @@ namespace EastFive.Azure.Auth.CredentialProviders.AzureADB2C
                 [Property(Name = state)]IRef<Authorization> authorization,
                 AzureApplication application, UrlHelper urlHelper,
                 HttpRequestMessage request,
-            RedirectResponse redirectResponse,
-            ServiceUnavailableResponse onCouldNotConnect,
-            BadRequestResponse onBadRequest)
+            RedirectResponse onRedirectResponse,
+            ServiceUnavailableResponse onNoServiceResponse,
+            BadRequestResponse onBadCredentials,
+            GeneralConflictResponse onFailure)
         {
             var parameters = new Dictionary<string, string>
             {
@@ -83,9 +86,10 @@ namespace EastFive.Azure.Auth.CredentialProviders.AzureADB2C
                     parameters,
                     application,
                     request, urlHelper,
-                (redirect, why) => redirectResponse(redirect, "success"),
-                (why) => onCouldNotConnect().AddReason(why),
-                (why) => onBadRequest().AddReason(why));
+                (redirect) => onRedirectResponse(redirect, "success"),
+                (why) => onBadCredentials().AddReason($"Bad credentials:{why}"),
+                (why) => onNoServiceResponse().AddReason(why),
+                (why) => onFailure(why));
         }
     }
 }

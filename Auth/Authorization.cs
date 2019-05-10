@@ -81,8 +81,6 @@ namespace EastFive.Azure.Auth
         [Storage(Name = ParametersPropertyName)]
         public IDictionary<string, string> parameters;
 
-<<<<<<< Updated upstream
-=======
         [Storage]
         public bool authorized;
 
@@ -92,7 +90,6 @@ namespace EastFive.Azure.Auth
         [Storage]
         public Guid? accountIdMaybe;
 
->>>>>>> Stashed changes
         [Api.HttpGet] //(MatchAllBodyParameters = false)]
         public static Task<HttpResponseMessage> GetAsync(
                 [QueryParameter(CheckFileName = true, Name = AuthorizationIdPropertyName)]IRef<Authorization> authorizationRef,
@@ -103,10 +100,6 @@ namespace EastFive.Azure.Auth
             UnauthorizedResponse onUnauthorized,
             BadRequestResponse onBadRequest)
         {
-<<<<<<< Updated upstream
-            return authorizationRef.StorageGetAsync(
-                (authorization) => onFound(authorization),
-=======
             return authorizationRef.StorageUpdateAsync(
                 async (authorization, saveAsync) =>
                 {
@@ -129,7 +122,6 @@ namespace EastFive.Azure.Auth
                     }
                     return onFound(authorization);
                 },
->>>>>>> Stashed changes
                 () => onNotFound());
         }
 
@@ -160,8 +152,6 @@ namespace EastFive.Azure.Auth
 
         [Api.HttpPatch] //(MatchAllBodyParameters = false)]
         public async static Task<HttpResponseMessage> UpdateAsync(
-<<<<<<< Updated upstream
-=======
                 [UpdateId(Name = AuthorizationIdPropertyName)]IRef<Authorization> authorizationRef,
                 [Property(Name = LocationLogoutReturnPropertyName)]Uri locationLogoutReturn,
                 EastFive.Api.Controllers.Security? securityMaybe,
@@ -187,7 +177,6 @@ namespace EastFive.Azure.Auth
 
         [Api.HttpDelete] //(MatchAllBodyParameters = false)]
         public async static Task<HttpResponseMessage> DeleteAsync(
->>>>>>> Stashed changes
                 [Property(Name = AuthorizationIdPropertyName)]IRef<Authorization> authorizationRef,
                 [Property(Name = LocationLogoutReturnPropertyName)]Uri locationLogoutReturn,
             NoContentResponse onUpdated,
@@ -196,6 +185,7 @@ namespace EastFive.Azure.Auth
             return await authorizationRef.StorageUpdateAsync(
                 async (authorization, saveAsync) =>
                 {
+                    // TODO: IF authorized, LocationAuthentication should not be set
                     authorization.LocationLogoutReturn = locationLogoutReturn;
                     await saveAsync(authorization);
                     return onUpdated();

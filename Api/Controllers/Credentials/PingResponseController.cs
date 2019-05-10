@@ -53,9 +53,9 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                 HttpRequestMessage request,
                 System.Web.Http.Routing.UrlHelper urlHelper,
             RedirectResponse onRedirectResponse,
-            BadRequestResponse onBadRequest,
+            BadRequestResponse onBadCredentials,
             HtmlResponse onCouldNotConnect,
-            ExecuteBackgroundResponseAsync onBackgroundProcess)
+            HtmlResponse onGeneralFailure)
         {
             //The way this works...
             //1.  User clicks Third Party Applications\AffirmHealth over in Athena.
@@ -75,12 +75,30 @@ namespace EastFive.Api.Azure.Credentials.Controllers
 
             var methodName = Enum.GetName(typeof(CredentialValidationMethodTypes), CredentialValidationMethodTypes.Ping);
             var method = await EastFive.Azure.Auth.Method.ByMethodName(methodName, application);
+
+            var failureHtml = "<html><title>{0}</title><body>{1} Please report:<code>{2}</code> to Affirm Health if the issue persists.</body></html>";
+
             return await Redirection.ProcessRequestAsync(method, 
                     request.GetQueryNameValuePairs().ToDictionary(), 
                     application, request, urlHelper,
-                (redirect, why) => onRedirectResponse(redirect, "success"),
-                (why) => onCouldNotConnect($"<html><title>PING/ATHENA credential service offline</title><body>Could not connect to PING (the authorization service used by Athena) to verify the provided link. We will work with them to resolve the issue. Please report:<code>{why}</code> to Affirm Health if the issue persists.</body></html>"),
-                (why) => onBadRequest().AddReason(why));
+                (redirect) => onRedirectResponse(redirect, "success"),
+                (why) => onBadCredentials().AddReason(why),
+                (why) =>
+                {
+                    var failureText = String.Format(failureHtml,
+                        "PING/ATHENA credential service offline",
+                        "Could not connect to PING (the authorization service used by Athena) to verify the provided link. Affirm Health will work with Athena/Ping to resolve this issue.",
+                        why);
+                    return onCouldNotConnect(why);
+                },
+                (why) =>
+                {
+                    var failureText = String.Format(failureHtml,
+                        "Failed to authenticate",
+                        "You could not be authenticated.",
+                        why);
+                    return onGeneralFailure(why);
+                });
         }
     }
 }

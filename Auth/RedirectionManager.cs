@@ -103,7 +103,7 @@ namespace EastFive.Azure.Auth
 
                                                 }, method, externalId, authorization.parameters,
                                                 Guid.NewGuid(), request.RequestUri, application, loginProvider,
-                                            (uri, obj) =>
+                                            (uri) =>
                                             {
                                                 return new RedirectionManager
                                                 {
@@ -113,7 +113,6 @@ namespace EastFive.Azure.Auth
                                                     redirection = uri,
                                                 };
                                             },
-                                            Failure,
                                             Failure,
                                             application.Telemetry);
                                     },
@@ -154,8 +153,7 @@ namespace EastFive.Azure.Auth
 
                                             }, method, externalId, authorization.parameters,
                                             Guid.NewGuid(), request.RequestUri, application, loginProvider,
-                                        (uri, obj) => onSuccess(uri, obj.IsDefaultOrNull() ? string.Empty : obj.ToString()),
-                                        (why) => onFailure().AddReason(why),
+                                        (uri) => onSuccess(uri, string.Empty),
                                         (why) => onFailure().AddReason(why),
                                         application.Telemetry);
                                 },

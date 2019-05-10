@@ -1,18 +1,17 @@
-﻿using BlackBarLabs;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Threading.Tasks;
+
+using BlackBarLabs;
 using BlackBarLabs.Extensions;
+using EastFive;
 using EastFive.Collections.Generic;
 using EastFive.Extensions;
 using EastFive.Linq;
 using EastFive.Linq.Async;
 using EastFive.Text;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Net.Http;
-using System.Security.Claims;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace EastFive.Azure.Synchronization
 {

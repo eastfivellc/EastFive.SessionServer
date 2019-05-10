@@ -338,7 +338,6 @@
     <Compile Include="Auth\CredentialProviders\AzureADB2C\Resources\User.cs" />
     <Compile Include="Auth\CredentialProviders\InternalProvider.cs" />
     <Compile Include="Exceptions\AgilityPackExtensions.cs" />
-    <Compile Include="Health.cs" />
     <Compile Include="Configuration\AppSettings.cs" />
     <Compile Include="Configuration\AuthorizationParameters.cs" />
     <Compile Include="Configuration\ClaimsDefinitions.cs" />
@@ -412,7 +411,6 @@
     <Compile Include="Api\Resources\PasswordCredential.cs" />
     <Compile Include="Roles.cs" />
     <Compile Include="Sessions.cs" />
-    <Compile Include="Extensions.cs" />
     <Compile Include="Context.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Authorizations.cs" />
