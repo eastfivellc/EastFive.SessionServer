@@ -94,7 +94,7 @@ namespace EastFive.Azure.Auth
         public static Task<HttpResponseMessage> GetAsync(
                 [QueryParameter(CheckFileName = true, Name = AuthorizationIdPropertyName)]IRef<Authorization> authorizationRef,
                 Api.Azure.AzureApplication application, UrlHelper urlHelper,
-                EastFive.Api.Controllers.Security? securityMaybe,
+                EastFive.Api.Controllers.SessionToken? securityMaybe,
             ContentTypeResponse<Authorization> onFound,
             NotFoundResponse onNotFound,
             UnauthorizedResponse onUnauthorized,

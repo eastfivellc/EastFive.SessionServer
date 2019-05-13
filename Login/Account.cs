@@ -79,7 +79,7 @@ namespace EastFive.Azure.Login
                             return onUsernameAlreadyTaken();
 
                         account.userIdentification = userIdentification;
-                        account.password = password;
+                        account.password = Account.GeneratePasswordHash(userIdentification, password);
                         await saveAsync(account);
                         return onUpdated();
                     });

@@ -63,6 +63,7 @@ namespace EastFive.Azure.Login
         [ApiProperty(PropertyName = StatePropertyName)]
         [JsonProperty(PropertyName = StatePropertyName)]
         [Storage]
+        [JsonIgnore]
         public string state;
 
         public const string ClientPropertyName = "client";
@@ -81,8 +82,23 @@ namespace EastFive.Azure.Login
 
         public const string AccountPropertyName = "account";
         [HtmlLink(Label = "Create new account")]
+        [JsonIgnore]
         public IRefOptional<Account> account;
 
+        [Api.HttpGet]
+        public static async Task<HttpResponseMessage> GetAsync(
+                [QueryParameter(Name = AuthenticationPropertyName)]IRef<Authentication> authenticationRef,
+                Api.Azure.AzureApplication application, UrlHelper urlHelper,
+            ContentTypeResponse<Authentication> onFound,
+            NotFoundResponse onNotFound)
+        {
+            return await authenticationRef.StorageGetAsync(
+                (authentication) =>
+                {
+                    return onFound(authentication);
+                },
+                () => onNotFound());
+        }
 
         [Api.HttpGet]
         public static async Task<HttpResponseMessage> GetAsync(
@@ -119,20 +135,14 @@ namespace EastFive.Azure.Login
         [HtmlAction(Label = "Login")]
         public static async Task<HttpResponseMessage> UpdateAsync(
                 [UpdateId(Name = AuthenticationPropertyName)]IRef<Authentication> authenticationRef,
-                [QueryParameter(Name = UserIdentificationPropertyName)]string userIdentification,
-                [QueryParameter(Name = PasswordPropertyName)]string password,
+                [Property(Name = UserIdentificationPropertyName)]string userIdentification,
+                [Property(Name = PasswordPropertyName)]string password,
                 Api.Azure.AzureApplication application,
-                IBuildUrls urlHelper,
+                // IBuildUrls urlHelper,
             NoContentResponse onUpdated,
             NotFoundResponse onNotFound,
             GeneralConflictResponse onInvalidPassword)
         {
-            urlHelper.Resources<Authentication>()
-                .Where(
-                    b => 
-                        b.id == authenticationRef.id &&
-                        Authentication.PasswordPropertyName == "asdf");
-
             return await await authenticationRef.StorageUpdateAsync(
                 (authentication, saveAsync) =>
                 {
