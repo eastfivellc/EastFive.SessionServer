@@ -45,8 +45,7 @@ namespace EastFive.Api.Controllers
                 url.GetLocation<InternalIntegrationResponseController>(
                     (irc) => irc.IntegrationId.AssignQueryValue(integration),
                     (irc) => irc.ResourceTypes.AssignQueryValue(resourceTypesList),
-                    application),
-                "complete");
+                    application));
         }
     }
 }

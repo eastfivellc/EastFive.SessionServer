@@ -153,7 +153,7 @@ namespace EastFive.Azure.Auth
 
                                             }, method, externalId, authorization.parameters,
                                             Guid.NewGuid(), request.RequestUri, application, loginProvider,
-                                        (uri) => onSuccess(uri, string.Empty),
+                                        (uri) => onSuccess(uri),
                                         (why) => onFailure().AddReason(why),
                                         application.Telemetry);
                                 },

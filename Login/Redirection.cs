@@ -14,12 +14,17 @@ using System.Web.Http.Routing;
 namespace EastFive.Azure.Login
 {
     [FunctionViewController4(
-        Route = "Redirection",
+        Route = "LoginRedirection",
         Resource = typeof(Redirection),
         ContentType = "x-application/login-redirection",
         ContentTypeVersion = "0.1")]
     public class Redirection
     {
+        public const string StatePropertyName = "state";
+        [ApiProperty(PropertyName = StatePropertyName)]
+        [JsonProperty(PropertyName = StatePropertyName)]
+        public string state;
+
         [HttpGet(MatchAllParameters = false)]
         public static async Task<HttpResponseMessage> Get(
                 AzureApplication application, UrlHelper urlHelper,
@@ -30,6 +35,7 @@ namespace EastFive.Azure.Login
             GeneralConflictResponse onFailure)
         {
             var parameters = request.RequestUri.ParseQuery();
+            parameters.Add(CredentialProvider.referrerKey, request.RequestUri.AbsoluteUri);
             var authentication = await EastFive.Azure.Auth.Method.ByMethodName(
                 CredentialProvider.IntegrationName, application);
 
@@ -37,7 +43,7 @@ namespace EastFive.Azure.Login
                     parameters,
                     application,
                     request, urlHelper,
-                (redirect) => onRedirectResponse(redirect, "success"),
+                (redirect) => onRedirectResponse(redirect).AddReason("success"),
                 (why) => onBadCredentials().AddReason($"Bad credentials:{why}"),
                 (why) => onNoServiceResponse().AddReason(why),
                 (why) => onFailure(why));

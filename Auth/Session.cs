@@ -158,6 +158,29 @@ namespace EastFive.Azure.Auth
                 () => onNotFound().AsTask());
         }
 
+        [Api.HttpGet]
+        public static Task<HttpResponseMessage> GetByRequestIdAsync(
+                [QueryParameter(Name = SessionIdPropertyName, CheckFileName = true)]IRef<Session> sessionRef,
+                [QueryParameter(Name = "request_id")]IRef<Authorization> authorization,
+                EastFive.Api.Controllers.SessionToken security,
+                Api.Azure.AzureApplication application, UrlHelper urlHelper,
+            ContentTypeResponse<Session> onUpdated,
+            NotFoundResponse onNotFound,
+            ForbiddenResponse forbidden,
+            ConfigurationFailureResponse onConfigurationFailure,
+            GeneralConflictResponse onFailure)
+        {
+            return UpdateBodyAsync(sessionRef, authorization.Optional(),
+                    application,
+                onUpdated,
+                onNotFound,
+                forbidden,
+                onConfigurationFailure,
+                onFailure);
+        }
+
+        
+
         [HttpPost] //(MatchAllBodyParameters = false)]
         public async static Task<HttpResponseMessage> CreateAsync(
                 [Property(Name = SessionIdPropertyName)]IRef<Session> sessionId,
@@ -206,7 +229,6 @@ namespace EastFive.Azure.Auth
         public static Task<HttpResponseMessage> UpdateBodyAsync(
                 [UpdateId(CheckFileName = true, Name = SessionIdPropertyName)]IRef<Session> sessionRef,
                 [PropertyOptional(Name = AuthorizationPropertyName)]IRefOptional<Authorization> authorizationRefMaybe,
-                [Resource]Session sessionPatch,
                 Api.Azure.AzureApplication application,
             ContentTypeResponse<Session> onUpdated,
             NotFoundResponse onNotFound,

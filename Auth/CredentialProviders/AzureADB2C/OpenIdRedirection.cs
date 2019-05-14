@@ -57,7 +57,7 @@ namespace EastFive.Azure.Auth.CredentialProviders.AzureADB2C
                     parameters,
                     application,
                     request, urlHelper,
-                (redirect) => onRedirectResponse(redirect, "success"),
+                (redirect) => onRedirectResponse(redirect),
                 (why) => onBadCredentials().AddReason($"Bad credentials:{why}"),
                 (why) => onNoServiceResponse().AddReason(why),
                 (why) => onFailure(why));
@@ -86,7 +86,7 @@ namespace EastFive.Azure.Auth.CredentialProviders.AzureADB2C
                     parameters,
                     application,
                     request, urlHelper,
-                (redirect) => onRedirectResponse(redirect, "success"),
+                (redirect) => onRedirectResponse(redirect),
                 (why) => onBadCredentials().AddReason($"Bad credentials:{why}"),
                 (why) => onNoServiceResponse().AddReason(why),
                 (why) => onFailure(why));

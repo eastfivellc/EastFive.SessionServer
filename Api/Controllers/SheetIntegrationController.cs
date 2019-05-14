@@ -47,7 +47,7 @@ namespace EastFive.Api.Controllers
                 {
                     return EastFive.Api.Azure.Credentials.Sheets.SaveAsync(sheetId, sheet.contentType.MediaType,  sheet.content, integration,
                             context.DataContext,
-                        () => onSuccess(redirectUrl, null),
+                        () => onSuccess(redirectUrl),
                         "Guid not unique".AsFunctionException<HttpResponseMessage>());
                 },
                 () => onNotFound().ToTask(),

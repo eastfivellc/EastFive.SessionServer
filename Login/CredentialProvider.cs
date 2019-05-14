@@ -1,5 +1,7 @@
-﻿using EastFive.Api.Azure.Credentials.Attributes;
+﻿using EastFive.Api.Azure;
+using EastFive.Api.Azure.Credentials.Attributes;
 using EastFive.Azure.Auth;
+using EastFive.Azure.Persistence.AzureStorageTables;
 using EastFive.Extensions;
 using EastFive.Security.SessionServer;
 using EastFive.Serialization;
@@ -84,13 +86,18 @@ namespace EastFive.Azure.Login
             Func<string, TResult> onUnspecifiedConfiguration,
             Func<string, TResult> onFailure)
         {
-            if (!tokenParameters.ContainsKey(CredentialProvider.tokenKey))
-                return onInvalidCredentials($"Parameter with name [{CredentialProvider.tokenKey}] was not provided");
-            var accessToken = tokenParameters[CredentialProvider.tokenKey];
+            //if (!tokenParameters.ContainsKey(CredentialProvider.tokenKey))
+            //    return onInvalidCredentials($"Parameter with name [{CredentialProvider.tokenKey}] was not provided");
+            //var accessToken = tokenParameters[CredentialProvider.tokenKey];
+
+            if (!tokenParameters.ContainsKey(CredentialProvider.stateKey))
+                return onInvalidCredentials($"Parameter with name [{CredentialProvider.stateKey}] was not provided");
+            var stateLookup = tokenParameters[CredentialProvider.stateKey];
 
             if (!tokenParameters.ContainsKey(CredentialProvider.referrerKey))
                 return onInvalidCredentials($"Parameter with name [{CredentialProvider.referrerKey}] was not provided");
             var referrerString = tokenParameters[CredentialProvider.referrerKey];
+
             if (!Uri.TryCreate(referrerString, UriKind.Absolute, out Uri referrer))
                 return onInvalidCredentials($"Referrer:`{referrerString}` is not a valid absolute url.");
 
@@ -98,30 +105,37 @@ namespace EastFive.Azure.Login
             {
                 using (var client = new HttpClient())
                 {
-                    var validationUrl = new Uri(referrer, $"/api/Authentication?token={accessToken}");
-                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-                    var result = await client.GetAsync(validationUrl);
-                    var authenticationContent = await result.Content.ReadAsStringAsync();
-                    var authentication = Newtonsoft.Json.JsonConvert.DeserializeObject<Authentication>(authenticationContent);
+                    //var validationUrl = new Uri(referrer, $"/api/Authentication/{stateLookup}");
+                    //client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                    //var result = await client.GetAsync(validationUrl);
+                    //var authenticationContent = await result.Content.ReadAsStringAsync();
+                    //var authentication = Newtonsoft.Json.JsonConvert.DeserializeObject<Authentication>(authenticationContent);
 
-                    var subject = authentication.userIdentification;
-                    var stateString = authentication.state;
-                    var extraParams = new Dictionary<string, string>
-                    {
-                        //{  CredentialProvider.accessTokenKey, apiAccessToken },
-                        //{  CredentialProvider.refreshTokenKey, apiRefreshToken },
-                        {  CredentialProvider.accountIdKey, subject },
-                        {  CredentialProvider.stateKey, stateString },
-                        {  CredentialProvider.tokenKey, accessToken },
-                    };
-                    if (!authentication.authenticated.HasValue)
-                        return onUnauthenticated(default(Guid?), extraParams);
+                    return await Guid.Parse(stateLookup).AsRef<Authentication>().StorageGetAsync(
+                        authentication =>
+                        {
+                            var subject = authentication.userIdentification;
+                            var stateString = authentication.state;
+                            var extraParams = new Dictionary<string, string>
+                            {
+                                //{  CredentialProvider.accessTokenKey, apiAccessToken },
+                                //{  CredentialProvider.refreshTokenKey, apiRefreshToken },
+                                {  CredentialProvider.accountIdKey, subject },
+                                {  CredentialProvider.stateKey, stateString },
+                                //{  CredentialProvider.tokenKey, accessToken },
+                            };
+                            if (!authentication.authenticated.HasValue)
+                                return onUnauthenticated(default(Guid?), extraParams);
 
-                    var state = default(Guid?);
-                    if (Guid.TryParse(stateString, out Guid parsedState))
-                        state = parsedState;
-
-                    return onSuccess(subject, state, default(Guid?), extraParams);
+                            var state = default(Guid?);
+                            if (Guid.TryParse(stateString, out Guid parsedState))
+                                state = parsedState;
+                            return onSuccess(subject, state, default(Guid?), extraParams);
+                        },
+                        () =>
+                        {
+                            return onInvalidCredentials($"`stateLookup` is not a valid {typeof(Authentication).FullName}");
+                        });
                 }
             }
             catch (Exception ex)
@@ -175,7 +189,6 @@ namespace EastFive.Azure.Login
         }
 
         #endregion
-
 
         #region IProvideSession
 

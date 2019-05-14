@@ -81,7 +81,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             return await Redirection.ProcessRequestAsync(method, 
                     request.GetQueryNameValuePairs().ToDictionary(), 
                     application, request, urlHelper,
-                (redirect) => onRedirectResponse(redirect, "success"),
+                (redirect) => onRedirectResponse(redirect),
                 (why) => onBadCredentials().AddReason(why),
                 (why) =>
                 {

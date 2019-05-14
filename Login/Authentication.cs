@@ -43,6 +43,7 @@ namespace EastFive.Azure.Login
         [ApiProperty(PropertyName = UserIdentificationPropertyName)]
         [JsonProperty(PropertyName = UserIdentificationPropertyName)]
         [HtmlInput(Label = "Username or email")]
+        [Storage]
         public string userIdentification;
 
         public const string PasswordPropertyName = "password";
@@ -124,7 +125,7 @@ namespace EastFive.Azure.Login
                             var location = urlHelper.GetLocation<Authentication>(
                                 auth => auth.authenticationRef.AssignQueryValue(authentication.authenticationRef),
                                 application);
-                            return onFound(location, "Found");
+                            return onFound(location);
                         },
                         () => throw new Exception("Secure guid not unique"));
                 },
@@ -138,8 +139,10 @@ namespace EastFive.Azure.Login
                 [Property(Name = UserIdentificationPropertyName)]string userIdentification,
                 [Property(Name = PasswordPropertyName)]string password,
                 Api.Azure.AzureApplication application,
+                RequestMessage<Authentication> request,
+                HttpRequestMessage httpRequest,
                 // IBuildUrls urlHelper,
-            NoContentResponse onUpdated,
+            RedirectResponse onUpdated,
             NotFoundResponse onNotFound,
             GeneralConflictResponse onInvalidPassword)
         {
@@ -158,7 +161,15 @@ namespace EastFive.Azure.Login
                                 authentication.userIdentification = userIdentification;
                                 authentication.authenticated = DateTime.UtcNow;
                                 await saveAsync(authentication);
-                                return onUpdated();
+                                //var related = request
+                                //    .Related<Login.Redirection>();
+                                //var whered = related
+                                //    .Where(redir => redir.state == authentication.state);
+                                //var authorizationUrl = whered
+                                //    // .ById(authentication.st)
+                                //    .RenderLocation();
+                                var authorizationUrl = new Uri(httpRequest.RequestUri, $"/api/LoginRedirection?state={authentication.authenticationRef.id}&token={authentication.state}");
+                                return onUpdated(authorizationUrl);
                             },
                             () => onInvalidPassword("Incorrect username or password.").AsTask());
                 },

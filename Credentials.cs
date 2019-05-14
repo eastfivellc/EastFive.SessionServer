@@ -443,6 +443,10 @@ namespace EastFive.Security.SessionServer
                 onNotFound);
         }
 
+        internal interface IProvideAccountInformation
+        {
+        }
+
         #endregion
 
     }

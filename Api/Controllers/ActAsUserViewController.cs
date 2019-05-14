@@ -79,7 +79,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 (document) =>
                 {
                     return ResponseController.ProcessRequestAsync(application, document.Method, request.RequestUri, document.GetValuesCredential(),
-                        (redirectUri, message) => redirectResponse(redirectUri, message),
+                        (redirectUri, message) => redirectResponse(redirectUri),
                         (code, message, reason) => viewResponse($"<html><head><title>{reason}</title></head><body>{message}</body></html>", null));
                 },
                 () => viewResponse("", null).ToTask(),
@@ -100,7 +100,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                     return ResponseController.AuthenticationAsync(credentialProcessId,
                             document.Method, document.GetValuesCredential(), request.RequestUri,
                             application,
-                        (redirectUri, message) => redirectResponse(redirectUri, message),
+                        (redirectUri, message) => redirectResponse(redirectUri),
                         (code, message, reason) => viewResponse($"<html><head><title>{reason}</title></head><body>{message}</body></html>", null));
                 },
                 () => viewResponse("", null).ToTask(),
@@ -133,7 +133,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                             {
                                 return ResponseController.CreateResponse(application, providerReturned, document.Method, actionReturned, sessionId, authorizationId,
                                         token, refreshToken, extraParams, request.RequestUri, redirectUrl,
-                                    (redirectUri, message) => redirectResponse(redirectUri, message),
+                                    (redirectUri, message) => redirectResponse(redirectUri),
                                     (code, message, reason) => viewResponse($"<html><head><title>{reason}</title></head><body>{message}</body></html>", null),
                                     application.Telemetry);
                             },
@@ -141,26 +141,26 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                             {
                                 if (redirectUrl.IsDefaultOrNull())
                                     return Web.Configuration.Settings.GetUri(Security.SessionServer.Configuration.AppSettings.LandingPage,
-                                            (redirect) => redirectResponse(redirectUrl, reason),
+                                            (redirect) => redirectResponse(redirectUrl),
                                             (why) => viewResponse($"<html><head><title>{reason}</title></head><body>{why}</body></html>", null));
                                 if (redirectUrl.Query.IsNullOrWhiteSpace())
                                     redirectUrl = redirectUrl.SetQueryParam("cache", Guid.NewGuid().ToString("N"));
-                                return await redirectResponse(redirectUrl, reason).ToTask();
+                                return await redirectResponse(redirectUrl).AsTask();
                             },
                             (subjectReturned, credentialProvider, extraParams, createMappingAsync) =>
                             {
                                 return ResponseController.UnmappedCredentailAsync(application,
                                         credentialProvider, document.Method, subjectReturned, extraParams, request.RequestUri,
                                         createMappingAsync,
-                                    (redirectUri, message) => redirectResponse(redirectUri, message),
+                                    (redirectUri, message) => redirectResponse(redirectUri),
                                     (code, message, reason) => viewResponse($"<html><head><title>{reason}</title></head><body>{message}</body></html>", null),
                                     application.Telemetry).ToTask();
                             },
-                            (why) => viewResponse($"<html><head><title>{why}</title></head><body>{why}</body></html>", null).ToTask(),
-                            (why) => viewResponse($"<html><head><title>{why}</title></head><body>{why}</body></html>", null).ToTask(),
-                            (why) => viewResponse($"<html><head><title>{why}</title></head><body>{why}</body></html>", null).ToTask(),
+                            (why) => viewResponse($"<html><head><title>{why}</title></head><body>{why}</body></html>", null).AsTask(),
+                            (why) => viewResponse($"<html><head><title>{why}</title></head><body>{why}</body></html>", null).AsTask(),
+                            (why) => viewResponse($"<html><head><title>{why}</title></head><body>{why}</body></html>", null).AsTask(),
                             application.Telemetry),
-                        (why) => viewResponse($"<html><head><title>{why}</title></head><body>{why}</body></html>", null).ToTask());
+                        (why) => viewResponse($"<html><head><title>{why}</title></head><body>{why}</body></html>", null).AsTask());
                 },
                 () => viewResponse("", null).ToTask(),
                 BlackBarLabs.Persistence.Azure.StorageTables.AzureStorageRepository.CreateRepository(
@@ -190,11 +190,11 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                             document.RedirectUrl.IsNullOrWhiteSpace(
                                 () => null,
                                 redirUrlString => new Uri(redirUrlString)),
-                        (redirectUri, message) => redirectResponse(redirectUri, message),
+                        (redirectUri, message) => redirectResponse(redirectUri),
                         (code, message, reason) => viewResponse($"<html><head><title>{reason}</title></head><body>{message}</body></html>", null),
                         application.Telemetry);
                 },
-                () => viewResponse("", null).ToTask(),
+                () => viewResponse("", null).AsTask(),
                 BlackBarLabs.Persistence.Azure.StorageTables.AzureStorageRepository.CreateRepository(
                     EastFive.Azure.AppSettings.ASTConnectionStringKey));
         }

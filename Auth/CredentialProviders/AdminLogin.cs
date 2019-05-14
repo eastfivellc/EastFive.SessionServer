@@ -111,7 +111,7 @@ namespace EastFive.Azure.Auth.CredentialProviders
                             adminLoginRedir => adminLoginRedir.authenticationId.AssignQueryValue(authenticationId),
                             adminLoginRedir => adminLoginRedir.token.AssignQueryValue(signedBytes),
                             application);
-                        return onRedirect(redirectUrl, "success");
+                        return onRedirect(redirectUrl);
                     }
                 },
                 (why) => onFailure(why));
