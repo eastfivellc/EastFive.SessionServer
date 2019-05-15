@@ -136,6 +136,7 @@ namespace EastFive.Azure.Login
         [HtmlAction(Label = "Login")]
         public static async Task<HttpResponseMessage> UpdateAsync(
                 [UpdateId(Name = AuthenticationPropertyName)]IRef<Authentication> authenticationRef,
+                [OptionalQueryParameter(Name = "hold")]bool? hold,
                 [Property(Name = UserIdentificationPropertyName)]string userIdentification,
                 [Property(Name = PasswordPropertyName)]string password,
                 Api.Azure.AzureApplication application,
@@ -143,6 +144,7 @@ namespace EastFive.Azure.Login
                 HttpRequestMessage httpRequest,
                 // IBuildUrls urlHelper,
             RedirectResponse onUpdated,
+            ContentTypeResponse<string> onHeldup,
             NotFoundResponse onNotFound,
             GeneralConflictResponse onInvalidPassword)
         {
@@ -169,6 +171,9 @@ namespace EastFive.Azure.Login
                                 //    // .ById(authentication.st)
                                 //    .RenderLocation();
                                 var authorizationUrl = new Uri(httpRequest.RequestUri, $"/api/LoginRedirection?state={authentication.authenticationRef.id}&token={authentication.state}");
+
+                                if (hold.HasValue && hold.Value)
+                                    return onHeldup(authorizationUrl.AbsoluteUri);
                                 return onUpdated(authorizationUrl);
                             },
                             () => onInvalidPassword("Incorrect username or password.").AsTask());

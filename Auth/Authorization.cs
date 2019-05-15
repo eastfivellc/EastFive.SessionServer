@@ -154,7 +154,7 @@ namespace EastFive.Azure.Auth
         public async static Task<HttpResponseMessage> UpdateAsync(
                 [UpdateId(Name = AuthorizationIdPropertyName)]IRef<Authorization> authorizationRef,
                 [Property(Name = LocationLogoutReturnPropertyName)]Uri locationLogoutReturn,
-                EastFive.Api.Controllers.Security? securityMaybe,
+                EastFive.Api.Controllers.SessionToken? securityMaybe,
             NoContentResponse onUpdated,
             AlreadyExistsResponse onNotFound,
             UnauthorizedResponse onUnauthorized)

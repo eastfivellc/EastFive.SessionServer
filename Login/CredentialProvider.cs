@@ -75,7 +75,6 @@ namespace EastFive.Azure.Login
 
         #endregion
 
-
         #region IProvideAuthorization
 
         public async Task<TResult> RedeemTokenAsync<TResult>(IDictionary<string, string> tokenParameters,
@@ -162,7 +161,6 @@ namespace EastFive.Azure.Login
 
         #endregion
 
-
         #region IProvideLogin
 
         public Type CallbackController => typeof(Redirection);
@@ -198,5 +196,6 @@ namespace EastFive.Azure.Login
         }
 
         #endregion
+
     }
 }
