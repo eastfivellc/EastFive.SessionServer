@@ -46,6 +46,10 @@ namespace EastFive.Api.Azure.Resources
         [JsonProperty(PropertyName = StreamingPropertyName)]
         public bool? Streaming { get; set; }
 
+        public const string ContentTypePropertyName = "content_type";
+        [JsonProperty(PropertyName = ContentTypePropertyName)]
+        public string contentType { get; set; }
+
         [HttpPost]
         public static async Task<HttpResponseMessage> CreateContentAsync(
                 [QueryParameter(CheckFileName = true, Name = ContentIdPropertyName)]Guid contentId,

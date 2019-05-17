@@ -217,6 +217,145 @@
     &lt;/body&gt;
 &lt;/html&gt;</value>
   </data>
+  <data name="loginHtml" xml:space="preserve">
+    <value>&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+    &lt;meta charset="UTF-8"&gt;
+    &lt;title&gt;Title&lt;/title&gt;
+    &lt;link rel="icon" type="image/x-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAQAAADZc7J/AAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAJcEhZcwAAJ18AACdfAR2GumoAAAAHdElNRQfjBAQAFS7NhRnAAAAC8UlEQVRIx62VS2icVRTHf99kZmKcxk5SCe34bFrfSHxR0WorWqQgoZgiiChYUaiiLlp058IXbiQEfJSCbnTjQnTRxCBtsVIlpZguiqUJrdhEh7QNtGOenZlkfi4yab5vZtIE8dzNPfee8z/3nPO/98L/KjGCZVktosTYSfuSEHfxDs21t9rIco4dxMt6QANpmkiFwjxEP0V2LDjFQwDtZIAuWviMDJvYwDrSBEwwzDF+5gRb6GId8AzfMF0ZP8k+RGSKnxhitqzNj1H2M1KeD9NanUAjfRUui48L3FtdxBmmlt2tApeqAab5fdkAfzJSq40Xlg1wtrqEcCd/zGVYZ9KgKu/AhPF57R+eqmxjwEu0QoYOHmElWXr5kYnyZoJH2cZ6CvTzLQNwDa9xiMlw/Js5hRvss+ScXPJr14iY8gNzzstpt4uMsTmawLMUb/SoUdlrvbjLQmT1bx8WeS8K8DG+reqYe3zdbmfUnBu9zgFVj7rLD82q+pVx6aF+wT3Od0l7VO00Lrb4i6q73WpeHbJNxFcsqoNm5DjXLrQxQTpJGijxGzPAeU4AsIpmEsAQpwHoZwJoJAUraAjzIMgzCsR4jAbgJu4vN/wceeAW2oCATTQCOcZDhwcokiuyn3ZivEAzAzzOfcAov/IXg7Sxmi/ZRxMd1AGHOQ+TUTJ1YosHItUu+ZF14otORtZPeY/ID+EiwnPM4O12m79sOO3TIt7h8OW1Wft9Yo6N70eZeIQhWgd4ni1sJM0Zrudl3uQwF3mVGzjAQdZT4Bi9ZAHGORjlQUBXlPtr7FPfcqs5z85RJzx6WVF5me7mTNRom+OOeFJ9t/JyjdFe65K+QT5slnSvqkfMVMb/hGQtgKv5NPoS3uagk3ZUuvewerGHoonPKYSNd7rH+rBziW7WcgVJsZvsgkPKVWH3HJ20sITEeIAvGKFUcfCLfM+TJCrNa39kCW5lMw+ylpXEyh/LIY7Xegmv9BPGaOAqoMAUs0sd/D/Lv8WXHob4zHT2AAAANXRFWHRDb21tZW50AENvbnZlcnRlZCB3aXRoIGV6Z2lmLmNvbSBTVkcgdG8gUE5HIGNvbnZlcnRlciwp4yMAAAAldEVYdGRhdGU6Y3JlYXRlADIwMTktMDQtMDRUMDA6MjE6NDYrMDI6MDATdn3eAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDE5LTA0LTA0VDAwOjIxOjQ2KzAyOjAwYivFYgAAABJ0RVh0U29mdHdhcmUAZXpnaWYuY29toMOzWAAAAFd6VFh0UmF3IHByb2ZpbGUgdHlwZSBpcHRjAAB4nOPyDAhxVigoyk/LzEnlUgADIwsuYwsTIxNLkxQDEyBEgDTDZAMjs1Qgy9jUyMTMxBzEB8uASKBKLgDqFxF08kI1lQAAAABJRU5ErkJggg=="/&gt;
+    &lt;link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous"&gt;
+    &lt;style type="text/css"&gt;
+      html, body {
+        height: 100%;
+      }
+      body {
+        display: -ms-flexbox;
+        display: -webkit-box;
+        display: flex;
+        -ms-flex-align: center;
+        -ms-flex-pack: center;
+        -webkit-box-align: center;
+        align-items: center;
+        -webkit-box-pack: center;
+        justify-content: center;
+        padding-top: 40px;
+        padding-bottom: 40px;
+        background-color: #f5f5f5;
+      }
+
+      svg#owlLogo {
+        width: 72px;
+        height: auto;
+      }
+
+      .form-signin {
+        width: 100%;
+        max-width: 330px;
+        padding: 15px;
+        margin: 0 auto;
+      }
+      .form-signin input[type="password"] {
+        margin-bottom: 10px;
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+      }
+      .form-signin input[type="text"]#usernameInput {
+        margin-bottom: -1px;
+        border-bottom-right-radius: 0;
+        border-bottom-left-radius: 0;
+      }
+      .form-signin .form-control {
+        position: relative;
+        box-sizing: border-box;
+        height: auto;
+        padding: 10px;
+        font-size: 16px;
+      }
+    &lt;/style&gt;
+&lt;/head&gt;
+&lt;body class="text-center"&gt;
+  &lt;form id="signInForm" class="form-signin mb-5"&gt;
+    &lt;svg id="owlLogo" class="mb-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300"&gt;&lt;path d="M248.8 88.4c9.3-21.4 7.4-45.2-9.4-68.4l-35.2 30.8c-16.1-7.9-34.1-12.3-53.2-12.3-18.9 0-36.8 4.4-52.8 12.1L63.2 20c-16.6 22.9-18.7 46.5-9.7 67.8-14.8 20.1-23.6 44.9-23.6 71.7 0 66.8 54.2 121 121 121s121-54.2 121-121c0-26.6-8.5-51.2-23.1-71.1z"/&gt;&lt;path d="M204.8 105.3c-27 0-48.8 21.9-48.8 48.8 0 13.8 5.7 26.2 14.9 35.1l-19.7 31.7-20-31.9c9.1-8.9 14.7-21.2 14.7-34.9 0-27-21.9-48.8-48.8-48.8s-48.8 21.9-48.8 48.8S70.1 203 97.1 203c6.6 0 12.8-1.3 18.6-3.7l35.6 56.8 35.2-56.7c5.7 2.3 11.9 3.6 18.4 3.6 27 0 48.8-21.9 48.8-48.8s-21.9-48.9-48.9-48.9zM97.1 173.6c-10.7 0-19.4-8.7-19.4-19.4s8.7-19.4 19.4-19.4 19.4 8.7 19.4 19.4-8.7 19.4-19.4 19.4zm107.7 0c-10.7 0-19.4-8.7-19.4-19.4s8.7-19.4 19.4-19.4 19.4 8.7 19.4 19.4c.1 10.7-8.6 19.4-19.4 19.4z" fill="#fff"/&gt;&lt;/svg&gt;
+    &lt;h1 class="h3 mb-3 font-weight-normal"&gt;Please log in&lt;/h1&gt;
+    &lt;label for="usernameInput" class="sr-only"&gt;Username&lt;/label&gt;
+    &lt;input type="text" id="usernameInput" class="form-control" placeholder="Username" required autofocus autocomplete="off"&gt;
+    &lt;label for="passwordInput" class="sr-only"&gt;Password&lt;/label&gt;
+    &lt;input type="password" id="passwordInput" class="form-control" placeholder="Password" required autocomplete="off"&gt;
+    &lt;button class="btn btn-lg btn-primary btn-block mb-5" type="submit"&gt;Log in&lt;/button&gt;
+  &lt;/form&gt;
+&lt;/body&gt;
+&lt;script&gt;
+  window.onload = function() {
+    var idUrlParam = getQueryParamByName('id', window.location);
+    var userNameInputId = 'usernameInput';
+    var passwordInputId = 'passwordInput';
+    var signInFormId = 'signInForm';
+    var signInForm = document.getElementById(signInFormId);
+
+    signInForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var formData = getFormData(e.target.elements);
+      var dataToSend = {
+        id: idUrlParam,
+        user_identification: formData[userNameInputId],
+        password: formData[passwordInputId]
+      };
+      doLogin(dataToSend);
+    });
+
+    function doLogin(data) {
+      var url = '/api/authentication';
+      function handleLoad () {
+        var isLoginSuccessful = this.status === 200;
+        if (isLoginSuccessful) {
+          var redirectUrl = JSON.parse(this.response);
+          window.location.href = redirectUrl;
+        }
+      }
+      function handleError () {
+        console.log('ERROR', this.statusCode);
+      }
+      var req = new XMLHttpRequest();
+      var preventRedirectParam = 'hold=true';
+      req.open('PATCH', url + '?' + preventRedirectParam);
+      req.setRequestHeader('Content-type', 'application/json');
+      req.addEventListener('load', handleLoad);
+      req.addEventListener('error', handleError);
+      req.send(JSON.stringify(data));
+    }
+
+    function getFormData(elements) {
+      var data = {};
+      var i = 0;
+      for (i; i&lt; elements.length; i++) {
+        var el = elements[i];
+        data[el.id] = el.value;
+      }
+      return data;
+    }
+
+    function getQueryParamByName(paramName, windowLocation) {
+      var paramHash = {};
+      var queryString = windowLocation.search &amp;&amp; windowLocation.search.substr(1);
+      var queryStringExists = !!queryString;
+      if (queryStringExists) {
+        var paramList = queryString.split('&amp;');
+        paramList.forEach(function(param) {
+          var paramSegments = param.split('=');
+          var keyIndex = 0;
+          var valIndex = 1;
+          var key = paramSegments[keyIndex];
+          var val = paramSegments[valIndex];
+          paramHash[key] = val;
+        });
+      }
+      return paramHash[paramName];
+    }
+  }
+&lt;/script&gt;
+&lt;/html&gt;</value>
+  </data>
   <data name="spabody" xml:space="preserve">
     <value>&lt;dash-root&gt;&lt;/dash-root&gt;&lt;script type="text/javascript" src="inline.54c1233f72172d979b96.bundle.js"&gt;&lt;/script&gt;&lt;script type="text/javascript" src="polyfills.d9faed5c4d2817543fd2.bundle.js"&gt;&lt;/script&gt;&lt;script type="text/javascript" src="scripts.02bf58f26e3bc6f16cdb.bundle.js"&gt;&lt;/script&gt;&lt;script type="text/javascript" src="main.6d7888cd63472334f6ce.bundle.js"&gt;&lt;/script&gt;</value>
   </data>

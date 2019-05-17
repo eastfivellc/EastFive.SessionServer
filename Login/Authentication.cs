@@ -16,6 +16,7 @@ using EastFive.Persistence.Azure.StorageTables;
 using EastFive.Security;
 using EastFive.Serialization;
 using System.Web.Http.Routing;
+using System.Net.Http.Headers;
 
 namespace EastFive.Azure.Login
 {
@@ -89,10 +90,15 @@ namespace EastFive.Azure.Login
         [Api.HttpGet]
         public static async Task<HttpResponseMessage> GetAsync(
                 [QueryParameter(Name = AuthenticationPropertyName)]IRef<Authentication> authenticationRef,
+                [Accepts(Media = "text/html")]MediaTypeWithQualityHeaderValue accept,
+                HttpRequestMessage request,
                 Api.Azure.AzureApplication application, UrlHelper urlHelper,
             ContentTypeResponse<Authentication> onFound,
+            HtmlResponse onHtmlWanted,
             NotFoundResponse onNotFound)
         {
+            if (!accept.IsDefaultOrNull())
+                return onHtmlWanted(EastFive.Azure.Properties.Resources.loginHtml);
             return await authenticationRef.StorageGetAsync(
                 (authentication) =>
                 {

@@ -102,6 +102,20 @@ namespace EastFive.Azure.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to &lt;!DOCTYPE html&gt;
+        ///&lt;html lang=&quot;en&quot;&gt;
+        ///&lt;head&gt;
+        ///    &lt;meta charset=&quot;UTF-8&quot;&gt;
+        ///    &lt;title&gt;Title&lt;/title&gt;
+        ///    &lt;link rel=&quot;icon&quot; type=&quot;image/x-icon&quot; href=&quot;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAQAAADZc7J/AAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAJcEhZcwAAJ18AACdfAR2GumoAAAAHdElNRQfjBAQAFS7NhRnAAAAC8UlEQVRIx62VS2icVRTHf99kZmKcxk5SCe34bFrfSHxR0WorWqQgoZgiiChYUaiiLlp058IXbiQEfJSCbnTjQnTRxCBtsVIlpZguiqUJrdhEh7QNtGOenZlkfi4yab5vZtIE8dzNPfee8z/3nP [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string loginHtml {
+            get {
+                return ResourceManager.GetString("loginHtml", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to &lt;dash-root&gt;&lt;/dash-root&gt;&lt;script type=&quot;text/javascript&quot; src=&quot;inline.54c1233f72172d979b96.bundle.js&quot;&gt;&lt;/script&gt;&lt;script type=&quot;text/javascript&quot; src=&quot;polyfills.d9faed5c4d2817543fd2.bundle.js&quot;&gt;&lt;/script&gt;&lt;script type=&quot;text/javascript&quot; src=&quot;scripts.02bf58f26e3bc6f16cdb.bundle.js&quot;&gt;&lt;/script&gt;&lt;script type=&quot;text/javascript&quot; src=&quot;main.6d7888cd63472334f6ce.bundle.js&quot;&gt;&lt;/script&gt;.
         /// </summary>
         internal static string spabody {

@@ -177,8 +177,7 @@ namespace EastFive.Azure.Auth
 
         [Api.HttpDelete] //(MatchAllBodyParameters = false)]
         public async static Task<HttpResponseMessage> DeleteAsync(
-                [Property(Name = AuthorizationIdPropertyName)]IRef<Authorization> authorizationRef,
-                [Property(Name = LocationLogoutReturnPropertyName)]Uri locationLogoutReturn,
+                [UpdateId(Name = AuthorizationIdPropertyName)]IRef<Authorization> authorizationRef,
             NoContentResponse onUpdated,
             AlreadyExistsResponse onNotFound)
         {
