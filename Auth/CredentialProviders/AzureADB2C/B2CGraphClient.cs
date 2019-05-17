@@ -14,10 +14,10 @@ using System.Threading.Tasks;
 
 namespace EastFive.AzureADB2C
 {
-    public class B2CGraphClient
+    public class B2CGraphClient : IDisposable
     {
         private readonly string tenant;
-        private readonly HttpClient http;
+        private HttpClient http;
         
         private B2CGraphClient(string clientId, string clientSecret, string tenant)
         {
@@ -36,10 +36,33 @@ namespace EastFive.AzureADB2C
                     // provided to Azure AD in order to receive an access_token using the app's identity.
                     clientId,
                     clientSecret,
-                    wrh)))
+                    wrh)), true)
             {
                 Timeout = new TimeSpan(0, 5, 0)
             };
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (http != null)
+                {
+                    http.Dispose();
+                    http = null;
+                }
+            }
+        }
+
+        ~B2CGraphClient()
+        {
+            Dispose(false);
         }
 
         private class HttpRetryHandler : DelegatingHandler
@@ -122,7 +145,7 @@ namespace EastFive.AzureADB2C
             private readonly string clientId;
             private readonly string clientSecret;
             private readonly TimeSpan expireBuffer = TimeSpan.FromMinutes(5);
-            private readonly SemaphoreSlim cache = new SemaphoreSlim(1, 1);
+            private SemaphoreSlim cache = new SemaphoreSlim(1, 1);
 
             private Int64 expiresUtc;
             private string accessToken;
@@ -139,9 +162,20 @@ namespace EastFive.AzureADB2C
             protected override void Dispose(bool disposing)
             {
                 if (disposing)
-                    cache.Dispose();
+                {
+                    if (cache != null)
+                    {
+                        cache.Dispose();
+                        cache = null;
+                    }
+                }
 
                 base.Dispose(disposing);
+            }
+
+            ~RefreshTokenMessageHandler()
+            {
+                Dispose(false);
             }
 
             protected override string AccessToken => accessToken;
