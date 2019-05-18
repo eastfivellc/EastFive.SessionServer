@@ -19,7 +19,7 @@ using EastFive.Extensions;
 namespace EastFive.Api.Azure.Credentials
 {
     [IntegrationName(IntegrationName)]
-    public class AzureADB2CProvider : IProvideLogin, IProvideLoginManagement, IProvideSession
+    public class AzureADB2CProvider : IProvideLogin, IProvideLoginManagement, IProvideSession, IDisposable
     {
         public const string IntegrationName = "Password";
         public string Method => IntegrationName;
@@ -44,6 +44,29 @@ namespace EastFive.Api.Azure.Credentials
             this.signinConfiguration = signinConfiguration;
             this.signupConfiguration = signupConfiguration;
             this.client = client;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (client != null)
+                {
+                    client.Dispose();
+                    client = null;
+                }
+            }
+        }
+
+        ~AzureADB2CProvider()
+        {
+            Dispose(false);
         }
 
         public static TResult LoadFromConfig<TResult>(
