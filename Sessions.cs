@@ -518,29 +518,5 @@ namespace EastFive.Security.SessionServer
             };
         }
 
-        public async Task<TResult> DeleteAsync<TResult>(Guid sessionId,
-                Func<Type, Uri> callbackLocationFunc,
-            Func<Session, TResult> onSuccess,
-            Func<TResult> onNotFound,
-            Func<string, TResult> onFailure)
-        {
-            return await this.dataContext.AuthenticationRequests.DeleteAsync(sessionId,
-                async (session, markForDeleteAsync) =>
-                {
-                    return await Context.GetLoginProvider(session.method,
-                        async (provider) =>
-                        {
-                            session.Deleted = DateTime.UtcNow;
-                            await markForDeleteAsync();
-                            var deletedSession = Convert(session);
-                            var callbackLocation = callbackLocationFunc(provider.CallbackController);
-                            deletedSession.logoutUrl = provider.GetLogoutUrl(sessionId, callbackLocation, callbackLocationFunc);
-                            return onSuccess(deletedSession);
-                        },
-                        () => onFailure("Credential system is no longer available").ToTask(),
-                        (why) => onFailure(why).ToTask());
-                },
-                onNotFound);
-        }
     }
 }

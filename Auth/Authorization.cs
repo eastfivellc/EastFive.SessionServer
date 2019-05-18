@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using System.Web.Http.Routing;
+using BlackBarLabs.Api;
 using EastFive.Api;
 using EastFive.Api.Azure;
 using EastFive.Api.Controllers;
@@ -90,6 +91,9 @@ namespace EastFive.Azure.Auth
         [Storage]
         public Guid? accountIdMaybe;
 
+        [Storage]
+        public DateTime? deleted;
+
         [Api.HttpGet] //(MatchAllBodyParameters = false)]
         public static Task<HttpResponseMessage> GetAsync(
                 [QueryParameter(CheckFileName = true, Name = AuthorizationIdPropertyName)]IRef<Authorization> authorizationRef,
@@ -103,7 +107,11 @@ namespace EastFive.Azure.Auth
             return authorizationRef.StorageUpdateAsync(
                 async (authorization, saveAsync) =>
                 {
-                    if(!securityMaybe.HasValue)
+                    if (authorization.deleted.HasValue)
+                        return onNotFound();
+                    if (authorization.authorized)
+                        authorization.LocationAuthentication = default(Uri);
+                    if (!securityMaybe.HasValue)
                     {
                         if (authorization.authorized)
                         {
@@ -115,10 +123,6 @@ namespace EastFive.Azure.Auth
                             await saveAsync(authorization);
                             return onFound(authorization);
                         }
-                    }
-                    if (authorization.authorized)
-                    {
-
                     }
                     return onFound(authorization);
                 },
@@ -162,12 +166,14 @@ namespace EastFive.Azure.Auth
             return await authorizationRef.StorageUpdateAsync(
                 async (authorization, saveAsync) =>
                 {
-                    if(authorization.authorized)
+                    if (authorization.deleted.HasValue)
+                        return onNotFound();
+                    if (authorization.authorized)
                     {
+                        authorization.LocationAuthentication = default(Uri);
                         if (!securityMaybe.HasValue)
                             return onUnauthorized();
                     }
-                    // TODO: IF authorized, LocationAuthentication should not be set
                     authorization.LocationLogoutReturn = locationLogoutReturn;
                     await saveAsync(authorization);
                     return onUpdated();
@@ -175,19 +181,48 @@ namespace EastFive.Azure.Auth
                 () => onNotFound());
         }
 
-        [Api.HttpDelete] //(MatchAllBodyParameters = false)]
-        public async static Task<HttpResponseMessage> DeleteAsync(
+        [HttpDelete]
+        public static async Task<HttpResponseMessage> DeleteAsync(
                 [UpdateId(Name = AuthorizationIdPropertyName)]IRef<Authorization> authorizationRef,
-            NoContentResponse onUpdated,
-            AlreadyExistsResponse onNotFound)
+                Context context, UrlHelper urlHelper, AzureApplication application,
+            NoContentResponse onLogoutComplete,
+            AcceptedBodyResponse onExternalSessionActive,
+            NotFoundResponse onNotFound,
+            GeneralFailureResponse onFailure)
         {
             return await authorizationRef.StorageUpdateAsync(
-                async (authorization, saveAsync) =>
+                async (authorizationToDelete, updateAsync) =>
                 {
-                    // TODO: IF authorized, LocationAuthentication should not be set
-                    authorization.LocationLogoutReturn = locationLogoutReturn;
-                    await saveAsync(authorization);
-                    return onUpdated();
+                    authorizationToDelete.deleted = DateTime.UtcNow;
+                    if (!authorizationToDelete.authorized)
+                        return onLogoutComplete().AddReason("Deleted");
+
+                    var locationLogout = await await Auth.Method.ById(authorizationToDelete.Method, application,
+                        (authentication) =>
+                        {
+                            return authentication.GetLogoutUrlAsync(
+                                application, urlHelper, authorizationRef.id);
+                        },
+                        () => default(Uri).AsTask());
+                    authorizationToDelete.LocationLogout = locationLogout;
+                    await updateAsync(authorizationToDelete);
+
+                    bool NoRedirectRequired()
+                    {
+                        if (locationLogout.IsDefaultOrNull())
+                            return true;
+                        if (!locationLogout.IsAbsoluteUri)
+                            return true;
+                        if (locationLogout.AbsoluteUri.IsNullOrWhiteSpace())
+                            return true;
+                        return false;
+                    }
+
+                    if (NoRedirectRequired())
+                        return onLogoutComplete().AddReason("Logout Complete");
+
+                    return onExternalSessionActive(authorizationToDelete, "application/json")
+                        .AddReason($"External session removal required:{locationLogout.AbsoluteUri}");
                 },
                 () => onNotFound());
         }

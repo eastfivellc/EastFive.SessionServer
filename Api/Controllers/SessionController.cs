@@ -27,10 +27,10 @@ namespace EastFive.Api.Azure.Credentials.Controllers
         //    return this.ActionResult(() => model.UpdateAsync(this.Request));
         //}
 
-        public IHttpActionResult Delete([FromBody]Resources.Queries.SessionQuery query)
-        {
-            return this.ActionResult(() => query.DeleteAsync(this.Request, this.Url));
-        }
+        //public IHttpActionResult Delete([FromBody]Resources.Queries.SessionQuery query)
+        //{
+        //    return this.ActionResult(() => query.DeleteAsync(this.Request, this.Url));
+        //}
     }
 }
 

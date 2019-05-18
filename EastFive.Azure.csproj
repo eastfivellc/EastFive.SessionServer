@@ -310,7 +310,6 @@
     <Compile Include="Api\Resources\Credential.cs" />
     <Compile Include="Api\Resources\Queries\AuthenticationRequestLinkQuery.cs" />
     <Compile Include="Api\Resources\Queries\IntegrationQuery.cs" />
-    <Compile Include="Api\Resources\Queries\SessionQuery.cs" />
     <Compile Include="Api\Resources\Queries\SamlCredentialQuery.cs" />
     <Compile Include="Api\Resources\SamlCredential.cs" />
     <Compile Include="Api\Resources\Queries\TokenQuery.cs" />

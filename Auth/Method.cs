@@ -316,6 +316,21 @@ namespace EastFive.Azure.Auth
                 () => throw new Exception($"Login provider with id {authenticationId} does not exists."));
         }
 
+        internal Task<Uri> GetLogoutUrlAsync(Api.Azure.AzureApplication application,
+            UrlHelper urlHelper, Guid authorizationIdSecure)
+        {
+            var authenticationId = this.id;
+            return GetLoginProviderAsync(application,
+                (name, loginProvider) =>
+                {
+                    var redirectionResource = loginProvider.CallbackController;
+                    var redirectionLocation = urlHelper.GetLocation(redirectionResource);
+                    return loginProvider.GetLogoutUrl(authorizationIdSecure, redirectionLocation,
+                        type => urlHelper.GetLocation(type));
+                },
+                () => throw new Exception($"Login provider with id {authenticationId} does not exists."));
+        }
+
         public Task<TResult> GetAuthorizationKeyAsync<TResult>(Api.Azure.AzureApplication application,
             IDictionary<string, string> parameters,
             Func<string, TResult> onAuthorizeKey,
