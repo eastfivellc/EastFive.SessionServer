@@ -67,15 +67,17 @@ namespace EastFive.Azure.Auth
                 ApiSecurity apiSecurity,
                 AzureApplication application,
                 HttpRequestMessage request,
-            ContentTypeResponse<RedirectionManager> onContent)
+            ContentTypeResponse<RedirectionManager> onContent,
+            UnauthorizedResponse onUnauthorized,
+            ConfigurationFailureResponse onConfigFailure)
         {
             Expression<Func<Authorization, bool>> allQuery =
-                   (authorization) => true;
+                (authorization) => true;
             var redirections = await allQuery
                 .StorageQuery()
                 .Where(authorization => !authorization.Method.IsDefaultOrNull())
                 .Where(authorization => authorization.Method.id == methodRef.id)
-                .Select(
+                .Select<Authorization, Task<RedirectionManager?>>(
                     async authorization =>
                     {
                         RedirectionManager? Failure(string why)
@@ -91,32 +93,23 @@ namespace EastFive.Azure.Auth
                             };
                         }
 
-                        return await await Method.ById(authorization.Method, application,
+                        return await await Method.ById<Task<RedirectionManager?>>(authorization.Method, application,
                             async method =>
                             {
-                                return await await method.ParseTokenAsync(authorization.parameters, application,
+                                return await method.ParseTokenAsync(authorization.parameters, application,
                                     (externalId, authRefDiscard, loginProvider) =>
                                     {
-                                        return Auth.Redirection.ProcessAsync(authorization,
-                                                async updatedAuth =>
-                                                {
-
-                                                }, method, externalId, authorization.parameters,
-                                                Guid.NewGuid(), request.RequestUri, application, loginProvider,
-                                            (uri) =>
-                                            {
-                                                return new RedirectionManager
-                                                {
-                                                    when = authorization.lastModified,
-                                                    message = $"Ready:{externalId}",
-                                                    authorization = authorization.authorizationRef.Optional(),
-                                                    redirection = uri,
-                                                };
-                                            },
-                                            Failure,
-                                            application.Telemetry);
+                                        return new RedirectionManager
+                                        {
+                                            when = authorization.lastModified,
+                                            message = $"Ready:{externalId}",
+                                            authorization = authorization.authorizationRef.Optional(),
+                                            redirection = new Uri(
+                                                request.RequestUri,
+                                                $"/api/RedirectionManager?ApiKeySecurity={apiSecurityKey}&authorization={authorization.id}"),
+                                        };
                                     },
-                                    (why) => Failure(why).AsTask());
+                                    (why) => Failure(why));
                             },
                             () => Failure("Method no longer supported").AsTask());
                     })
@@ -124,6 +117,50 @@ namespace EastFive.Azure.Auth
                 .SelectWhereHasValue()
                 .OrderByDescendingAsync(item => item.when);
             return onContent(redirections.ToArray());
+        }
+
+        [Api.HttpGet]
+        public static Task<HttpResponseMessage> GetRedirection(
+                [QueryParameter(Name = "ApiKeySecurity")]string apiSecurityKey,
+                [QueryParameter(Name = "authorization")]IRef<Authorization> authRef,
+                ApiSecurity apiSecurity,
+                AzureApplication application,
+                HttpRequestMessage request,
+            RedirectResponse onRedirection,
+            GeneralFailureResponse onFailure,
+            UnauthorizedResponse onUnauthorized,
+            ConfigurationFailureResponse onConfigFailure)
+        {
+            return authRef.StorageUpdateAsync(
+                async (authorization, saveAsync) =>
+                {
+                    var url = await await Method.ById(authorization.Method, application,
+                        async method =>
+                        {
+                            return await await method.ParseTokenAsync(authorization.parameters, application,
+                                (externalId, authRefDiscard, loginProvider) =>
+                                {
+                                    return Auth.Redirection.ProcessAsync(authorization,
+                                            updatedAuth => 1.AsTask(),
+                                            method, externalId, authorization.parameters,
+                                            Guid.NewGuid(), request.RequestUri, application, loginProvider,
+                                        (uri) =>
+                                        {
+                                            return uri;
+                                        },
+                                        (why) => default(Uri),
+                                        application.Telemetry);
+                                },
+                                (why) => default(Uri).AsTask());
+                        },
+                        () => default(Uri).AsTask());
+                    if (url.IsDefaultOrNull())
+                        return onFailure("Failed to determine correct redirect URL");
+
+                    authorization.expired = false;
+                    await saveAsync(authorization);
+                    return onRedirection(url);
+                });
         }
 
         [Api.HttpGet]
