@@ -46,6 +46,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             //    () => this.Request.CreateResponse(HttpStatusCode.OK, "Application is not an EastFive.Azure application.").ToActionResult().ToTask());
         }
 
+        [Obsolete("Use EastFive.Azure.Auth.Redirection")]
         public virtual async Task<IHttpActionResult> Post([FromUri]ResponseResult result)
         {
             if (result.IsDefault())
@@ -74,7 +75,8 @@ namespace EastFive.Api.Azure.Credentials.Controllers
             //            .ToActionResult()),
             //    () => this.Request.CreateResponse(HttpStatusCode.OK, "Application is not an EastFive.Azure application.").ToActionResult().ToTask());
         }
-        
+
+        [Obsolete("Use EastFive.Azure.Auth.Redirection")]
         public async static Task<TResult> ProcessRequestAsync<TResult>(AzureApplication application, 
                 string methodName, Uri baseUri, IDictionary<string, string> values,
             Func<Uri, string, TResult> onRedirect,
@@ -95,6 +97,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                 (why) => onResponse(HttpStatusCode.ServiceUnavailable, why, why));
         }
 
+        [Obsolete("Use EastFive.Azure.Auth.Redirection")]
         public async static Task<TResult> AuthenticationAsync<TResult>(Guid requestId, 
                 string method, IDictionary<string, string> values, Uri baseUri,
                 AzureApplication application, 

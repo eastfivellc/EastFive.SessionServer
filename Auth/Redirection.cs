@@ -17,13 +17,33 @@ using EastFive.Extensions;
 using EastFive.Security.SessionServer;
 using EastFive.Api.Azure;
 using EastFive.Azure.Persistence.AzureStorageTables;
+using EastFive.Persistence.Azure.StorageTables;
+using EastFive.Persistence;
+using Newtonsoft.Json;
 
 namespace EastFive.Azure.Auth
 {
-    public class Redirection
+    [StorageTable]
+    public class Redirection : IReferenceable
     {
+        [JsonIgnore]
+        public Guid id => webDataRef.id;
 
-        public static Task<TResult> ProcessRequestAsync<TResult>(
+        [JsonIgnore]
+        [RowKey]
+        [StandardParititionKey]
+        public IRef<Redirection> webDataRef;
+
+        [Storage]
+        public IRef<Method> method;
+
+        [Storage]
+        public IDictionary<string, string> values;
+
+        [Storage]
+        public Uri redirectedFrom;
+
+        public static async Task<TResult> ProcessRequestAsync<TResult>(
                 EastFive.Azure.Auth.Method method, 
                 IDictionary<string, string> values,
                 AzureApplication application, HttpRequestMessage request,
@@ -39,19 +59,26 @@ namespace EastFive.Azure.Auth
             telemetry.TrackEvent($"ResponseController.ProcessRequestAsync - Requesting credential manager.");
 
             var requestId = Guid.NewGuid();
+            var redirection = new Redirection
+            {
+                webDataRef = requestId.AsRef<Redirection>(),
+                method = method.authenticationId,
+                values = values,
+                redirectedFrom = request.Headers.Referrer,
+            };
 
-            return authorizationRequestManager.CredentialValidation<TResult>(requestId, application,
-                    method.authenticationId, values,
-                () =>
+            return await await redirection.StorageCreateAsync(
+                discard =>
                 {
                     var baseUri = request.RequestUri;
-                    return AuthenticationAsync(requestId, method, values, baseUri, application,
+                    return AuthenticationAsync(requestId,
+                            method, values, baseUri, application,
                         onRedirect,
                         () => onFailure("Authorization not found"),
                         onCouldNotConnect,
                         onFailure);
                 },
-                (why) => onBadCredentials(why));
+                () => onFailure("GUID NOT UNIQUE").AsTask());
         }
 
         private async static Task<TResult> AuthenticationAsync<TResult>(Guid requestId,
