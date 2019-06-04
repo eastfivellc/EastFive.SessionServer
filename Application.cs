@@ -129,9 +129,16 @@ namespace EastFive.Api.Azure
                 },
                 (why) => throw new Exception(why));
 
-            var byteArray = Encoding.UTF8.GetBytes(stringContent);
-            var message = new Microsoft.Azure.ServiceBus.Message(byteArray);
-            await client.SendAsync(message);
+            try
+            {
+                var byteArray = Encoding.UTF8.GetBytes(stringContent);
+                var message = new Microsoft.Azure.ServiceBus.Message(byteArray);
+                await client.SendAsync(message);
+            }
+            finally
+            {
+                await client.CloseAsync();
+            }
         }
 
         public virtual async Task SendQueueMessageAsync(string queueName, byte[] byteContent)
