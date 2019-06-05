@@ -23,23 +23,31 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
     {
         public static Task<TResult> StorageGetAsync<TEntity, TResult>(this Guid resourceId,
             Func<TEntity, TResult> onFound,
-            Func<TResult> onDoesNotExists = default(Func<TResult>))
+            Func<TResult> onDoesNotExists = default(Func<TResult>),
+            Func<string> getPartitionKey = default(Func<string>))
         {
+            if (default(Func<string>) == getPartitionKey)
+                getPartitionKey = () => resourceId.AsRowKey().GeneratePartitionKey();
+
             return AzureTableDriverDynamic
                 .FromSettings()
-                .FindByIdAsync(resourceId,
+                .FindByIdAsync(resourceId.AsRowKey(), getPartitionKey(),
                     onFound,
                     onDoesNotExists);
         }
 
         public static Task<TResult> StorageGetAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
             Func<TEntity, TResult> onFound,
-            Func<TResult> onDoesNotExists = default(Func<TResult>))
+            Func<TResult> onDoesNotExists = default(Func<TResult>),
+            Func<string> getPartitionKey = default(Func<string>))
             where TEntity : struct, IReferenceable
         {
+            if (default(Func<string>) == getPartitionKey)
+                getPartitionKey = () => entityRef.id.AsRowKey().GeneratePartitionKey();
+
             return AzureTableDriverDynamic
                 .FromSettings()
-                .FindByIdAsync(entityRef.id,
+                .FindByIdAsync(entityRef.id.AsRowKey(), getPartitionKey(),
                     onFound,
                     onDoesNotExists);
         }
