@@ -32,6 +32,7 @@ namespace EastFive.Api.Azure.Credentials
 
         public const string TokenId = "tokenid";
         public const string AgentId = "agentid";
+        public const string RestApiKey = "PingAuthName";
         public const string Subject = "pingone.subject";
         public const string LastName = "lastName";
         public const string FirstName = "firstName";
@@ -40,7 +41,8 @@ namespace EastFive.Api.Azure.Credentials
         public const string DepartmentId = "departmentID";
         public const string PatientId = "patientID";
         public const string EncounterId = "extraidentifier";
-        
+        public const string ReportSetId = "ReportSetId";
+
         public PingProvider()
         {
         }
@@ -77,64 +79,61 @@ namespace EastFive.Api.Azure.Credentials
                 return onInvalidCredentials("AgentId was not provided");
             var tokenId = extraParams[PingProvider.TokenId];
             var agentId = extraParams[PingProvider.AgentId];
+            var restAuthUsername = extraParams[PingProvider.RestApiKey];
+
             return await Web.Configuration.Settings.GetString<Task<TResult>>(Security.SessionServer.Configuration.AppSettings.PingIdentityAthenaRestApiKey,
                 async (restApiKey) =>
                 {
-                    return await Web.Configuration.Settings.GetString(Security.SessionServer.Configuration.AppSettings.PingIdentityAthenaRestAuthUsername,
-                        async (restAuthUsername) =>
+                    using (var httpClient = new HttpClient())
+                    {
+                        var credentials = Encoding.ASCII.GetBytes($"{restAuthUsername}:{restApiKey}");
+                        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(credentials));
+                        var tokenUrl = GetTokenServiceUrl(tokenId);
+                        var request = new HttpRequestMessage(
+                            new HttpMethod("GET"), tokenUrl);
+                        request.Headers.Add("Cookie", "agentid=" + agentId);
+                        //request.Content.Headers.ContentType = new MediaTypeHeaderValue("text/plain;charset=utf-8");
+                        try
                         {
-                            using (var httpClient = new HttpClient())
+                            var response = await httpClient.SendAsync(request);
+                            var content = await response.Content.ReadAsStringAsync();
+                            if (response.StatusCode == HttpStatusCode.OK)
                             {
-                                var credentials = Encoding.ASCII.GetBytes($"{restAuthUsername}:{restApiKey}");
-                                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(credentials));
-                                var tokenUrl = GetTokenServiceUrl(tokenId);
-                                var request = new HttpRequestMessage(
-                                    new HttpMethod("GET"), tokenUrl);
-                                request.Headers.Add("Cookie", "agentid=" + agentId);
-                                //request.Content.Headers.ContentType = new MediaTypeHeaderValue("text/plain;charset=utf-8");
+                                dynamic stuff = null;
                                 try
                                 {
-                                    var response = await httpClient.SendAsync(request);
-                                    var content = await response.Content.ReadAsStringAsync();
-                                    if (response.StatusCode == HttpStatusCode.OK)
-                                    {
-                                        dynamic stuff = null;
-                                        try
-                                        {
-                                            stuff = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(content);
-                                        }
-                                        catch (Newtonsoft.Json.JsonReaderException)
-                                        {
-                                            return onCouldNotConnect($"PING Returned non-json response:{content}");
-                                        }
-                                        string subject = (string)stuff[Subject];
-                                        //string subject = stuff.pingone.subject;
-                                        var hash = SHA512.Create().ComputeHash(System.Text.Encoding.UTF8.GetBytes(subject));
-                                        var loginId = new Guid(hash.Take(16).ToArray());
-                                        loginId = Guid.NewGuid();  //KDH - Take out
-                                        var extraParamsWithTokenValues = new Dictionary<string, string>(extraParams);
-                                        foreach (var item in stuff)
-                                        {
-                                            extraParamsWithTokenValues.Add(item.Key.ToString(), item.Value.ToString());
-                                        }
-                                        return onSuccess(subject, default(Guid?), loginId, extraParamsWithTokenValues);
-                                    }
-                                    else
-                                    {
-                                        return onFailure($"{content} TokenId: {tokenId}, AgentId: {agentId}");
-                                    }
+                                    stuff = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(content);
                                 }
-                                catch (System.Net.Http.HttpRequestException ex)
+                                catch (Newtonsoft.Json.JsonReaderException)
                                 {
-                                    return onCouldNotConnect($"{ex.GetType().FullName}:{ex.Message}");
+                                    return onCouldNotConnect($"PING Returned non-json response:{content}");
                                 }
-                                catch(Exception exGeneral)
+                                string subject = (string)stuff[Subject];
+                                //string subject = stuff.pingone.subject;
+                                var hash = SHA512.Create().ComputeHash(System.Text.Encoding.UTF8.GetBytes(subject));
+                                var loginId = new Guid(hash.Take(16).ToArray());
+                                loginId = Guid.NewGuid();  //KDH - Take out
+                                var extraParamsWithTokenValues = new Dictionary<string, string>(extraParams);
+                                foreach (var item in stuff)
                                 {
-                                    return onCouldNotConnect(exGeneral.Message);
+                                    extraParamsWithTokenValues.Add(item.Key.ToString(), item.Value.ToString());
                                 }
+                                return onSuccess(subject, default(Guid?), loginId, extraParamsWithTokenValues);
                             }
-                        },
-                        (why) => onUnspecifiedConfiguration(why).ToTask());
+                            else
+                            {
+                                return onFailure($"{content} TokenId: {tokenId}, AgentId: {agentId}");
+                            }
+                        }
+                        catch (System.Net.Http.HttpRequestException ex)
+                        {
+                            return onCouldNotConnect($"{ex.GetType().FullName}:{ex.Message}");
+                        }
+                        catch(Exception exGeneral)
+                        {
+                            return onCouldNotConnect(exGeneral.Message);
+                        }
+                    }
                 },
                 (why) => onUnspecifiedConfiguration(why).ToTask());
         }

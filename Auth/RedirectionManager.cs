@@ -140,7 +140,7 @@ namespace EastFive.Azure.Auth
                             return await await method.ParseTokenAsync(authorization.parameters, application,
                                 (externalId, authRefDiscard, loginProvider) =>
                                 {
-                                    return Auth.Redirection.ProcessAsync(authorization,
+                                    return Auth.Redirection.ProcessAsync(authorization, 
                                             updatedAuth => 1.AsTask(),
                                             method, externalId, authorization.parameters,
                                             Guid.NewGuid(), request.RequestUri, application, loginProvider,
