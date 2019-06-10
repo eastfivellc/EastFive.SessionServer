@@ -9,6 +9,8 @@ using BlackBarLabs.Api;
 using System.Threading.Tasks;
 using EastFive.Api.Controllers;
 using Newtonsoft.Json;
+using System.IO;
+using System.IO.Compression;
 
 namespace EastFive.Api.Azure.Resources
 {
@@ -86,12 +88,29 @@ namespace EastFive.Api.Azure.Resources
                 [OptionalQueryParameter]int? width,
                 [OptionalQueryParameter]int? height,
                 [OptionalQueryParameter]bool? fill,
+                [OptionalQueryParameter]string renderer,
             HttpRequestMessage request,
             System.Web.Http.Routing.UrlHelper url)
         {
             var response = await EastFive.Api.Azure.Content.FindContentByContentIdAsync(contentId,
                 (contentType, image) =>
                 {
+                    if(renderer.HasBlackSpace())
+                    {
+                        if(renderer.ToLower() == "unzip")
+                        {
+                            using (var compressedStream = new MemoryStream(image))
+                            using (var zipStream = new System.IO.Compression.ZipArchive(compressedStream, ZipArchiveMode.Read))
+                            using (var resultStream = new MemoryStream())
+                            {
+                                var zipFile = zipStream.Entries.First();
+                                zipFile.Open().CopyTo(resultStream);
+                                var data = resultStream.ToArray();
+                                return request.CreateFileResponse(data, "application/object", filename:zipFile.Name);
+                            }
+                        }
+                    }
+
                     if (contentType.StartsWith("video", StringComparison.InvariantCultureIgnoreCase) &&
                         (width.HasValue || height.HasValue || fill.HasValue))
                     {
