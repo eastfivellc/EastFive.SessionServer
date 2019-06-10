@@ -41,7 +41,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             this.accountName = accountName;
             this.accountKey = accountKey;
         }
-        
+
         public async Task<TResult> FindByIdAsync<TEntity, TResult>(
                 string rowKey, string partitionKey,
             Func<TEntity, TResult> onSuccess,
