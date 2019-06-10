@@ -49,7 +49,7 @@ namespace EastFive.Api.Azure.Persistence
             var blockBlob = container.GetBlockBlobReference(contentId.ToString("N"));
             try
             {
-                if (!String.IsNullOrWhiteSpace(contentType))
+                if (contentType.HasBlackSpace())
                     blockBlob.Properties.ContentType = contentType;
                 using (var stream = await blockBlob.OpenWriteAsync())
                 {

@@ -9,7 +9,6 @@ using EastFive.Api;
 using EastFive;
 using System.Web.Http.Routing;
 using EastFive.Api.Controllers;
-using BlackBarLabs.Extensions;
 using EastFive.Linq;
 using EastFive.Extensions;
 using System.Collections.Generic;
@@ -45,7 +44,7 @@ namespace EastFive.Api.Azure.Controllers
                 Endpoints = endpoints,
             };
 
-            return request.CreateResponse(System.Net.HttpStatusCode.OK, manifest).ToTask();
+            return request.CreateResponse(System.Net.HttpStatusCode.OK, manifest).AsTask();
         }
 
         public static Task<HttpResponseMessage> HtmlContent(
@@ -54,21 +53,8 @@ namespace EastFive.Api.Azure.Controllers
         {
             var lookups = httpApp
                 .GetLookups();
-            var manifest = new EastFive.Api.Resources.Manifest(lookups);
-            return onHtml("Manifest/Manifest.cshtml", manifest).ToTask();
-
-//            var htmlBody = lookups
-//                .Select(lookup => $"<div><h3>{lookup.Key}</h3>{GetRouteHtml(lookup.Key, lookup.Value)}</div>")
-//                .Join("");
-//            var html =
-//@"@model System.Guid
-//@{
-//    Layout = null;
-//}
-//<!DOCTYPE html>
-//<html lang=" + "\"en\"><body>" + htmlBody + "</body></html>";
-//            return onHtml(
-//                html, Guid.NewGuid()).ToTask();
+            var manifest = new EastFive.Api.Resources.Manifest(lookups, httpApp);
+            return onHtml("Manifest/Manifest.cshtml", manifest).AsTask();
         }
 
         public static string GetRouteHtml(string route, KeyValuePair<HttpMethod, MethodInfo[]>[] methods)

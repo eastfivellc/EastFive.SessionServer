@@ -158,21 +158,6 @@ namespace EastFive.Api.Azure
             await appQueue.AddMessageAsync(message);
         }
 
-        public virtual async Task SendStringQueueMessageAsync(string queueName, string stringContent)
-        {
-            var queue = EastFive.Web.Configuration.Settings.GetString("EastFive.Azure.StorageTables.ConnectionString",
-                (connString) =>
-                {
-                    var storageAccount = CloudStorageAccount.Parse(connString);
-                    var queueClient = storageAccount.CreateCloudQueueClient();
-                    return queueClient.GetQueueReference(queueName);
-                },
-                (why) => throw new Exception(why));
-
-            var message = new CloudQueueMessage(stringContent);
-            await queue.AddMessageAsync(message);
-        }
-
         protected override async Task<Initialized> InitializeAsync()
         {
             return await base.InitializeAsync();
