@@ -215,6 +215,10 @@ namespace EastFive.Messaging
                     {
                         return onFailure(ex.Message);
                     }
+                    finally
+                    {
+                        await sendClient.CloseAsync();
+                    }
                 },
                 onFailure.AsAsyncFunc()); 
 
