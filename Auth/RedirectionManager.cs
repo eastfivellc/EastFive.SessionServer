@@ -6,11 +6,14 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using BlackBarLabs.Api;
+using BlackBarLabs.Extensions;
 using EastFive.Api;
 using EastFive.Api.Azure;
 using EastFive.Api.Controllers;
 using EastFive.Azure.Persistence.AzureStorageTables;
+using EastFive.Collections.Generic;
 using EastFive.Extensions;
+using EastFive.Linq;
 using EastFive.Linq.Async;
 using EastFive.Persistence;
 using EastFive.Persistence.Azure.StorageTables;
@@ -138,18 +141,40 @@ namespace EastFive.Azure.Auth
                         async method =>
                         {
                             return await await method.ParseTokenAsync(authorization.parameters, application,
-                                (externalId, authRefDiscard, loginProvider) =>
+                                async (externalId, authRefDiscard, loginProvider) =>
                                 {
-                                    return Auth.Redirection.ProcessAsync(authorization, 
-                                            updatedAuth => 1.AsTask(),
-                                            method, externalId, authorization.parameters,
-                                            Guid.NewGuid(), request.RequestUri, application, loginProvider,
-                                        (uri) =>
+                                    var tag = "OpioidTool";
+                                    return await EastFive.Web.Configuration.Settings.GetString($"AffirmHealth.PDMS.PingRedirect.{tag}.PingAuthName",
+                                        async pingAuthName =>
                                         {
-                                            return uri;
+                                            return await EastFive.Web.Configuration.Settings.GetGuid($"AffirmHealth.PDMS.PingRedirect.{tag}.PingReportSetId",
+                                                reportSetId =>
+                                                {
+                                                    var requestParams = authorization.parameters
+                                                        .Append("PingAuthName".PairWithValue(pingAuthName))
+                                                        .Append("ReportSetId".PairWithValue(reportSetId.ToString()))
+                                                        .ToDictionary();
+
+                                                    return Auth.Redirection.ProcessAsync(authorization, 
+                                                            updatedAuth => 1.AsTask(),
+                                                            method, externalId, requestParams,
+                                                            Guid.NewGuid(), request.RequestUri, application, loginProvider,
+                                                        (uri) =>
+                                                        {
+                                                            return uri;
+                                                        },
+                                                        (why) => default(Uri),
+                                                        application.Telemetry);
+                                                },
+                                                why =>
+                                                {
+                                                    return default(Uri).AsTask();
+                                                });
                                         },
-                                        (why) => default(Uri),
-                                        application.Telemetry);
+                                        why =>
+                                        {
+                                            return default(Uri).AsTask();
+                                        });
                                 },
                                 (why) => default(Uri).AsTask());
                         },
