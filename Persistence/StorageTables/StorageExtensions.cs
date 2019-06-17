@@ -27,8 +27,11 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
             Func<TResult> onDoesNotExists = default(Func<TResult>),
             Func<string> getPartitionKey = default(Func<string>))
         {
-            if (default(Func<string>) == getPartitionKey)
+            if (default == getPartitionKey)
                 getPartitionKey = () => resourceId.AsRowKey().GeneratePartitionKey();
+
+            if (default == onDoesNotExists)
+                onDoesNotExists = Api.ResourceNotFoundException.StorageGetAsync<TResult>;
 
             return AzureTableDriverDynamic
                 .FromSettings()

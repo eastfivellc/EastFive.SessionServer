@@ -19,6 +19,9 @@ namespace EastFive.Azure
 
         public const string AdminLoginRsaKey = "EastFive.Azure.Auth.AdminLoginRsaKey";
 
+        public const string FunctionProcessorQueueTriggerName = "EastFive.Azure.Functions.QueueTriggerName";
+        public const string FunctionProcessorQueueTriggerNamePercent = "%EastFive.Azure.Functions.QueueTriggerName%";
+
         [Config]
         public static class SAML
         {

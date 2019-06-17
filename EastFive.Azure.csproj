@@ -288,6 +288,9 @@
     <Compile Include="Api\Resources\Monitoring.cs" />
     <Compile Include="Api\Resources\Queries\MonitoringQuery.cs" />
     <Compile Include="Attributes\ASTFVCPropertyAttribute.cs" />
+    <Compile Include="Functions\InvocationMessage.cs" />
+    <Compile Include="Functions\InvokeFunction.cs" />
+    <Compile Include="Functions\ResourceQueryCompilationExtensions.cs" />
     <Compile Include="Login\AppSettings.cs" />
     <Compile Include="Auth\Invite.cs" />
     <Compile Include="Auth\CredentialProviders\AzureADB2C\OpenIdRedirection.cs" />
@@ -576,9 +579,7 @@
       <Name>EastFive.Sheets</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Functions\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\Microsoft.Azure.Services.AppAuthentication.1.0.3\build\Microsoft.Azure.Services.AppAuthentication.targets" Condition="Exists('..\packages\Microsoft.Azure.Services.AppAuthentication.1.0.3\build\Microsoft.Azure.Services.AppAuthentication.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
