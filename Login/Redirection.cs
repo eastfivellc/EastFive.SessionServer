@@ -39,7 +39,7 @@ namespace EastFive.Azure.Login
             var authentication = await EastFive.Azure.Auth.Method.ByMethodName(
                 CredentialProvider.IntegrationName, application);
 
-            return await EastFive.Azure.Auth.Redirection.ProcessRequestAsync(authentication,
+            return await EastFive.Azure.Auth.Redirection.ProcessRequestAsync(authentication, 
                     parameters,
                     application,
                     request, urlHelper,

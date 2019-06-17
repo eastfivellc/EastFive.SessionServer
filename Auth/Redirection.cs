@@ -44,7 +44,7 @@ namespace EastFive.Azure.Auth
         public Uri redirectedFrom;
 
         public static async Task<TResult> ProcessRequestAsync<TResult>(
-                EastFive.Azure.Auth.Method method, 
+                EastFive.Azure.Auth.Method method,
                 IDictionary<string, string> values,
                 AzureApplication application, HttpRequestMessage request,
                 System.Web.Http.Routing.UrlHelper urlHelper,
@@ -157,7 +157,7 @@ namespace EastFive.Azure.Auth
         {
             authorization.authorized = true;
             authorization.LocationAuthentication = null;
-            return await await AccountMapping.FindByMethodAndKeyAsync(authentication.authenticationId, externalAccountKey,
+            var result = await await AccountMapping.FindByMethodAndKeyAsync(authentication.authenticationId, externalAccountKey,
                     authorization,
 
                 // Found
@@ -213,7 +213,7 @@ namespace EastFive.Azure.Auth
                             return await CreateLoginResponseAsync(requestId,
                                     default(Guid?), extraParams,
                                     authentication, authorization,
-                                    baseUri,
+                                    baseUri, 
                                     application, loginProvider,
                                 onRedirect,
                                 onGeneralFailure,
@@ -238,6 +238,7 @@ namespace EastFive.Azure.Auth
                         },
                         telemetry);
                 });
+            return result;
         }
 
         public static async Task<TResult> MapAccountAsync<TResult>(Authorization authorization,
@@ -262,7 +263,7 @@ namespace EastFive.Azure.Auth
                                     return CreateLoginResponseAsync(requestId,
                                            internalAccountId, authorization.parameters,
                                            method, authorization,
-                                           baseUri,
+                                           baseUri, 
                                            application, loginProvider,
                                        (url) => onRedirect(url),
                                        onFailure,

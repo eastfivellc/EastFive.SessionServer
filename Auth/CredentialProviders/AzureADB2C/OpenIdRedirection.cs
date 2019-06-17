@@ -53,7 +53,7 @@ namespace EastFive.Azure.Auth.CredentialProviders.AzureADB2C
             var authentication = await EastFive.Azure.Auth.Method.ByMethodName(
                 AzureADB2CProvider.IntegrationName, application);
             
-            return await EastFive.Azure.Auth.Redirection.ProcessRequestAsync(authentication,
+            return await EastFive.Azure.Auth.Redirection.ProcessRequestAsync(authentication, 
                     parameters,
                     application,
                     request, urlHelper,
