@@ -290,6 +290,7 @@
     <Compile Include="Attributes\ASTFVCPropertyAttribute.cs" />
     <Compile Include="Functions\InvocationMessage.cs" />
     <Compile Include="Functions\InvokeFunction.cs" />
+    <Compile Include="Functions\LinkedTokenSource.cs" />
     <Compile Include="Functions\ResourceQueryCompilationExtensions.cs" />
     <Compile Include="Login\AppSettings.cs" />
     <Compile Include="Auth\Invite.cs" />
