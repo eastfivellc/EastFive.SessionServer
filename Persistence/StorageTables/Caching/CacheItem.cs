@@ -217,7 +217,10 @@ namespace EastFive.Persistence.Azure.StorageTables.Caching
             var blobClient = GetBlobClient();
             var container = blobClient.GetContainerReference("cache");
             container.CreateIfNotExists();
-            var contentType = response.Content.Headers.ContentType.MediaType;
+            var contentType = response.Content.Headers.ContentType.IsDefaultOrNull()?
+                string.Empty
+                :
+                response.Content.Headers.ContentType.MediaType;
             var blobId = Guid.NewGuid();
             var when = DateTime.UtcNow;
             try
@@ -231,8 +234,6 @@ namespace EastFive.Persistence.Azure.StorageTables.Caching
                 blockBlob.Metadata.AddOrReplace("requestUri", response.RequestMessage.RequestUri.AbsoluteUri);
                 if(!response.Headers.ETag.IsDefaultOrNull())
                     blockBlob.Metadata.AddOrReplace("eTag", response.Headers.ETag.Tag);
-                if (!response.Content.Headers.ContentType.IsDefaultOrNull())
-                    blockBlob.Properties.ContentType = response.Content.Headers.ContentType.MediaType;
                 if (response.Content.Headers.ContentEncoding.AnyNullSafe())
                     blockBlob.Metadata.AddOrReplace("ContentEncoding",
                         response.Content.Headers.ContentEncoding.First());

@@ -44,7 +44,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
             Func<TEntity, TResult> onFound,
             Func<TResult> onDoesNotExists = default(Func<TResult>),
             Func<string> getPartitionKey = default(Func<string>))
-            where TEntity : struct, IReferenceable
+            where TEntity : IReferenceable
         {
             return StorageGetAsync(entityRef.id,
                 onFound,
@@ -54,6 +54,21 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
 
         public static TResult StorageGetBy<TRefEntity, TEntity, TResult>(this IRef<TRefEntity> entityRef,
                 Expression<Func<TEntity, IRef<TRefEntity>>> by,
+            Func<IEnumerableAsync<TEntity>, TResult> onFound,
+            Func<TResult> onRefNotFound = default(Func<TResult>))
+            where TEntity : struct, IReferenceable
+            where TRefEntity : struct, IReferenceable
+        {
+            return AzureTableDriverDynamic
+                .FromSettings()
+                .FindBy(entityRef,
+                        by,
+                    onFound,
+                    onRefNotFound);
+        }
+
+        public static TResult StorageGetBy<TRefEntity, TEntity, TResult>(this IRef<TRefEntity> entityRef,
+                Expression<Func<TEntity, IRefOptional<TRefEntity>>> by,
             Func<IEnumerableAsync<TEntity>, TResult> onFound,
             Func<TResult> onRefNotFound = default(Func<TResult>))
             where TEntity : struct, IReferenceable

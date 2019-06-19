@@ -339,6 +339,44 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                 () => throw new Exception());
         }
 
+
+        public TResult FindBy<TRefEntity, TEntity, TResult>(IRef<TRefEntity> entityRef,
+                Expression<Func<TEntity, IRefOptional<TRefEntity>>> by,
+            Func<IEnumerableAsync<TEntity>, TResult> onFound,
+            Func<TResult> onRefNotFound = default(Func<TResult>),
+            Func<ExtendedErrorInformationCodes, string, TResult> onFailure =
+                default(Func<ExtendedErrorInformationCodes, string, TResult>))
+            where TEntity : struct, IReferenceable
+            where TRefEntity : struct, IReferenceable
+        {
+            return by.MemberInfo(
+                memberInfo =>
+                {
+                    return memberInfo
+                        .GetAttributesInterface<IProvideFindBy>()
+                        .First<IProvideFindBy, TResult>(
+                            (attr, next) =>
+                            {
+                                var results = attr
+                                    .GetKeys(entityRef, this, memberInfo)
+                                    .Select(
+                                        rowParitionKeyKvp =>
+                                        {
+                                            var rowKey = rowParitionKeyKvp.Key;
+                                            var partitionKey = rowParitionKeyKvp.Value;
+                                            return this.FindByIdAsync(rowKey, partitionKey,
+                                                (TEntity entity) => entity,
+                                                () => default(TEntity?));
+                                        })
+                                    .Await()
+                                    .SelectWhereHasValue();
+                                return onFound(results);
+                            },
+                            () => throw new Exception());
+                },
+                () => throw new Exception());
+        }
+
         public static IEnumerableAsync<TEntity> FindAllInternal<TEntity>(
             TableQuery<TEntity> query,
             CloudTable table,

@@ -85,9 +85,8 @@ namespace EastFive.Persistence.Azure.StorageTables
             Func<Func<Task>, TResult> onSuccessWithRollback,
             Func<TResult> onFailure)
         {
-            string GetRowKey()
+            string GetRowKey(object rowKeyValue)
             {
-                var rowKeyValue = memberInfo.GetValue(value);
                 var propertyValueType = memberInfo.GetMemberType();
                 if (typeof(Guid).IsAssignableFrom(propertyValueType))
                 {
@@ -106,7 +105,11 @@ namespace EastFive.Persistence.Azure.StorageTables
                 }
                 return rowKeyValue.ToString();
             }
-            var rowKey = GetRowKey();
+            var rowKeyMemberValue = memberInfo.GetValue(value);
+            if (rowKeyMemberValue.IsDefaultOrNull())
+                return onSuccessWithRollback(
+                    () => 1.AsTask());
+            var rowKey = GetRowKey(rowKeyMemberValue);
             var partitionKey = GetPartitionKey(rowKey, value, memberInfo);
             var tableName = GetLookupTableName(memberInfo);
             return await repository.UpdateOrCreateAsync<StorageLookupTable, TResult>(rowKey, partitionKey,
