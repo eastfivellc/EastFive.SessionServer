@@ -1,4 +1,5 @@
-﻿using BlackBarLabs.Extensions;
+﻿using BlackBarLabs;
+using BlackBarLabs.Extensions;
 using BlackBarLabs.Persistence.Azure.StorageTables;
 using EastFive.Collections.Generic;
 using EastFive.Extensions;
@@ -36,7 +37,7 @@ namespace EastFive.Persistence.Azure.StorageTables
         {
             var tableName = GetLookupTableName(memberInfo);
             var rowKey = value.id.AsRowKey();
-            var partitionKey = GetPartitionKey(rowKey, null, memberInfo);
+            var partitionKey = GetPartitionKey(rowKey, default(TEntity), memberInfo);
             return repository
                 .FindByIdAsync<StorageLookupTable, IEnumerableAsync <KeyValuePair<string, string>>>(rowKey, partitionKey,
                     (dictEntity) =>
@@ -64,7 +65,47 @@ namespace EastFive.Persistence.Azure.StorageTables
             public KeyValuePair<string, string>[] rowAndPartitionKeys;
         }
 
-        private string GetPartitionKey(string rowKey, object value, MemberInfo memberInfo)
+        protected virtual IEnumerable<string> GetRowKeys<TEntity>(MemberInfo memberInfo, TEntity value)
+        {
+            var rowKeyValue = memberInfo.GetValue(value);
+            var propertyValueType = memberInfo.GetMemberType();
+            if (typeof(Guid).IsAssignableFrom(propertyValueType))
+            {
+                var guidValue = (Guid)rowKeyValue;
+                return guidValue.AsRowKey().AsEnumerable();
+            }
+            if (typeof(IReferenceable).IsAssignableFrom(propertyValueType))
+            {
+                var refValue = (IReferenceable)rowKeyValue;
+                return refValue.id.AsRowKey().AsEnumerable();
+            }
+            if (typeof(string).IsAssignableFrom(propertyValueType))
+            {
+                var stringValue = (string)rowKeyValue;
+                return stringValue.AsEnumerable();
+            }
+            if (typeof(IReferenceableOptional).IsAssignableFrom(propertyValueType))
+            {
+                var referenceableOptional = (IReferenceableOptional)rowKeyValue;
+                if (referenceableOptional.IsDefaultOrNull())
+                    return new string[] { };
+                if (!referenceableOptional.HasValue)
+                    return new string[] { };
+                return referenceableOptional.id.Value.AsRowKey().AsEnumerable();
+            }
+            if (typeof(IReferences).IsAssignableFrom(propertyValueType))
+            {
+                var references = (IReferences)rowKeyValue;
+                if (references.IsDefaultOrNull())
+                    return new string[] { };
+                return references.ids.Select(id => id.AsRowKey());
+            }
+            var exMsg = $"StorageLookup is not implemented for type `{propertyValueType.FullName}`. " +
+                "Please override GetRowKeys on `{this.GetType().FullName}`.";
+            throw new NotImplementedException(exMsg);
+        }
+
+        protected virtual string GetPartitionKey<TEntity>(string rowKey, TEntity value, MemberInfo memberInfo)
         {
             var partitionKeyAttributeType = this.PartitionAttribute.IsDefaultOrNull() ?
                   typeof(StandardParititionKeyAttribute)
@@ -85,59 +126,77 @@ namespace EastFive.Persistence.Azure.StorageTables
             Func<Func<Task>, TResult> onSuccessWithRollback,
             Func<TResult> onFailure)
         {
-            string GetRowKey(object rowKeyValue)
-            {
-                var propertyValueType = memberInfo.GetMemberType();
-                if (typeof(Guid).IsAssignableFrom(propertyValueType))
+            var rowKeys = GetRowKeys(memberInfo, value);
+            var rollbacks = await rowKeys
+                .Select(
+                    rowKey =>
+                    {
+                        var partitionKey = GetPartitionKey(rowKey, value, memberInfo);
+                        return MutateLookupTable(rowKey, partitionKey,
+                            memberInfo, repository, mutateCollection);
+                    })
+                .WhenAllAsync();
+            Func<Task> allRollbacks =
+                () =>
                 {
-                    var guidValue = (Guid)rowKeyValue;
-                    return guidValue.AsRowKey();
-                }
-                if (typeof(IReferenceable).IsAssignableFrom(propertyValueType))
-                {
-                    var refValue = (IReferenceable)rowKeyValue;
-                    return refValue.id.AsRowKey();
-                }
-                if (typeof(string).IsAssignableFrom(propertyValueType))
-                {
-                    var stringValue = (string)rowKeyValue;
-                    return stringValue;
-                }
-                return rowKeyValue.ToString();
-            }
-            var rowKeyMemberValue = memberInfo.GetValue(value);
-            if (rowKeyMemberValue.IsDefaultOrNull())
-                return onSuccessWithRollback(
-                    () => 1.AsTask());
-            var rowKey = GetRowKey(rowKeyMemberValue);
-            var partitionKey = GetPartitionKey(rowKey, value, memberInfo);
+                    var tasks = rollbacks.Select(rb => rb());
+                    return Task.WhenAll(tasks);
+                };
+            return onSuccessWithRollback(allRollbacks);
+        }
+
+        public async Task<Func<Task>> MutateLookupTable(string rowKey, string partitionKey,
+            MemberInfo memberInfo, AzureTableDriverDynamic repository,
+            Func<IEnumerable<KeyValuePair<string, string>>, IEnumerable<KeyValuePair<string, string>>> mutateCollection)
+        {
             var tableName = GetLookupTableName(memberInfo);
-            return await repository.UpdateOrCreateAsync<StorageLookupTable, TResult>(rowKey, partitionKey,
+            return await repository.UpdateOrCreateAsync<StorageLookupTable, Func<Task>>(rowKey, partitionKey,
                 async (created, lookup, saveAsync) =>
                 {
                     lookup.rowKey = rowKey;
                     lookup.partitionKey = partitionKey;
-                    lookup.rowAndPartitionKeys = mutateCollection(lookup.rowAndPartitionKeys)
+                    var rollbackRowAndPartitionKeys = lookup.rowAndPartitionKeys;
+                    lookup.rowAndPartitionKeys = mutateCollection(rollbackRowAndPartitionKeys)
                         .Distinct(rpKey => rpKey.Key)
                         .ToArray();
                     await saveAsync(lookup);
-                    Func<Task> rollback =
+                    Func<Task<bool>> rollback =
                         async () =>
                         {
                             if (created)
                             {
-                                await repository.DeleteAsync<StorageLookupTable, bool>(rowKey, partitionKey,
+                                return await repository.DeleteAsync<StorageLookupTable, bool>(rowKey, partitionKey,
                                     () => true,
                                     () => false,
-                                    tableName:tableName);
-                                return;
+                                    tableName: tableName);
                             }
-
-                            // TODO: Other rollback
+                            var table = repository.TableClient.GetTableReference(tableName);
+                            return await repository.UpdateAsync<StorageLookupTable, bool>(rowKey, partitionKey,
+                                async (modifiedDoc, saveRollbackAsync) =>
+                                {
+                                    var matchKeys = rollbackRowAndPartitionKeys.SelectKeys().AsHashSet();
+                                    var matchValues = rollbackRowAndPartitionKeys.SelectKeys().AsHashSet();
+                                    var modified = modifiedDoc.rowAndPartitionKeys
+                                        .All(
+                                            rowAndPartitionKey =>
+                                            {
+                                                if (!matchKeys.Contains(rowAndPartitionKey.Key))
+                                                    return false;
+                                                if (!matchValues.Contains(rowAndPartitionKey.Value))
+                                                    return false;
+                                                return true;
+                                            });
+                                    if (!modified)
+                                        return true;
+                                    modifiedDoc.rowAndPartitionKeys = rollbackRowAndPartitionKeys;
+                                    await saveRollbackAsync(modifiedDoc);
+                                    return true;
+                                },
+                                table: table);
                         };
-                    return onSuccessWithRollback(rollback);
+                    return rollback;
                 },
-                tableName:tableName);
+                tableName: tableName);
         }
 
         public virtual Task<TResult> ExecuteCreateAsync<TEntity, TResult>(MemberInfo memberInfo,
@@ -151,12 +210,12 @@ namespace EastFive.Persistence.Azure.StorageTables
                 rowKeyRef, partitionKeyRef,
                 value, dictionary,
                 repository,
-                (rowAndParitionKeys) => rowAndParitionKeys.Append(rowKeyRef.PairWithValue(partitionKeyRef)),
+                (rowAndParitionKeys) => rowAndParitionKeys.NullToEmpty().Append(rowKeyRef.PairWithValue(partitionKeyRef)),
                 onSuccessWithRollback,
                 onFailure);
         }
 
-        public Task<TResult> ExecuteUpdateAsync<TEntity, TResult>(MemberInfo memberInfo, 
+        public async Task<TResult> ExecuteUpdateAsync<TEntity, TResult>(MemberInfo memberInfo, 
                 string rowKeyRef, string partitionKeyRef, 
                 TEntity valueExisting, IDictionary<string, EntityProperty> dictionaryExisting,
                 TEntity valueUpdated, IDictionary<string, EntityProperty> dictionaryUpdated, 
@@ -164,9 +223,40 @@ namespace EastFive.Persistence.Azure.StorageTables
             Func<Func<Task>, TResult> onSuccessWithRollback, 
             Func<TResult> onFailure)
         {
-            // Since only updating the row/partition keys could force a change here, just ignroe
-            return onSuccessWithRollback(
-                () => true.AsTask()).AsTask();
+            var existingRowKeys = GetRowKeys(memberInfo, valueExisting);
+            var updatedRowKeys = GetRowKeys(memberInfo, valueUpdated);
+            var rowKeysDeleted = existingRowKeys.Except(updatedRowKeys);
+            var rowKeysAdded = updatedRowKeys.Except(existingRowKeys);
+            var deletionRollbacks = rowKeysDeleted
+                .Select(
+                    rowKey =>
+                    {
+                        var partitionKey = GetPartitionKey(rowKey, valueExisting, memberInfo);
+                        return MutateLookupTable(rowKey, partitionKey, memberInfo,
+                            repository,
+                            (rowAndParitionKeys) => rowAndParitionKeys
+                                .NullToEmpty()
+                                .Where(kvp => kvp.Key != rowKeyRef));
+                    });
+            var additionRollbacks = rowKeysAdded
+                 .Select(
+                     rowKey =>
+                     {
+                         var partitionKey = GetPartitionKey(rowKey, valueExisting, memberInfo);
+                         return MutateLookupTable(rowKey, partitionKey, memberInfo,
+                             repository,
+                             (rowAndParitionKeys) => rowAndParitionKeys
+                                .NullToEmpty()
+                                .Append(rowKeyRef.PairWithValue(partitionKeyRef)));
+                     });
+            var allRollbacks = await additionRollbacks.Concat(deletionRollbacks).WhenAllAsync();
+            Func<Task> allRollback =
+                () =>
+                {
+                    var tasks = allRollbacks.Select(rb => rb());
+                    return Task.WhenAll(tasks);
+                };
+            return onSuccessWithRollback(allRollback);
         }
 
         public Task<TResult> ExecuteDeleteAsync<TEntity, TResult>(MemberInfo memberInfo, 
@@ -180,7 +270,9 @@ namespace EastFive.Persistence.Azure.StorageTables
                 rowKeyRef, partitionKeyRef,
                 value, dictionary,
                 repository,
-                (rowAndParitionKeys) => rowAndParitionKeys.Where(kvp => kvp.Key != rowKeyRef),
+                (rowAndParitionKeys) => rowAndParitionKeys
+                    .NullToEmpty()
+                    .Where(kvp => kvp.Key != rowKeyRef),
                 onSuccessWithRollback,
                 onFailure);
         }

@@ -15,7 +15,7 @@ namespace EastFive.Azure
         public const string ApplicationInsightsKey = "EastFive.Security.SessionServer.ApplicationInsightsKey";
         public const string ApiSecurityKey = "EastFive.Security.SessionServer.ApiSecurityKey";
 
-        public const string SpaSiteLocation = "EastFive.Security.SessionServer.SpaSiteLocation";
+        public const string SpaSiteLocation = "EastFive.Azure.SpaSiteLocation";
 
         public const string AdminLoginRsaKey = "EastFive.Azure.Auth.AdminLoginRsaKey";
 

@@ -304,11 +304,11 @@ namespace EastFive.Persistence.Azure.StorageTables
                                   {
                                       return storageModifier.ExecuteUpdateAsync(memberInfo,
                                           this.RowKey, this.PartitionKey,
+                                          current.Entity, current.WriteEntity(null), 
                                           this.Entity, this.WriteEntity(null),
-                                          current.Entity, current.WriteEntity(null),
                                           repository,
                                           rollback => rollback.PairWithKey(true),
-                                          () => default(Func<Task>).PairWithKey(true));
+                                          () => default(Func<Task>).PairWithKey(false));
                                   }))
                        .AsyncEnumerable()
                        .ToArrayAsync();
