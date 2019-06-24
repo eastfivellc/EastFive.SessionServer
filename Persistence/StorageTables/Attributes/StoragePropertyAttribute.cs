@@ -844,6 +844,11 @@ namespace EastFive.Persistence
                 return onBound(arrayInstance);
             }
 
+            if(typeof(TimeZoneInfo) == type)
+            {
+                return onBound(default(TimeZoneInfo));
+            }
+
             return onFailedToBind();
         }
 

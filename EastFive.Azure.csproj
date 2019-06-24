@@ -373,6 +373,7 @@
     <Compile Include="Persistence\StorageTables\RelatedEntities\ChildDocument.cs" />
     <Compile Include="Persistence\StorageTables\RelatedEntities\ParentDocument.cs" />
     <Compile Include="Persistence\StorageTables\TableEntity.cs" />
+    <Compile Include="Redirect.cs" />
     <Compile Include="Synchronization\Api\AdapterController.cs" />
     <Compile Include="Synchronization\Api\ConnectionController.cs" />
     <Compile Include="Synchronization\Api\ConnectorController.cs" />

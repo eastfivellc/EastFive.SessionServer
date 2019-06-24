@@ -146,7 +146,7 @@ namespace EastFive.Azure.Auth
 
         [HttpDelete]
         public static async Task<HttpResponseMessage> DeleteAsync(
-        [UpdateId(CheckFileName = true, Name = IntegrationIdPropertyName)]IRef<Integration> integrationRef,
+        [UpdateId(Name = IntegrationIdPropertyName)]IRef<Integration> integrationRef,
                 Api.Azure.AzureApplication application, EastFive.Api.Controllers.SessionToken security,
             NoContentResponse onDeleted,
             NotFoundResponse onNotFound,

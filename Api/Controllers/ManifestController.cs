@@ -73,15 +73,12 @@ namespace EastFive.Api.Azure.Controllers
                     {
                         var parameterHtml = method
                             .GetParameters()
-                            .Where(methodParam => methodParam.ContainsCustomAttribute<QueryValidationAttribute>(true))
+                            .Where(methodParam => methodParam.ContainsAttributeInterface<IBindApiValue>(true))
                             .Select(
                                 methodParam =>
                                 {
-                                    var validator = methodParam.GetCustomAttribute<QueryValidationAttribute>();
-                                    var lookupName = validator.Name.IsNullOrWhiteSpace() ?
-                                        methodParam.Name.ToLower()
-                                        :
-                                        validator.Name.ToLower();
+                                    var validator = methodParam.GetAttributeInterface<IBindApiValue>();
+                                    var lookupName = validator.GetKey(methodParam);
                                     var required = methodParam.ContainsCustomAttribute<PropertyAttribute>() ||
                                         methodParam.ContainsCustomAttribute<QueryParameterAttribute>();
 

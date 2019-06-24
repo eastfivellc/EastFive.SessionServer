@@ -325,6 +325,21 @@ namespace EastFive.Persistence.Azure.StorageTables
                 var dtValue = value.DateTime;
                 return onBound(dtValue);
             }
+            if (typeof(TimeZoneInfo) == type)
+            {
+                if (value.PropertyType != EdmType.String)
+                    return onFailedToBind();
+                var stringValue = value.StringValue;
+                try
+                {
+                    var tzi = TimeZoneInfo.FindSystemTimeZoneById(stringValue);
+                    return onBound(tzi);
+                }
+                catch(Exception)
+                {
+                    return onFailedToBind();
+                }
+            }
             if (typeof(Uri) == type)
             {
                 var strValue = value.StringValue;
