@@ -183,7 +183,8 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
             Func<TEntity, Func<TEntity, Task>, Task<TResult>> onUpdate,
             Func<TResult> onNotFound = default(Func<TResult>),
             StorageTables.Driver.AzureStorageDriver.RetryDelegateAsync<Task<TResult>> onTimeoutAsync =
-                default(StorageTables.Driver.AzureStorageDriver.RetryDelegateAsync<Task<TResult>>))
+                default(StorageTables.Driver.AzureStorageDriver.RetryDelegateAsync<Task<TResult>>),
+                Func<string> getPartitionKey = default(Func<string>))
             where TEntity : struct, IReferenceable
         {
             var documentId = entityRef.id;
@@ -192,7 +193,8 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                 .UpdateAsync(documentId,
                     onUpdate,
                     onNotFound: onNotFound,
-                    onTimeoutAsync: onTimeoutAsync);
+                    onTimeoutAsync: onTimeoutAsync,
+                    getPartitionKey: getPartitionKey);
         }
 
         public static Task<TResult> StorageCreateOrUpdateAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
