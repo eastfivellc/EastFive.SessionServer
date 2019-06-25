@@ -1090,10 +1090,14 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             Func<TResult> onNotFound,
             Func<ExtendedErrorInformationCodes, string, TResult> onFailure =
                 default(Func<ExtendedErrorInformationCodes, string, TResult>),
-            AzureStorageDriver.RetryDelegate onTimeout = default(AzureStorageDriver.RetryDelegate))
+            AzureStorageDriver.RetryDelegate onTimeout = default(AzureStorageDriver.RetryDelegate),
+            Func<string> getPartitionKey = default(Func<string>))
         {
+            if (getPartitionKey.IsDefaultOrNull())
+                getPartitionKey = () => documentId.AsRowKey().GeneratePartitionKey();
+
             var rowKey = documentId.AsRowKey();
-            var partitionKey = rowKey.GeneratePartitionKey();
+            var partitionKey = getPartitionKey();
             return DeleteAsync<TData, TResult>(rowKey, partitionKey,
                 success,
                 onNotFound,

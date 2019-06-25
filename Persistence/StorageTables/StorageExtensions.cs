@@ -271,7 +271,8 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
 
         public static Task<TResult> StorageDeleteAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
             Func<TResult> onSuccess,
-            Func<TResult> onNotFound = default(Func<TResult>))
+            Func<TResult> onNotFound = default(Func<TResult>),
+            Func<string> getPartitionKey = default(Func<string>))
             where TEntity : struct, IReferenceable
         {
             var documentId = entityRef.id;
@@ -279,7 +280,8 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                 .FromSettings()
                 .DeleteByIdAsync<TEntity, TResult>(documentId,
                     onSuccess,
-                    onNotFound: onNotFound);
+                    onNotFound: onNotFound,
+                    getPartitionKey: getPartitionKey);
         }
 
         public static IEnumerableAsync<TResult> StorageDeleteBatch<TEntity, TResult>(this IEnumerableAsync<IRef<TEntity>> entityRefs,
