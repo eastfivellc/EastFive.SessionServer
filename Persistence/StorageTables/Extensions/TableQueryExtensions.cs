@@ -26,8 +26,21 @@ namespace EastFive.Persistence.Azure.StorageTables
                         var tablePropertyName = attr.GetTablePropertyName(member);
                         return tablePropertyName;
                     },
-                    () => member.Name);
-           
+                    () =>
+                    {
+                        return member
+                            .GetAttributesInterface<IModifyAzureStorageTablePartitionKey>()
+                            .First(
+                                (attr, next) =>
+                                {
+                                    var tablePropertyName = "PartitionKey";
+                                    return tablePropertyName;
+                                },
+                                () =>
+                                {
+                                    return member.Name;
+                                });
+                    });
         }
 
         public static object GetTableQuery<TEntity>(string whereExpression = null)
@@ -50,18 +63,28 @@ namespace EastFive.Persistence.Azure.StorageTables
             return query;
         }
 
-        private static MemberInfo ResolveMemberInType(Type entityType, MemberExpression expression)
+        private static MemberInfo ResolveMemberInType(Type entityType, MemberExpression expression, out Func<object, object> getValue)
         {
             var member = expression.Member;
+            getValue = (obj) => member.GetValue(obj);
             if (entityType.GetMembers().Contains(member))
             {
                 if (member.ContainsAttributeInterface<IPersistInAzureStorageTables>())
                     return member;
+
+                var partitionAttributes = member.GetAttributesInterface<IModifyAzureStorageTablePartitionKey>();
+                if (partitionAttributes.Any())
+                {
+                    var partitionAttribute = partitionAttributes.First();
+                    getValue = (obj) => partitionAttribute.GeneratePartitionKey(null,obj,member);
+                    return member;
+                }
+
                 throw new ArgumentException($"{member.DeclaringType.FullName}..{member.Name} is not storage property/field.");
             }
 
             if (expression.Expression is MemberExpression)
-                return ResolveMemberInType(entityType, expression.Expression as MemberExpression);
+                return ResolveMemberInType(entityType, expression.Expression as MemberExpression, out getValue);
 
             throw new ArgumentException($"{member.DeclaringType.FullName}..{member.Name} is not a property/field of {entityType.FullName}.");
         }
@@ -117,7 +140,7 @@ namespace EastFive.Persistence.Azure.StorageTables
                 throw new NotImplementedException($"Unary expression of type {operand.GetType().FullName} is not supported.");
 
             var memberOperand = operand as MemberExpression;
-            var assignmentMember = ResolveMemberInType(typeof(TEntity), memberOperand);
+            var assignmentMember = ResolveMemberInType(typeof(TEntity), memberOperand, out Func<object,object> getValue);
             var assignmentName = assignmentMember.GetTablePropertyName();
 
             var query = GetTableQuery<TEntity>();
@@ -127,7 +150,7 @@ namespace EastFive.Persistence.Azure.StorageTables
                 postFilter =
                         (entity) =>
                         {
-                            var nullableValue = assignmentMember.GetValue(entity);
+                            var nullableValue = getValue(entity);
                             var hasValue = nullableHasValueProperty.GetValue(nullableValue);
                             var hasValueBool = (bool)hasValue;
                             return !hasValueBool;
@@ -153,7 +176,7 @@ namespace EastFive.Persistence.Azure.StorageTables
                 postFilter =
                     (entity) =>
                     {
-                        var nullableValue = assignmentMember.GetValue(entity);
+                        var nullableValue = getValue(entity);
                         var hasValue = refOptionalHasValueProperty.GetValue(nullableValue);
                         var hasValueBool = (bool)hasValue;
                         return !hasValueBool;
@@ -191,7 +214,7 @@ namespace EastFive.Persistence.Azure.StorageTables
 
         private static object ResolveMemberExpression<TEntity>(MemberExpression expression)
         {
-            var assignmentMember = ResolveMemberInType(typeof(TEntity), expression);
+            var assignmentMember = ResolveMemberInType(typeof(TEntity), expression, out Func<object,object> getValue);
             if (!typeof(bool).IsAssignableFrom(expression.Type))
                 throw new NotImplementedException($"Member expression of type {expression.Type.FullName} is not supported.");
 
@@ -220,7 +243,7 @@ namespace EastFive.Persistence.Azure.StorageTables
             if (!(binaryExpression.Left is MemberExpression))
                 throw new ArgumentException("TableQuery expression left side must be an MemberExpression");
 
-            var assignmentMember = ResolveMemberInType(typeof(TEntity), binaryExpression.Left as MemberExpression);
+            var assignmentMember = ResolveMemberInType(typeof(TEntity), binaryExpression.Left as MemberExpression, out Func<object,object> getValue);
             var assignmentValue = binaryExpression.Right.ResolveExpression();
             var assignmentName = assignmentMember.GetTablePropertyName();
 
