@@ -103,7 +103,18 @@ namespace EastFive.Api.Azure.Modules
                     .Replace("affirmhealthpdms-production.azurewebsites.net", "dash.affirmhealth.com");
                 return request.CreateRedirectResponse(new Uri(absoluteUri));
             }
-        
+
+            if (!request.RequestUri.IsDefaultOrNull())
+            {
+                if (request.RequestUri.PathAndQuery.HasBlackSpace())
+                {
+                    if (request.RequestUri.PathAndQuery.Contains("apple-app-site-association"))
+                    {
+                        return await continuation(request, cancellationToken);
+                    }
+                }
+            }
+
             var context = httpApp.Context;
             string filePath = context.Request.FilePath;
             string fileName = VirtualPathUtility.GetFileName(filePath);

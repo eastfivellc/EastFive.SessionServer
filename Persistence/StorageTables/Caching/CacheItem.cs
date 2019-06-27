@@ -57,21 +57,9 @@ namespace EastFive.Persistence.Azure.StorageTables.Caching
                         var mutatedRequest = mutateHttpRequest(request);
                         using (var httpClient = new HttpClient())
                         {
-                            var sleepTime = TimeSpan.FromSeconds(1);
-                            while (true)
-                            {
-                                try
-                                {
-                                    // Disposed by caller
-                                    var response = await httpClient.SendAsync(mutatedRequest);
-                                    return response;
-                                }
-                                catch (TaskCanceledException)
-                                {
-                                    Thread.Sleep(sleepTime);
-                                    sleepTime = TimeSpan.FromSeconds(sleepTime.TotalSeconds * 2.0);
-                                }
-                            }
+                            // Disposed by caller
+                            var response = await httpClient.SendAsync(mutatedRequest);
+                            return response;
                         }
                     },
                 onRetrievedOrCached,
@@ -173,20 +161,53 @@ namespace EastFive.Persistence.Azure.StorageTables.Caching
                     }
                     if (ShouldFetch())
                     {
-                        var request = new HttpRequestMessage();
-                        request.RequestUri = source;
-                        try
+                        var sleepTime = TimeSpan.FromSeconds(1);
+                        while (true)
                         {
-                            using (var response = await sendAsync(request))
+                            var request = new HttpRequestMessage();
+                            request.RequestUri = source;
+                            try
                             {
-                                var responseData = await response.Content.ReadAsByteArrayAsync();
-                                await item.ImportResponseAsync(
-                                    response, responseData, saveAsync);
+                                using (var response = await sendAsync(request))
+                                {
+                                    var responseData = await response.Content.ReadAsByteArrayAsync();
+                                    await item.ImportResponseAsync(
+                                        response, responseData, saveAsync);
+                                    break;
+                                }
                             }
-                        }
-                        catch (TaskCanceledException)
-                        {
-                            return onFailedToRetrieve();
+                            catch (TaskCanceledException)
+                            {
+                                Thread.Sleep(sleepTime);
+                                sleepTime = TimeSpan.FromSeconds(sleepTime.TotalSeconds * 2.0);
+                            }
+                            catch (HttpRequestException requestEx)
+                            {
+                                if (!requestEx.InnerException.IsDefaultOrNull())
+                                {
+                                    if (requestEx.InnerException is WebException)
+                                    {
+                                        var webEx = requestEx.InnerException as WebException;
+                                        if (
+                                            webEx.Status == WebExceptionStatus.Timeout ||
+                                            webEx.Status == WebExceptionStatus.RequestCanceled ||
+                                            // Also a timeout conditions.... 
+                                            webEx.Status == WebExceptionStatus.ConnectFailure ||
+                                            webEx.Status == WebExceptionStatus.ConnectionClosed
+                                            )
+                                        {
+                                            Thread.Sleep(sleepTime);
+                                            sleepTime = TimeSpan.FromSeconds(sleepTime.TotalSeconds * 2.0);
+                                            continue;
+                                        }
+                                    }
+                                }
+                                return onFailedToRetrieve();
+                            }
+                            catch (Exception)
+                            {
+                                return onFailedToRetrieve();
+                            }
                         }
                     }
                     var cacheResponse = await item.ConstructResponseAsync(asOfUtcMaybe);
@@ -214,6 +235,16 @@ namespace EastFive.Persistence.Azure.StorageTables.Caching
         private async Task ImportResponseAsync(HttpResponseMessage response, byte[] responseData,
             Func<CacheItem, Task> saveAsync)
         {
+            var when = DateTime.UtcNow;
+            var checksum = responseData.Md5Checksum();
+            if (this.checksumLookup.ContainsKey(checksum))
+            {
+                var blobIdExisting = this.checksumLookup[checksum];
+                this.whenLookup[blobIdExisting] =  when;
+                await saveAsync(this);
+                return;
+            }
+
             var blobClient = GetBlobClient();
             var container = blobClient.GetContainerReference("cache");
             container.CreateIfNotExists();
@@ -222,7 +253,6 @@ namespace EastFive.Persistence.Azure.StorageTables.Caching
                 :
                 response.Content.Headers.ContentType.MediaType;
             var blobId = Guid.NewGuid();
-            var when = DateTime.UtcNow;
             try
             {
                 var blockBlob = container.GetBlockBlobReference(blobId.ToString("N"));
@@ -246,7 +276,6 @@ namespace EastFive.Persistence.Azure.StorageTables.Caching
                     await stream.WriteAsync(responseData, 0, responseData.Length);
                 }
                 this.whenLookup.Add(blobId, when);
-                var checksum = responseData.Md5Checksum();
                 this.checksumLookup.Add(checksum, blobId);
                 await saveAsync(this);
             }

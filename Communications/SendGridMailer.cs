@@ -57,6 +57,7 @@ namespace EastFive.Communications.Azure
             var message = new SendGridMessage();
             message.From = new EmailAddress(fromAddress, fromName);
             message.Subject = subject;
+            message.SetClickTracking(false, true);
             //message.TemplateId = templateName;
 
             var emailMute = false;

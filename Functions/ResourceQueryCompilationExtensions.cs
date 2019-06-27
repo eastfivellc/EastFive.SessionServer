@@ -7,6 +7,7 @@ using EastFive.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -20,7 +21,7 @@ namespace EastFive.Azure.Functions
             IInvokeApplication applicationInvoker = default)
         {
             var request = urlQuery.Request(httpMethod: httpMethod, applicationInvoker: applicationInvoker);
-            var invocationMessageRef = Ref<InvocationMessage>.NewRef();
+            var invocationMessageRef = Ref<InvocationMessage>.SecureRef();
             var invocationMessage = new InvocationMessage
             {
                 invocationRef = invocationMessageRef,
@@ -50,7 +51,7 @@ namespace EastFive.Azure.Functions
                     }
                     var application = GetApplication();
                     return await EastFive.Web.Configuration.Settings.GetString(
-                        AppSettings.FunctionProcessorQueueTriggerNamePercent,
+                        AppSettings.FunctionProcessorQueueTriggerName,
                         async (queueTriggerName) =>
                         {
                             await application.SendQueueMessageAsync(queueTriggerName, byteContent);

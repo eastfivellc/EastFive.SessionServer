@@ -309,7 +309,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             Func<ExtendedErrorInformationCodes, string, TResult> onFailure =
                 default(Func<ExtendedErrorInformationCodes, string, TResult>))
             where TEntity : struct, IReferenceable
-            where TRefEntity : struct, IReferenceable
+            where TRefEntity : IReferenceable
         {
             return FindByInternal(entityRef,
                     by,
@@ -326,7 +326,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             Func<ExtendedErrorInformationCodes, string, TResult> onFailure =
                 default(Func<ExtendedErrorInformationCodes, string, TResult>))
             where TEntity : struct, IReferenceable
-            where TRefEntity : struct, IReferenceable
+            where TRefEntity : IReferenceable
         {
             return FindByInternal(entityRef,
                     by,
@@ -342,7 +342,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             Func<ExtendedErrorInformationCodes, string, TResult> onFailure =
                 default(Func<ExtendedErrorInformationCodes, string, TResult>))
             where TEntity : struct, IReferenceable
-            where TRefEntity : struct, IReferenceable
+            where TRefEntity : IReferenceable
         {
             return FindByInternal(entityRef,
                     by,
@@ -358,7 +358,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             Func<ExtendedErrorInformationCodes, string, TResult> onFailure =
                 default(Func<ExtendedErrorInformationCodes, string, TResult>))
             where TEntity : struct, IReferenceable
-            where TRefEntity : struct, IReferenceable
+            where TRefEntity : IReferenceable
         {
             return by.MemberInfo(
                 (memberInfo, expr) =>
@@ -711,7 +711,10 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                 Func<string> getPartitionKey = default(Func<string>))
         {
             return this.UpdateAsyncAsync<TData, TResult>(documentId,
-                (doc, saveAsync) => onUpdate(false, doc, saveAsync),
+                (doc, saveAsync) =>
+                {
+                    return onUpdate(false, doc, saveAsync);
+                },
                 async () =>
                 {
                     var doc = Activator.CreateInstance<TData>();

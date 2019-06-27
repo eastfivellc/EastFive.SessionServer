@@ -57,7 +57,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
             Func<IEnumerableAsync<TEntity>, TResult> onFound,
             Func<TResult> onRefNotFound = default(Func<TResult>))
             where TEntity : struct, IReferenceable
-            where TRefEntity : struct, IReferenceable
+            where TRefEntity : IReferenceable
         {
             return AzureTableDriverDynamic
                 .FromSettings()
@@ -72,7 +72,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
             Func<IEnumerableAsync<TEntity>, TResult> onFound,
             Func<TResult> onRefNotFound = default(Func<TResult>))
             where TEntity : struct, IReferenceable
-            where TRefEntity : struct, IReferenceable
+            where TRefEntity : IReferenceable
         {
             return AzureTableDriverDynamic
                 .FromSettings()
@@ -87,7 +87,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
             Func<IEnumerableAsync<TEntity>, TResult> onFound,
             Func<TResult> onRefNotFound = default(Func<TResult>))
             where TEntity : struct, IReferenceable
-            where TRefEntity : struct, IReferenceable
+            where TRefEntity : IReferenceable
         {
             return AzureTableDriverDynamic
                 .FromSettings()

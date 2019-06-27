@@ -76,7 +76,7 @@ namespace EastFive.Azure
                 EastFive.Azure.AppSettings.SpaSiteLocation,
                 siteUrl =>
                 {
-                    var resourceName = application.GetResourceName(resourceType);
+                    var resourceName = application.GetResourceMime(resourceType);
                     var redirectUrl = siteUrl
                         .AppendToPath("redirect")
                         .AddQueryParameter("type", resourceName)

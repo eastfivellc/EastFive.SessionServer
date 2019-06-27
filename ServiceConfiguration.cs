@@ -63,9 +63,9 @@ namespace EastFive.Security.SessionServer
             
             
             AddExternalControllers<OpenIdResponseController>(config);
-            config.Routes.MapHttpRoute(name: "apple-app-links",
-                routeTemplate: "apple-app-site-association",
-                defaults: new { controller = "AppleAppSiteAssociation", id = RouteParameter.Optional });
+            //config.Routes.MapHttpRoute(name: "apple-app-links",
+            //    routeTemplate: "apple-app-site-association",
+            //    defaults: new { controller = "AppleAppSiteAssociation", id = RouteParameter.Optional });
 
             var credentialProvidersWithoutMethods = await initializers.Aggregate(
                 (new IProvideAuthorization[] { }).ToTask(),

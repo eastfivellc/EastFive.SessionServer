@@ -33,7 +33,7 @@ namespace EastFive.Persistence.Azure.StorageTables
         }
 
         public IEnumerableAsync<KeyValuePair<string, string>> GetKeys<TEntity>(IRef<TEntity> value, AzureTableDriverDynamic repository, MemberInfo memberInfo)
-            where TEntity : struct, IReferenceable
+            where TEntity : IReferenceable
         {
             var tableName = GetLookupTableName(memberInfo);
             var rowKey = value.id.AsRowKey();

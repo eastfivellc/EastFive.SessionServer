@@ -81,6 +81,9 @@ namespace EastFive.Api.Azure
         {
             base.Configure(config);
             config.MessageHandlers.Add(new Api.Azure.Modules.SpaHandler(this, config));
+            config.Routes.MapHttpRoute(name: "apple-app-links",
+                routeTemplate: "apple-app-site-association",
+                defaults: new { controller = "AppleAppSiteAssociation", id = RouteParameter.Optional });
         }
         
         public IDictionaryAsync<string, IProvideAuthorization> AuthorizationProviders
