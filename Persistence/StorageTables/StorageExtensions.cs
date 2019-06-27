@@ -183,7 +183,8 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
             Func<TEntity, Func<TEntity, Task>, Task<TResult>> onUpdate,
             Func<TResult> onNotFound = default(Func<TResult>),
             StorageTables.Driver.AzureStorageDriver.RetryDelegateAsync<Task<TResult>> onTimeoutAsync =
-                default(StorageTables.Driver.AzureStorageDriver.RetryDelegateAsync<Task<TResult>>))
+                default(StorageTables.Driver.AzureStorageDriver.RetryDelegateAsync<Task<TResult>>),
+                Func<string> getPartitionKey = default(Func<string>))
             where TEntity : struct, IReferenceable
         {
             var documentId = entityRef.id;
@@ -192,7 +193,8 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                 .UpdateAsync(documentId,
                     onUpdate,
                     onNotFound: onNotFound,
-                    onTimeoutAsync: onTimeoutAsync);
+                    onTimeoutAsync: onTimeoutAsync,
+                    getPartitionKey: getPartitionKey);
         }
 
         public static Task<TResult> StorageCreateOrUpdateAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
@@ -271,7 +273,8 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
 
         public static Task<TResult> StorageDeleteAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
             Func<TResult> onSuccess,
-            Func<TResult> onNotFound = default(Func<TResult>))
+            Func<TResult> onNotFound = default(Func<TResult>),
+            string partitionKey = default)
             where TEntity : struct, IReferenceable
         {
             var documentId = entityRef.id;
@@ -279,7 +282,8 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                 .FromSettings()
                 .DeleteByIdAsync<TEntity, TResult>(documentId,
                     onSuccess,
-                    onNotFound: onNotFound);
+                    onNotFound: onNotFound,
+                    partitionKey: partitionKey);
         }
 
         public static IEnumerableAsync<TResult> StorageDeleteBatch<TEntity, TResult>(this IEnumerableAsync<IRef<TEntity>> entityRefs,

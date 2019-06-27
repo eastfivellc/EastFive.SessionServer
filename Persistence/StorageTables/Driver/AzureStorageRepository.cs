@@ -19,6 +19,7 @@ using BlackBarLabs.Linq.Async;
 using Microsoft.WindowsAzure.Storage.Blob;
 using System.IO;
 using EastFive.Analytics;
+using BlackBarLabs.Web;
 
 namespace BlackBarLabs.Persistence.Azure.StorageTables
 {
@@ -42,7 +43,7 @@ namespace BlackBarLabs.Persistence.Azure.StorageTables
         public static AzureStorageRepository CreateRepository(
             string storageSettingConfigurationKeyName)
         {
-            var storageSetting = Microsoft.Azure.CloudConfigurationManager.GetSetting(storageSettingConfigurationKeyName);
+            var storageSetting = ConfigurationContext.Instance.AppSettings[storageSettingConfigurationKeyName];
             var cloudStorageAccount = CloudStorageAccount.Parse(storageSetting);
             var azureStorageRepository = new AzureStorageRepository(cloudStorageAccount);
             return azureStorageRepository;
