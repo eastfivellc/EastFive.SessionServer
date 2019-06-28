@@ -119,9 +119,19 @@ namespace EastFive.Api.Azure
                     .ToDictionary();
             }
         }
-
-        public virtual async Task SendServiceBusMessageAsync(string queueName, string stringContent)
+        public virtual Task SendServiceBusMessageAsync(string queueName, string contents)
         {
+            return SendServiceBusMessageAsync(queueName, new[] { contents });
+        }
+
+        public virtual async Task SendServiceBusMessageAsync(string queueName, IEnumerable<string> contents)
+        {
+            const int payloadSize = 262_144;
+            const int perMessageContainerSize = 70;
+
+            if (!contents.Any())
+                return;
+
             var client = EastFive.Web.Configuration.Settings.GetString(EastFive.Security.SessionServer.Configuration.AppSettings.ServiceBusConnectionString,
                 (connectionString) =>
                 {
@@ -131,9 +141,37 @@ namespace EastFive.Api.Azure
 
             try
             {
-                var byteArray = Encoding.UTF8.GetBytes(stringContent);
-                var message = new Microsoft.Azure.ServiceBus.Message(byteArray);
-                await client.SendAsync(message);
+                var messages = contents
+                    .Select(
+                        content =>
+                        {
+                            var bytes = Encoding.UTF8.GetBytes(content);
+                            return new Microsoft.Azure.ServiceBus.Message(bytes);
+                        })
+                    .ToArray();
+
+                var first = messages[0];
+                var remaining = messages.Skip(1).ToArray();
+                await client.SendAsync(first);
+
+                if (remaining.Length == 0)
+                    return;
+
+                var sizeFirst = first.Size;
+                var numberInBatch = payloadSize / ((sizeFirst * 2) + perMessageContainerSize); // fuzzy attempt to batch send as many as possible
+                var batches = await remaining
+                    .Select((x, index) => new { x, index }) 
+                    .GroupBy(x => x.index / numberInBatch, y => y.x)
+                    .Select(
+                        async g =>
+                        {
+                            var items = g.ToList();
+                            await client.SendAsync(items);
+                            return items.Count;
+                        })
+                    .WhenAllAsync(5);
+
+                var sent = 1 + batches.Sum();
             }
             finally
             {
