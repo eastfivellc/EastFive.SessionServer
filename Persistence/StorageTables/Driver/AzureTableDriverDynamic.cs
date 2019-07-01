@@ -299,6 +299,11 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                 }
                 throw se;
             }
+            catch(Exception ex)
+            {
+                ex.GetType();
+                throw ex;
+            }
 
         }
 
@@ -318,6 +323,21 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                 onFailure);
         }
 
+        public TResult FindBy<TRefEntity, TEntity, TResult>(IRef<TRefEntity> entityRef,
+                Expression<Func<TEntity, IRef<IReferenceable>>> by,
+            Func<IEnumerableAsync<TEntity>, TResult> onFound,
+            Func<TResult> onRefNotFound = default(Func<TResult>),
+            Func<ExtendedErrorInformationCodes, string, TResult> onFailure =
+                default(Func<ExtendedErrorInformationCodes, string, TResult>))
+            where TEntity : struct, IReferenceable
+            where TRefEntity : IReferenceable
+        {
+            return FindByInternal(entityRef,
+                    by,
+                onFound,
+                onRefNotFound,
+                onFailure);
+        }
 
         public TResult FindBy<TRefEntity, TEntity, TResult>(IRef<TRefEntity> entityRef,
                 Expression<Func<TEntity, IRefOptional<TRefEntity>>> by,
