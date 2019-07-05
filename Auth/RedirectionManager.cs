@@ -151,8 +151,8 @@ namespace EastFive.Azure.Auth
                                                 reportSetId =>
                                                 {
                                                     var requestParams = authorization.parameters
-                                                        .Append("PingAuthName".PairWithValue(pingAuthName))
-                                                        .Append("ReportSetId".PairWithValue(reportSetId.ToString()))
+                                                        .AppendIf("PingAuthName".PairWithValue(pingAuthName), !authorization.parameters.ContainsKey("PingAuthName"))
+                                                        .AppendIf("ReportSetId".PairWithValue(reportSetId.ToString()), !authorization.parameters.ContainsKey("ReportSetId"))
                                                         .ToDictionary();
 
                                                     return Auth.Redirection.ProcessAsync(authorization, 
