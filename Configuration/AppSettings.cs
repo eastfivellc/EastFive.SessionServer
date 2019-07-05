@@ -22,6 +22,9 @@ namespace EastFive.Azure
         public const string FunctionProcessorQueueTriggerName = "EastFive.Azure.Functions.QueueTriggerName";
         public const string FunctionProcessorQueueTriggerNamePercent = "%EastFive.Azure.Functions.QueueTriggerName%";
 
+        public const string CDNEndpointHostname = "EastFive.Azure.CDNEndpointHostname";
+        public const string CDNApiRoutePrefix = "EastFive.Azure.CDNApiRoutePrefix";
+
         [Config]
         public static class SAML
         {

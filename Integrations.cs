@@ -385,6 +385,13 @@ namespace EastFive.Azure
                 .ToArray());
         }
 
+        private struct InvocationResult
+        {
+            public string why;
+            public object obj;
+            public bool success;
+        }
+
         public async Task<KeyValuePair<Integration, object[]>> GetActivityAsync(Guid integrationId, Type typeofT)
         {
             if (!ServiceConfiguration.integrationActivites.ContainsKey(typeofT))
@@ -397,15 +404,44 @@ namespace EastFive.Azure
                     if (!activitiesOfTypeT.ContainsKey(integration.method))
                         return new KeyValuePair<Integration, object[]> { };
                     var activities = await activitiesOfTypeT[integration.method]
-                        .SelectAsyncOptional<ServiceConfiguration.IntegrationActivityDelegate, object>(
-                            async (invocation, select, skip) =>
+                        .Select(
+                            async invocation =>
                             {
-                                var resultTask = (Task<object>)invocation(integration,
-                                    (obj) => select(obj).AsTask<object>(),
-                                    (why) => skip().AsTask<object>());
-                                var result = await resultTask;
-                                return (EnumerableAsync.ISelected<object>)(result);
+                                var kvp = invocation(integration,
+                                    obj =>
+                                    {
+                                        var ir = new InvocationResult
+                                        {
+                                            obj = obj,
+                                            success = true,
+                                        };
+                                        return ir.AsTask<object>();
+                                    },
+                                    why =>
+                                    {
+                                        var ir = new InvocationResult
+                                        {
+                                            why = why,
+                                            success = false,
+                                        };
+                                        return ir.AsTask<object>();
+                                    });
+                                var irResultTask = kvp as Task<InvocationResult>;
+                                var irResult = await irResultTask;
+                                return irResult;
                             })
+                        .AsyncEnumerable()
+                        .Where(ir => ir.success)
+                        .Select(ir => ir.obj)
+                        //.SelectAsyncOptional<ServiceConfiguration.IntegrationActivityDelegate, object>(
+                        //    async (invocation, select, skip) =>
+                        //    {
+                        //        var resultTask = (Task<object>)invocation(integration,
+                        //            (obj) => select(obj).AsTask<object>(),
+                        //            (why) => skip().AsTask<object>());
+                        //        var result = await resultTask;
+                        //        return (EnumerableAsync.ISelected<object>)(result);
+                        //    })
                         .ToArrayAsync();
                     return integration.PairWithValue(activities);
                 },

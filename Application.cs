@@ -60,6 +60,26 @@ namespace EastFive.Api.Azure
             return false;
         }
 
+        public IInvokeApplication CDN
+        {
+            get
+            {
+                return Web.Configuration.Settings.GetUri(
+                    EastFive.Azure.AppSettings.CDNEndpointHostname,
+                    endpointHostname =>
+                    {
+                        return Web.Configuration.Settings.GetString(
+                            EastFive.Azure.AppSettings.CDNApiRoutePrefix,
+                            apiRoutePrefix =>
+                            {
+                                return new InvokeApplicationRemote(endpointHostname, apiRoutePrefix);
+                            },
+                            (why) => new InvokeApplicationRemote(endpointHostname, "api"));
+                    },
+                    (why) => new InvokeApplicationRemote(new Uri("http://example.com"), "api"));
+            }
+        }
+
         public virtual Task<bool> IsAdminAsync(SessionToken security)
         {
             return EastFive.Web.Configuration.Settings.GetGuid(

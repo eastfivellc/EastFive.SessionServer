@@ -40,13 +40,15 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                     onDoesNotExists);
         }
 
-        public static Task<TResult> StorageGetAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
+        public static async Task<TResult> StorageGetAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
             Func<TEntity, TResult> onFound,
             Func<TResult> onDoesNotExists = default(Func<TResult>),
             Func<string> getPartitionKey = default(Func<string>))
             where TEntity : IReferenceable
         {
-            return StorageGetAsync(entityRef.id,
+            if (entityRef.IsDefaultOrNull())
+                return onDoesNotExists();
+            return await StorageGetAsync(entityRef.id,
                 onFound,
                 onDoesNotExists,
                 getPartitionKey);

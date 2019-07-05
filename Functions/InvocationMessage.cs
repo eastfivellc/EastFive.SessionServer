@@ -38,14 +38,16 @@ namespace EastFive.Azure.Functions
         public byte[] content;
 
         public static Task<HttpResponseMessage> InvokeAsync(byte [] invocationMessageIdBytes,
-            IApplication application)
+            IApplication application,
+            InvokeApplicationDirect invokeApplication)
         {
             var invocationMessageId = new Guid(invocationMessageIdBytes);
-            return InvokeAsync(invocationMessageId, application);
+            return InvokeAsync(invocationMessageId, application, invokeApplication);
         }
 
         public static async Task<HttpResponseMessage> InvokeAsync(Guid invocationMessageId, 
-            IApplication application)
+            IApplication application,
+            InvokeApplicationDirect invokeApplication)
         {
             var invocationMessageRef = invocationMessageId.AsRef<InvocationMessage>();
             return await await invocationMessageRef.StorageGetAsync(
@@ -54,7 +56,8 @@ namespace EastFive.Azure.Functions
                     var request = new HttpRequestMessage(
                         new HttpMethod(invocationMessage.method),
                         invocationMessage.requestUri);
-                    return application.SendAsync(request);
+                    var requestMessage = new RequestMessage<object>(invokeApplication, request);
+                    return invokeApplication.SendAsync(requestMessage, request);
                 },
                 ResourceNotFoundException.StorageGetAsync<Task<HttpResponseMessage>>);
         }
