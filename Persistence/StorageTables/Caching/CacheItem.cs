@@ -159,7 +159,19 @@ namespace EastFive.Persistence.Azure.StorageTables.Caching
                         }
                         return false;
                     }
+
                     if (ShouldFetch())
+                    {
+                        return await FetchRequest();
+                    }
+
+                    var cacheResponse = await item.ConstructResponseAsync(asOfUtcMaybe);
+                    if(!cacheResponse.IsSuccessStatusCode)
+                        return await FetchRequest();
+
+                    return onRetrievedOrCached(cacheResponse);
+
+                    async Task<TResult> FetchRequest()
                     {
                         var sleepTime = TimeSpan.FromSeconds(1);
                         while (true)
@@ -168,13 +180,13 @@ namespace EastFive.Persistence.Azure.StorageTables.Caching
                             request.RequestUri = source;
                             try
                             {
-                                using (var response = await sendAsync(request))
-                                {
-                                    var responseData = await response.Content.ReadAsByteArrayAsync();
-                                    await item.ImportResponseAsync(
+                                var response = await sendAsync(request);
+                                var responseData = await response.Content.ReadAsByteArrayAsync();
+                                await item.ImportResponseAsync(
                                         response, responseData, saveAsync);
-                                    break;
-                                }
+
+                                var undisposedResponse = await item.ConstructResponseAsync(asOfUtcMaybe);
+                                return onRetrievedOrCached(response);
                             }
                             catch (TaskCanceledException)
                             {
@@ -210,8 +222,6 @@ namespace EastFive.Persistence.Azure.StorageTables.Caching
                             }
                         }
                     }
-                    var cacheResponse = await item.ConstructResponseAsync(asOfUtcMaybe);
-                    return onRetrievedOrCached(cacheResponse);
                 });
         }
 
