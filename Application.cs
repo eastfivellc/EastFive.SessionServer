@@ -229,6 +229,33 @@ namespace EastFive.Api.Azure
             await appQueue.AddMessageAsync(message);
         }
 
+        public virtual async Task<TResult> GetNextQueueMessageAsync<TResult>(string queueName,
+            Func<byte[],    // content
+                Func<Task>, // dequeueAsync
+                Task<TResult>> onNextMessage,
+            Func<TResult> onEmpty)
+        {
+            var appQueue = EastFive.Web.Configuration.Settings.GetString("EastFive.Azure.StorageTables.ConnectionString",
+                (connString) =>
+                {
+                    var storageAccount = CloudStorageAccount.Parse(connString);
+                    var queueClient = storageAccount.CreateCloudQueueClient();
+                    var queue = queueClient.GetQueueReference(queueName);
+                    queue.CreateIfNotExists();
+                    return queue;
+                },
+                (why) => throw new Exception(why));
+            
+            var message = await appQueue.GetMessageAsync();
+            if (null == message)
+                return onEmpty();
+
+            return await onNextMessage(
+                message.AsBytes,
+                () => appQueue.DeleteMessageAsync(message));
+        }
+
+
         protected override async Task<Initialized> InitializeAsync()
         {
             return await base.InitializeAsync();
