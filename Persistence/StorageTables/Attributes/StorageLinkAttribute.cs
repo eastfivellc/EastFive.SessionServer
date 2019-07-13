@@ -87,14 +87,13 @@ namespace EastFive.Persistence.Azure.StorageTables
                 string rowKeyRef, string partitionKeyRef,
                 TEntity value, IDictionary<string, EntityProperty> dictionary,
                 AzureTableDriverDynamic repository,
-                Func<IEnumerable<KeyValuePair<string, string>>, IEnumerable<KeyValuePair<string, string>>> mutateCollection,
             Func<Func<Task>, TResult> onSuccessWithRollback,
             Func<TResult> onFailure)
         {
+            var propertyValueType = memberInfo.GetMemberType();
             async Task<TResult> GetRowKey(Func<string, Task<TResult>> callback)
             {
                 var rowKeyValue = memberInfo.GetValue(value);
-                var propertyValueType = memberInfo.GetMemberType();
                 if (typeof(Guid).IsAssignableFrom(propertyValueType))
                 {
                     var guidValue = (Guid)rowKeyValue;
@@ -117,34 +116,67 @@ namespace EastFive.Persistence.Azure.StorageTables
             return GetRowKey(
                 rowKey =>
                 {
+                    var referencedEntityType = ReferenceType.IsDefaultOrNull() ?
+                        propertyValueType.GetGenericArguments().First()
+                        :
+                        ReferenceType;
                     var partitionKey = GetPartitionKey(rowKey, value, memberInfo);
-                    var tableName = GetLookupTableName(memberInfo);
-                    throw new NotImplementedException();
-                    //return repository.UpdateAsync<StorageLookupTable, TResult>(rowKey, partitionKey,
-                    //    async (created, lookup, saveAsync) =>
-                    //    {
-                    //        lookup.rowKey = rowKey;
-                    //        lookup.partitionKey = partitionKey;
-                    //        lookup.rowAndPartitionKeys = mutateCollection(lookup.rowAndPartitionKeys)
-                    //            .Distinct(rpKey => rpKey.Key)
-                    //            .ToArray();
-                    //        await saveAsync(lookup);
-                    //        Func<Task> rollback =
-                    //            async () =>
-                    //            {
-                    //                if (created)
-                    //                {
-                    //                    await repository.DeleteAsync<DictionaryTableEntity<string[]>, bool>(rowKey, partitionKey,
-                    //                        () => true,
-                    //                        () => false);
-                    //                    return;
-                    //                }
+                    return repository.UpdateAsync<TResult>(rowKey, partitionKey,
+                            referencedEntityType,
+                        async (entity, saveAsync) =>
+                        {
+                            var fieldToModifyFieldInfo = referencedEntityType
+                                .GetFields()
+                                .Select(
+                                    field =>
+                                    {
+                                        return field
+                                            .GetAttributesInterface<IPersistInAzureStorageTables>()
+                                            .Where(attr => attr.Name == this.ReferenceProperty)
+                                            .First(
+                                                (attr, next) => field,
+                                                () => default(FieldInfo));
+                                    })
+                                .Where(v => !v.IsDefaultOrNull())
+                                .First();
+                            var valueToMutate = fieldToModifyFieldInfo.GetValue(entity);
+                            var valueToMutateType = valueToMutate.GetType();
+                            if (valueToMutateType.IsSubClassOfGeneric(typeof(IRefs<>)))
+                            {
+                                var references = valueToMutate as IReferences;
+                                var idsOriginal = references.ids;
+                                var rowKeyId = Guid.Parse(rowKeyRef);
+                                if (idsOriginal.Contains(rowKeyId))
+                                    return onSuccessWithRollback(() => 1.AsTask());
 
-                    //                // TODO: Other rollback
-                    //            };
-                    //        return onSuccessWithRollback(rollback);
-                    //    },
-                    //    tableName: tableName);
+                                var ids = idsOriginal
+                                    .Append(rowKeyId)
+                                    .Distinct()
+                                    .ToArray();
+                                var refsInstantiatable = typeof(Refs<>)
+                                    .MakeGenericType(valueToMutateType.GenericTypeArguments.First().AsArray());
+                                var valueMutated = Activator.CreateInstance(refsInstantiatable, ids.AsArray());
+
+                                fieldToModifyFieldInfo.SetValue(ref entity, valueMutated);
+
+                                await saveAsync(entity);
+                                Func<Task> rollback =
+                                    async () =>
+                                    {
+                                        bool rolled = await repository.UpdateAsync<bool>(rowKey, partitionKey,
+                                                referencedEntityType,
+                                            async (entityRollback, saveRollbackAsync) =>
+                                            {
+                                                fieldToModifyFieldInfo.SetValue(ref entityRollback, valueToMutate);
+                                                await saveRollbackAsync(entityRollback);
+                                                return true;
+                                            });
+                                    };
+                                return onSuccessWithRollback(rollback);
+                            }
+
+                            return onFailure();
+                        });
                 });
         }
 
@@ -197,7 +229,6 @@ namespace EastFive.Persistence.Azure.StorageTables
                 rowKeyRef, partitionKeyRef,
                 value, dictionary,
                 repository,
-                (rowAndParitionKeys) => rowAndParitionKeys.Append(rowKeyRef.PairWithValue(partitionKeyRef)),
                 onSuccessWithRollback,
                 onFailure);
         }
@@ -226,7 +257,6 @@ namespace EastFive.Persistence.Azure.StorageTables
                 rowKeyRef, partitionKeyRef,
                 value, dictionary,
                 repository,
-                (rowAndParitionKeys) => rowAndParitionKeys.Where(kvp => kvp.Key != rowKeyRef),
                 onSuccessWithRollback,
                 onFailure);
         }

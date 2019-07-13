@@ -22,7 +22,7 @@ namespace EastFive.Persistence
 {
     public interface IPersistInAzureStorageTables 
     {
-        // string Name { get; }
+        string Name { get; }
 
         KeyValuePair<string, EntityProperty>[] ConvertValue(object value, MemberInfo memberInfo);
         object GetMemberValue(MemberInfo memberInfo, IDictionary<string, EntityProperty> values);
