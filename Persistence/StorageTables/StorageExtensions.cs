@@ -362,8 +362,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
         public static Task<TResult> StorageCreateAsync<TEntity, TResult>(this TEntity entity,
             Func<EastFive.Persistence.Azure.StorageTables.IAzureStorageTableEntity<TEntity>, TResult> onCreated,
             Func<TResult> onAlreadyExists,
-            IHandleFailedModifications<TResult>[] onModificationFailures =
-                default(IHandleFailedModifications<TResult>[]))
+            params IHandleFailedModifications<TResult>[] onModificationFailures)
         {
             return AzureTableDriverDynamic
                 .FromSettings()
@@ -385,7 +384,6 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                     onFailure: onFailure,
                     onTimeout:onTimeout);
         }
-        
 
         #region Transactions
 
@@ -497,6 +495,40 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                         return rollback.TransactionResultSuccess<TResult>();
                     },
                     () => onAlreadyExists().TransactionResultFailure());
+        }
+
+        #endregion
+
+        #region BLOB
+
+        public static Task<TResult> BlobCreateAsync<TResult>(this byte[] content, string containerName,
+            Func<Guid, TResult> onSuccess,
+            Func<StorageTables.Driver.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
+            string contentType = default,
+            StorageTables.Driver.AzureStorageDriver.RetryDelegate onTimeout = null)
+        {
+            return AzureTableDriverDynamic
+                .FromSettings()
+                .BlobCreateAsync(content, containerName,
+                    onSuccess,
+                    onFailure: onFailure,
+                    contentType: contentType,
+                    onTimeout: onTimeout);
+        }
+
+        public static Task<TResult> BlobLoadAsync<TResult>(this Guid blobId, string containerName,
+            Func<byte [], string, TResult> onSuccess,
+            Func<TResult> onNotFound = default,
+            Func<StorageTables.Driver.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
+            StorageTables.Driver.AzureStorageDriver.RetryDelegate onTimeout = null)
+        {
+            return AzureTableDriverDynamic
+                .FromSettings()
+                .BlobLoadAsync(blobId, containerName,
+                    onSuccess,
+                    onNotFound,
+                    onFailure: onFailure,
+                    onTimeout: onTimeout);
         }
 
         #endregion

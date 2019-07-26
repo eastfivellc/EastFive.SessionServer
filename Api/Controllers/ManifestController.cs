@@ -51,8 +51,7 @@ namespace EastFive.Api.Azure.Controllers
                 HttpApplication httpApp, HttpRequestMessage request, UrlHelper url,
             ViewFileResponse onHtml)
         {
-            var lookups = httpApp
-                .GetLookups();
+            var lookups = httpApp.GetResources();
             var manifest = new EastFive.Api.Resources.Manifest(lookups, httpApp);
             return onHtml("Manifest/Manifest.cshtml", manifest).AsTask();
         }
