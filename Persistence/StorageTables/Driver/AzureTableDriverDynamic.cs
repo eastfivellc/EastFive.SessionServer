@@ -1650,6 +1650,71 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
 
         #endregion
 
+        #region BLOB
+
+        public async Task<TResult> BlobCreateAsync<TResult>(byte[] content, string containerName,
+            Func<Guid, TResult> onSuccess,
+            Func<ExtendedErrorInformationCodes, string, TResult> onFailure = default,
+            string contentType = default,
+            AzureStorageDriver.RetryDelegate onTimeout = default)
+        {
+            var container = this.BlobClient.GetContainerReference(containerName);
+            container.CreateIfNotExists();
+            var blobId = Guid.NewGuid();
+            var blockBlob = container.GetBlockBlobReference(blobId.ToString("N"));
+            try
+            {
+                if (contentType.HasBlackSpace())
+                    blockBlob.Properties.ContentType = contentType;
+                using (var stream = await blockBlob.OpenWriteAsync())
+                {
+                    await stream.WriteAsync(content, 0, content.Length);
+                }
+                return onSuccess(blobId);
+            }
+            catch (Microsoft.WindowsAzure.Storage.StorageException ex)
+            {
+                if (onFailure.IsDefaultOrNull())
+                    throw;
+                return ex.ParseStorageException(
+                    (errorCode, errorMessage) =>
+                        onFailure(errorCode, errorMessage),
+                    () => throw ex);
+            }
+        }
+
+        public async Task<TResult> BlobLoadAsync<TResult>(Guid blobId, string containerName,
+            Func<byte[], string, TResult> onFound,
+            Func<TResult> onNotFound = default,
+            Func<ExtendedErrorInformationCodes, string, TResult> onFailure = default,
+            AzureStorageDriver.RetryDelegate onTimeout = default)
+        {
+            var container = this.BlobClient.GetContainerReference(containerName);
+            try
+            {
+                var blockBlob = container.GetBlockBlobReference(blobId.ToString("N"));
+                using (var stream = await blockBlob.OpenReadAsync())
+                {
+                    var content = stream.ToBytes();
+                    var contentType = blockBlob.Properties.ContentType;
+                    return onFound(content, contentType);
+                }
+            }
+            catch (Microsoft.WindowsAzure.Storage.StorageException ex)
+            {
+                if (ex.IsProblemDoesNotExist())
+                    if(!onNotFound.IsDefaultOrNull())
+                        return onNotFound();
+                if(onFailure.IsDefaultOrNull())
+                    throw;
+                return ex.ParseExtendedErrorInformation(
+                    (code, msg) => onFailure(code, msg),
+                    () => throw ex);
+            }
+        }
+
+        #endregion
+
     }
 }
 
