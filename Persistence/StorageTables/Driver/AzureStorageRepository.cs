@@ -1328,7 +1328,7 @@ namespace BlackBarLabs.Persistence.Azure.StorageTables
                 RetryDelegateAsync<Task<TResult>> onTimeout = default(RetryDelegateAsync<Task<TResult>>),
             Func<string, string> mutatePartition = default(Func<string, string>),
             Func<TDocument,TDocument> mutateUponLock = default(Func<TDocument,TDocument>))
-            where TDocument : TableEntity => LockedUpdateAsync(id, string.Empty, lockedPropertyExpression, 0, DateTime.UtcNow,
+            where TDocument : TableEntity => LockedUpdateAsync(id, id.AsRowKey().GeneratePartitionKey(), lockedPropertyExpression, 0, DateTime.UtcNow,
                 onLockAquired,
                 onNotFound,
                 onLockRejected,
