@@ -319,6 +319,9 @@
     <Compile Include="IProvideIntegration.cs" />
     <Compile Include="Persistence\AppSettings.cs" />
     <Compile Include="Persistence\Attributes\StorageResourceAttribute.cs" />
+    <Compile Include="Persistence\StorageTables\Attributes\Modifiers\MigratePartitionAttribute.cs" />
+    <Compile Include="Persistence\StorageTables\Attributes\PartitionKey\StandardParititionKeyAttribute.cs" />
+    <Compile Include="Persistence\StorageTables\Attributes\PartitionKey\Partition16x3Attribute.cs" />
     <Compile Include="Persistence\StorageTables\StorageExtensions.cs" />
     <Compile Include="Persistence\CryptoDocument.cs" />
     <Compile Include="Persistence\DataStores.cs" />
@@ -344,10 +347,10 @@
     <Compile Include="Persistence\StorageTables\Attributes\Interfaces\IProvideFindBy.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\Interfaces\IProvideTable.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\LastModifiedAttribute.cs" />
-    <Compile Include="Persistence\StorageTables\Attributes\ParititionKeyAttribute.cs" />
+    <Compile Include="Persistence\StorageTables\Attributes\PartitionKey\ParititionKeyAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\RowKeyAttribute.cs" />
-    <Compile Include="Persistence\StorageTables\Attributes\StorageLinkAttribute.cs" />
-    <Compile Include="Persistence\StorageTables\Attributes\StorageLookupAttribute.cs" />
+    <Compile Include="Persistence\StorageTables\Attributes\Modifiers\StorageLinkAttribute.cs" />
+    <Compile Include="Persistence\StorageTables\Attributes\Modifiers\StorageLookupAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\StoragePropertyAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\StorageTableAttribute.cs" />
     <Compile Include="Persistence\StorageTables\AzureStorageHelpers.cs" />

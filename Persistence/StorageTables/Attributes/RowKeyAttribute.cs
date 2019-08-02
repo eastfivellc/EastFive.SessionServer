@@ -10,8 +10,14 @@ using System.Threading.Tasks;
 namespace EastFive.Persistence.Azure.StorageTables
 {
     public class RowKeyAttribute : Attribute,
-        IModifyAzureStorageTableRowKey
+        IModifyAzureStorageTableRowKey, IComputeAzureStorageTableRowKey
     {
+        public string ComputeRowKey<EntityType>(IRef<EntityType> refKey, MemberInfo memberInfo)
+            where EntityType : IReferenceable
+        {
+            return refKey.id.AsRowKey();
+        }
+
         public virtual string GenerateRowKey(object value, MemberInfo memberInfo)
         {
             var partitionValue = memberInfo.GetValue(value);

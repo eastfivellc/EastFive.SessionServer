@@ -76,7 +76,17 @@ namespace EastFive.Persistence.Azure.StorageTables
                 if (partitionAttributes.Any())
                 {
                     var partitionAttribute = partitionAttributes.First();
-                    getValue = (obj) => partitionAttribute.GeneratePartitionKey(null,obj,member);
+                    var getRowKey = member.DeclaringType
+                        .GetPropertyOrFieldMembers()
+                        .Where(m => m.ContainsAttributeInterface<IModifyAzureStorageTableRowKey>())
+                        .First<MemberInfo, Func<object, string>>(
+                            (rowKeyMember, next) =>
+                            {
+                                var rowKeyAttr = rowKeyMember.GetAttributesInterface<IModifyAzureStorageTableRowKey>().First();
+                                return (obj) => rowKeyAttr.GenerateRowKey(obj, rowKeyMember);
+                            },
+                            () => (obj) => null);
+                    getValue = (obj) => partitionAttribute.GeneratePartitionKey(getRowKey(obj), obj,member);
                     return member;
                 }
 

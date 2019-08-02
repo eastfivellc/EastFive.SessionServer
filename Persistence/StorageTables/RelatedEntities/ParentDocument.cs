@@ -4,6 +4,7 @@ using System.Collections.Generic;
 namespace BlackBarLabs.Persistence.Azure.StorageTables.RelationshipDocuments
 {
 	[Serializable]
+    [Obsolete]
     internal class ParentDocument : DocumentTemplate<Guid>
     {
         public ParentDocument() {}

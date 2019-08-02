@@ -20,7 +20,7 @@ using System.Net.Http.Headers;
 
 namespace EastFive.Azure.Login
 {
-    [FunctionViewController4(
+    [FunctionViewController5(
         Route = "Authentication",
         Resource = typeof(Authentication),
         ContentType = "x-application/login-authentication",

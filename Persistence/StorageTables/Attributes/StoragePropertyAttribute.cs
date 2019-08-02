@@ -37,10 +37,10 @@ namespace EastFive.Persistence
         object GetMemberValue(EntityProperty value);
     }
 
-    public interface IModifyAzureStorageTablePartitionKey
+    public interface IComputeAzureStorageTableRowKey
     {
-        string GeneratePartitionKey(string rowKey, object value, MemberInfo memberInfo);
-        EntityType ParsePartitionKey<EntityType>(EntityType entity, string value, MemberInfo memberInfo);
+        string ComputeRowKey<EntityType>(IRef<EntityType> refKey, MemberInfo memberInfo)
+            where EntityType : IReferenceable;
     }
 
     public interface IModifyAzureStorageTableRowKey
@@ -48,6 +48,19 @@ namespace EastFive.Persistence
         string GenerateRowKey(object value, MemberInfo memberInfo);
 
         EntityType ParseRowKey<EntityType>(EntityType entity, string value, MemberInfo memberInfo);
+    }
+
+    public interface IComputeAzureStorageTablePartitionKey
+    {
+        string ComputePartitionKey<EntityType>(IRef<EntityType> refKey,
+            string rowKey, MemberInfo memberInfo)
+            where EntityType : IReferenceable;
+    }
+
+    public interface IModifyAzureStorageTablePartitionKey
+    {
+        string GeneratePartitionKey(string rowKey, object value, MemberInfo memberInfo);
+        EntityType ParsePartitionKey<EntityType>(EntityType entity, string value, MemberInfo memberInfo);
     }
 
     public interface IModifyAzureStorageTableLastModified

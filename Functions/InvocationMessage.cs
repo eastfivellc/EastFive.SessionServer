@@ -18,6 +18,8 @@ using EastFive.Api.Azure;
 using BlackBarLabs.Extensions;
 using EastFive.Collections.Generic;
 using Microsoft.WindowsAzure.Storage.Queue;
+using EastFive.Linq.Async;
+using EastFive.Linq;
 
 namespace EastFive.Azure.Functions
 {
@@ -64,22 +66,36 @@ namespace EastFive.Azure.Functions
 
         [HttpAction("Invoke")]
         public static async Task<HttpResponseMessage> RunAsync(
-                [UpdateId]IRef<InvocationMessage> invocationMessageRef,
+                [UpdateId]IRefs<InvocationMessage> invocationMessageRefs,
                 [HeaderLog]EastFive.Analytics.ILogger analyticsLog,
-                InvokeApplicationDirect invokeApplication)
+                InvokeApplicationDirect invokeApplication,
+                MultipartResponseAsync onRun)
         {
-            return await InvokeAsync(invocationMessageRef, invokeApplication);
+            var messages = await invocationMessageRefs.refs
+                .Select(invocationMessageRef => InvokeAsync(invocationMessageRef, invokeApplication))
+                .AsyncEnumerable()
+                .ToArrayAsync();
+            return await onRun(messages);
         }
 
         #endregion
 
-        public static Task<HttpResponseMessage> InvokeAsync(byte [] invocationMessageIdBytes,
+        public static IEnumerableAsync<HttpResponseMessage> InvokeAsync(
+                byte [] invocationMessageIdsBytes,
             IApplication application,
             IInvokeApplication invokeApplication)
         {
-            var invocationMessageId = new Guid(invocationMessageIdBytes);
-            var invocationMessageRef = invocationMessageId.AsRef<InvocationMessage>();
-            return InvokeAsync(invocationMessageRef, invokeApplication);
+            return invocationMessageIdsBytes
+                .Split(index => 16)
+                .Select(
+                    invocationMessageIdBytes =>
+                    {
+                        var idBytes = invocationMessageIdBytes.ToArray();
+                        var invocationMessageId = new Guid(idBytes);
+                        var invocationMessageRef = invocationMessageId.AsRef<InvocationMessage>();
+                        return InvokeAsync(invocationMessageRef, invokeApplication);
+                    })
+                .Parallel();
         }
 
         internal static async Task<HttpResponseMessage> SendAsync<TResource>(
@@ -104,8 +120,6 @@ namespace EastFive.Azure.Functions
             return await await invocationMessage.StorageCreateAsync(
                 async (created) =>
                 {
-                    CloudQueueMessage msg = await InvocationMessage.SendToQueueAsync(
-                        invocationMessageRef, azureApplication);
                     var invocationSerialized = JsonConvert.SerializeObject(invocationMessage,
                         new EastFive.Api.Serialization.Converter());
                     var response = new HttpResponseMessage(System.Net.HttpStatusCode.Accepted)
@@ -125,6 +139,19 @@ namespace EastFive.Azure.Functions
             AzureApplication azureApplication)
         {
             var byteContent = invocationMessageRef.id.ToByteArray();
+            return EastFive.Web.Configuration.Settings.GetString(
+                AppSettings.FunctionProcessorQueueTriggerName,
+                (queueTriggerName) =>
+                {
+                    return azureApplication.SendQueueMessageAsync(queueTriggerName, byteContent);
+                },
+                (why) => throw new Exception(why));
+        }
+
+        public static Task<CloudQueueMessage> SendToQueueAsync(IRefs<InvocationMessage> invocationMessageRef,
+            AzureApplication azureApplication)
+        {
+            var byteContent = invocationMessageRef.ids.Select(id => id.ToByteArray()).SelectMany().ToArray();
             return EastFive.Web.Configuration.Settings.GetString(
                 AppSettings.FunctionProcessorQueueTriggerName,
                 (queueTriggerName) =>

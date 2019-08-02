@@ -62,7 +62,8 @@ namespace EastFive.Persistence.Azure.StorageTables
             return query.Where(whereExpression);
         }
 
-        private class TableEntity<EntityType> : IWrapTableEntity<EntityType>, IAzureStorageTableEntity<EntityType>
+        private class TableEntity<EntityType> : 
+            IWrapTableEntity<EntityType>, IAzureStorageTableEntity<EntityType>
         {
             public EntityType Entity { get; set; }
 
