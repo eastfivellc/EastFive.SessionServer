@@ -72,20 +72,20 @@ namespace EastFive.Persistence.Azure.StorageTables
             public KeyValuePair<string, string>[] rowAndPartitionKeys;
         }
 
-        private string GetPartitionKey(string rowKey, object value, MemberInfo memberInfo)
+        private string GetPartitionKey(IRef<IReferenceable> refKey, string rowKey, MemberInfo memberInfo)
         {
             var partitionKeyAttributeType = this.PartitionAttribute.IsDefaultOrNull() ?
                   typeof(StandardParititionKeyAttribute)
                   :
                   this.PartitionAttribute;
-            if (!partitionKeyAttributeType.IsSubClassOfGeneric(typeof(IModifyAzureStorageTablePartitionKey)))
+            if (!partitionKeyAttributeType.IsSubClassOfGeneric(typeof(IComputeAzureStorageTablePartitionKey)))
                 throw new Exception($"{memberInfo.DeclaringType.FullName}..{memberInfo.Name} defines partition type as {partitionKeyAttributeType.FullName} which does not implement {typeof(IModifyAzureStorageTablePartitionKey).FullName}.");
-            var partitionKeyAttribute = Activator.CreateInstance(partitionKeyAttributeType) as IModifyAzureStorageTablePartitionKey;
-            var partitionKey = partitionKeyAttribute.GeneratePartitionKey(rowKey, value, memberInfo);
+            var partitionKeyAttribute = Activator.CreateInstance(partitionKeyAttributeType) as IComputeAzureStorageTablePartitionKey;
+            var partitionKey = partitionKeyAttribute.ComputePartitionKey(refKey, rowKey, memberInfo);
             return partitionKey;
         }
 
-        public virtual Task<TResult> ExecuteAsync<TEntity, TResult>(MemberInfo memberInfo,
+        public virtual async Task<TResult> ExecuteAsync<TEntity, TResult>(MemberInfo memberInfo,
                 string rowKeyRef, string partitionKeyRef,
                 TEntity value, IDictionary<string, EntityProperty> dictionary,
                 AzureTableDriverDynamic repository,
@@ -93,41 +93,40 @@ namespace EastFive.Persistence.Azure.StorageTables
             Func<TResult> onFailure)
         {
             var propertyValueType = memberInfo.GetMemberType();
-            async Task<TResult> GetRowKey(Func<string, Task<TResult>> callback)
-            {
-                var rowKeyValue = memberInfo.GetValue(value);
-                if (typeof(Guid).IsAssignableFrom(propertyValueType))
+            var rowKeyValue = memberInfo.GetValue(value);
+            var referencedEntityType = ReferenceType.IsDefaultOrNull() ?
+                propertyValueType.GetGenericArguments().First()
+                :
+                ReferenceType;
+
+            if (!propertyValueType.IsSubClassOfGeneric(typeof(IRef<>)))
+                throw new Exception($"`{propertyValueType.FullName}` is instance of IRef<>");
+
+            Task<TResult> result = (Task<TResult>)this.GetType()
+                .GetMethod("ExecuteTypedAsync", BindingFlags.Public | BindingFlags.Instance)
+                .MakeGenericMethod(typeof(TEntity), referencedEntityType, typeof(TResult))
+                .Invoke(this, new object[] { rowKeyValue,
+                    memberInfo, rowKeyRef, partitionKeyRef, value, dictionary, repository, onSuccessWithRollback, onFailure });
+
+            return await result;
+        }
+
+        public virtual Task<TResult> ExecuteTypedAsync<TEntity, TRefEntity, TResult>(IRef<TRefEntity> entityRef,
+                MemberInfo memberInfo,
+                string rowKeyRef, string partitionKeyRef,
+                TEntity value, IDictionary<string, EntityProperty> dictionary,
+                AzureTableDriverDynamic repository,
+            Func<Func<Task>, TResult> onSuccessWithRollback,
+            Func<TResult> onFailure)
+            where TRefEntity : IReferenceable
+        {
+            var rowKey = entityRef.StorageComputeRowKey();
+            var partitionKey = entityRef.StorageComputePartitionKey();
+            return repository.UpdateAsync<TRefEntity, TResult>(rowKey, partitionKey,
+                async (entity, saveAsync) =>
                 {
-                    var guidValue = (Guid)rowKeyValue;
-                    return await callback(guidValue.AsRowKey());
-                }
-                if (typeof(IReferenceable).IsAssignableFrom(propertyValueType))
-                {
-                    var refValue = (IReferenceable)rowKeyValue;
-                    if (refValue.IsDefaultOrNull())
-                        return onFailure();
-                    return await callback(refValue.id.AsRowKey());
-                }
-                if (typeof(string).IsAssignableFrom(propertyValueType))
-                {
-                    var stringValue = (string)rowKeyValue;
-                    return await callback(stringValue);
-                }
-                return await callback(rowKeyValue.ToString());
-            }
-            return GetRowKey(
-                rowKey =>
-                {
-                    var referencedEntityType = ReferenceType.IsDefaultOrNull() ?
-                        propertyValueType.GetGenericArguments().First()
-                        :
-                        ReferenceType;
-                    var partitionKey = value.StorageGetPartitionKey(); // GetPartitionKey(rowKey, value, memberInfo);
-                    return repository.UpdateAsync<TResult>(rowKey, partitionKey,
-                            referencedEntityType,
-                        async (entity, saveAsync) =>
-                        {
-                            var fieldToModifyFieldInfo = referencedEntityType
+                    var referencedEntityType = typeof(TRefEntity);
+                    var fieldToModifyFieldInfo = referencedEntityType
                                 .GetFields()
                                 .Select(
                                     field =>
@@ -141,45 +140,45 @@ namespace EastFive.Persistence.Azure.StorageTables
                                     })
                                 .Where(v => !v.IsDefaultOrNull())
                                 .First();
-                            var valueToMutate = fieldToModifyFieldInfo.GetValue(entity);
-                            var valueToMutateType = valueToMutate.GetType();
-                            if (valueToMutateType.IsSubClassOfGeneric(typeof(IRefs<>)))
+                    var valueToMutate = fieldToModifyFieldInfo.GetValue(entity);
+                    var valueToMutateType = valueToMutate.GetType();
+                    if (valueToMutateType.IsSubClassOfGeneric(typeof(IRefs<>)))
+                    {
+                        var references = valueToMutate as IReferences;
+                        var idsOriginal = references.ids;
+                        var rowKeyId = Guid.Parse(rowKeyRef);
+                        if (idsOriginal.Contains(rowKeyId))
+                            return onSuccessWithRollback(() => 1.AsTask());
+
+                        var ids = idsOriginal
+                            .Append(rowKeyId)
+                            .Distinct()
+                            .ToArray();
+                        var refsInstantiatable = typeof(Refs<>)
+                            .MakeGenericType(valueToMutateType.GenericTypeArguments.First().AsArray());
+                        var valueMutated = Activator.CreateInstance(refsInstantiatable, ids.AsArray());
+
+                        fieldToModifyFieldInfo.SetValue(ref entity, valueMutated);
+
+                        await saveAsync(entity);
+                        Func<Task> rollback =
+                            async () =>
                             {
-                                var references = valueToMutate as IReferences;
-                                var idsOriginal = references.ids;
-                                var rowKeyId = Guid.Parse(rowKeyRef);
-                                if (idsOriginal.Contains(rowKeyId))
-                                    return onSuccessWithRollback(() => 1.AsTask());
-
-                                var ids = idsOriginal
-                                    .Append(rowKeyId)
-                                    .Distinct()
-                                    .ToArray();
-                                var refsInstantiatable = typeof(Refs<>)
-                                    .MakeGenericType(valueToMutateType.GenericTypeArguments.First().AsArray());
-                                var valueMutated = Activator.CreateInstance(refsInstantiatable, ids.AsArray());
-
-                                fieldToModifyFieldInfo.SetValue(ref entity, valueMutated);
-
-                                await saveAsync(entity);
-                                Func<Task> rollback =
-                                    async () =>
+                                bool rolled = await repository.UpdateAsync<TRefEntity, bool>(rowKey, partitionKey,
+                                    async (entityRollback, saveRollbackAsync) =>
                                     {
-                                        bool rolled = await repository.UpdateAsync<bool>(rowKey, partitionKey,
-                                                referencedEntityType,
-                                            async (entityRollback, saveRollbackAsync) =>
-                                            {
-                                                fieldToModifyFieldInfo.SetValue(ref entityRollback, valueToMutate);
-                                                await saveRollbackAsync(entityRollback);
-                                                return true;
-                                            });
-                                    };
-                                return onSuccessWithRollback(rollback);
-                            }
+                                        fieldToModifyFieldInfo.SetValue(ref entityRollback, valueToMutate);
+                                        await saveRollbackAsync(entityRollback);
+                                        return true;
+                                    },
+                                    () => false);
+                            };
+                        return onSuccessWithRollback(rollback);
+                    }
 
-                            return onFailure();
-                        });
-                });
+                    return onFailure();
+                },
+                onFailure);
         }
 
         private class FaildModificationHandler<TResult> : IHandleFailedModifications<TResult>
@@ -200,6 +199,7 @@ namespace EastFive.Persistence.Azure.StorageTables
             {
                 var failureMember = membersWithFailures
                     .Where(membersWithFailure => membersWithFailure.ContainsCustomAttribute<StorageLinkAttribute>(true))
+                    .Where(memberWithFailure => memberWithFailure.Name == member.Name)
                     .First();
                 return handler();
             }

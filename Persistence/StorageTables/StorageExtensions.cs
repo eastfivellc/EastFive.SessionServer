@@ -18,12 +18,14 @@ using Microsoft.WindowsAzure.Storage.Table;
 using EastFive.Persistence.Azure;
 using EastFive.Azure.StorageTables.Driver;
 using BlackBarLabs.Extensions;
+using System.Reflection;
 
 namespace EastFive.Azure.Persistence.AzureStorageTables
 {
     public static class StorageExtensions
     {
-        public static string StorageComputeRowKey<TEntity>(this IRef<TEntity> entityRef)
+        public static string StorageComputeRowKey<TEntity>(this IRef<TEntity> entityRef,
+                Func<EastFive.Persistence.IComputeAzureStorageTableRowKey> onMissing = default)
             where TEntity : IReferenceable
         {
             var partitionKeyMember = typeof(TEntity)
@@ -33,7 +35,14 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                     member.GetAttributesInterface<EastFive.Persistence.IComputeAzureStorageTableRowKey>()
                         .First()
                         .PairWithKey(member))
-                .First();
+                .First(
+                    (computeAzureStorageTableRowKey, next) => computeAzureStorageTableRowKey,
+                    () =>
+                    {
+                        if (onMissing.IsDefaultOrNull())
+                            throw new Exception($"{typeof(TEntity).FullName} is missing attribute implementing {typeof(EastFive.Persistence.IComputeAzureStorageTableRowKey).FullName}.");
+                        return onMissing().PairWithKey(default(MemberInfo));
+                    });
             return partitionKeyMember.Value.ComputeRowKey(entityRef, partitionKeyMember.Key);
         }
 
@@ -63,10 +72,18 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
             return partitionKeyMember.Value.ParseRowKey(entity, rowKey, partitionKeyMember.Key);
         }
 
-        public static string StorageComputePartitionKey<TEntity>(this IRef<TEntity> entityRef)
+        public static string StorageComputePartitionKey<TEntity>(this IRef<TEntity> entityRef,
+                Func<EastFive.Persistence.IComputeAzureStorageTablePartitionKey> onMissing = default)
             where TEntity : IReferenceable
         {
             var rowKey = entityRef.StorageComputeRowKey();
+            return entityRef.StorageComputePartitionKey(rowKey, onMissing: onMissing);
+        }
+
+        public static string StorageComputePartitionKey<TEntity>(this IRef<TEntity> entityRef, string rowKey,
+                Func<EastFive.Persistence.IComputeAzureStorageTablePartitionKey> onMissing = default)
+            where TEntity : IReferenceable
+        {
             var partitionKeyMember = typeof(TEntity)
                 .GetPropertyOrFieldMembers()
                 .Where(member => member.ContainsAttributeInterface<EastFive.Persistence.IComputeAzureStorageTablePartitionKey>())
@@ -74,7 +91,14 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                     member.GetAttributesInterface<EastFive.Persistence.IComputeAzureStorageTablePartitionKey>()
                         .First()
                         .PairWithKey(member))
-                .First();
+                .First(
+                    (computeAzureStorageTableParitionKey, next) => computeAzureStorageTableParitionKey,
+                    () =>
+                    {
+                        if (onMissing.IsDefaultOrNull())
+                            throw new Exception($"{typeof(TEntity).FullName} is missing attribute implementing {typeof(EastFive.Persistence.IComputeAzureStorageTableRowKey).FullName}.");
+                        return onMissing().PairWithKey(default(MemberInfo));
+                    });
             return partitionKeyMember.Value.ComputePartitionKey(entityRef, rowKey, partitionKeyMember.Key);
         }
 
@@ -313,6 +337,19 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                 .FromSettings()
                 .UpdateOrCreateAsync<TEntity, TResult>(rowKey, partitionKey,
                     setId,
+                    onCreated,
+                    default(AzureStorageDriver.RetryDelegateAsync<Task<TResult>>));
+        }
+
+        public static Task<TResult> StorageCreateOrUpdateAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
+            Func<bool, TEntity, Func<TEntity, Task>, Task<TResult>> onCreated)
+            where TEntity : struct, IReferenceable
+        {
+            var rowKey = entityRef.StorageComputeRowKey();
+            var partitionKey = entityRef.StorageComputePartitionKey();
+            return AzureTableDriverDynamic
+                .FromSettings()
+                .UpdateOrCreateAsync<TEntity, TResult>(rowKey, partitionKey,
                     onCreated,
                     default(AzureStorageDriver.RetryDelegateAsync<Task<TResult>>));
         }

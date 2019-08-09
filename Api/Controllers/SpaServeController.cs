@@ -39,16 +39,18 @@ namespace EastFive.Api.Azure.Controllers
 
                     var scripts = doc.DocumentNode.SelectNodes("//script");
 
-                    var scriptList = new List<string>();
-
-                    foreach (var script in scripts)
-                    {
-                        scriptList.Add(script.Attributes["src"].Value);
-                    }
-
+                    var scriptList = scripts
+                        .Select(
+                            script =>
+                            {
+                                var attrs = script.Attributes
+                                    .Select(attr => attr.OriginalName.PairWithValue(attr.Value))
+                                    .ToArray();
+                                return attrs;
+                            })
+                        .ToArray();
 
                     //var content = Properties.Resources.spahead + "|" + Properties.Resources.spabody;
-
 
                     //var content = $"{head}|{body}";
 
@@ -56,7 +58,7 @@ namespace EastFive.Api.Azure.Controllers
                         new
                         {
                             head = head,
-                            scripts = scriptList.ToArray(),
+                            scripts = scriptList,
                             body = body
                         });
                     //response.Content = new StringContent(content);

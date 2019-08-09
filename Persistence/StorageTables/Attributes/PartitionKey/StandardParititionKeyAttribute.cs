@@ -35,7 +35,7 @@ namespace EastFive.Persistence.Azure.StorageTables
             return entity;
         }
 
-        private static string GetValue(string rowKey)
+        public static string GetValue(string rowKey)
         {
             return rowKey.GeneratePartitionKey();
         }

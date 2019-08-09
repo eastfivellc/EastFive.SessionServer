@@ -781,17 +781,14 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             where TRefEntity : IReferenceable
         {
             return by.MemberInfo(
-                (memberInfo, expr) =>
+                (memberCandidate, expr) =>
                 {
-                    return MemberExpr(memberInfo);
-                    IEnumerableAsync<TEntity> MemberExpr(MemberInfo memberCandidate)
-                    {
-                        return memberCandidate
-                            .GetAttributesInterface<IProvideFindBy>()
-                            .First<IProvideFindBy, IEnumerableAsync<TEntity>>(
-                                (attr, next) =>
-                                {
-                                    return attr.GetKeys(entityRef, this, memberCandidate)
+                    return memberCandidate
+                        .GetAttributesInterface<IProvideFindBy>()
+                        .First<IProvideFindBy, IEnumerableAsync<TEntity>>(
+                            (attr, next) =>
+                            {
+                                return attr.GetKeys(entityRef, this, memberCandidate)
                                         .Select(
                                             rowParitionKeyKvp =>
                                             {
@@ -804,12 +801,11 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                                             })
                                         .Await()
                                         .SelectWhereHasValue();
-                                },
-                                () =>
-                                {
-                                    throw new ArgumentException("TEntity does not contain an attribute of type IProvideFindBy.");
-                                });
-                    }
+                            },
+                            () =>
+                            {
+                                throw new ArgumentException("TEntity does not contain an attribute of type IProvideFindBy.");
+                            });
                 },
                 () => throw new Exception());
         }

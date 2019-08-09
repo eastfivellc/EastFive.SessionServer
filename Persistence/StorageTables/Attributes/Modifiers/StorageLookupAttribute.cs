@@ -37,8 +37,10 @@ namespace EastFive.Persistence.Azure.StorageTables
             where TEntity : IReferenceable
         {
             var tableName = GetLookupTableName(memberInfo);
-            var rowKey = value.StorageComputeRowKey();
-            var partitionKey = value.StorageComputePartitionKey(); // GetPartitionKey(rowKey, default(TEntity), memberInfo);
+            var rowKey = value.StorageComputeRowKey(
+                () => new RowKeyAttribute());
+            var partitionKey = value.StorageComputePartitionKey(rowKey,
+                onMissing:() => new StandardParititionKeyAttribute()); // GetPartitionKey(rowKey, default(TEntity), memberInfo);
             return repository
                 .FindByIdAsync<StorageLookupTable, IEnumerableAsync <KeyValuePair<string, string>>>(rowKey, partitionKey,
                     (dictEntity) =>
@@ -56,6 +58,7 @@ namespace EastFive.Persistence.Azure.StorageTables
         [StorageTable]
         public struct StorageLookupTable
         {
+
             [RowKey]
             public string rowKey;
 

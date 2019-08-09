@@ -117,8 +117,8 @@ namespace EastFive.Azure.Functions
                     await httpRequest.Content.ReadAsByteArrayAsync(),
                 method = httpRequest.Method.Method,
             };
-            return await await invocationMessage.StorageCreateAsync(
-                async (created) =>
+            return await invocationMessage.StorageCreateAsync(
+                (created) =>
                 {
                     var invocationSerialized = JsonConvert.SerializeObject(invocationMessage,
                         new EastFive.Api.Serialization.Converter());
