@@ -136,22 +136,27 @@ namespace EastFive.Azure.Auth
                             EastFive.Security.AppSettings.TokenScope,
                         scope =>
                         {
-                            return GetClaimsAsync(application, session.authorization,
-                                (claims, accountIdMaybe, authorized) =>
+                            return Web.Configuration.Settings.GetDouble(Security.SessionServer.Configuration.AppSettings.TokenExpirationInMinutes,
+                                (tokenExpirationInMinutes) =>
                                 {
-                                    session.account = accountIdMaybe;
-                                    session.authorized = authorized;
-                                    return BlackBarLabs.Security.Tokens.JwtTools.CreateToken(session.id,
-                                            scope, TimeSpan.FromDays(365.0), claims, // TODO: Expiration time from .Config
-                                        (tokenNew) =>
+                                    return GetClaimsAsync(application, session.authorization,
+                                        (claims, accountIdMaybe, authorized) =>
                                         {
-                                            session.token = tokenNew;
-                                            return onFound(session);
+                                            session.account = accountIdMaybe;
+                                            session.authorized = authorized;
+                                            return BlackBarLabs.Security.Tokens.JwtTools.CreateToken(session.id,
+                                                    scope, TimeSpan.FromMinutes(tokenExpirationInMinutes), claims,
+                                                (tokenNew) =>
+                                                {
+                                                    session.token = tokenNew;
+                                                    return onFound(session);
+                                                },
+                                                (missingConfig) => onConfigurationFailure("Missing", missingConfig),
+                                                (configName, issue) => onConfigurationFailure(configName, issue));
                                         },
-                                        (missingConfig) => onConfigurationFailure("Missing", missingConfig),
-                                        (configName, issue) => onConfigurationFailure(configName, issue));
+                                        (why) => onNotFound());
                                 },
-                                (why) => onNotFound());
+                                (why) => onConfigurationFailure("Missing", why).AsTask());
                         },
                         (why) => onConfigurationFailure("Missing", why).AsTask());
                 },
@@ -197,29 +202,34 @@ namespace EastFive.Azure.Auth
 
             return await Web.Configuration.Settings.GetUri(
                     EastFive.Security.AppSettings.TokenScope,
-                async scope =>
+                scope =>
                 {
-                    return await await GetClaimsAsync(application, authorizationRefMaybe,
-                        (claims, accountIdMaybe, authorized) =>
+                    return Web.Configuration.Settings.GetDouble(Security.SessionServer.Configuration.AppSettings.TokenExpirationInMinutes,
+                        async (tokenExpirationInMinutes) =>
                         {
-                            session.account = accountIdMaybe;
-                            session.authorized = authorized;
-                            return session.StorageCreateAsync(
-                                (sessionIdCreated) =>
+                            return await await GetClaimsAsync(application, authorizationRefMaybe,
+                                (claims, accountIdMaybe, authorized) =>
                                 {
-                                    return BlackBarLabs.Security.Tokens.JwtTools.CreateToken(sessionId.id,
-                                        scope, TimeSpan.FromDays(365.0), claims, // TODO: Expiration time from .Config
-                                        (tokenNew) =>
+                                    session.account = accountIdMaybe;
+                                    session.authorized = authorized;
+                                    return session.StorageCreateAsync(
+                                        (sessionIdCreated) =>
                                         {
-                                            session.token = tokenNew;
-                                            return onCreated(session);
+                                            return BlackBarLabs.Security.Tokens.JwtTools.CreateToken(sessionId.id,
+                                                scope, TimeSpan.FromMinutes(tokenExpirationInMinutes), claims,
+                                                (tokenNew) =>
+                                                {
+                                                    session.token = tokenNew;
+                                                    return onCreated(session);
+                                                },
+                                                (missingConfig) => onConfigurationFailure("Missing", missingConfig),
+                                                (configName, issue) => onConfigurationFailure(configName, issue));
                                         },
-                                        (missingConfig) => onConfigurationFailure("Missing", missingConfig),
-                                        (configName, issue) => onConfigurationFailure(configName, issue));
+                                        () => onAlreadyExists());
                                 },
-                                () => onAlreadyExists());
+                                (why) => onFailure(why).AsTask());
                         },
-                        (why) => onFailure(why).AsTask());
+                        (why) => onConfigurationFailure("Missing", why).AsTask());
                 },
                 (why) => onConfigurationFailure("Missing", why).AsTask());
                 
@@ -241,26 +251,31 @@ namespace EastFive.Azure.Auth
                 {
                     return Web.Configuration.Settings.GetUri(
                             EastFive.Security.AppSettings.TokenScope,
-                        async scope =>
+                        (scope) =>
                         {
-                            return await await GetClaimsAsync(application, authorizationRefMaybe,
-                                async (claims, accountIdMaybe, authorized) =>
+                            return Web.Configuration.Settings.GetDouble(Security.SessionServer.Configuration.AppSettings.TokenExpirationInMinutes,
+                                async (tokenExpirationInMinutes) =>
                                 {
-                                    sessionStorage.authorization = authorizationRefMaybe;
-                                    sessionStorage.authorized = authorized;
-                                    sessionStorage.account = accountIdMaybe;
-                                    return await BlackBarLabs.Security.Tokens.JwtTools.CreateToken(sessionRef.id,
-                                            scope, TimeSpan.FromDays(365.0), claims, // TODO: Expiration time from .Config
-                                        async (tokenNew) =>
-                                        {
-                                            sessionStorage.token = tokenNew;
-                                            await saveSessionAsync(sessionStorage);
-                                            return onUpdated(sessionStorage);
-                                        },
-                                        (missingConfig) => onConfigurationFailure("Missing", missingConfig).AsTask(),
-                                        (configName, issue) => onConfigurationFailure(configName, issue).AsTask());
+                                    return await await GetClaimsAsync(application, authorizationRefMaybe,
+                                    async (claims, accountIdMaybe, authorized) =>
+                                    {
+                                        sessionStorage.authorization = authorizationRefMaybe;
+                                        sessionStorage.authorized = authorized;
+                                        sessionStorage.account = accountIdMaybe;
+                                        return await BlackBarLabs.Security.Tokens.JwtTools.CreateToken(sessionRef.id,
+                                                scope, TimeSpan.FromMinutes(tokenExpirationInMinutes), claims,
+                                            async (tokenNew) =>
+                                            {
+                                                sessionStorage.token = tokenNew;
+                                                await saveSessionAsync(sessionStorage);
+                                                return onUpdated(sessionStorage);
+                                            },
+                                            (missingConfig) => onConfigurationFailure("Missing", missingConfig).AsTask(),
+                                            (configName, issue) => onConfigurationFailure(configName, issue).AsTask());
+                                    },
+                                    why => onFailure(why).AsTask());
                                 },
-                                why => onFailure(why).AsTask());
+                                why => onConfigurationFailure("Missing", why).AsTask());
                         },
                         (why) => onConfigurationFailure("Missing", why).AsTask());
                 },
