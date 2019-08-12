@@ -44,7 +44,8 @@ namespace BlackBarLabs.Identity.AzureStorageTables.Extensions
             }
         }
 
-        public static async Task<TResult> SaveBlobAsync<TResult>(this Persistence.Azure.DataStores context, string containerReference, Guid id, byte[] data,
+        public static async Task<TResult> SaveBlobAsync<TResult>(this Persistence.Azure.DataStores context, string containerReference,
+                Guid id, byte[] data,
                 Dictionary<string, string> metadata,
                 string contentType,
             Func<TResult> success,

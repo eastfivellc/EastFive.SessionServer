@@ -4,6 +4,7 @@ using Microsoft.WindowsAzure.Storage.Table;
 namespace BlackBarLabs.Persistence.Azure.StorageTables
 {
     [Serializable]
+    [Obsolete]
     public abstract class DocumentTemplate<TKey> : TableEntity, IDocument
     {
         protected DocumentTemplate()

@@ -10,27 +10,8 @@ using System.Threading.Tasks;
 
 namespace EastFive.Persistence.Azure.StorageTables
 {
-    public class ParititionKeyAttribute : Attribute,
-        IModifyAzureStorageTablePartitionKey
-    {
-        public string GeneratePartitionKey(string rowKey, object value, MemberInfo memberInfo)
-        {
-            var partitionValue = memberInfo.GetValue(value);
-            return (string)partitionValue;
-        }
-
-        public EntityType ParsePartitionKey<EntityType>(EntityType entity, string value, MemberInfo memberInfo)
-        {
-            if (memberInfo.GetPropertyOrFieldType().IsAssignableFrom(typeof(string)))
-                memberInfo.SetValue(ref entity, value);
-
-            // otherwise, discard ...?
-            return entity;
-        }
-    }
-
     public class StandardParititionKeyAttribute : Attribute,
-       IModifyAzureStorageTablePartitionKey
+       IModifyAzureStorageTablePartitionKey, IComputeAzureStorageTablePartitionKey
     {
         public string GeneratePartitionKey(string rowKey, object value, MemberInfo memberInfo)
         {
@@ -43,7 +24,18 @@ namespace EastFive.Persistence.Azure.StorageTables
             return entity;
         }
 
-        internal static string GetValue(string rowKey)
+        public string ComputePartitionKey<EntityType>(IRef<EntityType> refKey, string rowKey, MemberInfo memberInfo) where EntityType : IReferenceable
+        {
+            return GetValue(rowKey);
+        }
+
+        public EntityType AssignPartitionKey<EntityType>(EntityType entity, string rowKey, string partitionKey, MemberInfo memberInfo)
+        {
+            // discard since generated from id
+            return entity;
+        }
+
+        public static string GetValue(string rowKey)
         {
             return rowKey.GeneratePartitionKey();
         }

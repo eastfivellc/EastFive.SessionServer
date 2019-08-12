@@ -1,6 +1,7 @@
 ﻿using BlackBarLabs;
 using BlackBarLabs.Extensions;
 using BlackBarLabs.Persistence.Azure.StorageTables;
+using EastFive.Azure.Persistence.AzureStorageTables;
 using EastFive.Collections.Generic;
 using EastFive.Extensions;
 using EastFive.Linq;
@@ -36,8 +37,10 @@ namespace EastFive.Persistence.Azure.StorageTables
             where TEntity : IReferenceable
         {
             var tableName = GetLookupTableName(memberInfo);
-            var rowKey = value.id.AsRowKey();
-            var partitionKey = GetPartitionKey(rowKey, default(TEntity), memberInfo);
+            var rowKey = value.StorageComputeRowKey(
+                () => new RowKeyAttribute());
+            var partitionKey = value.StorageComputePartitionKey(rowKey,
+                onMissing:() => new StandardParititionKeyAttribute()); // GetPartitionKey(rowKey, default(TEntity), memberInfo);
             return repository
                 .FindByIdAsync<StorageLookupTable, IEnumerableAsync <KeyValuePair<string, string>>>(rowKey, partitionKey,
                     (dictEntity) =>
@@ -55,6 +58,7 @@ namespace EastFive.Persistence.Azure.StorageTables
         [StorageTable]
         public struct StorageLookupTable
         {
+
             [RowKey]
             public string rowKey;
 

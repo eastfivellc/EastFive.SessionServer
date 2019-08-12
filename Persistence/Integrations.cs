@@ -130,7 +130,8 @@ namespace EastFive.Azure.Persistence.Persistence
         {
             try
             {
-                var query = new TableQuery<AccessDocument>().Where(TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, actorId.AsRowKey()));
+                var query = new TableQuery<AccessDocument>()
+                    .Where(TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, actorId.AsRowKey()));
                 var accessDocs = await repository.FindByQueryAsync(query);
                 return await accessDocs
                     .FlatMap(

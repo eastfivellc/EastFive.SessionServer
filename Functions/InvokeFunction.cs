@@ -24,7 +24,15 @@ namespace EastFive.Azure.Functions
         public InvokeFunction(AzureApplication application, Uri serverUrl, string apiRouteName)
             : base(serverUrl, apiRouteName)
         {
-            this.azureApplication = application;
+            AzureApplication GetApplication()
+            {
+                if (application is FunctionApplication)
+                    return application;
+                var newApp = Activator.CreateInstance(application.GetType()) as AzureApplication;
+                newApp.ApplicationStart();
+                return newApp;
+            }
+            this.azureApplication = GetApplication();
         }
 
         public override Task<HttpResponseMessage> SendAsync<TResource>(RequestMessage<TResource> requestMessage, 

@@ -3,6 +3,7 @@ using System;
 namespace BlackBarLabs.Persistence.Azure.StorageTables.RelationshipDocuments
 {
 	[Serializable]
+    [Obsolete]
     public class ChildDocument : DocumentTemplate<Guid>
     {
         public ChildDocument() {}

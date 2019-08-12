@@ -214,7 +214,7 @@ namespace EastFive.Api.Azure
 
         public virtual async Task<CloudQueueMessage> SendQueueMessageAsync(string queueName, byte[] byteContent)
         {
-            var appQueue = EastFive.Web.Configuration.Settings.GetString("EastFive.Azure.StorageTables.ConnectionString",
+            var appQueue = EastFive.Web.Configuration.Settings.GetString(EastFive.Azure.Persistence.AppSettings.Storage,
                 (connString) =>
                 {
                     var storageAccount = CloudStorageAccount.Parse(connString);
@@ -236,7 +236,7 @@ namespace EastFive.Api.Azure
                 Task<TResult>> onNextMessage,
             Func<TResult> onEmpty)
         {
-            var appQueue = EastFive.Web.Configuration.Settings.GetString("EastFive.Azure.StorageTables.ConnectionString",
+            var appQueue = EastFive.Web.Configuration.Settings.GetString(EastFive.Azure.Persistence.AppSettings.Storage,
                 (connString) =>
                 {
                     var storageAccount = CloudStorageAccount.Parse(connString);

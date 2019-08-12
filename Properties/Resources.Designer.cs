@@ -19,7 +19,7 @@ namespace EastFive.Azure.Properties {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "15.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "16.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     internal class Resources {
@@ -91,9 +91,9 @@ namespace EastFive.Azure.Properties {
         ///        &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
         ///        &lt;title&gt;Affirm Health&lt;/title&gt;
         ///    &lt;/head&gt;
-        ///    &lt;body id=&quot;body&quot; class=&quot;hold-transition sidebar-mini fixed&quot; style=&quot;background-color: #f2f2f2; font-family: Arial, Helvetica, sans-serif;&quot;&gt;
-        ///        &lt;div&gt;
-        ///            &lt;img style=&quot;max-width: 200px;&quot; alt=&quot;Affirm Health&quot; src=&quot;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPoAAACCCAYAAABvndWRAAAAAXNSR0IArs4c6QAAA [rest of string was truncated]&quot;;.
+        ///    &lt;body id=&quot;body&quot; class=&quot;hold-transition sidebar-mini fixed&quot;&gt;
+        ///&lt;div  style=&quot;background-color: #f2f2f2; font-family: Arial, Helvetica, sans-serif;&quot;&gt;
+        ///            &lt;img style=&quot;max-width: 200px;&quot; alt=&quot;Affirm Health&quot; src=&quot;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPoAAACCCAYAAABvndWRAAAAAXNSR0IArs4c6QAAAAlwSFlz [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string indexPage {
             get {

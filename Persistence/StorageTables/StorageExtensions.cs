@@ -17,110 +17,195 @@ using BlackBarLabs.Persistence.Azure;
 using Microsoft.WindowsAzure.Storage.Table;
 using EastFive.Persistence.Azure;
 using EastFive.Azure.StorageTables.Driver;
+using BlackBarLabs.Extensions;
+using System.Reflection;
 
 namespace EastFive.Azure.Persistence.AzureStorageTables
 {
     public static class StorageExtensions
     {
+        public static string StorageComputeRowKey<TEntity>(this IRef<TEntity> entityRef,
+                Func<EastFive.Persistence.IComputeAzureStorageTableRowKey> onMissing = default)
+            where TEntity : IReferenceable
+        {
+            var partitionKeyMember = typeof(TEntity)
+                .GetPropertyOrFieldMembers()
+                .Where(member => member.ContainsAttributeInterface<EastFive.Persistence.IComputeAzureStorageTableRowKey>())
+                .Select(member =>
+                    member.GetAttributesInterface<EastFive.Persistence.IComputeAzureStorageTableRowKey>()
+                        .First()
+                        .PairWithKey(member))
+                .First(
+                    (computeAzureStorageTableRowKey, next) => computeAzureStorageTableRowKey,
+                    () =>
+                    {
+                        if (onMissing.IsDefaultOrNull())
+                            throw new Exception($"{typeof(TEntity).FullName} is missing attribute implementing {typeof(EastFive.Persistence.IComputeAzureStorageTableRowKey).FullName}.");
+                        return onMissing().PairWithKey(default(MemberInfo));
+                    });
+            return partitionKeyMember.Value.ComputeRowKey(entityRef, partitionKeyMember.Key);
+        }
+
+        public static string StorageGetRowKey<TEntity>(this TEntity entity)
+        {
+            var partitionKeyMember = typeof(TEntity)
+                .GetPropertyOrFieldMembers()
+                .Where(member => member.ContainsAttributeInterface<EastFive.Persistence.IModifyAzureStorageTableRowKey>())
+                .Select(member =>
+                    member.GetAttributesInterface<EastFive.Persistence.IModifyAzureStorageTableRowKey>()
+                        .First()
+                        .PairWithKey(member))
+                .First();
+            return partitionKeyMember.Value.GenerateRowKey(entity, partitionKeyMember.Key);
+        }
+
+        public static TEntity StorageParseRowKey<TEntity>(this TEntity entity, string rowKey)
+        {
+            var partitionKeyMember = typeof(TEntity)
+                .GetPropertyOrFieldMembers()
+                .Where(member => member.ContainsAttributeInterface<EastFive.Persistence.IModifyAzureStorageTableRowKey>())
+                .Select(member =>
+                    member.GetAttributesInterface<EastFive.Persistence.IModifyAzureStorageTableRowKey>()
+                        .First()
+                        .PairWithKey(member))
+                .First();
+            return partitionKeyMember.Value.ParseRowKey(entity, rowKey, partitionKeyMember.Key);
+        }
+
+        public static string StorageComputePartitionKey<TEntity>(this IRef<TEntity> entityRef,
+                Func<EastFive.Persistence.IComputeAzureStorageTablePartitionKey> onMissing = default)
+            where TEntity : IReferenceable
+        {
+            var rowKey = entityRef.StorageComputeRowKey();
+            return entityRef.StorageComputePartitionKey(rowKey, onMissing: onMissing);
+        }
+
+        public static string StorageComputePartitionKey<TEntity>(this IRef<TEntity> entityRef, string rowKey,
+                Func<EastFive.Persistence.IComputeAzureStorageTablePartitionKey> onMissing = default)
+            where TEntity : IReferenceable
+        {
+            var partitionKeyMember = typeof(TEntity)
+                .GetPropertyOrFieldMembers()
+                .Where(member => member.ContainsAttributeInterface<EastFive.Persistence.IComputeAzureStorageTablePartitionKey>())
+                .Select(member =>
+                    member.GetAttributesInterface<EastFive.Persistence.IComputeAzureStorageTablePartitionKey>()
+                        .First()
+                        .PairWithKey(member))
+                .First(
+                    (computeAzureStorageTableParitionKey, next) => computeAzureStorageTableParitionKey,
+                    () =>
+                    {
+                        if (onMissing.IsDefaultOrNull())
+                            throw new Exception($"{typeof(TEntity).FullName} is missing attribute implementing {typeof(EastFive.Persistence.IComputeAzureStorageTableRowKey).FullName}.");
+                        return onMissing().PairWithKey(default(MemberInfo));
+                    });
+            return partitionKeyMember.Value.ComputePartitionKey(entityRef, rowKey, partitionKeyMember.Key);
+        }
+
+        public static string StorageGetPartitionKey<TEntity>(this TEntity entity)
+        {
+            var rowKey = entity.StorageGetRowKey();
+            var partitionKeyMember = typeof(TEntity)
+                .GetPropertyOrFieldMembers()
+                .Where(member => member.ContainsAttributeInterface<EastFive.Persistence.IModifyAzureStorageTablePartitionKey>())
+                .Select(member =>
+                    member.GetAttributesInterface<EastFive.Persistence.IModifyAzureStorageTablePartitionKey>()
+                        .First()
+                        .PairWithKey(member))
+                .First();
+            return partitionKeyMember.Value.GeneratePartitionKey(rowKey: rowKey, entity, partitionKeyMember.Key);
+        }
+
+        public static TEntity StorageParsePartitionKey<TEntity>(this TEntity entity, string partitionKey)
+        {
+            var partitionKeyMember = typeof(TEntity)
+                .GetPropertyOrFieldMembers()
+                .Where(member => member.ContainsAttributeInterface<EastFive.Persistence.IModifyAzureStorageTablePartitionKey>())
+                .Select(member =>
+                    member.GetAttributesInterface<EastFive.Persistence.IModifyAzureStorageTablePartitionKey>()
+                        .First()
+                        .PairWithKey(member))
+                .First();
+            return partitionKeyMember.Value.ParsePartitionKey(entity, partitionKey, partitionKeyMember.Key);
+        }
+
         public static Task<TResult> StorageGetAsync<TEntity, TResult>(this Guid resourceId,
             Func<TEntity, TResult> onFound,
             Func<TResult> onDoesNotExists = default(Func<TResult>),
             Func<string> getPartitionKey = default(Func<string>))
+            where TEntity : IReferenceable
         {
-            if (default == getPartitionKey)
-                getPartitionKey = () => resourceId.AsRowKey().GeneratePartitionKey();
-
-            if (default == onDoesNotExists)
-                onDoesNotExists = Api.ResourceNotFoundException.StorageGetAsync<TResult>;
-
-            return AzureTableDriverDynamic
-                .FromSettings()
-                .FindByIdAsync(resourceId.AsRowKey(), getPartitionKey(),
+            return resourceId
+                .AsRef<TEntity>()
+                .StorageGetAsync(
                     onFound,
                     onDoesNotExists);
         }
 
         public static async Task<TResult> StorageGetAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
             Func<TEntity, TResult> onFound,
-            Func<TResult> onDoesNotExists = default(Func<TResult>),
-            Func<string> getPartitionKey = default(Func<string>))
+            Func<TResult> onDoesNotExists = default)
             where TEntity : IReferenceable
         {
             if (entityRef.IsDefaultOrNull())
                 return onDoesNotExists();
-            return await StorageGetAsync(entityRef.id,
-                onFound,
-                onDoesNotExists,
-                getPartitionKey);
+            var rowKey = entityRef.StorageComputeRowKey();
+            var partitionKey = entityRef.StorageComputePartitionKey();
+            return await AzureTableDriverDynamic
+                .FromSettings()
+                .FindByIdAsync(rowKey, partitionKey,
+                    onFound,
+                    onDoesNotExists);
         }
 
-        public static TResult StorageGetBy<TRefEntity, TEntity, TResult>(this IRef<TRefEntity> entityRef,
-                Expression<Func<TEntity, IRef<TRefEntity>>> by,
-            Func<IEnumerableAsync<TEntity>, TResult> onFound,
-            Func<TResult> onRefNotFound = default(Func<TResult>))
+        public static IEnumerableAsync<TEntity> StorageGetBy<TRefEntity, TEntity>(this IRef<TRefEntity> entityRef,
+                Expression<Func<TEntity, IRef<TRefEntity>>> by)
             where TEntity : struct, IReferenceable
             where TRefEntity : IReferenceable
         {
             return AzureTableDriverDynamic
                 .FromSettings()
-                .FindBy(entityRef,
-                        by,
-                    onFound,
-                    onRefNotFound);
+                .FindBy(entityRef, by);
         }
 
-        public static TResult StorageGetBy<TRefEntity, TEntity, TResult>(this IRef<TRefEntity> entityRef,
-                Expression<Func<TEntity, IRefOptional<TRefEntity>>> by,
-            Func<IEnumerableAsync<TEntity>, TResult> onFound,
-            Func<TResult> onRefNotFound = default(Func<TResult>))
+        public static IEnumerableAsync<TEntity> StorageGetBy<TRefEntity, TEntity>(this IRef<TRefEntity> entityRef,
+                Expression<Func<TEntity, IRefOptional<TRefEntity>>> by)
             where TEntity : struct, IReferenceable
             where TRefEntity : IReferenceable
         {
             return AzureTableDriverDynamic
                 .FromSettings()
-                .FindBy(entityRef,
-                        by,
-                    onFound,
-                    onRefNotFound);
+                .FindBy(entityRef, by);
         }
 
-        public static TResult StorageGetBy<TRefEntity, TEntity, TResult>(this IRef<TRefEntity> entityRef,
-                Expression<Func<TEntity, IRef<IReferenceable>>> by,
-            Func<IEnumerableAsync<TEntity>, TResult> onFound,
-            Func<TResult> onRefNotFound = default(Func<TResult>))
+        public static IEnumerableAsync<TEntity> StorageGetBy<TRefEntity, TEntity>(this IRef<TRefEntity> entityRef,
+                Expression<Func<TEntity, IRef<IReferenceable>>> by)
             where TEntity : struct, IReferenceable
             where TRefEntity : IReferenceable
         {
             return AzureTableDriverDynamic
                 .FromSettings()
-                .FindBy(entityRef,
-                        by,
-                    onFound,
-                    onRefNotFound);
+                .FindBy(entityRef, by);
         }
 
-        public static TResult StorageGetBy<TRefEntity, TEntity, TResult>(this IRef<TRefEntity> entityRef,
-                Expression<Func<TEntity, IRefs<TRefEntity>>> by,
-            Func<IEnumerableAsync<TEntity>, TResult> onFound,
-            Func<TResult> onRefNotFound = default(Func<TResult>))
+        public static IEnumerableAsync<TEntity> StorageGetBy<TRefEntity, TEntity>(this IRef<TRefEntity> entityRef,
+                Expression<Func<TEntity, IRefs<TRefEntity>>> by)
             where TEntity : struct, IReferenceable
             where TRefEntity : IReferenceable
         {
             return AzureTableDriverDynamic
                 .FromSettings()
-                .FindBy(entityRef,
-                        by,
-                    onFound,
-                    onRefNotFound);
+                .FindBy(entityRef, by);
         }
 
+        [Obsolete("Use IRef in place of IRefObj")]
         public static Task<TResult> StorageGetAsync<TEntity, TResult>(this IRefObj<TEntity> entityRefObj,
             Func<TEntity, TResult> onFound,
-            Func<TResult> onDoesNotExists = default(Func<TResult>),
-            Func<string> getPartitionKey = default(Func<string>))
+            Func<TResult> onDoesNotExists = default,
+            Func<string> getPartitionKey = default)
             where TEntity : class, IReferenceable
         {
-            if (default(Func<string>) == getPartitionKey)
+            if (getPartitionKey.IsDefaultOrNull())
                 getPartitionKey = () => entityRefObj.id.AsRowKey().GeneratePartitionKey();
 
             return AzureTableDriverDynamic
@@ -132,8 +217,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
 
         public static Task<TResult> StorageGetAsync<TEntity, TResult>(this IRefOptional<TEntity> entityRefMaybe,
             Func<TEntity, TResult> onFound,
-            Func<TResult> onDoesNotExists = default(Func<TResult>),
-            Func<string> getPartitionKey = default(Func<string>))
+            Func<TResult> onDoesNotExists = default)
             where TEntity : struct, IReferenceable
         {
             if (!entityRefMaybe.HasValueNotNull())
@@ -142,16 +226,19 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
             var entityRef = entityRefMaybe.Ref;
             return StorageGetAsync(entityRef,
                 onFound,
-                onDoesNotExists,
-                getPartitionKey);
+                onDoesNotExists);
         }
 
         public static IEnumerableAsync<TEntity> StorageGet<TEntity>(this IRefs<TEntity> entityRefs)
             where TEntity : struct, IReferenceable
         {
+            var keys = entityRefs.refs
+                .Select(r => r.StorageComputeRowKey()
+                    .PairWithValue(r.StorageComputePartitionKey()))
+                .ToArray();
             return AzureTableDriverDynamic
                 .FromSettings()
-                .FindByIdsAsync<TEntity>(entityRefs.ids);
+                .FindByIdsAsync<TEntity>(keys);
         }
 
         public static IEnumerableAsync<TEntity> StorageQuery<TEntity>(
@@ -160,6 +247,14 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
             return AzureTableDriverDynamic
                 .FromSettings()
                 .FindAll(query);
+        }
+
+        public static IEnumerableAsync<TEntity> StorageGetPartition<TEntity>(this string partition)
+            where TEntity : IReferenceable
+        {
+            return AzureTableDriverDynamic
+                .FromSettings()
+                .FindEntityBypartition<TEntity>(partition);
         }
 
         public static IEnumerableAsync<IDictionary<string, TValue>> StorageGetPartitionAsDictionary<TValue>(
@@ -179,6 +274,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                 rowKey, partitionKey, dictionary);
         }
 
+        [Obsolete("Use string row/partition keys")]
         public static Microsoft.WindowsAzure.Storage.Table.ITableEntity ToTableEntity<TValue>(this IDictionary<string, TValue> dictionary,
             Guid id)
         {
@@ -190,6 +286,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
 
         public static IEnumerableAsync<Microsoft.WindowsAzure.Storage.Table.TableResult> StorageQueryDelete<TEntity>(
             this Expression<Func<TEntity, bool>> query)
+            where TEntity : IReferenceable
         {
             return AzureTableDriverDynamic
                 .FromSettings()
@@ -200,52 +297,61 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
             Func<TEntity, Func<TEntity, Task>, Task<TResult>> onUpdate,
             Func<TResult> onNotFound = default,
             StorageTables.Driver.AzureStorageDriver.RetryDelegateAsync<Task<TResult>> onTimeoutAsync =
-                default(StorageTables.Driver.AzureStorageDriver.RetryDelegateAsync<Task<TResult>>),
-                Func<string> getPartitionKey = default(Func<string>))
-            where TEntity : struct, IReferenceable
+                default(StorageTables.Driver.AzureStorageDriver.RetryDelegateAsync<Task<TResult>>))
+            where TEntity : IReferenceable
         {
-            var documentId = entityRef.id;
             return AzureTableDriverDynamic
                 .FromSettings()
-                .UpdateAsync(documentId,
+                .UpdateAsync(
+                        entityRef.StorageComputeRowKey(),
+                        entityRef.StorageComputePartitionKey(),
                     onUpdate,
                     onNotFound: onNotFound,
-                    onTimeoutAsync: onTimeoutAsync,
-                    getPartitionKey: getPartitionKey);
+                    onTimeoutAsync: onTimeoutAsync);
         }
 
         public static Task<TResult> StorageUpdateAsyncAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
             Func<TEntity, Func<TEntity, Task>, Task<TResult>> onUpdate,
             Func<Task<TResult>> onNotFound = default,
             StorageTables.Driver.AzureStorageDriver.RetryDelegateAsync<Task<TResult>> onTimeoutAsync =
-                default(StorageTables.Driver.AzureStorageDriver.RetryDelegateAsync<Task<TResult>>),
-                Func<string> getPartitionKey = default(Func<string>))
+                default(StorageTables.Driver.AzureStorageDriver.RetryDelegateAsync<Task<TResult>>))
             where TEntity : struct, IReferenceable
         {
-            var documentId = entityRef.id;
             return AzureTableDriverDynamic
                 .FromSettings()
-                .UpdateAsyncAsync(documentId,
+                .UpdateAsyncAsync(entityRef.StorageComputeRowKey(), entityRef.StorageComputePartitionKey(),
                     onUpdate,
                     onNotFound: onNotFound,
-                    onTimeoutAsync: onTimeoutAsync,
-                    getPartitionKey: getPartitionKey);
+                    onTimeoutAsync: onTimeoutAsync);
+        }
+
+        [Obsolete("Set ID is no longer necessary with property row / partition attributes")]
+        public static Task<TResult> StorageCreateOrUpdateAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
+            Func<TEntity,TEntity> setId,
+            Func<bool, TEntity, Func<TEntity, Task>, Task<TResult>> onCreated)
+            where TEntity : struct, IReferenceable
+        {
+            var rowKey = entityRef.StorageComputeRowKey();
+            var partitionKey = entityRef.StorageComputePartitionKey();
+            return AzureTableDriverDynamic
+                .FromSettings()
+                .UpdateOrCreateAsync<TEntity, TResult>(rowKey, partitionKey,
+                    setId,
+                    onCreated,
+                    default(AzureStorageDriver.RetryDelegateAsync<Task<TResult>>));
         }
 
         public static Task<TResult> StorageCreateOrUpdateAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
-            Func<TEntity,TEntity> setId,
-            Func<bool, TEntity, Func<TEntity, Task>, Task<TResult>> onCreated,
-                Func<string> getPartitionKey = default(Func<string>))
+            Func<bool, TEntity, Func<TEntity, Task>, Task<TResult>> onCreated)
             where TEntity : struct, IReferenceable
         {
-            var documentId = entityRef.id;
+            var rowKey = entityRef.StorageComputeRowKey();
+            var partitionKey = entityRef.StorageComputePartitionKey();
             return AzureTableDriverDynamic
                 .FromSettings()
-                .UpdateOrCreateAsync<TEntity, TResult>(documentId,
-                    setId,
+                .UpdateOrCreateAsync<TEntity, TResult>(rowKey, partitionKey,
                     onCreated,
-                    default(AzureStorageDriver.RetryDelegateAsync<Task<TResult>>),
-                    getPartitionKey);
+                    default(AzureStorageDriver.RetryDelegateAsync<Task<TResult>>));
         }
 
         public static IEnumerableAsync<TResult> StorageCreateOrUpdateBatch<TEntity, TResult>(this IEnumerable<TEntity> entities,
@@ -290,6 +396,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                     diagnostics:diagnostics);
         }
 
+        [Obsolete("Replace IRefObj with IRef")]
         public static Task<TResult> StorageUpdateAsync<TEntity, TResult>(this IRefObj<TEntity> entityRef,
             Func<TEntity, Func<TEntity, Task>, Task<TResult>> onUpdate,
             Func<TResult> onNotFound = default(Func<TResult>),
@@ -308,17 +415,16 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
 
         public static Task<TResult> StorageDeleteAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
             Func<TResult> onSuccess,
-            Func<TResult> onNotFound = default(Func<TResult>),
-            string partitionKey = default)
+            Func<TResult> onNotFound = default)
             where TEntity : struct, IReferenceable
         {
-            var documentId = entityRef.id;
             return AzureTableDriverDynamic
                 .FromSettings()
-                .DeleteByIdAsync<TEntity, TResult>(documentId,
+                .DeleteAsync<TEntity, TResult>(
+                        entityRef.StorageComputeRowKey(),
+                        entityRef.StorageComputePartitionKey(),
                     onSuccess,
-                    onNotFound: onNotFound,
-                    partitionKey: partitionKey);
+                    onNotFound);
         }
 
         public static IEnumerableAsync<TResult> StorageDeleteBatch<TEntity, TResult>(this IEnumerableAsync<IRef<TEntity>> entityRefs,
@@ -348,7 +454,9 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
         {
             return AzureTableDriverDynamic
                 .FromSettings()
-                .LockedUpdateAsync(entityRef.id,
+                .LockedUpdateAsync(
+                        entityRef.StorageComputeRowKey(),
+                        entityRef.StorageComputePartitionKey(),
                         lockedPropertyExpression,
                     onLockAquired,
                     onNotFound: onNotFound,
@@ -363,6 +471,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
             Func<EastFive.Persistence.Azure.StorageTables.IAzureStorageTableEntity<TEntity>, TResult> onCreated,
             Func<TResult> onAlreadyExists,
             params IHandleFailedModifications<TResult>[] onModificationFailures)
+            where TEntity : IReferenceable
         {
             return AzureTableDriverDynamic
                 .FromSettings()
@@ -376,6 +485,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
             Func<TResult> onSuccess,
             Func<StorageTables.Driver.ExtendedErrorInformationCodes, string, TResult> onFailure = null,
             StorageTables.Driver.AzureStorageDriver.RetryDelegate onTimeout = null)
+            where TEntity : IReferenceable
         {
             return AzureTableDriverDynamic
                 .FromSettings()
@@ -478,7 +588,8 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
         }
 
         public static async Task<ITransactionResult<TResult>> StorageCreateTransactionAsync<TEntity, TResult>(this TEntity entity,
-            Func<TResult> onAlreadyExists)
+            Func<TResult> onAlreadyExists) 
+            where TEntity : IReferenceable
         {
             var driver = AzureTableDriverDynamic
                 .FromSettings();
