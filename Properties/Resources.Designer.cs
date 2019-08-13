@@ -86,14 +86,14 @@ namespace EastFive.Azure.Properties {
         /// <summary>
         ///   Looks up a localized string similar to &lt;!DOCTYPE html&gt;
         ///&lt;html&gt;
-        ///    &lt;head id=&quot;head&quot;&gt;
-        ///        &lt;meta charset=&quot;utf-8&quot;&gt;
-        ///        &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
-        ///        &lt;title&gt;Affirm Health&lt;/title&gt;
-        ///    &lt;/head&gt;
-        ///    &lt;body id=&quot;body&quot; class=&quot;hold-transition sidebar-mini fixed&quot;&gt;
-        ///&lt;div  style=&quot;background-color: #f2f2f2; font-family: Arial, Helvetica, sans-serif;&quot;&gt;
-        ///            &lt;img style=&quot;max-width: 200px;&quot; alt=&quot;Affirm Health&quot; src=&quot;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPoAAACCCAYAAABvndWRAAAAAXNSR0IArs4c6QAAAAlwSFlz [rest of string was truncated]&quot;;.
+        ///&lt;head id=&quot;head&quot;&gt;
+        ///    &lt;meta charset=&quot;utf-8&quot;&gt;
+        ///    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+        ///    &lt;title&gt;Affirm Health&lt;/title&gt;
+        ///&lt;/head&gt;
+        ///&lt;body id=&quot;body&quot; class=&quot;hold-transition sidebar-mini fixed&quot;&gt;
+        ///    &lt;div style=&quot;background-color: #f2f2f2; font-family: Arial, Helvetica, sans-serif;&quot;&gt;
+        ///        &lt;img style=&quot;max-width: 200px;&quot; alt=&quot;Affirm Health&quot; src=&quot;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPoAAACCCAYAAABvndWRAAAAAXNSR0IArs4c6QAAAAlwSFlzAAALEwAACxMBAJqc [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string indexPage {
             get {
