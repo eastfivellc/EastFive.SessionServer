@@ -496,6 +496,11 @@ namespace EastFive.Persistence.Azure.StorageTables
                         var intValue = value.Int32Value;
                         return onBound(intValue);
                     }
+                    if (typeof(bool) == nullableType)
+                    {
+                        var boolValue = value.BooleanValue;
+                        return onBound(boolValue);
+                    }
                     if (typeof(float) == nullableType)
                     {
                         var floatValue = value.DoubleValue.HasValue ?
