@@ -320,6 +320,7 @@
     <Compile Include="Persistence\AppSettings.cs" />
     <Compile Include="Persistence\Attributes\StorageResourceAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\Modifiers\MigratePartitionAttribute.cs" />
+    <Compile Include="Persistence\StorageTables\Attributes\PartitionKey\RowKeyPrefixAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\PartitionKey\StandardParititionKeyAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\PartitionKey\Partition16x3Attribute.cs" />
     <Compile Include="Persistence\StorageTables\StorageExtensions.cs" />
@@ -377,6 +378,7 @@
     <Compile Include="Persistence\StorageTables\RelatedEntities\ChildDocument.cs" />
     <Compile Include="Persistence\StorageTables\RelatedEntities\ParentDocument.cs" />
     <Compile Include="Persistence\StorageTables\TableEntity.cs" />
+    <Compile Include="Persistence\StorageTables\TableInformation.cs" />
     <Compile Include="Redirect.cs" />
     <Compile Include="Synchronization\Api\AdapterController.cs" />
     <Compile Include="Synchronization\Api\ConnectionController.cs" />

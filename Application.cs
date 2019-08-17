@@ -54,6 +54,17 @@ namespace EastFive.Api.Azure
                         httpApp as AzureApplication, baseUri, apiPath);
                     return onCreated(invokeFunction);
                 });
+            this.AddInstigator(typeof(InvokeApplicationDirect),
+                (httpApp, request, parameterInfo, onCreated) =>
+                {
+                    var baseUriString = request.RequestUri.GetLeftPart(UriPartial.Authority);
+                    var baseUri = new Uri(baseUriString);
+                    var apiPath = request.RequestUri.AbsolutePath.Trim('/'.AsArray()).Split('/'.AsArray()).First();
+                    var invokeFunction = new InvokeApplicationDirect(
+                        httpApp, baseUri, apiPath);
+                    return onCreated(invokeFunction);
+                });
+            
         }
 
         public virtual async Task<bool> CanAdministerCredentialAsync(Guid actorInQuestion, Api.Controllers.SessionToken security)

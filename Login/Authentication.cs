@@ -82,10 +82,10 @@ namespace EastFive.Azure.Login
 
         #endregion
 
-        public const string AccountPropertyName = "account";
-        [HtmlLink(Label = "Create new account")]
-        [JsonIgnore]
-        public IRefOptional<Account> account;
+        //public const string AccountPropertyName = "account";
+        //[HtmlLink(Label = "Create new account")]
+        //[JsonIgnore]
+        //public IRefOptional<Account> account;
 
         [Api.HttpGet]
         public static async Task<HttpResponseMessage> GetAsync(
@@ -145,10 +145,7 @@ namespace EastFive.Azure.Login
                 [OptionalQueryParameter(Name = "hold")]bool? hold,
                 [Property(Name = UserIdentificationPropertyName)]string userIdentification,
                 [Property(Name = PasswordPropertyName)]string password,
-                //Api.Azure.AzureApplication application,
-                //RequestMessage<Authentication> request,
                 HttpRequestMessage httpRequest,
-                // IBuildUrls urlHelper,
             RedirectResponse onUpdated,
             ContentTypeResponse<string> onHeldup,
             NotFoundResponse onNotFound,

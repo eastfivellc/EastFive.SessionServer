@@ -54,9 +54,12 @@ namespace EastFive.Persistence.Azure.StorageTables
             return table;
         }
 
-        public object GetTableQuery<TEntity>(string whereExpression = null)
+        public object GetTableQuery<TEntity>(string whereExpression = null,
+            IList<string> selectColumns = default)
         {
             var query = new TableQuery<TableEntity<TEntity>>();
+            if (!selectColumns.IsDefaultNullOrEmpty())
+                query.SelectColumns = selectColumns;
             if (!whereExpression.HasBlackSpace())
                 return query;
             return query.Where(whereExpression);
@@ -66,6 +69,15 @@ namespace EastFive.Persistence.Azure.StorageTables
             IWrapTableEntity<EntityType>, IAzureStorageTableEntity<EntityType>
         {
             public EntityType Entity { get; set; }
+
+            protected string rawRowKey;
+            public string RawRowKey => rawRowKey;
+
+            protected string rawPartitionKey;
+            public string RawPartitionKey => rawPartitionKey;
+
+            protected IDictionary<string, EntityProperty> rawProperties;
+            public IDictionary<string, EntityProperty> RawProperties => rawProperties;
 
             private static TResult GetMemberSupportingInterface<TInterface, TResult>(
                 Func<MemberInfo, TInterface, TResult> onFound,
@@ -103,6 +115,7 @@ namespace EastFive.Persistence.Azure.StorageTables
                 }
                 set
                 {
+                    rawRowKey = value;
                     this.Entity = SetRowKey(this.Entity, value);
                 }
             }
@@ -130,6 +143,7 @@ namespace EastFive.Persistence.Azure.StorageTables
                 }
                 set
                 {
+                    rawPartitionKey = value;
                     this.Entity = SetPartitionKey(this.Entity, value);
                 }
             }
@@ -158,6 +172,7 @@ namespace EastFive.Persistence.Azure.StorageTables
                 }
                 set
                 {
+                    this.timestamp = value;
                     this.Entity = SetTimestamp(this.Entity, value);
                 }
             }
@@ -189,6 +204,7 @@ namespace EastFive.Persistence.Azure.StorageTables
             public void ReadEntity(
                 IDictionary<string, EntityProperty> properties, OperationContext operationContext)
             {
+                this.rawProperties = properties;
                 this.Entity = CreateEntityInstance(this.Entity, properties);
             }
 

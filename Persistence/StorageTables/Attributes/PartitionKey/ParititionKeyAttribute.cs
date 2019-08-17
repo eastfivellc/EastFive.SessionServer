@@ -19,6 +19,11 @@ namespace EastFive.Persistence.Azure.StorageTables
             return (string)partitionValue;
         }
 
+        public IEnumerable<string> GeneratePartitionKeys(Type type, int skip, int top)
+        {
+            throw new NotImplementedException();
+        }
+
         public EntityType ParsePartitionKey<EntityType>(EntityType entity, string value, MemberInfo memberInfo)
         {
             if (memberInfo.GetPropertyOrFieldType().IsAssignableFrom(typeof(string)))

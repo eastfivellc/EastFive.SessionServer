@@ -11,6 +11,6 @@ namespace EastFive.Persistence.Azure.StorageTables
     {
         CloudTable GetTable(Type type, CloudTableClient client);
 
-        object GetTableQuery<TEntity>(string whereExpression = null);
+        object GetTableQuery<TEntity>(string whereExpression = null, IList<string> selectColumns = default);
     }
 }

@@ -34,5 +34,11 @@ namespace EastFive.Persistence.Azure.StorageTables
             return rowKey.Substring(0, 3);
         }
 
+        public IEnumerable<string> GeneratePartitionKeys(Type type, int skip, int top)
+        {
+            return Enumerable
+                .Range(skip, top)
+                .Select((paritionNum) => paritionNum.ToString("X3").ToLower());
+        }
     }
 }

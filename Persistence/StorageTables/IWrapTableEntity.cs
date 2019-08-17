@@ -12,7 +12,10 @@ namespace EastFive.Persistence.Azure.StorageTables
 
         TEntity Entity { get; }
 
+        string RawRowKey { get; }
 
-        // CloudTable GetTable(CloudTableClient tableClient);
+        string RawPartitionKey { get; }
+
+        IDictionary<string, EntityProperty> RawProperties { get; }
     }
 }

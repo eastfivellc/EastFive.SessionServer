@@ -10,9 +10,24 @@ using System.Threading.Tasks;
 
 namespace EastFive.Persistence.Azure.StorageTables
 {
-    public class StandardParititionKeyAttribute : Attribute,
-       IModifyAzureStorageTablePartitionKey, IComputeAzureStorageTablePartitionKey
+    public class RowKeyPrefixAttribute : Attribute,
+        IModifyAzureStorageTablePartitionKey, IComputeAzureStorageTablePartitionKey
     {
+        private uint? charactersMaybe;
+        public uint Characters
+        {
+            get
+            {
+                if (!charactersMaybe.HasValue)
+                    return 2;
+                return charactersMaybe.Value;
+            }
+            set
+            {
+                charactersMaybe = value;
+            }
+        }
+
         public string GeneratePartitionKey(string rowKey, object value, MemberInfo memberInfo)
         {
             return GetValue(rowKey);
@@ -29,24 +44,17 @@ namespace EastFive.Persistence.Azure.StorageTables
             return GetValue(rowKey);
         }
 
-        public EntityType AssignPartitionKey<EntityType>(EntityType entity, string rowKey, string partitionKey, MemberInfo memberInfo)
+        public string GetValue(string rowKey)
         {
-            // discard since generated from id
-            return entity;
-        }
-
-        public static string GetValue(string rowKey)
-        {
-            return rowKey.GeneratePartitionKey();
+            return rowKey.Substring(0, (int)this.Characters);
         }
 
         public IEnumerable<string> GeneratePartitionKeys(Type type, int skip, int top)
         {
+            var formatter = $"X{this.Characters}";
             return Enumerable
-                .Range(
-                    -1 * (KeyExtensions.PartitionKeyRemainder - 1),
-                    (KeyExtensions.PartitionKeyRemainder * 2) - 1)
-                .Select(index => index.ToString());
+                .Range(skip, top)
+                .Select((paritionNum) => paritionNum.ToString(formatter).ToLower());
         }
     }
 }

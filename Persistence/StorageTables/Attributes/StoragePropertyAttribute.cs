@@ -61,6 +61,7 @@ namespace EastFive.Persistence
     {
         string GeneratePartitionKey(string rowKey, object value, MemberInfo memberInfo);
         EntityType ParsePartitionKey<EntityType>(EntityType entity, string value, MemberInfo memberInfo);
+        IEnumerable<string> GeneratePartitionKeys(Type type, int skip, int top);
     }
 
     public interface IModifyAzureStorageTableLastModified
@@ -885,6 +886,15 @@ namespace EastFive.Persistence
         public string GeneratePartitionKey(string rowKey, object value, MemberInfo memberInfo)
         {
             return rowKey.GeneratePartitionKey();
+        }
+
+        public IEnumerable<string> GeneratePartitionKeys(Type type, int skip, int top)
+        {
+            return Enumerable
+                .Range(
+                    -1 * (KeyExtensions.PartitionKeyRemainder - 1),
+                    (KeyExtensions.PartitionKeyRemainder * 2) - 1)
+                .Select(index => index.ToString());
         }
 
         public EntityType ParsePartitionKey<EntityType>(EntityType entity, string value, MemberInfo memberInfo)

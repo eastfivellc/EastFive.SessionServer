@@ -44,6 +44,25 @@ namespace EastFive.Azure.Functions
         [StandardParititionKey]
         public IRef<InvocationMessage> invocationRef;
 
+        [LastModified]
+        public DateTimeOffset lastModified;
+
+        [StorageLookup]
+        public string LastUsedDay
+        {
+            get
+            {
+                var epoch = new DateTime(2019, 1, 1);
+                var span = lastModified - epoch;
+                var totalDays = (int)span.TotalDays;
+                return totalDays.ToString();
+            }
+            set
+            {
+                // ignore
+            }
+        }
+
         [JsonProperty]
         [Storage]
         public Uri requestUri;
@@ -60,6 +79,12 @@ namespace EastFive.Azure.Functions
         [Storage]
         public byte[] content;
 
+        public const string LastExecutedPropertyName = "last_executed";
+        [JsonProperty(PropertyName = LastExecutedPropertyName)]
+        [ApiProperty(PropertyName = LastExecutedPropertyName)]
+        [Storage]
+        public DateTime? lastExecuted;
+        
         #endregion
 
         #region Http Methods
@@ -161,11 +186,11 @@ namespace EastFive.Azure.Functions
                 (why) => throw new Exception(why));
         }
 
-        public static async Task<HttpResponseMessage> InvokeAsync(IRef<InvocationMessage> invocationMessageRef,
+        public static Task<HttpResponseMessage> InvokeAsync(IRef<InvocationMessage> invocationMessageRef,
             IInvokeApplication invokeApplication)
         {
-            return await await invocationMessageRef.StorageGetAsync(
-                invocationMessage =>
+            return invocationMessageRef.StorageUpdateAsync(
+                async (invocationMessage, saveAsync) =>
                 {
                     if (invocationMessage.method.IsNullOrEmpty())
                     {
@@ -187,10 +212,12 @@ namespace EastFive.Azure.Functions
                         httpRequest.Content = new ByteArrayContent(invocationMessage.content);
                         httpRequest.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
                     }
+
                     var requestMessage = new RequestMessage<object>(invokeApplication, httpRequest);
-                    return invokeApplication.SendAsync(requestMessage, httpRequest);
+                    invocationMessage.lastExecuted = DateTime.UtcNow;
+                    return await invokeApplication.SendAsync(requestMessage, httpRequest);
                 },
-                ResourceNotFoundException.StorageGetAsync<Task<HttpResponseMessage>>);
+                ResourceNotFoundException.StorageGetAsync<HttpResponseMessage>);
         }
     }
 }

@@ -20,6 +20,15 @@ namespace EastFive.Persistence.Azure.StorageTables
     {
         public EntityType Entity { get; private set; }
 
+        protected string rawRowKey;
+        public string RawRowKey => rawRowKey;
+
+        protected string rawPartitionKey;
+        public string RawPartitionKey => rawPartitionKey;
+
+        protected IDictionary<string, EntityProperty> rawProperties;
+        public IDictionary<string, EntityProperty> RawProperties => rawProperties;
+
         public virtual string RowKey
         {
             get
@@ -69,7 +78,7 @@ namespace EastFive.Persistence.Azure.StorageTables
             }
             set
             {
-                var x = value.GetType();
+                rawRowKey = value;
             }
         }
 
@@ -94,8 +103,7 @@ namespace EastFive.Persistence.Azure.StorageTables
             }
             set
             {
-                var x = value.GetType();
-
+                rawPartitionKey = value;
             }
         }
 
@@ -114,6 +122,7 @@ namespace EastFive.Persistence.Azure.StorageTables
 
         public void ReadEntity(IDictionary<string, EntityProperty> properties, OperationContext operationContext)
         {
+            this.rawProperties = properties;
             this.Entity = CreateEntityInstance(properties);
         }
 

@@ -43,19 +43,23 @@ namespace EastFive.Persistence.Azure.StorageTables
                     });
         }
 
-        public static object GetTableQuery<TEntity>(string whereExpression = null)
+        public static object GetTableQuery<TEntity>(string whereExpression = null,
+            IList<string> selectColumns = default)
         {
             var query = typeof(TEntity)
                 .GetAttributesInterface<IProvideTable>()
                 .First(
                     (tableProvider, next) =>
                     {
-                        var tableQueryDyanmic = tableProvider.GetTableQuery<TEntity>(whereExpression);
+                        var tableQueryDyanmic = tableProvider.GetTableQuery<TEntity>(
+                            whereExpression:whereExpression, selectColumns:selectColumns);
                         return tableQueryDyanmic;
                     },
                     () =>
                     {
                         var tableQuery = new TableQuery<TableEntity<TEntity>>();
+                        if (!selectColumns.IsDefaultNullOrEmpty())
+                            tableQuery.SelectColumns = selectColumns;
                         if (!whereExpression.HasBlackSpace())
                             return (object)tableQuery;
                         return (object)tableQuery.Where(whereExpression);
