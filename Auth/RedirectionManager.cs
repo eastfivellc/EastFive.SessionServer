@@ -116,7 +116,8 @@ namespace EastFive.Azure.Auth
                             },
                             () => Failure("Method no longer supported").AsTask());
                     })
-                .Parallel()
+                //Parallel()
+                .Throttle()
                 .SelectWhereHasValue()
                 .OrderByDescendingAsync(item => item.when);
             return onContent(redirections.ToArray());
