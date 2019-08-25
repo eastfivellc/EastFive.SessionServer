@@ -321,8 +321,8 @@ namespace BlackBarLabs.Persistence.Azure.StorageTables
                 Func<TDocument, Guid> getRowKey,
                 Func<TDocument, TResult> onSuccess,
                 Func<TDocument, TResult> onFailure,
-                RetryDelegate onTimeout = default(RetryDelegate),
-                string tag = default(string))
+                RetryDelegate onTimeout = default,
+                ILogger logger = default)
             where TDocument : class, ITableEntity
         {
             return entities
@@ -330,7 +330,7 @@ namespace BlackBarLabs.Persistence.Azure.StorageTables
                 .Select(
                     rows =>
                     {
-                        return CreateOrReplaceBatch(rows, getRowKey, onSuccess, onFailure, onTimeout);
+                        return CreateOrReplaceBatch(rows, getRowKey, onSuccess, onFailure, onTimeout, logger: logger);
                     })
                 .SelectAsyncMany();
         }
@@ -339,17 +339,17 @@ namespace BlackBarLabs.Persistence.Azure.StorageTables
                 Func<TDocument, Guid> getRowKey,
                 Func<TDocument, TResult> onSuccess,
                 Func<TDocument, TResult> onFailure,
-                RetryDelegate onTimeout = default(RetryDelegate),
-                string tag = default(string))
+                RetryDelegate onTimeout = default,
+                ILogger logger = default)
             where TDocument : class, ITableEntity
         {
             return CreateOrReplaceBatch(entities,
-                row => getRowKey(row).AsRowKey(),
-                row => row.RowKey.GeneratePartitionKey(),
+                    row => getRowKey(row).AsRowKey(),
+                    row => row.RowKey.GeneratePartitionKey(),
                 onSuccess,
                 onFailure,
                 onTimeout,
-                tag);
+                    logger:logger);
         }
 
         public IEnumerableAsync<TResult> CreateOrReplaceBatchWithPartitionKey<TDocument, TElement, TResult>(IEnumerableAsync<TElement> entities,
@@ -359,7 +359,7 @@ namespace BlackBarLabs.Persistence.Azure.StorageTables
                Func<TDocument, TResult> onSuccess,
                Func<TDocument, TResult> onFailure,
                RetryDelegate onTimeout = default(RetryDelegate),
-               string tag = default(string))
+               ILogger logger = default)
            where TDocument : class, ITableEntity
         {
             return entities
@@ -367,39 +367,22 @@ namespace BlackBarLabs.Persistence.Azure.StorageTables
                 .Select(
                     elements =>
                     {
-                    return CreateOrReplaceBatch(elements, getDocument,
-                        (element, doc) => getRowKey(element, doc).AsRowKey(),
-                            (element, doc) => getPartitionKey(element, doc),
-                            onSuccess, onFailure, onTimeout);
+                        return CreateOrReplaceBatch(elements, getDocument,
+                            (element, doc) => getRowKey(element, doc).AsRowKey(),
+                                (element, doc) => getPartitionKey(element, doc),
+                                onSuccess, onFailure, onTimeout,
+                                logger: logger);
                     })
                 .SelectAsyncMany();
         }
 
-        public IEnumerableAsync<string> CreateOrReplaceBatchExact<TDocument>(IEnumerableAsync<TDocument> entities)
-           where TDocument : class, ITableEntity
-        {
-            return entities
-                .Batch()
-                .Select(
-                    rows =>
-                    {
-                        return CreateOrReplaceBatch(rows,
-                            (doc) => doc.RowKey,
-                            (doc) => doc.PartitionKey,
-                            (doc) => doc.RowKey,
-                            (doc) => string.Empty,
-                            default(RetryDelegate));
-                    })
-                .SelectAsyncMany()
-                .Where(id => id.HasBlackSpace());
-        }
         public IEnumerableAsync<TResult> CreateOrReplaceBatchWithPartitionKey<TDocument, TResult>(IEnumerableAsync<TDocument> entities,
                Func<TDocument, Guid> getRowKey,
                Func<TDocument, string> getPartitionKey,
                Func<TDocument, TResult> onSuccess,
                Func<TDocument, TResult> onFailure,
                RetryDelegate onTimeout = default(RetryDelegate),
-               string tag = default(string))
+               ILogger logger = default)
            where TDocument : class, ITableEntity
         {
             return entities
@@ -410,7 +393,8 @@ namespace BlackBarLabs.Persistence.Azure.StorageTables
                         return CreateOrReplaceBatch(rows,
                             (doc) => getRowKey(doc).AsRowKey(),
                             (doc) => getPartitionKey(doc),
-                            onSuccess, onFailure, onTimeout);
+                            onSuccess, onFailure, onTimeout,
+                            logger: logger);
                     })
                 .SelectAsyncMany();
         }
@@ -420,7 +404,7 @@ namespace BlackBarLabs.Persistence.Azure.StorageTables
                 Func<TDocument, TResult> onSuccess,
                 Func<TDocument, TResult> onFailure,
                 RetryDelegate onTimeout = default(RetryDelegate),
-                string tag = default(string))
+                ILogger logger = default)
             where TDocument : class, ITableEntity
         {
             return entities
@@ -431,7 +415,8 @@ namespace BlackBarLabs.Persistence.Azure.StorageTables
                         return CreateOrReplaceBatch(rows,
                             getRowKey, 
                             (doc) => doc.RowKey.GeneratePartitionKey(),
-                            onSuccess, onFailure, onTimeout);
+                            onSuccess, onFailure, onTimeout,
+                            logger: logger);
                     })
                 .SelectAsyncMany();
         }
@@ -441,8 +426,8 @@ namespace BlackBarLabs.Persistence.Azure.StorageTables
                 Func<TDocument, string> getPartitionKey,
                 Func<TDocument, TResult> onSuccess,
                 Func<TDocument, TResult> onFailure,
-                RetryDelegate onTimeout = default(RetryDelegate),
-                string tag = default(string))
+                RetryDelegate onTimeout = default,
+                ILogger logger = default)
             where TDocument : class, ITableEntity
         {
             return entities
@@ -450,23 +435,9 @@ namespace BlackBarLabs.Persistence.Azure.StorageTables
                 .Select(
                     rows =>
                     {
-                        return CreateOrReplaceBatch(rows, getRowKey, getPartitionKey, onSuccess, onFailure, onTimeout);
+                        return CreateOrReplaceBatch(rows, getRowKey, getPartitionKey, onSuccess, onFailure, onTimeout,
+                            logger: logger);
                     })
-                //.OnComplete(
-                //    (resultss) =>
-                //    {
-                //        resultss.OnCompleteAll(
-                //            resultsArray =>
-                //            {
-                //                if (tag.IsNullOrWhiteSpace())
-                //                    return;
-
-                //                if (!resultsArray.Any())
-                //                    Console.WriteLine($"Batch[{tag}]:saved 0 {typeof(TDocument).Name} documents in 0 batches.");
-
-                //                Console.WriteLine($"Batch[{tag}]:saved {resultsArray.Sum(results => results.Length)} {typeof(TDocument).Name} documents in {resultsArray.Length} batches.");
-                //            });
-                //    })
                 .SelectAsyncMany();
         }
 
@@ -476,7 +447,7 @@ namespace BlackBarLabs.Persistence.Azure.StorageTables
                 Func<TDocument, TResult> onSuccess,
                 Func<TDocument, TResult> onFailure,
                 RetryDelegate onTimeout = default(RetryDelegate),
-                string tag = default(string))
+                ILogger logger = default)
             where TDocument : class, ITableEntity
         {
             return entities
@@ -495,19 +466,12 @@ namespace BlackBarLabs.Persistence.Azure.StorageTables
                             .Split(index => 100)
                             .Select(set => set.ToArray().PairWithKey(grp.Key));
                     })
-                .Select(grp => CreateOrReplaceBatchAsync(grp.Key, grp.Value))
-                .AsyncEnumerable()
-                .OnComplete(
-                    (resultss) =>
+                .Select(
+                    grp =>
                     {
-                        if (tag.IsNullOrWhiteSpace())
-                            return;
-
-                        if (!resultss.Any())
-                            Console.WriteLine($"Batch[{tag}]:saved 0 {typeof(TDocument).Name} documents across 0 partitions.");
-
-                        Console.WriteLine($"Batch[{tag}]:saved {resultss.Sum(results => results.Length)} {typeof(TDocument).Name} documents across {resultss.Length} partitions.");
+                        return CreateOrReplaceBatchAsync(grp.Key, grp.Value, diagnostics: logger);
                     })
+                .AsyncEnumerable()
                 .SelectMany(
                     trs =>
                     {
@@ -530,10 +494,10 @@ namespace BlackBarLabs.Persistence.Azure.StorageTables
                 Func<TDocument, TResult> onSuccess,
                 Func<TDocument, TResult> onFailure,
                 RetryDelegate onTimeout = default(RetryDelegate),
-                EastFive.Analytics.ILogger logger = default(ILogger))
+                EastFive.Analytics.ILogger logger = default)
             where TDocument : class, ITableEntity
         {
-            var scopeLogger = logger.CreateScope("Batch");
+            var scopeLogger = logger.CreateScope("CreateOrReplaceBatch");
 
             return entities
                 .Select(
@@ -552,14 +516,11 @@ namespace BlackBarLabs.Persistence.Azure.StorageTables
                             .Split(index => 100)
                             .Select(set => set.ToArray().PairWithKey(grp.Key));
                     })
-                .Select(grp => CreateOrReplaceBatchAsync(grp.Key, grp.Value))
+                .Select(grp => CreateOrReplaceBatchAsync(grp.Key, grp.Value, diagnostics: scopeLogger))
                 .AsyncEnumerable()
                 .OnComplete(
                     (resultss) =>
                     {
-                        if (scopeLogger.IsDefaultOrNull())
-                            return;
-
                         if (!resultss.Any())
                             scopeLogger.Trace($"Saved 0 {typeof(TDocument).Name} documents across 0 partitions.");
 
@@ -582,14 +543,13 @@ namespace BlackBarLabs.Persistence.Azure.StorageTables
 
         public async Task<TableResult[]> CreateOrReplaceBatchAsync<TDocument>(string partitionKey, TDocument[] entities,
                 RetryDelegate onTimeout = default(RetryDelegate),
-                EastFive.Analytics.ILogger diagnostics = default(EastFive.Analytics.ILogger))
+                EastFive.Analytics.ILogger diagnostics = default)
             where TDocument : class, ITableEntity
         {
             if (!entities.Any())
                 return new TableResult[] { };
             
             var table = GetTable<TDocument>();
-            var bucketCount = (entities.Length / 100) + 1;
             diagnostics.Trace($"{entities.Length} rows for partition `{partitionKey}`.");
             
             var batch = new TableBatchOperation();
