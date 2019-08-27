@@ -540,31 +540,33 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                     onNotFound);
         }
 
-<<<<<<< HEAD
-        public static Task<TResult> StorageDeleteAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
-            Func<TEntity, Func<Task>, Task<TResult>> onFound,
-=======
-        [Obsolete]
         public static Task<TResult> StorageDeleteAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
                 string partitionKey,
             Func<TResult> onSuccess,
->>>>>>> 6945447ecc5ee4e9a24a8a76d63233f08ab0a30b
             Func<TResult> onNotFound = default)
             where TEntity : struct, IReferenceable
         {
             return AzureTableDriverDynamic
                 .FromSettings()
-<<<<<<< HEAD
-                .DeleteAsync(
-                        entityRef.StorageComputeRowKey(),
-                        entityRef.StorageComputePartitionKey(),
-                    onFound,
-=======
                 .DeleteAsync<TEntity, TResult>(
                         entityRef.StorageComputeRowKey(),
                         partitionKey,
                     onSuccess,
->>>>>>> 6945447ecc5ee4e9a24a8a76d63233f08ab0a30b
+                    onNotFound);
+        }
+
+        [Obsolete]
+        public static Task<TResult> StorageDeleteAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
+            Func<TEntity, Func<Task>, Task<TResult>> onFound,
+            Func<TResult> onNotFound = default)
+            where TEntity : struct, IReferenceable
+        {
+            return AzureTableDriverDynamic
+                .FromSettings()
+                .DeleteAsync(
+                        entityRef.StorageComputeRowKey(),
+                        entityRef.StorageComputePartitionKey(),
+                    onFound,
                     onNotFound);
         }
 
