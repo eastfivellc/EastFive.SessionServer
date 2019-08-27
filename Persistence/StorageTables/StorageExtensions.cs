@@ -285,7 +285,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
         }
 
         public static IEnumerableAsync<TEntity> StorageGet<TEntity>(this IRefs<TEntity> entityRefs)
-            where TEntity : struct, IReferenceable
+            where TEntity : IReferenceable
         {
             var keys = entityRefs.refs
                 .Select(r => r.StorageComputeRowKey()

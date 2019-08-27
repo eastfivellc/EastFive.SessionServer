@@ -1291,7 +1291,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             CloudTable table = default(CloudTable),
             AzureStorageDriver.RetryDelegate onTimeout =
                 default(AzureStorageDriver.RetryDelegate))
-            where TEntity : struct, IReferenceable
+            where TEntity : IReferenceable
         {
             if (table.IsDefaultOrNull())
                 table = GetTable<TEntity>();
@@ -1299,14 +1299,15 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                 .Select(
                     rowKey =>
                     {
-                        return FindByIdAsync<TEntity, TEntity?>(rowKey.Key, rowKey.Value,
-                            (entity) => entity,
-                            () => default(TEntity?),
+                        return FindByIdAsync<TEntity, KeyValuePair<bool, TEntity>?>(rowKey.Key, rowKey.Value,
+                            (entity) => entity.PairWithKey(true),
+                            () => default(KeyValuePair<bool, TEntity>?),
                             table: table,
                             onTimeout: onTimeout);
                     })
                 .AsyncEnumerable()
-                .SelectWhereHasValue();
+                .SelectWhereHasValue()
+                .SelectValues();
         }
 
         public IEnumerableAsync<TEntity> FindAll<TEntity>(
