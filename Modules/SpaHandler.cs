@@ -94,16 +94,6 @@ namespace EastFive.Api.Azure.Modules
         
         protected override async Task<HttpResponseMessage> SendAsync(EastFive.Api.HttpApplication httpApp, HttpRequestMessage request, CancellationToken cancellationToken, Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> continuation)
         {
-            if (request.RequestUri.Host.ToLower().Contains("affirmhealthpdms-production.azurewebsites.net") &&
-                request.RequestUri.Segments.NullToEmpty().Count() > 2 &&
-                request.RequestUri.Segments[1].Contains("schedules") &&
-                request.Method.Method.ToLower() == HttpMethod.Get.Method.ToLower())
-            {
-                var absoluteUri = request.RequestUri.AbsoluteUri
-                    .Replace("affirmhealthpdms-production.azurewebsites.net", "dash.affirmhealth.com");
-                return request.CreateRedirectResponse(new Uri(absoluteUri));
-            }
-
             if (!request.RequestUri.IsDefaultOrNull())
             {
                 if (request.RequestUri.PathAndQuery.HasBlackSpace())
