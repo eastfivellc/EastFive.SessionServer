@@ -144,7 +144,7 @@ namespace BlackBarLabs.Persistence.Azure.Attributes
         }
     }
 
-    [AttributeUsage(AttributeTargets.Class)]
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
     public class StorageResourceAttribute : Attribute
     {
         public StorageResourceAttribute(Type partitionKeyGenerator, Type rowKeyGenerator)

@@ -328,6 +328,7 @@
     <Compile Include="Persistence\StorageTables\Attributes\PartitionKey\StandardParititionKeyAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\PartitionKey\Partition16x3Attribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\StorageObjectAttribute.cs" />
+    <Compile Include="Persistence\StorageTables\GenericTableEntity.cs" />
     <Compile Include="Persistence\StorageTables\StorageExtensions.cs" />
     <Compile Include="Persistence\CryptoDocument.cs" />
     <Compile Include="Persistence\DataStores.cs" />
