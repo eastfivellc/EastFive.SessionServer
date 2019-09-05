@@ -863,6 +863,9 @@ namespace EastFive.Persistence
                 return onBound(default(TimeZoneInfo));
             }
 
+            if (type.IsClass)
+                return onBound(null);
+
             return onFailedToBind();
         }
 

@@ -54,6 +54,9 @@
     <Reference Include="Microsoft.Azure.Amqp, Version=2.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Azure.Amqp.2.1.2\lib\net45\Microsoft.Azure.Amqp.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.Azure.CognitiveServices.Vision.ComputerVision, Version=5.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Azure.CognitiveServices.Vision.ComputerVision.5.0.0\lib\net452\Microsoft.Azure.CognitiveServices.Vision.ComputerVision.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.Azure.KeyVault.Core, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Azure.KeyVault.Core.3.0.1\lib\net452\Microsoft.Azure.KeyVault.Core.dll</HintPath>
     </Reference>
@@ -91,7 +94,7 @@
       <HintPath>..\packages\Microsoft.IdentityModel.Tokens.5.2.4\lib\net451\Microsoft.IdentityModel.Tokens.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Rest.ClientRuntime, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Rest.ClientRuntime.2.3.17\lib\net452\Microsoft.Rest.ClientRuntime.dll</HintPath>
+      <HintPath>..\packages\Microsoft.Rest.ClientRuntime.2.3.18\lib\net452\Microsoft.Rest.ClientRuntime.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Rest.ClientRuntime.Azure, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Rest.ClientRuntime.Azure.3.3.18\lib\net452\Microsoft.Rest.ClientRuntime.Azure.dll</HintPath>
@@ -315,6 +318,7 @@
     <Compile Include="Login\Client.cs" />
     <Compile Include="Login\CredentialProvider.cs" />
     <Compile Include="Login\Redirection.cs" />
+    <Compile Include="Media\ContentExtensions.cs" />
     <Compile Include="Monitoring\Monitoring.cs" />
     <Compile Include="IProvideIntegration.cs" />
     <Compile Include="Persistence\AppSettings.cs" />
@@ -323,6 +327,7 @@
     <Compile Include="Persistence\StorageTables\Attributes\PartitionKey\RowKeyPrefixAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\PartitionKey\StandardParititionKeyAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\PartitionKey\Partition16x3Attribute.cs" />
+    <Compile Include="Persistence\StorageTables\Attributes\StorageObjectAttribute.cs" />
     <Compile Include="Persistence\StorageTables\StorageExtensions.cs" />
     <Compile Include="Persistence\CryptoDocument.cs" />
     <Compile Include="Persistence\DataStores.cs" />
@@ -352,7 +357,7 @@
     <Compile Include="Persistence\StorageTables\Attributes\RowKeyAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\Modifiers\StorageLinkAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\Modifiers\StorageLookupAttribute.cs" />
-    <Compile Include="Persistence\StorageTables\Attributes\StoragePropertyAttribute.cs" />
+    <Compile Include="Persistence\StorageTables\Attributes\StorageAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\StorageTableAttribute.cs" />
     <Compile Include="Persistence\StorageTables\AzureStorageHelpers.cs" />
     <Compile Include="Persistence\StorageTables\Caching\CacheItem.cs" />
@@ -477,7 +482,7 @@
     <Compile Include="Persistence\Content.cs" />
     <Compile Include="Persistence\Documents\LookupDocument.cs" />
     <Compile Include="Persistence\Sheet.cs" />
-    <Compile Include="Content.cs" />
+    <Compile Include="Media\Content.cs" />
     <Compile Include="Processes\Persistence\ProcessStageTypeDocument.cs" />
     <Compile Include="Processes\Persistence\LookupDocuments.cs" />
     <Compile Include="Processes\Processes.cs" />

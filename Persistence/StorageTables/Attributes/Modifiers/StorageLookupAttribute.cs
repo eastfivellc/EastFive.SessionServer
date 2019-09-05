@@ -13,6 +13,8 @@ using Microsoft.WindowsAzure.Storage.Table;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -279,6 +281,46 @@ namespace EastFive.Persistence.Azure.StorageTables
                     .Where(kvp => kvp.Key != rowKeyRef),
                 onSuccessWithRollback,
                 onFailure);
+        }
+
+
+        public static IHandleFailedModifications<TResult> ModificationFailure<T, TResult>(
+            Expression<Func<T, object>> property,
+            Func<TResult> handlerOnFailure)
+        {
+            var member = property.MemberInfo(
+                memberInfo => memberInfo,
+                () => throw new Exception($"`{property}`: is not a member expression"));
+
+            return new FaildModificationHandler<TResult>()
+            {
+                member = member,
+                handler = handlerOnFailure,
+            };
+        }
+
+        private class FaildModificationHandler<TResult> : IHandleFailedModifications<TResult>
+        {
+            internal MemberInfo member;
+            internal Func<TResult> handler;
+
+            public bool DoesMatchMember(MemberInfo[] membersWithFailures)
+            {
+                var doesMatchMember = membersWithFailures
+                    .Where(memberWithFailure => memberWithFailure.ContainsCustomAttribute<StorageLookupAttribute>(true))
+                    .Where(memberWithFailure => memberWithFailure.Name == member.Name)
+                    .Any();
+                return doesMatchMember;
+            }
+
+            public TResult ModificationFailure(MemberInfo[] membersWithFailures)
+            {
+                var failureMember = membersWithFailures
+                    .Where(membersWithFailure => membersWithFailure.ContainsCustomAttribute<StorageLookupAttribute>(true))
+                    .Where(memberWithFailure => memberWithFailure.Name == member.Name)
+                    .First();
+                return handler();
+            }
         }
     }
 }

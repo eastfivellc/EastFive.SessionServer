@@ -799,7 +799,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
 
         public IEnumerableAsync<TEntity> FindBy<TRefEntity, TEntity>(IRef<TRefEntity> entityRef,
                 Expression<Func<TEntity, IRef<TRefEntity>>> by)
-            where TEntity : struct, IReferenceable
+            where TEntity : IReferenceable
             where TRefEntity : IReferenceable
         {
             return FindByInternal(entityRef, by);
@@ -807,7 +807,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
 
         public IEnumerableAsync<TEntity> FindBy<TRefEntity, TEntity>(IRef<TRefEntity> entityRef,
                 Expression<Func<TEntity, IRef<IReferenceable>>> by)
-            where TEntity : struct, IReferenceable
+            where TEntity : IReferenceable
             where TRefEntity : IReferenceable
         {
             return FindByInternal(entityRef, by);
@@ -815,7 +815,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
 
         public IEnumerableAsync<TEntity> FindBy<TRefEntity, TEntity>(IRef<TRefEntity> entityRef,
                 Expression<Func<TEntity, IRefOptional<TRefEntity>>> by)
-            where TEntity : struct, IReferenceable
+            where TEntity : IReferenceable
             where TRefEntity : IReferenceable
         {
             return FindByInternal(entityRef, by);
@@ -823,7 +823,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
 
         public IEnumerableAsync<TEntity> FindBy<TRefEntity, TEntity>(IRef<TRefEntity> entityRef,
                 Expression<Func<TEntity, IRefs<TRefEntity>>> by)
-            where TEntity : struct, IReferenceable
+            where TEntity : IReferenceable
             where TRefEntity : IReferenceable
         {
             return FindByInternal(entityRef, by);
@@ -831,7 +831,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
 
         private IEnumerableAsync<TEntity> FindByInternal<TRefEntity, TMatch, TEntity>(IRef<TRefEntity> entityRef,
                 Expression<Func<TEntity, TMatch>> by)
-            where TEntity : struct, IReferenceable
+            where TEntity : IReferenceable
             where TRefEntity : IReferenceable
         {
             return by.MemberInfo(
@@ -843,18 +843,19 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                             (attr, next) =>
                             {
                                 return attr.GetKeys(entityRef, this, memberCandidate)
-                                        .Select(
-                                            rowParitionKeyKvp =>
-                                            {
-                                                var rowKey = rowParitionKeyKvp.Key;
-                                                var partitionKey = rowParitionKeyKvp.Value;
-                                                return this.FindByIdAsync(rowKey, partitionKey,
-                                                    (TEntity entity) => entity,
-                                                    () => default(TEntity?),
-                                                    onFailure: (code, msg) => default(TEntity?));
-                                            })
-                                        .Await()
-                                        .SelectWhereHasValue();
+                                    .Select(
+                                        rowParitionKeyKvp =>
+                                        {
+                                            var rowKey = rowParitionKeyKvp.Key;
+                                            var partitionKey = rowParitionKeyKvp.Value;
+                                            return this.FindByIdAsync(rowKey, partitionKey,
+                                                    (TEntity entity) => entity.PairWithKey(true),
+                                                    () => default(TEntity).PairWithKey(false),
+                                                    onFailure: (code, msg) => default(TEntity).PairWithKey(false));
+                                        })
+                                    .Await()
+                                    .Where(kvp => kvp.Key)
+                                    .SelectValues();
                             },
                             () =>
                             {
@@ -1310,6 +1311,23 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                 .SelectValues();
         }
 
+        public IEnumerableAsync<TableResult> Copy(
+            string filter,
+            string tableName,
+            AzureTableDriverDynamic copyTo,
+            int numberOfTimesToRetry = DefaultNumberOfTimesToRetry)
+        {
+            var table = this.TableClient.GetTableReference(tableName);
+            var query = new TableQuery<GenericTableEntity>();
+            var filteredQuery = query.Where(filter);
+            var allRows = FindAllInternal(filteredQuery, table, numberOfTimesToRetry);
+            return copyTo.CreateOrReplaceBatch(allRows,
+                row => row.RowKey,
+                row => row.PartitionKey,
+                (row, action) => action,
+                tableName);
+        }
+
         public IEnumerableAsync<TEntity> FindAll<TEntity>(
             Expression<Func<TEntity, bool>> filter,
             CloudTable table = default(CloudTable),
@@ -1600,21 +1618,6 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                     {
                         return CreateOrReplaceBatch(rows, getRowKey, getPartitionKey, perItemCallback, tableName, onTimeout);
                     })
-                //.OnComplete(
-                //    (resultss) =>
-                //    {
-                //        resultss.OnCompleteAll(
-                //            resultsArray =>
-                //            {
-                //                if (tag.IsNullOrWhiteSpace())
-                //                    return;
-
-                //                if (!resultsArray.Any())
-                //                    Console.WriteLine($"Batch[{tag}]:saved 0 {typeof(TDocument).Name} documents in 0 batches.");
-
-                //                Console.WriteLine($"Batch[{tag}]:saved {resultsArray.Sum(results => results.Length)} {typeof(TDocument).Name} documents in {resultsArray.Length} batches.");
-                //            });
-                //    })
                 .SelectAsyncMany();
         }
 
@@ -2081,25 +2084,27 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
 
         #region BLOB
 
-        public async Task<TResult> BlobCreateAsync<TResult>(byte[] content, string containerName,
-            Func<Guid, TResult> onSuccess,
+        public async Task<TResult> BlobCreateAsync<TResult>(byte[] content, Guid blobId, string containerName,
+            Func<TResult> onSuccess,
+            Func<TResult> onAlreadyExists,
             Func<ExtendedErrorInformationCodes, string, TResult> onFailure = default,
             string contentType = default,
             AzureStorageDriver.RetryDelegate onTimeout = default)
         {
             var container = this.BlobClient.GetContainerReference(containerName);
             container.CreateIfNotExists();
-            var blobId = Guid.NewGuid();
             var blockBlob = container.GetBlockBlobReference(blobId.ToString("N"));
             try
             {
+                if (await blockBlob.ExistsAsync())
+                    return onAlreadyExists();
                 if (contentType.HasBlackSpace())
                     blockBlob.Properties.ContentType = contentType;
                 using (var stream = await blockBlob.OpenWriteAsync())
                 {
                     await stream.WriteAsync(content, 0, content.Length);
                 }
-                return onSuccess(blobId);
+                return onSuccess();
             }
             catch (Microsoft.WindowsAzure.Storage.StorageException ex)
             {
@@ -2112,7 +2117,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             }
         }
 
-        public async Task<TResult> BlobLoadAsync<TResult>(Guid blobId, string containerName,
+        public async Task<TResult> BlobLoadBytesAsync<TResult>(Guid blobId, string containerName,
             Func<byte[], string, TResult> onFound,
             Func<TResult> onNotFound = default,
             Func<ExtendedErrorInformationCodes, string, TResult> onFailure = default,
@@ -2135,6 +2140,44 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                     if(!onNotFound.IsDefaultOrNull())
                         return onNotFound();
                 if(onFailure.IsDefaultOrNull())
+                    throw;
+                return ex.ParseExtendedErrorInformation(
+                    (code, msg) => onFailure(code, msg),
+                    () => throw ex);
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="blobId"></param>
+        /// <param name="containerName"></param>
+        /// <param name="onFound">Stream is NOT disposed.</param>
+        /// <param name="onNotFound"></param>
+        /// <param name="onFailure"></param>
+        /// <param name="onTimeout"></param>
+        /// <returns></returns>
+        public async Task<TResult> BlobLoadStreamAsync<TResult>(Guid blobId, string containerName,
+            Func<System.IO.Stream, string, TResult> onFound,
+            Func<TResult> onNotFound = default,
+            Func<ExtendedErrorInformationCodes, string, TResult> onFailure = default,
+            AzureStorageDriver.RetryDelegate onTimeout = default)
+        {
+            var container = this.BlobClient.GetContainerReference(containerName);
+            try
+            {
+                var blockBlob = container.GetBlockBlobReference(blobId.ToString("N"));
+                var contentType = blockBlob.Properties.ContentType;
+                var stream = await blockBlob.OpenReadAsync();
+                return onFound(stream, contentType);
+            }
+            catch (Microsoft.WindowsAzure.Storage.StorageException ex)
+            {
+                if (ex.IsProblemDoesNotExist())
+                    if (!onNotFound.IsDefaultOrNull())
+                        return onNotFound();
+                if (onFailure.IsDefaultOrNull())
                     throw;
                 return ex.ParseExtendedErrorInformation(
                     (code, msg) => onFailure(code, msg),

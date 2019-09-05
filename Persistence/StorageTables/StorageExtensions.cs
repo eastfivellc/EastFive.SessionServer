@@ -215,7 +215,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
 
         public static IEnumerableAsync<TEntity> StorageGetBy<TRefEntity, TEntity>(this IRef<TRefEntity> entityRef,
                 Expression<Func<TEntity, IRef<TRefEntity>>> by)
-            where TEntity : struct, IReferenceable
+            where TEntity : IReferenceable
             where TRefEntity : IReferenceable
         {
             return AzureTableDriverDynamic
@@ -225,7 +225,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
 
         public static IEnumerableAsync<TEntity> StorageGetBy<TRefEntity, TEntity>(this IRef<TRefEntity> entityRef,
                 Expression<Func<TEntity, IRefOptional<TRefEntity>>> by)
-            where TEntity : struct, IReferenceable
+            where TEntity : IReferenceable
             where TRefEntity : IReferenceable
         {
             return AzureTableDriverDynamic
@@ -235,7 +235,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
 
         public static IEnumerableAsync<TEntity> StorageGetBy<TRefEntity, TEntity>(this IRef<TRefEntity> entityRef,
                 Expression<Func<TEntity, IRef<IReferenceable>>> by)
-            where TEntity : struct, IReferenceable
+            where TEntity : IReferenceable
             where TRefEntity : IReferenceable
         {
             return AzureTableDriverDynamic
@@ -245,7 +245,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
 
         public static IEnumerableAsync<TEntity> StorageGetBy<TRefEntity, TEntity>(this IRef<TRefEntity> entityRef,
                 Expression<Func<TEntity, IRefs<TRefEntity>>> by)
-            where TEntity : struct, IReferenceable
+            where TEntity : IReferenceable
             where TRefEntity : IReferenceable
         {
             return AzureTableDriverDynamic
@@ -737,16 +737,33 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
             string contentType = default,
             Azure.StorageTables.Driver.AzureStorageDriver.RetryDelegate onTimeout = null)
         {
+            var blobId = Guid.NewGuid();
+            return content.BlobCreateAsync(blobId, containerName,
+                () => onSuccess(blobId),
+                () => throw new Exception("Guid not unique."),
+                onFailure: onFailure,
+                contentType: contentType,
+                onTimeout: onTimeout);
+        }
+
+        public static Task<TResult> BlobCreateAsync<TResult>(this byte[] content, Guid blobId, string containerName,
+            Func<TResult> onSuccess,
+            Func<TResult> onAlreadyExists,
+            Func<Azure.StorageTables.Driver.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
+            string contentType = default,
+            Azure.StorageTables.Driver.AzureStorageDriver.RetryDelegate onTimeout = null)
+        {
             return AzureTableDriverDynamic
                 .FromSettings()
-                .BlobCreateAsync(content, containerName,
+                .BlobCreateAsync(content, blobId, containerName,
                     onSuccess,
+                    onAlreadyExists,
                     onFailure: onFailure,
                     contentType: contentType,
                     onTimeout: onTimeout);
         }
 
-        public static Task<TResult> BlobLoadAsync<TResult>(this Guid blobId, string containerName,
+        public static Task<TResult> BlobLoadBytesAsync<TResult>(this Guid blobId, string containerName,
             Func<byte [], string, TResult> onSuccess,
             Func<TResult> onNotFound = default,
             Func<Azure.StorageTables.Driver.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
@@ -754,7 +771,22 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
         {
             return AzureTableDriverDynamic
                 .FromSettings()
-                .BlobLoadAsync(blobId, containerName,
+                .BlobLoadBytesAsync(blobId, containerName,
+                    onSuccess,
+                    onNotFound,
+                    onFailure: onFailure,
+                    onTimeout: onTimeout);
+        }
+
+        public static Task<TResult> BlobLoadStreamAsync<TResult>(this Guid blobId, string containerName,
+            Func<System.IO.Stream, string, TResult> onSuccess,
+            Func<TResult> onNotFound = default,
+            Func<Azure.StorageTables.Driver.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
+            Azure.StorageTables.Driver.AzureStorageDriver.RetryDelegate onTimeout = null)
+        {
+            return AzureTableDriverDynamic
+                .FromSettings()
+                .BlobLoadStreamAsync(blobId, containerName,
                     onSuccess,
                     onNotFound,
                     onFailure: onFailure,

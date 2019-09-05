@@ -11,6 +11,11 @@ using EastFive.Api.Controllers;
 using Newtonsoft.Json;
 using System.IO;
 using System.IO.Compression;
+using EastFive.Azure.Persistence.AzureStorageTables;
+using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
+using Microsoft.Azure.CognitiveServices.Vision.ComputerVision;
+using EastFive.Extensions;
+using EastFive.Linq;
 
 namespace EastFive.Api.Azure.Resources
 {
@@ -56,7 +61,6 @@ namespace EastFive.Api.Azure.Resources
         public static async Task<HttpResponseMessage> CreateContentAsync(
                 [QueryParameter(CheckFileName = true, Name = ContentIdPropertyName)]Guid contentId,
                 [QueryParameter(Name = ContentPropertyName)]ByteArrayContent content,
-                HttpRequestMessage request,
             CreatedResponse onCreated,
             AlreadyExistsResponse onAlreadyExists)
         {
@@ -72,7 +76,6 @@ namespace EastFive.Api.Azure.Resources
                 [Property(Name = ContentIdPropertyName)]Guid contentId,
                 [Property(Name = ContentPropertyName)]byte[] contentBytes,
                 [Header(Content = ContentPropertyName)]System.Net.Http.Headers.MediaTypeHeaderValue mediaHeader,
-                HttpRequestMessage request,
             CreatedResponse onCreated,
             AlreadyExistsResponse onAlreadyExists)
         {
@@ -95,9 +98,9 @@ namespace EastFive.Api.Azure.Resources
             var response = await EastFive.Api.Azure.Content.FindContentByContentIdAsync(contentId,
                 (contentType, image) =>
                 {
-                    if(renderer.HasBlackSpace())
+                    if (renderer.HasBlackSpace())
                     {
-                        if(renderer.ToLower() == "unzip")
+                        if (renderer.ToLower() == "unzip")
                         {
                             using (var compressedStream = new MemoryStream(image))
                             using (var zipStream = new System.IO.Compression.ZipArchive(compressedStream, ZipArchiveMode.Read))
@@ -106,7 +109,7 @@ namespace EastFive.Api.Azure.Resources
                                 var zipFile = zipStream.Entries.First();
                                 zipFile.Open().CopyTo(resultStream);
                                 var data = resultStream.ToArray();
-                                return request.CreateFileResponse(data, "application/object", filename:zipFile.Name);
+                                return request.CreateFileResponse(data, "application/object", filename: zipFile.Name);
                             }
                         }
                     }
@@ -127,6 +130,33 @@ namespace EastFive.Api.Azure.Resources
                 () => request.CreateResponse(HttpStatusCode.NotFound),
                 () => request.CreateResponse(HttpStatusCode.Unauthorized));
             return response;
+        }
+
+        public Task<TResult> LoadStreamAsync<TResult>(
+            Func<Stream, string, TResult> onFound,
+            Func<TResult> onNotFound)
+        {
+            return contentRef.id.BlobLoadStreamAsync("content",
+                onFound,
+                onNotFound);
+        }
+
+        public static Task<TResult> FindContentStreamByIdAsync<TResult>(Guid contentId,
+            Func<string, byte[], TResult> onFound,
+            Func<TResult> onNotFound)
+        {
+            return contentId.BlobLoadBytesAsync("content",
+                (data, contentType) => onFound(contentType, data),
+                onNotFound);
+        }
+
+        public static Task<TResult> FindContentByIdAsync<TResult>(Guid contentId,
+            Func<string, byte[], TResult> onFound,
+            Func<TResult> onNotFound)
+        {
+            return contentId.BlobLoadBytesAsync("content",
+                (data, contentType) => onFound(contentType, data),
+                onNotFound);
         }
 
         private static async Task<HttpResponseMessage> QueryAsVideoStream(

@@ -26,6 +26,22 @@ namespace EastFive.Azure
         public const string CDNApiRoutePrefix = "EastFive.Azure.CDNApiRoutePrefix";
 
         [Config]
+        public static class CognitiveServices
+        {
+            [ConfigKey("Endpoint used by computer vision to analyze image Content.",
+                DeploymentOverrides.Suggested,
+                Location = "Azure portal image classification quick start",
+                DeploymentSecurityConcern = false)]
+            public const string ComputerVisionEndpoint = "EastFive.Azure.CognitiveServices.ComputerVisionEndpoint";
+
+            [ConfigKey("Subscription key that provides access to the computer vision API.",
+                DeploymentOverrides.Suggested,
+                Location = "Azure portal image classification quick start",
+                DeploymentSecurityConcern = false)]
+            public const string ComputerVisionSubscriptionKey = "EastFive.Azure.CognitiveServices.ComputerVisionSubscriptionKey";
+        }
+
+        [Config]
         public static class SAML
         {
             [ConfigKey("The certificate the SAML provider offers. It is in base64 format. Only the public key is availble. " +
