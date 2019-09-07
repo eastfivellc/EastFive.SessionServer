@@ -8,6 +8,7 @@ using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using System.Web.Http.Routing;
 using BlackBarLabs.Api;
+using BlackBarLabs.Persistence.Azure.Attributes;
 using EastFive.Api;
 using EastFive.Api.Azure;
 using EastFive.Api.Controllers;
@@ -32,6 +33,7 @@ namespace EastFive.Azure.Auth
         Resource = typeof(Authorization),
         ContentType = "x-application/auth-authorization",
         ContentTypeVersion = "0.1")]
+    [StorageResource(typeof(StandardPartitionKeyGenerator))]
     [StorageTable]
     public struct Authorization : IReferenceable
     {

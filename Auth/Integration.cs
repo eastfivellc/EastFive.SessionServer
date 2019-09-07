@@ -7,6 +7,7 @@ using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using System.Web.Http.Routing;
 using BlackBarLabs.Api;
+using BlackBarLabs.Persistence.Azure.Attributes;
 using EastFive;
 using EastFive.Api;
 using EastFive.Api.Controllers;
@@ -29,6 +30,7 @@ namespace EastFive.Azure.Auth
         Resource = typeof(Integration),
         ContentType = "x-application/auth-integration",
         ContentTypeVersion = "0.1")]
+    [StorageResource(typeof(StandardPartitionKeyGenerator))]
     [StorageTable]
     public struct Integration : IReferenceable
     {
@@ -51,7 +53,8 @@ namespace EastFive.Azure.Auth
         [JsonProperty(PropertyName = AccountPropertyName)]
         [Storage]
         public Guid accountId { get; set; }
-        
+
+        [StorageResource(typeof(StandardPartitionKeyGenerator))]
         [StorageTable]
         public struct AuthorizationIntegrationLookup : IReferenceable
         {
@@ -68,6 +71,7 @@ namespace EastFive.Azure.Auth
             public IRef<Integration> integrationMappingRef;
         }
 
+        [StorageResource(typeof(StandardPartitionKeyGenerator))]
         [StorageTable]
         public struct AccountIntegrationLookup : IReferenceable
         {

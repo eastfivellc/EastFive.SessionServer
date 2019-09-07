@@ -11,7 +11,8 @@ namespace EastFive.Persistence.Azure.Documents
 {
     [Serializable]
     [DataContract]
-    [StorageResource(typeof(RemainderKeyGenerator), typeof(HexadecimalRangeKeyGenerator))]
+    // commented out b/c the EastFive.Azure.Persistence.Documents.LookupDocument copy has this already
+    //[StorageResource(typeof(StandardPartitionKeyGenerator), typeof(OnePlaceHexadecimalKeyGenerator))]  
     public class LookupDocument : TableEntity
     {
         [IgnoreDataMember]

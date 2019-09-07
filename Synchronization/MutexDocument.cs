@@ -8,9 +8,11 @@ using BlackBarLabs.Persistence.Azure.StorageTables;
 using System.Runtime.Serialization;
 using EastFive.Linq.Async;
 using System.Text;
+using BlackBarLabs.Persistence.Azure.Attributes;
 
 namespace EastFive.Azure.Synchronization.Persistence
 {
+    [StorageResource(typeof(StandardPartitionKeyGenerator))]
     public class MutexDocument : TableEntity
     {
         [IgnoreDataMember]

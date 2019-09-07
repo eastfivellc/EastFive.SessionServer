@@ -8,11 +8,13 @@ using EastFive.Linq;
 using EastFive.Collections.Generic;
 using BlackBarLabs.Linq;
 using System.Collections.Generic;
+using BlackBarLabs.Persistence.Azure.Attributes;
 
 namespace EastFive.Azure.Persistence.Documents
 {
     [Serializable]
     [DataContract]
+    [StorageResource(typeof(StandardPartitionKeyGenerator), typeof(OnePlaceHexadecimalKeyGenerator))]
     public class LookupDocument : TableEntity
     {
         [IgnoreDataMember]

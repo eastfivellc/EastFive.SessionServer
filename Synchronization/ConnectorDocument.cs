@@ -23,6 +23,7 @@ using BlackBarLabs.Persistence.Azure.Attributes;
 
 namespace EastFive.Azure.Synchronization.Persistence
 {
+    [StorageResource(typeof(NoKeyGenerator), typeof(OnePlaceHexadecimalKeyGenerator))]
     public class ConnectorSynchronizationDocument : TableEntity
     {
         [IgnoreDataMember]
@@ -34,7 +35,7 @@ namespace EastFive.Azure.Synchronization.Persistence
         public bool Locked { get; set; }
     }
 
-    [StorageResource(typeof(RemainderKeyGenerator), typeof(TwoPlaceHexadecimalRangeKeyGenerator))]
+    [StorageResource(typeof(StandardPartitionKeyGenerator), typeof(ThreePlaceHexadecimalKeyGenerator))]
     public class ConnectorDocument : TableEntity
     {
         [IgnoreDataMember]
@@ -72,7 +73,7 @@ namespace EastFive.Azure.Synchronization.Persistence
             return localId.ToByteArray().Concat(remoteId.ToByteArray()).ToArray().MD5HashGuid();
         }
 
-        private static Func<string, string> GetMutatePartitionKey(string resourceType) =>
+        public static Func<string, string> GetMutatePartitionKey(string resourceType) =>
             partition => $"{resourceType}___{partition}";
 
         public static Task<TResult> CreateAndUpdateAdaptersAsync<TResult>(Guid connectorId,
