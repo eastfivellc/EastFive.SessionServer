@@ -83,6 +83,8 @@ namespace EastFive.Persistence.Azure.StorageTables
             if (typeof(IReferenceable).IsAssignableFrom(propertyValueType))
             {
                 var refValue = (IReferenceable)rowKeyValue;
+                if(refValue.IsDefaultOrNull())
+                    return new string[] { };
                 return refValue.id.AsRowKey().AsEnumerable();
             }
             if (typeof(string).IsAssignableFrom(propertyValueType))
@@ -106,8 +108,8 @@ namespace EastFive.Persistence.Azure.StorageTables
                     return new string[] { };
                 return references.ids.Select(id => id.AsRowKey());
             }
-            var exMsg = $"StorageLookup is not implemented for type `{propertyValueType.FullName}`. " +
-                "Please override GetRowKeys on `{this.GetType().FullName}`.";
+            var exMsg = $"{this.GetType().Name} is not implemented for type `{propertyValueType.FullName}`. " +
+                $"Please override GetRowKeys on `{this.GetType().FullName}`.";
             throw new NotImplementedException(exMsg);
         }
 

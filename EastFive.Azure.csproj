@@ -291,6 +291,7 @@
     <Compile Include="Api\Resources\Monitoring.cs" />
     <Compile Include="Api\Resources\Queries\MonitoringQuery.cs" />
     <Compile Include="Attributes\ASTFVCPropertyAttribute.cs" />
+    <Compile Include="Auth\Whoami.cs" />
     <Compile Include="Functions\FunctionApplication.cs" />
     <Compile Include="Functions\InvocationMessage.cs" />
     <Compile Include="Functions\InvokeFunction.cs" />
@@ -324,6 +325,7 @@
     <Compile Include="Persistence\AppSettings.cs" />
     <Compile Include="Persistence\Attributes\StorageResourceAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\Modifiers\MigratePartitionAttribute.cs" />
+    <Compile Include="Persistence\StorageTables\Attributes\Modifiers\StorageConstraintUniqueAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\PartitionKey\RowKeyPrefixAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\PartitionKey\StandardParititionKeyAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\PartitionKey\Partition16x3Attribute.cs" />
