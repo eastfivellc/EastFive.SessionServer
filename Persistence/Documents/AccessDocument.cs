@@ -7,7 +7,6 @@ using System.Runtime.Serialization;
 
 namespace EastFive.Security.SessionServer.Persistence.Documents
 {
-    [StorageResource(typeof(RemainderKeyGenerator), typeof(ListKeyGenerator))]
     public class AccessDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
     {
         [IgnoreDataMember]

@@ -20,14 +20,16 @@ namespace BlackBarLabs.Persistence.Azure.Attributes
         IEnumerable<StringKey> GetKeys();
     }
 
+    public class NoKeyGenerator : ListKeyGenerator
+    {
+        public NoKeyGenerator() : base(new string[] { }) { }
+    }
+
     public class ListKeyGenerator : StringKeyGenerator
     {
         private readonly IEnumerable<string> items;
-        public ListKeyGenerator()
-        {
-        }
 
-        public ListKeyGenerator(string[] items)
+        public ListKeyGenerator(IEnumerable<string> items)
         {
             this.items = items;
         }
@@ -44,14 +46,14 @@ namespace BlackBarLabs.Persistence.Azure.Attributes
         }
     }
 
+    public class StandardPartitionKeyGenerator : RemainderKeyGenerator
+    {
+        public StandardPartitionKeyGenerator() : base(KeyExtensions.PartitionKeyRemainder - 1) { }
+    }
+
     public class RemainderKeyGenerator : StringKeyGenerator
     {
         private readonly int positiveBound;
-
-        public RemainderKeyGenerator()
-            : this(KeyExtensions.PartitionKeyRemainder - 1)
-        {
-        }
 
         public RemainderKeyGenerator(int positiveBound)
         {
@@ -61,7 +63,7 @@ namespace BlackBarLabs.Persistence.Azure.Attributes
         public virtual IEnumerable<StringKey> GetKeys()
         {
             int negativeBound = -positiveBound;
-            int count = positiveBound * 2 + 1; // include zero value
+            int count = (positiveBound * 2) + 1; // include zero value
             return Enumerable.Range(negativeBound, count)  // i.e. (-12, 25)
                 .Select(
                     num => num.ToString())
@@ -76,17 +78,32 @@ namespace BlackBarLabs.Persistence.Azure.Attributes
         }
     }
 
-    public class HexadecimalRangeKeyGenerator : StringKeyGenerator
+    public class OnePlaceHexadecimalKeyGenerator : HexadecimalKeyGenerator
+    {
+        public OnePlaceHexadecimalKeyGenerator() : base(1) { }
+    }
+
+    public class TwoPlaceHexadecimalKeyGenerator : HexadecimalKeyGenerator
+    {
+        public TwoPlaceHexadecimalKeyGenerator() : base(2) { }
+    }
+
+    public class ThreePlaceHexadecimalKeyGenerator : HexadecimalKeyGenerator
+    {
+        public ThreePlaceHexadecimalKeyGenerator() : base(3) { }
+    }
+
+    public class FourPlaceHexadecimalKeyGenerator : HexadecimalKeyGenerator
+    {
+        public FourPlaceHexadecimalKeyGenerator() : base(4) { }
+    }
+
+    public class HexadecimalKeyGenerator : StringKeyGenerator
     {
         private readonly string format;
         private readonly int count;
 
-        public HexadecimalRangeKeyGenerator()
-            : this(1)
-        {
-        }
-
-        public HexadecimalRangeKeyGenerator(int places)
+        public HexadecimalKeyGenerator(int places)
         {
             this.format = $"x{places}";
             this.count = 0x1 << (places * 4);
@@ -115,20 +132,6 @@ namespace BlackBarLabs.Persistence.Azure.Attributes
                 });
         }
     }
-    public class TwoPlaceHexadecimalRangeKeyGenerator : HexadecimalRangeKeyGenerator
-    {
-        public TwoPlaceHexadecimalRangeKeyGenerator() : base(2) { }
-    }
-
-    public class ThreePlaceHexadecimalRangeKeyGenerator : HexadecimalRangeKeyGenerator
-    {
-        public ThreePlaceHexadecimalRangeKeyGenerator() : base(3) { }
-    }
-
-    public class FourPlaceHexadecimalRangeKeyGenerator : HexadecimalRangeKeyGenerator
-    {
-        public FourPlaceHexadecimalRangeKeyGenerator() : base(4) { }
-    }
 
     public class ConcatGenerator : StringKeyGenerator
     {
@@ -147,6 +150,10 @@ namespace BlackBarLabs.Persistence.Azure.Attributes
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
     public class StorageResourceAttribute : Attribute
     {
+        public StorageResourceAttribute() : this(typeof(NoKeyGenerator), typeof(NoKeyGenerator)) { }
+
+        public StorageResourceAttribute(Type partitionKeyGenerator) : this(partitionKeyGenerator, typeof(NoKeyGenerator)) { }
+
         public StorageResourceAttribute(Type partitionKeyGenerator, Type rowKeyGenerator)
         {
             PartitionKeyGenerator = 

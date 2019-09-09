@@ -1,20 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
 using System.Net.Http;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using System.Web.Http.Routing;
-using BlackBarLabs.Api.Resources;
-using BlackBarLabs.Extensions;
+using BlackBarLabs.Persistence.Azure.Attributes;
 using EastFive.Api;
 using EastFive.Api.Controllers;
 using EastFive.Azure.Persistence.AzureStorageTables;
-using EastFive.Collections.Generic;
 using EastFive.Extensions;
-using EastFive.Linq;
-using EastFive.Linq.Async;
 using EastFive.Persistence;
 using EastFive.Persistence.Azure.StorageTables;
 using Newtonsoft.Json;
@@ -27,6 +21,7 @@ namespace EastFive.Azure.Auth
         Resource = typeof(Session),
         ContentType = "x-application/auth-session",
         ContentTypeVersion = "0.1")]
+    [StorageResource(typeof(StandardPartitionKeyGenerator))]
     [StorageTable]
     public struct Session : IReferenceable
     {

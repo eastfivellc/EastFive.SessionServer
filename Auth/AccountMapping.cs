@@ -7,6 +7,7 @@ using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using System.Web.Http.Routing;
 using BlackBarLabs.Api;
+using BlackBarLabs.Persistence.Azure.Attributes;
 using EastFive.Api;
 using EastFive.Api.Controllers;
 using EastFive.Azure.Persistence.AzureStorageTables;
@@ -28,6 +29,7 @@ namespace EastFive.Azure.Auth
         Resource = typeof(AccountMapping),
         ContentType = "x-application/auth-account-mapping",
         ContentTypeVersion = "0.1")]
+    [StorageResource(typeof(StandardPartitionKeyGenerator))]
     [StorageTable]
     public struct AccountMapping : IReferenceable
     {
@@ -67,6 +69,7 @@ namespace EastFive.Azure.Auth
         [Storage(Name = AccountPropertyName)]
         public Guid accountId { get; set; }
 
+        [StorageResource(typeof(StandardPartitionKeyGenerator))]
         [StorageTable]
         public struct AccountMappingLookup : IReferenceable
         {
@@ -110,6 +113,7 @@ namespace EastFive.Azure.Auth
             }
         }
 
+        [StorageResource(typeof(StandardPartitionKeyGenerator))]
         [StorageTable]
         public struct AuthorizationLookup : IReferenceable
         {

@@ -17,6 +17,8 @@ namespace EastFive.Azure
 
         public const string SpaSiteLocation = "EastFive.Azure.SpaSiteLocation";
 
+        public const string TelemetryKey = "Telemetry.Key";
+
         public const string AdminLoginRsaKey = "EastFive.Azure.Auth.AdminLoginRsaKey";
 
         public const string FunctionProcessorQueueTriggerName = "EastFive.Azure.Functions.QueueTriggerName";
