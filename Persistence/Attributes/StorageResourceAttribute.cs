@@ -98,11 +98,6 @@ namespace BlackBarLabs.Persistence.Azure.Attributes
         public FourPlaceHexadecimalKeyGenerator() : base(4) { }
     }
 
-    public class FivePlaceHexadecimalKeyGenerator : HexadecimalKeyGenerator
-    {
-        public FivePlaceHexadecimalKeyGenerator() : base(5) { }
-    }
-
     public class HexadecimalKeyGenerator : StringKeyGenerator
     {
         private readonly string format;
