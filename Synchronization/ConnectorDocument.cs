@@ -35,7 +35,7 @@ namespace EastFive.Azure.Synchronization.Persistence
         public bool Locked { get; set; }
     }
 
-    [StorageResource(typeof(StandardPartitionKeyGenerator), typeof(ThreePlaceHexadecimalKeyGenerator))]
+    [StorageResource(typeof(StandardPartitionKeyGenerator), typeof(TwoPlaceHexadecimalKeyGenerator))]
     public class ConnectorDocument : TableEntity
     {
         [IgnoreDataMember]
