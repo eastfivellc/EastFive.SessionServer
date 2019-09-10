@@ -78,32 +78,32 @@ namespace BlackBarLabs.Persistence.Azure.Attributes
         }
     }
 
-    public class OnePlaceHexadecimalKeyGenerator : HexadecimalKeyGenerator
+    public class OnePlaceHexadecimalKeyGenerator : HexadecimalKeyRangeGenerator
     {
         public OnePlaceHexadecimalKeyGenerator() : base(1) { }
     }
 
-    public class TwoPlaceHexadecimalKeyGenerator : HexadecimalKeyGenerator
+    public class TwoPlaceHexadecimalKeyGenerator : HexadecimalKeyRangeGenerator
     {
         public TwoPlaceHexadecimalKeyGenerator() : base(2) { }
     }
 
-    public class ThreePlaceHexadecimalKeyGenerator : HexadecimalKeyGenerator
+    public class ThreePlaceHexadecimalKeyGenerator : HexadecimalKeyRangeGenerator
     {
         public ThreePlaceHexadecimalKeyGenerator() : base(3) { }
     }
 
-    public class FourPlaceHexadecimalKeyGenerator : HexadecimalKeyGenerator
+    public class FourPlaceHexadecimalKeyGenerator : HexadecimalKeyRangeGenerator
     {
         public FourPlaceHexadecimalKeyGenerator() : base(4) { }
     }
 
-    public class HexadecimalKeyGenerator : StringKeyGenerator
+    public class HexadecimalKeyRangeGenerator : StringKeyGenerator
     {
         private readonly string format;
         private readonly int count;
 
-        public HexadecimalKeyGenerator(int places)
+        public HexadecimalKeyRangeGenerator(int places)
         {
             this.format = $"x{places}";
             this.count = 0x1 << (places * 4);
@@ -144,6 +144,37 @@ namespace BlackBarLabs.Persistence.Azure.Attributes
         public IEnumerable<StringKey> GetKeys()
         {
             return generators.SelectMany(g => g.GetKeys());
+        }
+    }
+
+    public class TwoThousandEighteenYearMonthGenerator : DayGenerator
+    {
+        public TwoThousandEighteenYearMonthGenerator() : base(new DateTime(2018,1,1,0,0,0,DateTimeKind.Utc), "yyyyMM") { }
+    }
+
+    public class DayGenerator : StringKeyGenerator
+    {
+        private readonly DateTime epochStart;
+        private readonly string dateFormat;
+
+        public DayGenerator(DateTime epochStart, string dateFormat)
+        {
+            this.epochStart = epochStart;
+            this.dateFormat = dateFormat;
+        }
+
+        public virtual IEnumerable<StringKey> GetKeys()
+        {
+            int daysThroughPresent = (int)((DateTime.UtcNow.Date - epochStart).TotalDays + 1);
+            return Enumerable.Range(0, daysThroughPresent)
+                .Select(offset => epochStart.AddDays(offset))
+                .Select(date => date.ToString(dateFormat))
+                .Distinct()
+                .Select(
+                    formattedDay => new StringKey
+                    {
+                        Equal = formattedDay
+                    });
         }
     }
 

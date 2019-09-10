@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using BlackBarLabs.Persistence.Azure;
+using BlackBarLabs.Persistence.Azure.Attributes;
 using BlackBarLabs.Persistence.Azure.StorageTables;
 using BlackBarLabs.Web;
 using Microsoft.WindowsAzure.Storage;
@@ -12,6 +13,7 @@ namespace EastFive.Api.Azure.Monitoring
 {
     [Serializable]
     [DataContract]
+    [StorageResource(typeof(TwoThousandEighteenYearMonthGenerator))]
     public class MonitoringDocument : TableEntity
     {
         public MonitoringDocument()
