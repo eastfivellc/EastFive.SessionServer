@@ -37,6 +37,14 @@ namespace EastFive.Api.Azure.Resources
         [JsonProperty(PropertyName = ContentPropertyName)]
         public byte[] Data { get; set; }
 
+        public const string XPropertyName = "x";
+        [JsonProperty(PropertyName = XPropertyName)]
+        public int X { get; set; }
+
+        public const string YPropertyName = "y";
+        [JsonProperty(PropertyName = YPropertyName)]
+        public int Y { get; set; }
+
         public const string WidthPropertyName = "width";
         [JsonProperty(PropertyName = WidthPropertyName)]
         public int? Width { get; set; }
@@ -131,6 +139,7 @@ namespace EastFive.Api.Azure.Resources
                 () => request.CreateResponse(HttpStatusCode.Unauthorized));
             return response;
         }
+
 
         public Task<TResult> LoadStreamAsync<TResult>(
             Func<Stream, string, TResult> onFound,

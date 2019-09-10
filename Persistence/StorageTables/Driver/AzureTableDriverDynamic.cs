@@ -244,7 +244,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
 
         public async Task<TResult> CreateAsync<TEntity, TResult>(TEntity entity,
             Func<IAzureStorageTableEntity<TEntity>, TResult> onSuccess,
-            Func<TResult> onAlreadyExists,
+            Func<TResult> onAlreadyExists = default,
             Func<ExtendedErrorInformationCodes, string, TResult> onFailure = default,
             IHandleFailedModifications<TResult>[] onModificationFailures = default,
            AzureStorageDriver.RetryDelegate onTimeout = default,
@@ -269,6 +269,8 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                             if (ex.IsProblemResourceAlreadyExists())
                             {
                                 await rollback();
+                                if (onAlreadyExists.IsDefaultOrNull())
+                                    throw new Api.ResourceAlreadyExistsException();
                                 return onAlreadyExists();
                             }
 
@@ -2086,7 +2088,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
 
         public async Task<TResult> BlobCreateAsync<TResult>(byte[] content, Guid blobId, string containerName,
             Func<TResult> onSuccess,
-            Func<TResult> onAlreadyExists,
+            Func<TResult> onAlreadyExists = default,
             Func<ExtendedErrorInformationCodes, string, TResult> onFailure = default,
             string contentType = default,
             AzureStorageDriver.RetryDelegate onTimeout = default)
@@ -2097,7 +2099,11 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             try
             {
                 if (await blockBlob.ExistsAsync())
+                {
+                    if (onAlreadyExists.IsDefault())
+                        throw new RecordAlreadyExistsException();
                     return onAlreadyExists();
+                }
                 if (contentType.HasBlackSpace())
                     blockBlob.Properties.ContentType = contentType;
                 using (var stream = await blockBlob.OpenWriteAsync())

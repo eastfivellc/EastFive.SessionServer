@@ -29,6 +29,8 @@ using Microsoft.WindowsAzure.Storage;
 
 namespace EastFive.Api.Azure
 {
+
+    [ApiResourcesAttribute(NameSpacePrefixes = "EastFive.Azure,EastFive.Search")]
     public class AzureApplication : EastFive.Api.HttpApplication
     {
         public const string QueryRequestIdentfier = "request_id";

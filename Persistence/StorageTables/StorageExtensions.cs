@@ -358,7 +358,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
 
         public static Task<TResult> StorageCreateAsync<TEntity, TResult>(this TEntity entity,
             Func<EastFive.Persistence.Azure.StorageTables.IAzureStorageTableEntity<TEntity>, TResult> onCreated,
-            Func<TResult> onAlreadyExists,
+            Func<TResult> onAlreadyExists = default,
             params IHandleFailedModifications<TResult>[] onModificationFailures)
             where TEntity : IReferenceable
         {
@@ -757,7 +757,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                 .FromSettings()
                 .BlobCreateAsync(content, blobId, containerName,
                     onSuccess,
-                    onAlreadyExists,
+                    onAlreadyExists: onAlreadyExists,
                     onFailure: onFailure,
                     contentType: contentType,
                     onTimeout: onTimeout);
