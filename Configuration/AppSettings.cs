@@ -28,6 +28,24 @@ namespace EastFive.Azure
         public const string CDNApiRoutePrefix = "EastFive.Azure.CDNApiRoutePrefix";
 
         [Config]
+        public static class Pinterest
+        {
+            [ConfigKey("Key used to identify the application to pinterest.",
+                DeploymentOverrides.Suggested,
+                Location = "Pinterest admin portal",
+                DeploymentSecurityConcern = false,
+                PrivateRepositoryOnly =true)]
+            public const string AppKey = "EastFive.Pinterest.AppKey";
+
+            [ConfigKey("Key used to securte the application to pinterest.",
+                DeploymentOverrides.Suggested,
+                Location = "Pinterest admin portal",
+                DeploymentSecurityConcern = false,
+                PrivateRepositoryOnly = true)]
+            public const string AppSecret = "EastFive.Pinterest.AppSecret";
+        }
+
+        [Config]
         public static class CognitiveServices
         {
             [ConfigKey("Endpoint used by computer vision to analyze image Content.",
