@@ -291,6 +291,7 @@
     <Compile Include="Api\Resources\Monitoring.cs" />
     <Compile Include="Api\Resources\Queries\MonitoringQuery.cs" />
     <Compile Include="Attributes\ASTFVCPropertyAttribute.cs" />
+    <Compile Include="Auth\CredentialProviders\PinterestProvider.cs" />
     <Compile Include="Auth\Whoami.cs" />
     <Compile Include="Functions\FunctionApplication.cs" />
     <Compile Include="Functions\InvocationMessage.cs" />

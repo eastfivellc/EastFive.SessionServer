@@ -51,7 +51,9 @@ namespace EastFive.Azure.Media
                 onTimeout: onTimeout);
         }
 
-        public static Task<ImageAnalysis> AnalyzeAsync(this IRef<Content> contentRef)
+        public static Task<TResult> AnalyzeAsync<TResult>(this IRef<Content> contentRef,
+            Func<ImageAnalysis, double?, TResult> onAnalyzed,
+            Func<TResult> onNotFound = default)
         {
             return AppSettings.CognitiveServices.ComputerVisionSubscriptionKey.ConfigurationString(
                 subscriptionKey =>
@@ -66,18 +68,45 @@ namespace EastFive.Azure.Media
                                 return await await contentRef.LoadStreamAsync(
                                     async (imageStream, contentType) =>
                                     {
+                                        var widthMultiplier = default(double?);
+                                        if (imageStream.Length > 4000000)
+                                        {
+                                            var image = System.Drawing.Image.FromStream(imageStream);
+                                            var newImageStream = new MemoryStream();
+                                            widthMultiplier = Math.Sqrt(4000000.0 / imageStream.Length);
+                                            image
+                                                .ResizeImage(
+                                                    (int)(image.Width * widthMultiplier),
+                                                    (int)(image.Height * widthMultiplier))
+                                                .Save(newImageStream, System.Drawing.Imaging.ImageFormat.Jpeg);
+                                            newImageStream.Position = 0;
+                                            imageStream = newImageStream;
+                                        }
                                         computerVision.Endpoint = endpointUri.OriginalString;
-                                        var analysis = await computerVision.AnalyzeImageInStreamAsync(imageStream,
-                                            VisualFeatureTypes.Categories.AsArray()
+                                        var featuresToSearchFor = VisualFeatureTypes.Categories.AsArray()
                                                 .Append(VisualFeatureTypes.Description)
                                                 .Append(VisualFeatureTypes.ImageType)
                                                 .Append(VisualFeatureTypes.Objects)
                                                 .Append(VisualFeatureTypes.Tags)
                                                 .Append(VisualFeatureTypes.Brands)
-                                                .ToList());
-                                        return analysis;
+                                                .ToList();
+                                        try
+                                        {
+                                            var analysis = await computerVision.AnalyzeImageInStreamAsync(
+                                                imageStream, featuresToSearchFor);
+                                            return onAnalyzed(analysis, widthMultiplier);
+                                        }
+                                        catch(ComputerVisionErrorException ex)
+                                        {
+                                            throw ex;
+                                        }
                                     },
-                                    () => throw new ResourceNotFoundException());
+                                    () =>
+                                    {
+                                        if(onNotFound.IsDefaultOrNull())
+                                            throw new ResourceNotFoundException();
+                                        return onNotFound().AsTask();
+                                    });
                             }
                         });
                 });
