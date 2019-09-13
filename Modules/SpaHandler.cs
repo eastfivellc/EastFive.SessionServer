@@ -17,6 +17,8 @@ using System.Net.Http;
 using System.Threading;
 using BlackBarLabs.Api;
 using EastFive.Linq;
+using EastFive.Web.Configuration;
+using EastFive.Persistence.Azure.StorageTables.Driver;
 
 namespace EastFive.Api.Azure.Modules
 {
@@ -45,15 +47,23 @@ namespace EastFive.Api.Azure.Modules
         
         private void ExtractSpaFiles(AzureApplication application)
         {
-            var spaZipPath = System.Web.Hosting.HostingEnvironment.MapPath("~/Content/Spa.zip");
-            if (!System.IO.File.Exists(spaZipPath))
+            ZipArchive zipArchive = null;
+            try
             {
-                lookupSpaFile = new Dictionary<string, byte[]>();
+                var blobClient = EastFive.Azure.Persistence.AppSettings.Storage.ConfigurationString(connectionString => AzureTableDriverDynamic.FromStorageString(connectionString).BlobClient);
+                var container = blobClient.GetContainerReference("spa");
+                var blobRef = container.GetBlockBlobReference("spa.zip");
+                var blobStream = blobRef.OpenRead();
+
+                zipArchive = new ZipArchive(blobStream);
+            }
+            catch
+            {
                 indexHTML = System.Text.Encoding.UTF8.GetBytes("SPA Not Installed");
                 return;
-            };
+            }
 
-            using (var zipArchive = ZipFile.OpenRead(spaZipPath))
+            using (zipArchive)
             {
 
                 indexHTML = zipArchive.Entries

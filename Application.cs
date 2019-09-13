@@ -165,6 +165,7 @@ namespace EastFive.Api.Azure
                     .ToDictionary();
             }
         }
+
         public virtual Task SendServiceBusMessageAsync(string queueName, string contents)
         {
             return SendServiceBusMessageAsync(queueName, new[] { contents });
@@ -328,7 +329,8 @@ namespace EastFive.Api.Azure
             return onNoChange();
         }
 
-        public virtual Web.Services.ISendMessageService SendMessageService { get => Web.Services.ServiceConfiguration.SendMessageService(); }
+        public virtual Web.Services.ISendMessageService SendMessageService
+        { get => Web.Services.ServiceConfiguration.SendMessageService(); }
         
         public virtual Web.Services.ITimeService TimeService { get => Web.Services.ServiceConfiguration.TimeService(); }
         
@@ -337,7 +339,7 @@ namespace EastFive.Api.Azure
             return Security.SessionServer.Library.configurationManager.GetActorLink(actorId, url);
         }
 
-        internal virtual Task<TResult> GetActorNameDetailsAsync<TResult>(Guid actorId,
+        public virtual Task<TResult> GetActorNameDetailsAsync<TResult>(Guid actorId,
             Func<string, string, string, TResult> onActorFound,
             Func<TResult> onActorNotFound)
         {

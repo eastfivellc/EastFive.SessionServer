@@ -25,7 +25,7 @@ using Newtonsoft.Json;
 namespace EastFive.Azure.Auth
 {
     [DataContract]
-    [FunctionViewController4(
+    [FunctionViewController6(
         Route = "Integration",
         Resource = typeof(Integration),
         ContentType = "x-application/auth-integration",
@@ -170,7 +170,7 @@ namespace EastFive.Azure.Auth
         [Api.HttpPatch] //(MatchAllBodyParameters = false)]
         public async static Task<HttpResponseMessage> UpdateAsync(
                 [Property(Name = IntegrationIdPropertyName)]IRef<Integration> integrationRef,
-                [PropertyOptional(Name = AuthorizationPropertyName)]IRefOptional<Authorization> authorizationRefMaybe,
+                [Property(Name = AuthorizationPropertyName)]IRef<Authorization> authorizationRef,
                 Api.Azure.AzureApplication application, EastFive.Api.Controllers.SessionToken security,
             ContentTypeResponse<Integration> onUpdated,
             NotFoundResponse onNotFound,
@@ -186,13 +186,13 @@ namespace EastFive.Azure.Auth
                     if (!await application.CanAdministerCredentialAsync(accountId, security))
                         return onUnauthorized();
 
-                    return await await authorizationRefMaybe.StorageGetAsync(
+                    return await await authorizationRef.StorageGetAsync(
                         async authorization =>
                         {
                             // TODO? This
                             // var accountIdDidMatch = await await authorization.ParseCredentailParameters(
                             integration.Method = authorization.Method; // method is used in the .mappingId
-                            integration.authorization = authorizationRefMaybe;
+                            integration.authorization = authorizationRef.Optional();
                             return await await SaveAuthorizationLookupAsync(integration.integrationRef, authorization.authorizationRef,
                                 async () =>
                                 {

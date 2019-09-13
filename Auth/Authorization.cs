@@ -96,7 +96,7 @@ namespace EastFive.Azure.Auth
         [Storage]
         public DateTime? deleted;
 
-        [Api.HttpGet] //(MatchAllBodyParameters = false)]
+        [Api.HttpGet]
         public static Task<HttpResponseMessage> GetAsync(
                 [QueryParameter(CheckFileName = true, Name = AuthorizationIdPropertyName)]IRef<Authorization> authorizationRef,
                 Api.Azure.AzureApplication application, UrlHelper urlHelper,
@@ -131,7 +131,7 @@ namespace EastFive.Azure.Auth
                 () => onNotFound());
         }
 
-        [Api.HttpPost] //(MatchAllBodyParameters = false)]
+        [Api.HttpPost]
         public async static Task<HttpResponseMessage> CreateAsync(
                 [Property(Name = AuthorizationIdPropertyName)]Guid authorizationId,
                 [Property(Name = MethodPropertyName)]IRef<Method> method,

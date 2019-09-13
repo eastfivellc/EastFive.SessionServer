@@ -45,15 +45,27 @@ namespace EastFive.Azure.Auth
         public Guid? account { get; set; }
 
         [Api.HttpGet] //(MatchAllBodyParameters = false)]
-        public static HttpResponseMessage GetAsync(
+        public static async Task<HttpResponseMessage> GetAsync(
                 EastFive.Api.Controllers.SessionToken security,
                 Api.Azure.AzureApplication application, UrlHelper urlHelper,
             ContentTypeResponse<Whoami> onFound)
         {
+            async Task<string> GetName()
+            {
+                if (!security.accountIdMaybe.HasValue)
+                    return string.Empty;
+                return await application.GetActorNameDetailsAsync(security.accountIdMaybe.Value,
+                    (first, last, email) =>
+                    {
+                        return $"{first} {last} [{email}]";
+                    },
+                    () => string.Empty);
+            }
             var whoami = new Whoami()
             {
                 session = security.sessionId.AsRef<Session>(),
                 account = security.accountIdMaybe,
+                name = await GetName(),
             };
             return onFound(whoami);
         }

@@ -40,7 +40,7 @@ namespace EastFive.Persistence.Azure.StorageTables
         {
             var tableName = GetLookupTableName(memberInfo);
             var rowKey = value.StorageComputeRowKey(
-                () => new RowKeyAttribute());
+                onMissing:() => new RowKeyAttribute());
             var partitionKey = value.StorageComputePartitionKey(rowKey,
                 onMissing:() => new StandardParititionKeyAttribute()); // GetPartitionKey(rowKey, default(TEntity), memberInfo);
             return repository
@@ -161,8 +161,8 @@ namespace EastFive.Persistence.Azure.StorageTables
             return await repository.UpdateOrCreateAsync<StorageLookupTable, Func<Task>>(rowKey, partitionKey,
                 async (created, lookup, saveAsync) =>
                 {
-                    lookup.rowKey = rowKey;
-                    lookup.partitionKey = partitionKey;
+                    //lookup.rowKey = rowKey;
+                    //lookup.partitionKey = partitionKey;
                     var rollbackRowAndPartitionKeys = lookup.rowAndPartitionKeys;
                     lookup.rowAndPartitionKeys = mutateCollection(rollbackRowAndPartitionKeys)
                         .Distinct(rpKey => rpKey.Key)
