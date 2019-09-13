@@ -313,6 +313,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             Func<TResult> success,
             Func<TResult> documentModified,
             Func<ExtendedErrorInformationCodes, string, TResult> onFailure = null,
+            IHandleFailedModifications<TResult>[] onModificationFailures = default,
             AzureStorageDriver.RetryDelegate onTimeout = null,
             CloudTable table = default(CloudTable))
         {
@@ -320,52 +321,74 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                 table = GetTable<TData>();
             var tableData = GetEntity(data);
             var update = TableOperation.Replace(tableData);
-            var rollback = await tableData.ExecuteUpdateModifiersAsync(currentDocument, this,
-                rollbacks => rollbacks,
-                (members) => throw new Exception("Modifiers failed to execute."));
-            try
-            {
-                await table.ExecuteAsync(update);
-                return success();
-            }
-            catch (StorageException ex)
-            {
-                await rollback();
-                return await ex.ParseStorageException(
-                    async (errorCode, errorMessage) =>
+            return await await tableData.ExecuteUpdateModifiersAsync(currentDocument, this,
+                async rollback =>
+                {
+                    try
                     {
-                        switch (errorCode)
-                        {
-                            case ExtendedErrorInformationCodes.Timeout:
+                        await table.ExecuteAsync(update);
+                        return success();
+                    }
+                    catch (StorageException ex)
+                    {
+                        await rollback();
+                        return await ex.ParseStorageException(
+                            async (errorCode, errorMessage) =>
+                            {
+                                switch (errorCode)
                                 {
-                                    var timeoutResult = default(TResult);
-                                    if (default(AzureStorageDriver.RetryDelegate) == onTimeout)
-                                        onTimeout = AzureStorageDriver.GetRetryDelegate();
-                                    await onTimeout(ex.RequestInformation.HttpStatusCode, ex,
-                                        async () =>
+                                    case ExtendedErrorInformationCodes.Timeout:
                                         {
-                                            timeoutResult = await UpdateIfNotModifiedAsync(data, currentDocument,
-                                                success, documentModified, onFailure, onTimeout);
-                                        });
-                                    return timeoutResult;
+                                            var timeoutResult = default(TResult);
+                                            if (default(AzureStorageDriver.RetryDelegate) == onTimeout)
+                                                onTimeout = AzureStorageDriver.GetRetryDelegate();
+                                            await onTimeout(ex.RequestInformation.HttpStatusCode, ex,
+                                                async () =>
+                                                {
+                                                    timeoutResult = await UpdateIfNotModifiedAsync(data, currentDocument,
+                                                        success,
+                                                        documentModified,
+                                                        onFailure:onFailure,
+                                                        onModificationFailures: onModificationFailures, 
+                                                        onTimeout:onTimeout,
+                                                            table:table);
+                                                });
+                                            return timeoutResult;
+                                        }
+                                    case ExtendedErrorInformationCodes.UpdateConditionNotSatisfied:
+                                        {
+                                            return documentModified();
+                                        }
+                                    default:
+                                        {
+                                            if (onFailure.IsDefaultOrNull())
+                                                throw ex;
+                                            return onFailure(errorCode, errorMessage);
+                                        }
                                 }
-                            case ExtendedErrorInformationCodes.UpdateConditionNotSatisfied:
-                                {
-                                    return documentModified();
-                                }
-                            default:
-                                {
-                                    if (onFailure.IsDefaultOrNull())
-                                        throw ex;
-                                    return onFailure(errorCode, errorMessage);
-                                }
-                        }
-                    },
-                    () =>
-                    {
-                        throw ex;
-                    });
-            }
+                            },
+                            () =>
+                            {
+                                throw ex;
+                            });
+                    }
+                },
+                (membersWithFailures) =>
+                {
+                    if (onModificationFailures.IsDefaultNullOrEmpty())
+                        throw new Exception("Modifiers failed to execute.");
+                    return onModificationFailures
+                        .NullToEmpty()
+                        .Where(
+                            onModificationFailure =>
+                            {
+                                return onModificationFailure.DoesMatchMember(membersWithFailures);
+                            })
+                        .First<IHandleFailedModifications<TResult>, TResult>(
+                            (onModificationFailure, next) => onModificationFailure.ModificationFailure(membersWithFailures),
+                            () => throw new Exception("Modifiers failed to execute."))
+                        .AsTask();
+                });
         }
 
         public Task<TResult> ReplaceAsync<TData, TResult>(TData data,
@@ -815,6 +838,13 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             return FindByInternal(entityRef, by);
         }
 
+        public IEnumerableAsync<TEntity> FindBy<TEntity>(Guid entityId,
+                Expression<Func<TEntity, Guid>> by)
+            where TEntity : IReferenceable
+        {
+            return FindByInternal(entityId.AsRef<IReferenceable>(), by);
+        }
+
         public IEnumerableAsync<TEntity> FindBy<TRefEntity, TEntity>(IRef<TRefEntity> entityRef,
                 Expression<Func<TEntity, IRefOptional<TRefEntity>>> by)
             where TEntity : IReferenceable
@@ -1108,70 +1138,6 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
 
         #region CREATE
 
-        //public Task<TResult> UpdateOrCreateAsync<TData, TResult>(Guid documentId,
-        //    Func<bool, TData, Func<TData, Task>, Task<TResult>> onUpdate,
-        //    AzureStorageDriver.RetryDelegateAsync<Task<TResult>> onTimeoutAsync =
-        //        default(AzureStorageDriver.RetryDelegateAsync<Task<TResult>>))
-        //{
-        //    return this.UpdateAsyncAsync<TData, TResult>(documentId,
-        //        (doc, saveAsync) => onUpdate(false, doc, saveAsync),
-        //        async () =>
-        //        {
-        //            var doc = Activator.CreateInstance<TData>();
-        //            var global = default(TResult);
-        //            bool useGlobal = false;
-        //            var result = await onUpdate(true, doc,
-        //                async (docUpdated) =>
-        //                {
-        //                if (await this.CreateAsync(docUpdated,
-        //                    discard => true,
-        //                    () => false))
-        //                    return;
-        //                    global = await this.UpdateOrCreateAsync<TData, TResult>(documentId, onUpdate, onTimeoutAsync);
-        //                    useGlobal = true;
-        //                });
-        //            if (useGlobal)
-        //                return global;
-        //            return result;
-        //        });
-        //}
-
-        //public Task<TResult> UpdateOrCreateAsync<TData, TResult>(Guid documentId,
-        //        Func<TData, TData> setId,
-        //    Func<bool, TData, Func<TData, Task>, Task<TResult>> onUpdate,
-        //    AzureStorageDriver.RetryDelegateAsync<Task<TResult>> onTimeoutAsync =
-        //            default(AzureStorageDriver.RetryDelegateAsync<Task<TResult>>),
-        //        Func<string> getPartitionKey = default(Func<string>))
-        //{
-        //    return this.UpdateAsyncAsync<TData, TResult>(documentId,
-        //        (doc, saveAsync) =>
-        //        {
-        //            return onUpdate(false, doc, saveAsync);
-        //        },
-        //        async () =>
-        //        {
-        //            var doc = Activator.CreateInstance<TData>();
-        //            doc = setId(doc);
-        //            var global = default(TResult);
-        //            bool useGlobal = false;
-        //            var result = await onUpdate(true, doc,
-        //                async (docUpdated) =>
-        //                {
-        //                    if (await this.CreateAsync(docUpdated,
-        //                        discard => true,
-        //                        () => false))
-        //                        return;
-        //                    global = await this.UpdateOrCreateAsync<TData, TResult>(documentId, setId, onUpdate, onTimeoutAsync);
-        //                    useGlobal = true;
-        //                });
-        //            if (useGlobal)
-        //                return global;
-        //            return result;
-        //        },
-        //        default(AzureStorageDriver.RetryDelegateAsync<Task<TResult>>),
-        //        getPartitionKey);
-        //}
-
         public Task<TResult> UpdateOrCreateAsync<TData, TResult>(string rowKey, string partitionKey,
                 Func<TData, TData> setId,
             Func<bool, TData, Func<TData, Task>, Task<TResult>> onUpdate,
@@ -1424,6 +1390,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
         public Task<TResult> UpdateAsync<TData, TResult>(string rowKey, string partitionKey,
             Func<TData, Func<TData, Task>, Task<TResult>> onUpdate,
             Func<TResult> onNotFound = default(Func<TResult>),
+            IHandleFailedModifications<TResult>[] onModificationFailures = default,
             CloudTable table = default(CloudTable),
             AzureStorageDriver.RetryDelegateAsync<Task<TResult>> onTimeoutAsync = 
                 default(AzureStorageDriver.RetryDelegateAsync<Task<TResult>>))
@@ -1431,7 +1398,8 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             return UpdateAsyncAsync(rowKey, partitionKey,
                 onUpdate, 
                 onNotFound.AsAsyncFunc(),
-                    table, onTimeoutAsync);
+                onModificationFailures: onModificationFailures,
+                    table:table, onTimeoutAsync:onTimeoutAsync);
         }
 
         public Task<TResult> UpdateAsync<TResult>(string rowKey, string partitionKey,
@@ -1465,9 +1433,38 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             return await UpdateAsyncAsync(rowKey, partitionKey, onUpdate, onNotFound);
         }
 
+        private class UpdateModificationFailure<TResult> : IHandleFailedModifications<Task<bool>>
+        {
+            public IHandleFailedModifications<TResult>[] onModificationFailures;
+
+            public Action<TResult> setGlobalCallback;
+
+            public bool DoesMatchMember(MemberInfo[] membersWithFailures)
+            {
+                return true;
+            }
+
+            Task<bool> IHandleFailedModifications<Task<bool>>.ModificationFailure(MemberInfo[] membersWithFailures)
+            {
+                var result = onModificationFailures
+                    .NullToEmpty()
+                    .Where(
+                        onModificationFailure =>
+                        {
+                            return onModificationFailure.DoesMatchMember(membersWithFailures);
+                        })
+                    .First<IHandleFailedModifications<TResult>, TResult>(
+                        (onModificationFailure, next) => onModificationFailure.ModificationFailure(membersWithFailures),
+                            () => throw new Exception("Modifiers failed to execute."));
+                setGlobalCallback(result);
+                return true.AsTask();
+            }
+        }
+
         public async Task<TResult> UpdateAsyncAsync<TData, TResult>(string rowKey, string partitionKey,
             Func<TData, Func<TData, Task>, Task<TResult>> onUpdate,
             Func<Task<TResult>> onNotFound = default(Func<Task<TResult>>),
+            IHandleFailedModifications<TResult>[] onModificationFailures = default,
             CloudTable table = default(CloudTable),
             AzureStorageDriver.RetryDelegateAsync<Task<TResult>> onTimeoutAsync =
                 default(AzureStorageDriver.RetryDelegateAsync<Task<TResult>>)) 
@@ -1477,6 +1474,14 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                 {
                     var resultGlobal = default(TResult);
                     var useResultGlobal = false;
+                    var modificationFailure = new UpdateModificationFailure<TResult>()
+                    {
+                        setGlobalCallback =
+                            (v) =>
+                            {
+                            },
+                        onModificationFailures = onModificationFailures,
+                    };
                     var resultLocal = await onUpdate.Invoke(currentStorage,
                         async (documentToSave) =>
                         {
@@ -1492,17 +1497,22 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                                         onTimeoutAsync = AzureStorageDriver.GetRetryDelegateContentionAsync<Task<TResult>>();
 
                                     resultGlobal = await await onTimeoutAsync(
-                                        async () => await UpdateAsyncAsync(rowKey, partitionKey, onUpdate, onNotFound, table, onTimeoutAsync),
+                                        async () => await UpdateAsyncAsync(rowKey, partitionKey, 
+                                            onUpdate, 
+                                            onNotFound,
+                                            onModificationFailures: onModificationFailures,
+                                                table:table, onTimeoutAsync:onTimeoutAsync),
                                         (numberOfRetries) => { throw new Exception("Failed to gain atomic access to document after " + numberOfRetries + " attempts"); });
                                     return true;
                                 },
+                                onModificationFailures: modificationFailure.AsArray(),
                                 onTimeout: AzureStorageDriver.GetRetryDelegate(),
                                 table:table);
                         });
                     return useResultGlobal ? resultGlobal : resultLocal;
                 },
                 onNotFound,
-                default(Func<ExtendedErrorInformationCodes, string, Task<TResult>>),
+                onFailure: default(Func<ExtendedErrorInformationCodes, string, Task<TResult>>),
                 table:table,
                 onTimeout:AzureStorageDriver.GetRetryDelegate());
         }
@@ -1922,13 +1932,11 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                 DateTime initialPass,
             WhileLockedDelegateAsync<TDocument, TResult> onLockAquired,
             Func<Task<TResult>> onNotFoundAsync,
-            Func<TResult> onLockRejected = default(Func<TResult>),
-                ContinueAquiringLockDelegateAsync<TDocument, TResult> onAlreadyLocked =
-                    default(ContinueAquiringLockDelegateAsync<TDocument, TResult>),
-                ConditionForLockingDelegateAsync<TDocument, TResult> shouldLock =
-                    default(ConditionForLockingDelegateAsync<TDocument, TResult>),
-                AzureStorageDriver.RetryDelegateAsync<Task<TResult>> onTimeout = default(AzureStorageDriver.RetryDelegateAsync<Task<TResult>>),
-                Func<TDocument, TDocument> mutateUponLock = default(Func<TDocument, TDocument>))
+            Func<TResult> onLockRejected = default,
+            ContinueAquiringLockDelegateAsync<TDocument, TResult> onAlreadyLocked = default,
+            ConditionForLockingDelegateAsync<TDocument, TResult> shouldLock = default,
+            AzureStorageDriver.RetryDelegateAsync<Task<TResult>> onTimeout = default,
+            Func<TDocument, TDocument> mutateUponLock = default)
             where TDocument : IReferenceable
         {
             if (onTimeout.IsDefaultOrNull())

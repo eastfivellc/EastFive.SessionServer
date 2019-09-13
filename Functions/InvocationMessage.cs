@@ -23,7 +23,7 @@ using EastFive.Linq;
 
 namespace EastFive.Azure.Functions
 {
-    [FunctionViewController5(
+    [FunctionViewController6(
         Route = "InvocationMessage",
         Resource = typeof(InvocationMessage),
         ContentType = "x-application/eastfive.azure.invocation-message",
@@ -123,9 +123,7 @@ namespace EastFive.Azure.Functions
                 .Parallel();
         }
 
-        internal static async Task<HttpResponseMessage> SendAsync<TResource>(
-            AzureApplication azureApplication,
-            RequestMessage<TResource> requestMessage,
+        internal static async Task<HttpResponseMessage> CreateAsync(
             HttpRequestMessage httpRequest)
         {
             var invocationMessageRef = Ref<InvocationMessage>.SecureRef();

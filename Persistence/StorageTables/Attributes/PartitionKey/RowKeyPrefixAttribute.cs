@@ -1,4 +1,5 @@
 ﻿using BlackBarLabs.Persistence.Azure;
+using BlackBarLabs.Persistence.Azure.Attributes;
 using EastFive.Linq.Expressions;
 using EastFive.Reflection;
 using System;
@@ -11,7 +12,8 @@ using System.Threading.Tasks;
 namespace EastFive.Persistence.Azure.StorageTables
 {
     public class RowKeyPrefixAttribute : Attribute,
-        IModifyAzureStorageTablePartitionKey, IComputeAzureStorageTablePartitionKey
+        IModifyAzureStorageTablePartitionKey, IComputeAzureStorageTablePartitionKey,
+        BlackBarLabs.Persistence.Azure.Attributes.StringKeyGenerator
     {
         private uint? charactersMaybe;
         public uint Characters
@@ -55,6 +57,14 @@ namespace EastFive.Persistence.Azure.StorageTables
             return Enumerable
                 .Range(skip, top)
                 .Select((paritionNum) => paritionNum.ToString(formatter).ToLower());
+        }
+
+        public IEnumerable<StringKey> GetKeys()
+        {
+            var formatter = $"X{this.Characters}";
+            return Enumerable
+                .Range(0, (int)Math.Pow(0x16, this.Characters))
+                .Select((paritionNum) => new StringKey() { Equal = paritionNum.ToString(formatter).ToLower() });
         }
     }
 }

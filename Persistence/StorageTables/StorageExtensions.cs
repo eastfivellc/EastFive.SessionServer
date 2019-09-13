@@ -243,6 +243,15 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                 .FindBy(entityRef, by);
         }
 
+        public static IEnumerableAsync<TEntity> StorageGetBy<TEntity>(this Guid entityId,
+                Expression<Func<TEntity, Guid>> by)
+            where TEntity : IReferenceable
+        {
+            return AzureTableDriverDynamic
+                .FromSettings()
+                .FindBy(entityId, by);
+        }
+
         public static IEnumerableAsync<TEntity> StorageGetBy<TRefEntity, TEntity>(this IRef<TRefEntity> entityRef,
                 Expression<Func<TEntity, IRefs<TRefEntity>>> by)
             where TEntity : IReferenceable
@@ -477,6 +486,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
         public static Task<TResult> StorageUpdateAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
             Func<TEntity, Func<TEntity, Task>, Task<TResult>> onUpdate,
             Func<TResult> onNotFound = default,
+            IHandleFailedModifications<TResult>[] onModificationFailures = default,
             Azure.StorageTables.Driver.AzureStorageDriver.RetryDelegateAsync<Task<TResult>> onTimeoutAsync =
                 default(Azure.StorageTables.Driver.AzureStorageDriver.RetryDelegateAsync<Task<TResult>>))
             where TEntity : IReferenceable
@@ -488,6 +498,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                         entityRef.StorageComputePartitionKey(),
                     onUpdate,
                     onNotFound: onNotFound,
+                    onModificationFailures: onModificationFailures,
                     onTimeoutAsync: onTimeoutAsync);
         }
 

@@ -25,6 +25,8 @@ namespace EastFive.Persistence.Azure.StorageTables
     public class StorageConstraintUniqueAttribute : Attribute,
         IModifyAzureStorageTableSave
     {
+        public bool IgnoreDefault { get; set; } = true;
+
         public interface IScope
         {
             string GetHashValue<TEntity>(MemberInfo memberInfo, TEntity value);
@@ -118,7 +120,7 @@ namespace EastFive.Persistence.Azure.StorageTables
             if (Scope.IsNullOrWhiteSpace())
             {
                 hashKeys = baseKey.AsArray();
-                return baseKey.MD5HashString();
+                return baseKey.MD5HashGuid().ToString("N");
             }
             var scopedKeys = typeof(TEntity)
                 .GetMembers(BindingFlags.Public | BindingFlags.Instance)
@@ -129,20 +131,38 @@ namespace EastFive.Persistence.Azure.StorageTables
                         .First()
                         .GetHashValue(member, value));
             hashKeys = baseKey.AsArray().Concat(scopedKeys).ToArray();
-            return hashKeys.Join("|").MD5HashString();
+            return hashKeys.Join("|").MD5HashGuid().ToString("N");
         }
 
-        public Task<TResult> ExecuteCreateAsync<TEntity, TResult>(MemberInfo memberInfo,
+        private bool IsIgnored<TEntity>(MemberInfo memberInfo, TEntity entity)
+        {
+            var useDefault = !IgnoreDefault;
+            if (useDefault)
+                return false;
+            var value = memberInfo.GetValue(entity);
+            if (value.IsDefaultOrNull())
+                return true;
+            if (memberInfo.GetMemberType().IsAssignableFrom(typeof(IReferenceableOptional)))
+            {
+                var refOptional = (IReferenceableOptional)value;
+                return !refOptional.HasValue;
+            }
+            return false;
+        }
+
+        public async Task<TResult> ExecuteCreateAsync<TEntity, TResult>(MemberInfo memberInfo,
                 string rowKeyRef, string partitionKeyRef,
                 TEntity value, IDictionary<string, EntityProperty> dictionary,
                 AzureTableDriverDynamic repository,
             Func<Func<Task>, TResult> onSuccessWithRollback,
             Func<TResult> onFailure)
         {
+            if (IsIgnored(memberInfo, value))
+                return onSuccessWithRollback(() => true.AsTask());
             var hashRowKey = GetHashRowKey(memberInfo, value, out string[] hashKeys);
             var hashPartitionKey = memberInfo.DeclaringType.Name;
             var tableName = GetLookupTableName(memberInfo);
-            return repository.UpdateOrCreateAsync<StorageLookupTable, TResult>(
+            return await repository.UpdateOrCreateAsync<StorageLookupTable, TResult>(
                     hashRowKey, hashPartitionKey,
                 async (created, lookup, saveAsync) =>
                 {
@@ -164,7 +184,7 @@ namespace EastFive.Persistence.Azure.StorageTables
                 tableName: tableName);
         }
 
-        public Task<TResult> ExecuteUpdateAsync<TEntity, TResult>(MemberInfo memberInfo, 
+        public async Task<TResult> ExecuteUpdateAsync<TEntity, TResult>(MemberInfo memberInfo, 
                 string rowKeyRef, string partitionKeyRef, 
                 TEntity valueExisting, IDictionary<string, EntityProperty> dictionaryExisting,
                 TEntity valueUpdated, IDictionary<string, EntityProperty> dictionaryUpdated, 
@@ -172,23 +192,43 @@ namespace EastFive.Persistence.Azure.StorageTables
             Func<Func<Task>, TResult> onSuccessWithRollback, 
             Func<TResult> onFailure)
         {
+            var existingRowKey = valueExisting.StorageGetRowKey();
+            var existingPartitionKey = valueExisting.StorageGetPartitionKey();
+
+            if (IsIgnored(memberInfo, valueUpdated))
+            {
+                if (IsIgnored(memberInfo, valueExisting))
+                    return onSuccessWithRollback(() => true.AsTask());
+                var rollbackMaybeTask = await ExecuteDeleteAsync(memberInfo, rowKeyRef, partitionKeyRef,
+                        valueExisting, dictionaryExisting,
+                        repository,
+                        (rb) => rb,
+                        () => default);
+                return onSuccessWithRollback(rollbackMaybeTask);
+            }
+
             var hashRowKey = GetHashRowKey(memberInfo, valueUpdated, out string[] hashKeys);
             var hashPartitionKey = memberInfo.DeclaringType.Name;
             var tableName = GetLookupTableName(memberInfo);
-            return repository.UpdateOrCreateAsync<StorageLookupTable, TResult>(
+            return await repository.UpdateOrCreateAsync<StorageLookupTable, TResult>(
                     hashRowKey, hashPartitionKey,
                 async (created, lookup, saveAsync) =>
                 {
                     if (!created)
                         return onFailure();
 
+                    async Task<Func<Task>> RollbackMaybeAsync()
+                    {
+                        if (IsIgnored(memberInfo, valueExisting))
+                            return default(Func<Task>);
+                        return await ExecuteDeleteAsync(memberInfo, rowKeyRef, partitionKeyRef,
+                            valueExisting, dictionaryExisting,
+                            repository,
+                            (rb) => rb,
+                            () => default);
+                    }
 
-                    var rollbackMaybeTask = ExecuteDeleteAsync(memberInfo, rowKeyRef, partitionKeyRef,
-                        valueExisting, dictionaryExisting,
-                        repository,
-                        (rb) => rb,
-                        () => default);
-
+                    var rollbackMaybeTask = RollbackMaybeAsync();
                     lookup.hashvalues = hashKeys;
                     await saveAsync(lookup);
                     var rollbackMaybe = await rollbackMaybeTask;
@@ -208,17 +248,20 @@ namespace EastFive.Persistence.Azure.StorageTables
                 tableName: tableName);
         }
 
-        public Task<TResult> ExecuteDeleteAsync<TEntity, TResult>(MemberInfo memberInfo, 
+        public async Task<TResult> ExecuteDeleteAsync<TEntity, TResult>(MemberInfo memberInfo, 
                 string rowKeyRef, string partitionKeyRef,
                 TEntity value, IDictionary<string, EntityProperty> dictionary, 
                 AzureTableDriverDynamic repository,
             Func<Func<Task>, TResult> onSuccessWithRollback, 
             Func<TResult> onFailure)
         {
+            if (IsIgnored(memberInfo, value))
+                return onSuccessWithRollback(() => true.AsTask());
+
             var hashRowKey = GetHashRowKey(memberInfo, value, out string[] discard);
             var hashPartitionKey = memberInfo.DeclaringType.Name;
             var tableName = GetLookupTableName(memberInfo);
-            return repository.DeleteAsync<StorageLookupTable, TResult>(
+            return await repository.DeleteAsync<StorageLookupTable, TResult>(
                     hashRowKey, hashPartitionKey,
                 async (entity, deleteAsync) =>
                 {

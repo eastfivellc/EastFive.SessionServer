@@ -176,7 +176,7 @@ namespace EastFive.Azure.Auth
                 [QueryParameter(Name = "session")]IRef<Session> sessionRef,
                 Api.Azure.AzureApplication application,
             MultipartResponseAsync<Method> onContent,
-            ReferencedDocumentNotFoundResponse<Integration> onIntegrationNotFound)
+            ReferencedDocumentNotFoundResponse<Session> onIntegrationNotFound)
         {
             return await await sessionRef.StorageGetAsync(
                 session =>
