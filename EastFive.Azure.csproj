@@ -328,6 +328,7 @@
     <Compile Include="Monitoring\Monitoring.cs" />
     <Compile Include="IProvideIntegration.cs" />
     <Compile Include="Persistence\AppSettings.cs" />
+    <Compile Include="Persistence\Attributes\ContainerResourceAttribute.cs" />
     <Compile Include="Persistence\Attributes\StorageResourceAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\Modifiers\MigratePartitionAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\Modifiers\StorageConstraintUniqueAttribute.cs" />
