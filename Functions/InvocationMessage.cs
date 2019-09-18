@@ -158,6 +158,13 @@ namespace EastFive.Azure.Functions
                 () => throw new Exception());
         }
 
+
+
+        public Task<CloudQueueMessage> SendToQueueAsync(AzureApplication application)
+        {
+            return InvocationMessage.SendToQueueAsync(this.invocationRef, application);
+        }
+
         public static Task<CloudQueueMessage> SendToQueueAsync(IRef<InvocationMessage> invocationMessageRef,
             AzureApplication azureApplication)
         {
@@ -190,12 +197,6 @@ namespace EastFive.Azure.Functions
             return invocationMessageRef.StorageUpdateAsync(
                 async (invocationMessage, saveAsync) =>
                 {
-                    if (invocationMessage.method.IsNullOrEmpty())
-                    {
-                        //throw new Exception("Invalid invocation message: no method");
-                        invocationMessage.method = "patch";
-                    }
-
                     var httpRequest = new HttpRequestMessage(
                         new HttpMethod(invocationMessage.method),
                         invocationMessage.requestUri);

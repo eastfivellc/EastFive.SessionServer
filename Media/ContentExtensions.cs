@@ -51,6 +51,22 @@ namespace EastFive.Azure.Media
                 onTimeout: onTimeout);
         }
 
+        public static Task<TResult> SaveStreamAsync<TResult>(this IRef<Content> contentRef,
+                Stream content,
+            Func<TResult> onSuccess,
+            Func<TResult> onAlreadyExists = default,
+            Func<StorageTables.Driver.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
+            string contentType = default,
+            Azure.StorageTables.Driver.AzureStorageDriver.RetryDelegate onTimeout = null)
+        {
+            return content.BlobCreateAsync(contentRef.id, "content",
+                onSuccess,
+                onAlreadyExists: onAlreadyExists,
+                onFailure: onFailure,
+                contentType: contentType,
+                onTimeout: onTimeout);
+        }
+
         public static Task<TResult> AnalyzeAsync<TResult>(this IRef<Content> contentRef,
             Func<ImageAnalysis, double?, TResult> onAnalyzed,
             Func<TResult> onNotFound = default)

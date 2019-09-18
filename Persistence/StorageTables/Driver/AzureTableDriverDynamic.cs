@@ -18,6 +18,7 @@ using Microsoft.WindowsAzure.Storage.RetryPolicies;
 using Microsoft.WindowsAzure.Storage.Table;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
@@ -2117,6 +2118,43 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                 using (var stream = await blockBlob.OpenWriteAsync())
                 {
                     await stream.WriteAsync(content, 0, content.Length);
+                }
+                return onSuccess();
+            }
+            catch (Microsoft.WindowsAzure.Storage.StorageException ex)
+            {
+                if (onFailure.IsDefaultOrNull())
+                    throw;
+                return ex.ParseStorageException(
+                    (errorCode, errorMessage) =>
+                        onFailure(errorCode, errorMessage),
+                    () => throw ex);
+            }
+        }
+
+        public async Task<TResult> BlobCreateAsync<TResult>(Stream content, Guid blobId, string containerName,
+            Func<TResult> onSuccess,
+            Func<TResult> onAlreadyExists = default,
+            Func<ExtendedErrorInformationCodes, string, TResult> onFailure = default,
+            string contentType = default,
+            AzureStorageDriver.RetryDelegate onTimeout = default)
+        {
+            var container = this.BlobClient.GetContainerReference(containerName);
+            container.CreateIfNotExists();
+            var blockBlob = container.GetBlockBlobReference(blobId.ToString("N"));
+            try
+            {
+                if (await blockBlob.ExistsAsync())
+                {
+                    if (onAlreadyExists.IsDefault())
+                        throw new RecordAlreadyExistsException();
+                    return onAlreadyExists();
+                }
+                if (contentType.HasBlackSpace())
+                    blockBlob.Properties.ContentType = contentType;
+                using (var stream = await blockBlob.OpenWriteAsync())
+                {
+                    await content.CopyToAsync(stream);
                 }
                 return onSuccess();
             }

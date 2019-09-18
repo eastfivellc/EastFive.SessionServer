@@ -100,7 +100,7 @@ namespace EastFive.Azure.Auth
                             async method =>
                             {
                                 return await method.ParseTokenAsync(authorization.parameters, application,
-                                    (externalId, authRefDiscard, loginProvider) =>
+                                    (externalId, loginProvider) =>
                                     {
                                         return new RedirectionManager
                                         {
@@ -142,7 +142,7 @@ namespace EastFive.Azure.Auth
                         async method =>
                         {
                             return await await method.ParseTokenAsync(authorization.parameters, application,
-                                async (externalId, authRefDiscard, loginProvider) =>
+                                async (externalId, loginProvider) =>
                                 {
                                     var tag = "OpioidTool";
                                     return await EastFive.Web.Configuration.Settings.GetString($"AffirmHealth.PDMS.PingRedirect.{tag}.PingAuthName",
@@ -208,7 +208,7 @@ namespace EastFive.Azure.Auth
                         async method =>
                         {
                             return await await method.ParseTokenAsync(authorization.parameters, application,
-                                (externalId, authRefDiscard, loginProvider) =>
+                                (externalId, loginProvider) =>
                                 {
                                     return Auth.Redirection.ProcessAsync(authorization,
                                             async updatedAuth =>

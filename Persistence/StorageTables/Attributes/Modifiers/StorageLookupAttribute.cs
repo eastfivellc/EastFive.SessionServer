@@ -163,7 +163,7 @@ namespace EastFive.Persistence.Azure.StorageTables
                 {
                     //lookup.rowKey = rowKey;
                     //lookup.partitionKey = partitionKey;
-                    var rollbackRowAndPartitionKeys = lookup.rowAndPartitionKeys;
+                    var rollbackRowAndPartitionKeys = lookup.rowAndPartitionKeys; // store for rollback
                     lookup.rowAndPartitionKeys = mutateCollection(rollbackRowAndPartitionKeys)
                         .Distinct(rpKey => rpKey.Key)
                         .ToArray();
@@ -182,19 +182,26 @@ namespace EastFive.Persistence.Azure.StorageTables
                             return await repository.UpdateAsync<StorageLookupTable, bool>(rowKey, partitionKey,
                                 async (modifiedDoc, saveRollbackAsync) =>
                                 {
-                                    var matchKeys = rollbackRowAndPartitionKeys.SelectKeys().AsHashSet();
-                                    var matchValues = rollbackRowAndPartitionKeys.SelectKeys().AsHashSet();
-                                    var modified = modifiedDoc.rowAndPartitionKeys
-                                        .All(
-                                            rowAndPartitionKey =>
-                                            {
-                                                if (!matchKeys.Contains(rowAndPartitionKey.Key))
-                                                    return false;
-                                                if (!matchValues.Contains(rowAndPartitionKey.Value))
-                                                    return false;
-                                                return true;
-                                            });
-                                    if (!modified)
+                                    bool Modified()
+                                    {
+                                        if (rollbackRowAndPartitionKeys.Length != modifiedDoc.rowAndPartitionKeys.Length)
+                                            return true;
+
+                                        var matchKeys = rollbackRowAndPartitionKeys.SelectKeys().AsHashSet();
+                                        var matchValues = rollbackRowAndPartitionKeys.SelectKeys().AsHashSet();
+                                        var allValuesAccountedFor = modifiedDoc.rowAndPartitionKeys
+                                            .All(
+                                                rowAndPartitionKey =>
+                                                {
+                                                    if (!matchKeys.Contains(rowAndPartitionKey.Key))
+                                                        return false;
+                                                    if (!matchValues.Contains(rowAndPartitionKey.Value))
+                                                        return false;
+                                                    return true;
+                                                });
+                                        return !allValuesAccountedFor;
+                                    }
+                                    if (!Modified())
                                         return true;
                                     modifiedDoc.rowAndPartitionKeys = rollbackRowAndPartitionKeys;
                                     await saveRollbackAsync(modifiedDoc);

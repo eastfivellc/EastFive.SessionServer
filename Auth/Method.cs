@@ -242,7 +242,7 @@ namespace EastFive.Azure.Auth
 
         public async Task<TResult> ParseTokenAsync<TResult>(IDictionary<string, string> parameters, 
             Api.Azure.AzureApplication application,
-            Func<string, IRefOptional<Authorization>, IProvideLogin, TResult> onParsed,
+            Func<string, IProvideLogin, TResult> onParsed,
             Func<string, TResult> onFailure)
         {
             var methodName = this.name;
@@ -255,9 +255,9 @@ namespace EastFive.Azure.Auth
             var matchingLoginProvider = matchingLoginProviders.First();
 
             return matchingLoginProvider.ParseCredentailParameters(parameters,
-                (externalId, authorizationIdMaybe, lookupDiscard) =>
+                (externalId, authorizationIdMaybeDiscard, lookupDiscard) =>
                 {
-                    return onParsed(externalId, authorizationIdMaybe.AsRefOptional<Authorization>(), matchingLoginProvider);
+                    return onParsed(externalId, matchingLoginProvider);
                 },
                 onFailure);
         }

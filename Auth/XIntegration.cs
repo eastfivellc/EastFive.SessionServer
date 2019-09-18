@@ -12,6 +12,7 @@ using EastFive;
 using EastFive.Api;
 using EastFive.Api.Controllers;
 using EastFive.Azure.Persistence.AzureStorageTables;
+using EastFive.Collections;
 using EastFive.Collections.Generic;
 using EastFive.Extensions;
 using EastFive.Linq;
@@ -85,19 +86,20 @@ namespace EastFive.Azure.Auth
                 Api.Azure.AzureApplication application, EastFive.Api.Controllers.SessionToken security,
             CreatedResponse onCreated,
             AlreadyExistsResponse onAlreadyExists,
-            ForbiddenResponse forbidden,
+            ForbiddenResponse onForbidden,
             ReferencedDocumentDoesNotExistsResponse<Authorization> onAuthorizationDoesNotExist,
             GeneralConflictResponse onFailure)
         {
             if (!await application.CanAdministerCredentialAsync(accountId, security))
-                return forbidden();
+                return onForbidden();
 
             return await await authorizationRefMaybe.StorageGetAsync(
-                authorization =>
+                async authorization =>
                 {
-                    // TODO? This
-                    // var accountIdDidMatch = await await authorization.ParseCredentailParameters(
-                    return CreateWithAuthorization(integration, authorization,
+                    if(!await application.ShouldAuthorizeIntegrationAsync(integration, authorization))
+                        return onFailure("Authorization is not accessable to this account.");
+
+                    return await CreateWithAuthorization(integration, authorization,
                         () => onCreated(),
                         () => onAlreadyExists(),
                         (why) => onFailure(why));
@@ -149,18 +151,18 @@ namespace EastFive.Azure.Auth
                     if (!await application.CanAdministerCredentialAsync(accountId, security))
                         return onUnauthorized();
 
-                    var methodMaybe = await authorizationRef.StorageGetAsync(
-                        authorization => authorization.Method.Optional(),
-                        () => default(Guid?).AsRefOptional<Method>());
-                    if (!methodMaybe.HasValue)
-                        return onAuthorizationDoesNotExist();
+                    return await await authorizationRef.StorageGetAsync(
+                        async authorization =>
+                        {
+                            if (!await application.ShouldAuthorizeIntegrationAsync(integration, authorization))
+                                return onForbidden().AddReason("Authorization is not accessable to this account.");
 
-                    // TODO? This
-                    // var accountIdDidMatch = await await authorization.ParseCredentailParameters(
-                    integration.Method = methodMaybe.Ref; // method is used in the .mappingId
-                    integration.authorization = authorizationRef.Optional();
-                    await saveAsync(integration);
-                    return onUpdated(integration);
+                            integration.Method = authorization.Method; // method is used in the .mappingId
+                            integration.authorization = authorizationRef.Optional();
+                            await saveAsync(integration);
+                            return onUpdated(integration);
+                        },
+                        () => onAuthorizationDoesNotExist().AsTask());
                 },
                 () => onNotFound(),
                 onModificationFailures:
@@ -204,6 +206,28 @@ namespace EastFive.Azure.Auth
                     })
                 .Await()
                 .SelectWhereHasValue();;
+        }
+
+        public TResult GetService<T, TResult>(Func<T, TResult> onServiceLocated, Func<TResult> onServiceNotAvailable)
+        {
+            throw new NotImplementedException();
+        }
+
+        private static Dictionary<string, object[]> services = new Dictionary<string, object[]>();
+
+        public static void RegisterService<T>(string integrationMethod, T service)
+        {
+            services.AddIfMissing(integrationMethod,
+                (addValue) =>
+                {
+                    return addValue(service.AsArray<object>());
+                },
+                (currentServices, current, alreadyAdded) =>
+                {
+                    if(!alreadyAdded)
+                        current[integrationMethod] = currentServices.Append((object)service).ToArray();
+                    return true;
+                });
         }
 
         public static Task<TResult> CreateWithAuthorization<TResult>(

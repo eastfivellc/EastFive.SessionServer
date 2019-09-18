@@ -26,6 +26,7 @@ using EastFive.Collections.Generic;
 using System.Linq.Expressions;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage;
+using EastFive.Azure.Auth;
 
 namespace EastFive.Api.Azure
 {
@@ -101,6 +102,14 @@ namespace EastFive.Api.Azure
                     },
                     (why) => new InvokeApplicationRemote(new Uri("http://example.com"), "api"));
             }
+        }
+
+        public virtual Task<bool> ShouldAuthorizeIntegrationAsync(XIntegration integration, EastFive.Azure.Auth.Authorization authorization)
+        {
+            if (authorization.accountIdMaybe.HasValue)
+                if (integration.accountId != authorization.accountIdMaybe.Value)
+                    return false.AsTask();
+            return true.AsTask();
         }
 
         public virtual Task<bool> IsAdminAsync(SessionToken security)

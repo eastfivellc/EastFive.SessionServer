@@ -19,6 +19,7 @@ using EastFive.Persistence.Azure;
 using EastFive.Azure.StorageTables.Driver;
 using BlackBarLabs.Extensions;
 using System.Reflection;
+using System.IO;
 
 namespace EastFive.Azure.Persistence.AzureStorageTables
 {
@@ -758,6 +759,23 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
         }
 
         public static Task<TResult> BlobCreateAsync<TResult>(this byte[] content, Guid blobId, string containerName,
+            Func<TResult> onSuccess,
+            Func<TResult> onAlreadyExists,
+            Func<Azure.StorageTables.Driver.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
+            string contentType = default,
+            Azure.StorageTables.Driver.AzureStorageDriver.RetryDelegate onTimeout = null)
+        {
+            return AzureTableDriverDynamic
+                .FromSettings()
+                .BlobCreateAsync(content, blobId, containerName,
+                    onSuccess,
+                    onAlreadyExists: onAlreadyExists,
+                    onFailure: onFailure,
+                    contentType: contentType,
+                    onTimeout: onTimeout);
+        }
+
+        public static Task<TResult> BlobCreateAsync<TResult>(this Stream content, Guid blobId, string containerName,
             Func<TResult> onSuccess,
             Func<TResult> onAlreadyExists,
             Func<Azure.StorageTables.Driver.ExtendedErrorInformationCodes, string, TResult> onFailure = default,

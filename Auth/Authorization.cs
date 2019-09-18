@@ -245,7 +245,7 @@ namespace EastFive.Azure.Auth
                             (loginProvider) =>
                             {
                                 return loginProvider.ParseCredentailParameters(parameters,
-                                    (string userKey, Guid? authorizationId, Guid? deprecatedId) =>
+                                    (string userKey, Guid? authorizationIdDiscard, Guid? deprecatedId) =>
                                     {
                                         return onSuccess(userKey, loginProvider);
                                     },

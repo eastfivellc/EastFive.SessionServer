@@ -115,6 +115,9 @@ namespace EastFive.Api.Azure.Modules
                 }
             }
 
+            if (lookupSpaFile.IsDefaultNullOrEmpty())
+                return await continuation(request, cancellationToken);
+
             var context = httpApp.Context;
             string filePath = context.Request.FilePath;
             string fileName = VirtualPathUtility.GetFileName(filePath);
