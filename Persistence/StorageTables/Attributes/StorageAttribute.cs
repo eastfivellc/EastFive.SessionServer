@@ -39,8 +39,7 @@ namespace EastFive.Persistence
 
     public interface IComputeAzureStorageTableRowKey
     {
-        string ComputeRowKey<EntityType>(IRef<EntityType> refKey, MemberInfo memberInfo)
-            where EntityType : IReferenceable;
+        string ComputeRowKey(object memberValue, MemberInfo memberInfo);
     }
 
     public interface IModifyAzureStorageTableRowKey
@@ -52,9 +51,8 @@ namespace EastFive.Persistence
 
     public interface IComputeAzureStorageTablePartitionKey
     {
-        string ComputePartitionKey<EntityType>(IRef<EntityType> refKey,
-            string rowKey, MemberInfo memberInfo)
-            where EntityType : IReferenceable;
+        string ComputePartitionKey(object memberValue, MemberInfo memberInfo,
+            string rowKey);
     }
 
     public interface IModifyAzureStorageTablePartitionKey

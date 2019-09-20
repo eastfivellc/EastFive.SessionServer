@@ -12,33 +12,39 @@ namespace EastFive.Persistence.Azure.StorageTables
     public class RowKeyAttribute : Attribute,
         IModifyAzureStorageTableRowKey, IComputeAzureStorageTableRowKey
     {
-        public string ComputeRowKey<EntityType>(IRef<EntityType> refKey, MemberInfo memberInfo)
-            where EntityType : IReferenceable
+        public virtual string ComputeRowKey(object memberValue, MemberInfo memberInfo)
         {
-            return refKey.id.AsRowKey();
-        }
-
-        public virtual string GenerateRowKey(object value, MemberInfo memberInfo)
-        {
-            var partitionValue = memberInfo.GetValue(value);
             var propertyValueType = memberInfo.GetMemberType();
             if (typeof(Guid).IsAssignableFrom(propertyValueType))
             {
-                var guidValue = (Guid)partitionValue;
+                var guidValue = (Guid)memberValue;
                 return guidValue.AsRowKey();
             }
             if (typeof(IReferenceable).IsAssignableFrom(propertyValueType))
             {
-                var refValue = (IReferenceable)partitionValue;
+                var refValue = (IReferenceable)memberValue;
                 return refValue.id.AsRowKey();
+            }
+            if (typeof(IReferenceableOptional).IsAssignableFrom(propertyValueType))
+            {
+                var refValue = (IReferenceableOptional)memberValue;
+                if (!refValue.HasValue)
+                    return null;
+                return refValue.id.Value.AsRowKey();
             }
             if (typeof(string).IsAssignableFrom(propertyValueType))
             {
-                var stringValue = (string)partitionValue;
+                var stringValue = (string)memberValue;
                 return stringValue;
             }
             var message = $"`{this.GetType().FullName}` Cannot determine row key from type `{propertyValueType.FullName}` on `{memberInfo.DeclaringType.FullName}..{memberInfo.Name}`";
             throw new NotImplementedException(message);
+        }
+
+        public virtual string GenerateRowKey(object value, MemberInfo memberInfo)
+        {
+            var memberValue = memberInfo.GetValue(value);
+            return ComputeRowKey(memberValue, memberInfo);
         }
 
         EntityType IModifyAzureStorageTableRowKey.ParseRowKey<EntityType>(EntityType entity, string value, MemberInfo memberInfo)

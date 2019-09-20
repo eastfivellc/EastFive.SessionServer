@@ -38,26 +38,26 @@ namespace EastFive.Persistence.Azure.StorageTables
             return $"{memberInfo.DeclaringType.Name}{memberInfo.Name}";
         }
 
-        public IEnumerableAsync<KeyValuePair<string, string>> GetKeys<TEntity>(IRef<TEntity> value,
-                Driver.AzureTableDriverDynamic repository, MemberInfo memberInfo)
-            where TEntity : IReferenceable
+        public IEnumerableAsync<IRefAst> GetKeys(object memberValue,
+                MemberInfo memberInfo, Driver.AzureTableDriverDynamic repository)
         {
             var tableName = GetLookupTableName(memberInfo);
 
-            var rowKey = value.StorageComputeRowKey(
+            var rowKey = memberInfo.StorageComputeRowKey(memberValue,
                 onMissing: () => new RowKeyAttribute());
-            var partitionKey = value.StorageComputePartitionKey(rowKey,
+            var partitionKey = memberInfo.StorageComputePartitionKey(memberValue, rowKey,
                 onMissing: () => new RowKeyPrefixAttribute());
             return repository
-                .FindByIdAsync<StorageLookupTable, IEnumerableAsync <KeyValuePair<string, string>>>(rowKey, partitionKey,
+                .FindByIdAsync<StorageLookupTable, IEnumerableAsync<IRefAst>>(rowKey, partitionKey,
                     (dictEntity) =>
                     {
-                        var rowAndParitionKeys = dictEntity.rowAndPartitionKeys.NullToEmpty()
-                            .Select(rowParitionKeyKvp => rowParitionKeyKvp.AsTask())
-                            .AsyncEnumerable();
+                        var rowAndParitionKeys = dictEntity.rowAndPartitionKeys
+                            .NullToEmpty()
+                            .Select(rowParitionKeyKvp => rowParitionKeyKvp.Key.AsAstRef(rowParitionKeyKvp.Value))
+                            .AsAsync();
                         return rowAndParitionKeys;
                     },
-                    () => EnumerableAsync.Empty<KeyValuePair<string, string>>(),
+                    () => EnumerableAsync.Empty<IRefAst>(),
                     tableName: tableName)
                 .FoldTask();
         }
@@ -84,7 +84,7 @@ namespace EastFive.Persistence.Azure.StorageTables
             if (!partitionKeyAttributeType.IsSubClassOfGeneric(typeof(IComputeAzureStorageTablePartitionKey)))
                 throw new Exception($"{memberInfo.DeclaringType.FullName}..{memberInfo.Name} defines partition type as {partitionKeyAttributeType.FullName} which does not implement {typeof(IModifyAzureStorageTablePartitionKey).FullName}.");
             var partitionKeyAttribute = Activator.CreateInstance(partitionKeyAttributeType) as IComputeAzureStorageTablePartitionKey;
-            var partitionKey = partitionKeyAttribute.ComputePartitionKey(refKey, rowKey, memberInfo);
+            var partitionKey = partitionKeyAttribute.ComputePartitionKey(refKey, memberInfo, rowKey);
             return partitionKey;
         }
 

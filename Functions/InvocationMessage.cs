@@ -45,23 +45,9 @@ namespace EastFive.Azure.Functions
         public IRef<InvocationMessage> invocationRef;
 
         [LastModified]
+        [DateTimeLookup(Partition = 3600.0, Row = 60.0)]
         public DateTimeOffset lastModified;
 
-        [StorageLookup]
-        public string LastUsedDay
-        {
-            get
-            {
-                var epoch = new DateTime(2019, 1, 1);
-                var span = lastModified - epoch;
-                var totalDays = (int)span.TotalDays;
-                return totalDays.ToString();
-            }
-            set
-            {
-                // ignore
-            }
-        }
 
         [JsonProperty]
         [Storage]

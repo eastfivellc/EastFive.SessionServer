@@ -31,7 +31,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                 Func<EastFive.Persistence.IComputeAzureStorageTableRowKey> onMissing = default)
             where TEntity : IReferenceable
         {
-            var partitionKeyMember = typeof(TEntity)
+            var rowKeyMember = typeof(TEntity)
                 .GetPropertyOrFieldMembers()
                 .Where(member => member.ContainsAttributeInterface<EastFive.Persistence.IComputeAzureStorageTableRowKey>())
                 .Select(member =>
@@ -46,7 +46,30 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                             throw new Exception($"{typeof(TEntity).FullName} is missing attribute implementing {typeof(EastFive.Persistence.IComputeAzureStorageTableRowKey).FullName}.");
                         return onMissing().PairWithKey(default(MemberInfo));
                     });
-            return partitionKeyMember.Value.ComputeRowKey(entityRef, partitionKeyMember.Key);
+            return rowKeyMember.Value.ComputeRowKey(entityRef, rowKeyMember.Key);
+        }
+
+        public static string StorageComputeRowKey(this MemberInfo memberInfo, object memberValue,
+                Func<EastFive.Persistence.IComputeAzureStorageTableRowKey> onMissing = default)
+        {
+            return memberInfo
+                .GetAttributesInterface<EastFive.Persistence.IComputeAzureStorageTableRowKey>()
+                .First(
+                    (computeAzureStorageTableRowKey, next) =>
+                    {
+                        return computeAzureStorageTableRowKey.ComputeRowKey(memberValue, memberInfo);
+                    },
+                    () =>
+                    {
+                        if (onMissing.IsDefaultOrNull())
+                        {
+                            throw new Exception(
+                                $"{memberInfo.DeclaringType.FullName}..{memberInfo.Name} is missing attribute implementing" + 
+                                $" {typeof(EastFive.Persistence.IComputeAzureStorageTableRowKey).FullName}.");
+                        }
+                        var computeAzureStorageTableRowKey = onMissing();
+                        return computeAzureStorageTableRowKey.ComputeRowKey(memberValue, memberInfo);
+                    });
         }
 
         public static string StorageGetRowKey<TEntity>(this TEntity entity)
@@ -99,10 +122,40 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                     () =>
                     {
                         if (onMissing.IsDefaultOrNull())
-                            throw new Exception($"{typeof(TEntity).FullName} is missing attribute implementing {typeof(EastFive.Persistence.IComputeAzureStorageTableRowKey).FullName}.");
+                        {
+                            var exMessage = $"{typeof(TEntity).FullName} is missing attribute implementing" +
+                                " {typeof(EastFive.Persistence.IComputeAzureStorageTablePartitionKey).FullName}.";
+                            throw new Exception(exMessage);
+                        }
                         return onMissing().PairWithKey(default(MemberInfo));
                     });
-            return partitionKeyMember.Value.ComputePartitionKey(entityRef, rowKey, partitionKeyMember.Key);
+            return partitionKeyMember.Value.ComputePartitionKey(entityRef, partitionKeyMember.Key, rowKey);
+        }
+
+        public static string StorageComputePartitionKey(this MemberInfo memberInfo, 
+                object memberValue,
+                string rowKey,
+                Func<EastFive.Persistence.IComputeAzureStorageTablePartitionKey> onMissing = default)
+        {
+            return memberInfo
+                .GetAttributesInterface<EastFive.Persistence.IComputeAzureStorageTablePartitionKey>()
+                .First(
+                    (computeAzureStorageTableParitionKey, next) =>
+                    {
+                        var partitionKey = computeAzureStorageTableParitionKey.ComputePartitionKey(memberValue, memberInfo, rowKey);
+                        return partitionKey;
+                    },
+                    () =>
+                    {
+                        if (onMissing.IsDefaultOrNull())
+                        {
+                            var exMessage =
+                                $"{memberInfo.DeclaringType.FullName}..{memberInfo.Name} is missing attribute implementing" +
+                                $" {typeof(EastFive.Persistence.IComputeAzureStorageTablePartitionKey).FullName}.";
+                            throw new Exception(exMessage);
+                        }
+                        return onMissing().ComputePartitionKey(memberValue, memberInfo, rowKey);
+                    });
         }
 
         public static string StorageGetPartitionKey<TEntity>(this TEntity entity)

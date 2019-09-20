@@ -6,8 +6,7 @@ using System.Net.Http;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using System.Web.Http.Routing;
-using BlackBarLabs.Api.Resources;
-using BlackBarLabs.Extensions;
+
 using EastFive.Api;
 using EastFive.Api.Controllers;
 using EastFive.Azure.Persistence.AzureStorageTables;

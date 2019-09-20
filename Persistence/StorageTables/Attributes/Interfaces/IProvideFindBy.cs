@@ -11,9 +11,8 @@ namespace EastFive.Persistence.Azure.StorageTables
 {
     public interface IProvideFindBy
     {
-        IEnumerableAsync<KeyValuePair<string, string>> GetKeys<TEntity>(IRef<TEntity> value,
-                Driver.AzureTableDriverDynamic repository, MemberInfo memberInfo)
-            where TEntity : IReferenceable;
+        IEnumerableAsync<IRefAst> GetKeys(object memberValue,
+                MemberInfo memberInfo, Driver.AzureTableDriverDynamic repository);
     }
 
     public interface IProvideFindByAsync

@@ -851,7 +851,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             where TEntity : IReferenceable
             where TRefEntity : IReferenceable
         {
-            return FindByInternal(entityRef, by);
+            return FindByInternal(entityRef.Optional(), by);
         }
 
         public IEnumerableAsync<TEntity> FindBy<TRefEntity, TEntity>(IRef<TRefEntity> entityRef,
@@ -862,10 +862,9 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             return FindByInternal(entityRef, by);
         }
 
-        private IEnumerableAsync<TEntity> FindByInternal<TRefEntity, TMatch, TEntity>(IRef<TRefEntity> entityRef,
+        private IEnumerableAsync<TEntity> FindByInternal<TMatch, TEntity>(object findByValue,
                 Expression<Func<TEntity, TMatch>> by)
             where TEntity : IReferenceable
-            where TRefEntity : IReferenceable
         {
             return by.MemberInfo(
                 (memberCandidate, expr) =>
@@ -875,12 +874,12 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                         .First<IProvideFindBy, IEnumerableAsync<TEntity>>(
                             (attr, next) =>
                             {
-                                return attr.GetKeys(entityRef, this, memberCandidate)
+                                return attr.GetKeys(findByValue, memberCandidate, this)
                                     .Select(
                                         rowParitionKeyKvp =>
                                         {
-                                            var rowKey = rowParitionKeyKvp.Key;
-                                            var partitionKey = rowParitionKeyKvp.Value;
+                                            var rowKey = rowParitionKeyKvp.RowKey;
+                                            var partitionKey = rowParitionKeyKvp.ParitionKey;
                                             return this.FindByIdAsync(rowKey, partitionKey,
                                                     (TEntity entity) => entity.PairWithKey(true),
                                                     () => default(TEntity).PairWithKey(false),

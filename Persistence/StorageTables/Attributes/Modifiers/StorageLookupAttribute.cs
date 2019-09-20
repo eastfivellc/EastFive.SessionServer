@@ -26,7 +26,79 @@ namespace EastFive.Persistence.Azure.StorageTables
     {
         public string LookupTableName { get; set; }
 
+        public string Scope { get; set; }
+
+        public Type RowKeyAttribute { get; set; }
+
         public Type PartitionAttribute { get; set; }
+
+        public interface IScope
+        {
+            string GetHashValue(MemberInfo memberInfo);
+        }
+
+        public class ScopingAttribute : Attribute, IScope
+        {
+            public string Scope { get; set; }
+
+            public ScopingAttribute(string scope)
+            {
+                this.Scope = scope;
+            }
+
+            public string GetHashValue(MemberInfo memberInfo)
+            {
+                return this.Scope;
+            }
+        }
+
+        public virtual string ComputeLookupRowKey(object memberValue, MemberInfo memberInfo)
+        {
+            if (!this.RowKeyAttribute.IsDefaultOrNull())
+            {
+                var rowKeyComputer = (IComputeAzureStorageTableRowKey)Activator.CreateInstance(RowKeyAttribute);
+                return rowKeyComputer.ComputeRowKey(memberValue, memberInfo);
+            }
+            return memberInfo.StorageComputeRowKey(memberValue,
+                () => new RowKeyAttribute());
+        }
+
+        public virtual string ComputeLookupPartitionKey(object memberValue, MemberInfo memberInfo, string rowKey)
+        {
+            var scopes = memberInfo.DeclaringType
+                .GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                .Where(member => member.ContainsAttributeInterface<IScope>())
+                .Select(
+                    member =>
+                    {
+                        return member.GetAttributesInterface<IScope>().First()
+                            .GetHashValue(member);
+                    })
+                .Join(string.Empty);
+            if (scopes.HasBlackSpace())
+                return scopes;
+
+            if (!this.PartitionAttribute.IsDefaultOrNull())
+            {
+                var partitionKeyComputer = (IComputeAzureStorageTablePartitionKey)Activator.CreateInstance(RowKeyAttribute);
+                return partitionKeyComputer.ComputePartitionKey(memberValue, memberInfo, rowKey);
+            }
+
+            return memberInfo.StorageComputePartitionKey(memberValue, rowKey,
+                () => new StandardParititionKeyAttribute());
+        }
+
+        //public virtual IRefAst< ComputeLookupRef(object memberValue, MemberInfo memberInfo, string rowKey)
+        //{
+        //    // TODO: Check for Scopes
+        //    if (!this.PartitionAttribute.IsDefaultOrNull())
+        //    {
+        //        var partitionKeyComputer = (IComputeAzureStorageTablePartitionKey)Activator.CreateInstance(RowKeyAttribute);
+        //        return partitionKeyComputer.ComputePartitionKey(memberValue, memberInfo, rowKey);
+        //    }
+        //    return memberInfo.StorageComputePartitionKey(memberValue, rowKey,
+        //        () => new StandardParititionKeyAttribute());
+        //}
 
         private string GetLookupTableName(MemberInfo memberInfo)
         {
@@ -35,24 +107,23 @@ namespace EastFive.Persistence.Azure.StorageTables
             return $"{memberInfo.DeclaringType.Name}{memberInfo.Name}";
         }
 
-        public IEnumerableAsync<KeyValuePair<string, string>> GetKeys<TEntity>(IRef<TEntity> value, AzureTableDriverDynamic repository, MemberInfo memberInfo)
-            where TEntity : IReferenceable
+        public IEnumerableAsync<IRefAst> GetKeys(object memberValue,
+                MemberInfo memberInfo, Driver.AzureTableDriverDynamic repository)
         {
             var tableName = GetLookupTableName(memberInfo);
-            var rowKey = value.StorageComputeRowKey(
-                onMissing:() => new RowKeyAttribute());
-            var partitionKey = value.StorageComputePartitionKey(rowKey,
-                onMissing:() => new StandardParititionKeyAttribute()); // GetPartitionKey(rowKey, default(TEntity), memberInfo);
+            var lookupRowKey = ComputeLookupRowKey(memberValue, memberInfo);
+            var lookupPartitionKey = ComputeLookupPartitionKey(memberValue, memberInfo, lookupRowKey);
             return repository
-                .FindByIdAsync<StorageLookupTable, IEnumerableAsync <KeyValuePair<string, string>>>(rowKey, partitionKey,
+                .FindByIdAsync<StorageLookupTable, IEnumerableAsync<IRefAst>>(lookupRowKey, lookupPartitionKey,
                     (dictEntity) =>
                     {
-                        var rowAndParitionKeys = dictEntity.rowAndPartitionKeys.NullToEmpty()
-                            .Select(rowParitionKeyKvp => rowParitionKeyKvp.AsTask())
-                            .AsyncEnumerable();
+                        var rowAndParitionKeys = dictEntity.rowAndPartitionKeys
+                            .NullToEmpty()
+                            .Select(rowParitionKeyKvp => rowParitionKeyKvp.Key.AsAstRef(rowParitionKeyKvp.Value))
+                            .AsAsync();
                         return rowAndParitionKeys;
                     },
-                    () => EnumerableAsync.Empty<KeyValuePair<string, string>>(),
+                    () => EnumerableAsync.Empty<IRefAst>(),
                     tableName: tableName)
                 .FoldTask();
         }

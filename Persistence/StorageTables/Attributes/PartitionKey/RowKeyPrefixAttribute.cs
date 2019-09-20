@@ -41,7 +41,7 @@ namespace EastFive.Persistence.Azure.StorageTables
             return entity;
         }
 
-        public string ComputePartitionKey<EntityType>(IRef<EntityType> refKey, string rowKey, MemberInfo memberInfo) where EntityType : IReferenceable
+        public string ComputePartitionKey(object refKey, MemberInfo memberInfo, string rowKey)
         {
             return GetValue(rowKey);
         }

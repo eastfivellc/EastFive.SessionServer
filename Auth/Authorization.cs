@@ -37,6 +37,8 @@ namespace EastFive.Azure.Auth
     [StorageTable]
     public struct Authorization : IReferenceable
     {
+        #region Properties
+
         public Guid id => authorizationRef.id;
 
         public const string AuthorizationIdPropertyName = "id";
@@ -85,16 +87,24 @@ namespace EastFive.Azure.Auth
         public IDictionary<string, string> parameters;
 
         [Storage]
+        [JsonIgnore]
         public bool authorized;
 
         [Storage]
+        [JsonIgnore]
         public bool expired;
 
         [Storage]
+        [JsonIgnore]
         public Guid? accountIdMaybe;
 
         [Storage]
+        [JsonIgnore]
         public DateTime? deleted;
+
+        #endregion
+
+        #region Http Methods
 
         [Api.HttpGet]
         public static Task<HttpResponseMessage> GetAsync(
@@ -228,6 +238,8 @@ namespace EastFive.Azure.Auth
                 },
                 () => onNotFound());
         }
+
+        #endregion
 
         public async Task<TResult> ParseCredentailParameters<TResult>(
                 Api.Azure.AzureApplication application,
