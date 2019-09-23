@@ -267,53 +267,65 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                     onDoesNotExists);
         }
 
-        public static IEnumerableAsync<TEntity> StorageGetBy<TRefEntity, TEntity>(this IRef<TRefEntity> entityRef,
-                Expression<Func<TEntity, IRef<TRefEntity>>> by)
+        public static IEnumerableAsync<TEntity> StorageGetByIdProperty<TRefEntity, TEntity>(this IRef<TRefEntity> entityRef,
+                Expression<Func<TEntity, IRef<TRefEntity>>> idProperty)
             where TEntity : IReferenceable
             where TRefEntity : IReferenceable
         {
             return AzureTableDriverDynamic
                 .FromSettings()
-                .FindBy(entityRef, by);
+                .FindBy(entityRef, idProperty);
         }
 
         public static IEnumerableAsync<TEntity> StorageGetBy<TRefEntity, TEntity>(this IRef<TRefEntity> entityRef,
-                Expression<Func<TEntity, IRefOptional<TRefEntity>>> by)
+                Expression<Func<TEntity, IRef<TRefEntity>>> idProperty,
+                Expression<Func<TEntity, bool>> query1 = default,
+                Expression<Func<TEntity, bool>> query2 = default)
             where TEntity : IReferenceable
             where TRefEntity : IReferenceable
         {
             return AzureTableDriverDynamic
                 .FromSettings()
-                .FindBy(entityRef, by);
+                .FindBy(entityRef, idProperty, query1, query2);
         }
 
-        public static IEnumerableAsync<TEntity> StorageGetBy<TRefEntity, TEntity>(this IRef<TRefEntity> entityRef,
-                Expression<Func<TEntity, IRef<IReferenceable>>> by)
+        public static IEnumerableAsync<TEntity> StorageGetByIdProperty<TRefEntity, TEntity>(this IRef<TRefEntity> entityRef,
+                Expression<Func<TEntity, IRefOptional<TRefEntity>>> idProperty)
             where TEntity : IReferenceable
             where TRefEntity : IReferenceable
         {
             return AzureTableDriverDynamic
                 .FromSettings()
-                .FindBy(entityRef, by);
+                .FindBy(entityRef, idProperty);
         }
 
-        public static IEnumerableAsync<TEntity> StorageGetBy<TEntity>(this Guid entityId,
-                Expression<Func<TEntity, Guid>> by)
-            where TEntity : IReferenceable
-        {
-            return AzureTableDriverDynamic
-                .FromSettings()
-                .FindBy(entityId, by);
-        }
-
-        public static IEnumerableAsync<TEntity> StorageGetBy<TRefEntity, TEntity>(this IRef<TRefEntity> entityRef,
-                Expression<Func<TEntity, IRefs<TRefEntity>>> by)
+        public static IEnumerableAsync<TEntity> StorageGetByProperty<TRefEntity, TEntity>(this IRef<TRefEntity> entityRef,
+                Expression<Func<TEntity, IRef<IReferenceable>>> idProperty)
             where TEntity : IReferenceable
             where TRefEntity : IReferenceable
         {
             return AzureTableDriverDynamic
                 .FromSettings()
-                .FindBy(entityRef, by);
+                .FindBy(entityRef, idProperty);
+        }
+
+        public static IEnumerableAsync<TEntity> StorageGetByIdProperty<TEntity>(this Guid entityId,
+                Expression<Func<TEntity, Guid>> idProperty)
+            where TEntity : IReferenceable
+        {
+            return AzureTableDriverDynamic
+                .FromSettings()
+                .FindBy(entityId, idProperty);
+        }
+
+        public static IEnumerableAsync<TEntity> StorageGetByIdsProperty<TRefEntity, TEntity>(this IRef<TRefEntity> entityRef,
+                Expression<Func<TEntity, IRefs<TRefEntity>>> idsProperty)
+            where TEntity : IReferenceable
+            where TRefEntity : IReferenceable
+        {
+            return AzureTableDriverDynamic
+                .FromSettings()
+                .FindBy(entityRef, idsProperty);
         }
 
         [Obsolete("Use IRef in place of IRefObj")]

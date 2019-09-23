@@ -48,6 +48,8 @@ namespace EastFive.Persistence.Azure.StorageTables
 
         public string GetValue(string rowKey)
         {
+            if (rowKey.IsNullOrWhiteSpace())
+                return null;
             return rowKey.Substring(0, (int)this.Characters);
         }
 

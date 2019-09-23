@@ -192,7 +192,7 @@ namespace EastFive.Azure.Auth
         public static IEnumerableAsync<KeyValuePair<XIntegration, Authorization>> GetIntegrationsByAccount(Guid accountId)
         {
             return accountId
-                .StorageGetBy((XIntegration integration) => integration.accountId)
+                .StorageGetByIdProperty((XIntegration integration) => integration.accountId)
                 .Where(integration => integration.authorization.HasValue)
                 .Select(
                     integration =>
@@ -306,7 +306,7 @@ namespace EastFive.Azure.Auth
                 IRef<Method> methodId, Guid accountId)
         {
             return accountId
-                .StorageGetBy((XIntegration intgration) => intgration.accountId)
+                .StorageGetByIdProperty((XIntegration intgration) => intgration.accountId)
                 .Where(integration => integration.Method != null)
                 .Where(integration => integration.Method.id == methodId.id)
                 .Where(integration => integration.authorization.HasValue)

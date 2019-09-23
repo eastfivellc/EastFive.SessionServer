@@ -64,8 +64,12 @@ namespace EastFive.Persistence.Azure.StorageTables
         }
 
         public IEnumerableAsync<IRefAst> GetKeys(object memberValueObj,
-                MemberInfo memberInfo, Driver.AzureTableDriverDynamic repository)
+            MemberInfo memberInfo, Driver.AzureTableDriverDynamic repository,
+            KeyValuePair<MemberInfo, object>[] queries)
         {
+            if (!queries.IsDefaultNullOrEmpty())
+                throw new ArgumentException("Exactly one query param is valid for DateTimeLookupAttribute.");
+
             var memberValue = (DateTime)memberValueObj;
             var tableName = GetLookupTableName(memberInfo);
             var lookupRowKey = ComputeLookupKey(memberValue, TimeSpan.FromSeconds(this.Row));
@@ -103,17 +107,52 @@ namespace EastFive.Persistence.Azure.StorageTables
             public string[] partitions;
         }
 
+        private DateTime? GetDtValue<TEntity>(MemberInfo memberInfo, TEntity value)
+        {
+            var dtValueObj = memberInfo.GetValue(value);
+            var dtValueType = dtValueObj.GetType();
+            if (typeof(DateTime).IsAssignableFrom(dtValueType))
+            {
+                var dtValue = (DateTime)dtValueObj;
+                return dtValue;
+            }
+            if (typeof(DateTime?).IsAssignableFrom(dtValueType))
+            {
+                var dtValueMaybe = (DateTime?)dtValueObj;
+                return dtValueMaybe;
+            }
+            if (typeof(DateTimeOffset).IsAssignableFrom(dtValueType))
+            {
+                var dtValue = (DateTimeOffset)dtValueObj;
+                return dtValue.UtcDateTime;
+            }
+            if (typeof(DateTimeOffset?).IsAssignableFrom(dtValueType))
+            {
+                var dtValueMaybe = (DateTimeOffset?)dtValueObj;
+                if (!dtValueMaybe.HasValue)
+                    return default(DateTime?);
+                return dtValueMaybe.Value.UtcDateTime;
+            }
+            return null;
+        }
+
         protected string GetRowKey<TEntity>(MemberInfo memberInfo, TEntity value)
         {
-            var dtValue = (DateTime)memberInfo.GetValue(value);
-            var partitionKey = ComputeLookupKey(dtValue, TimeSpan.FromSeconds(this.Row));
+            var dtMaybe = GetDtValue(memberInfo, value);
+            if (!dtMaybe.HasValue)
+                return null;
+            var dt = dtMaybe.Value;
+            var partitionKey = ComputeLookupKey(dt, TimeSpan.FromSeconds(this.Row));
             return partitionKey;
         }
 
         protected string GetPartitionKey<TEntity>(MemberInfo memberInfo, TEntity value)
         {
-            var dtValue = (DateTime)memberInfo.GetValue(value);
-            var partitionKey = ComputeLookupKey(dtValue, TimeSpan.FromSeconds(this.Partition));
+            var dtMaybe = GetDtValue(memberInfo, value);
+            if (!dtMaybe.HasValue)
+                return null;
+            var dt = dtMaybe.Value;
+            var partitionKey = ComputeLookupKey(dt, TimeSpan.FromSeconds(this.Partition));
             return partitionKey;
         }
 
@@ -127,6 +166,8 @@ namespace EastFive.Persistence.Azure.StorageTables
         {
             var rowKey = GetRowKey(memberInfo, value);
             var partitionKey = GetPartitionKey(memberInfo, value);
+            if (rowKey.IsNullOrWhiteSpace() || partitionKey.IsNullOrWhiteSpace())
+                return onSuccessWithRollback(() => 1.AsTask());
             var rollback = await MutateLookupTable(rowKey, partitionKey,
                             memberInfo, repository, mutateCollection);
             return onSuccessWithRollback(rollback);
@@ -142,7 +183,8 @@ namespace EastFive.Persistence.Azure.StorageTables
                 {
                     // store for rollback
                     var rollbackRowAndPartitionKeys = lookup.rows
-                        .Zip(lookup.partitions, (k,v) => k.PairWithValue(v))
+                        .NullToEmpty()
+                        .Zip(lookup.partitions.NullToEmpty(), (k,v) => k.PairWithValue(v))
                         .ToArray();
                     await saveAsync(lookup);
                     Func<Task<bool>> rollback =
@@ -237,21 +279,35 @@ namespace EastFive.Persistence.Azure.StorageTables
                 return false;
             }
 
+            Func<Task> noFactor = () => 1.AsTask();
             if (!Changed())
-                return onSuccessWithRollback(() => 1.AsTask());
+                return onSuccessWithRollback(noFactor);
 
-            var deleteRollback = MutateLookupTable(existingRowKey, existingPartitionKey, memberInfo,
-                    repository,
-                    (rowAndParitionKeys) => rowAndParitionKeys
-                        .NullToEmpty()
-                        .Where(kvp => kvp.Key != rowKeyRef));
-            var additionRollback = MutateLookupTable(existingRowKey, existingPartitionKey, memberInfo,
+            IEnumerable<Task<Func<Task>>> GetDeleteRollbacks()
+            {
+                if (existingPartitionKey.IsNullOrWhiteSpace() || existingPartitionKey.IsNullOrWhiteSpace())
+                    yield break;
+                yield return MutateLookupTable(existingRowKey, existingPartitionKey, memberInfo,
+                        repository,
+                        (rowAndParitionKeys) => rowAndParitionKeys
+                            .NullToEmpty()
+                            .Where(kvp => kvp.Key != rowKeyRef));
+            }
+            var deleteRollback = GetDeleteRollbacks();
+
+            IEnumerable<Task<Func<Task>>> GetAdditionRollbacks()
+            {
+                if (updatedRowKey.IsNullOrWhiteSpace() || updatedPartitionKey.IsNullOrWhiteSpace())
+                    yield break;
+                yield return MutateLookupTable(updatedRowKey, updatedPartitionKey, memberInfo,
                     repository,
                     (rowAndParitionKeys) => rowAndParitionKeys
                         .NullToEmpty()
                         .Append(rowKeyRef.PairWithValue(partitionKeyRef)));
+            }
+            var additionRollback = GetAdditionRollbacks();
 
-            var allRollbacks = await deleteRollback.AsArray().Append(additionRollback).WhenAllAsync();
+            var allRollbacks = await deleteRollback.Concat(additionRollback).WhenAllAsync();
             Func<Task> allRollback =
                 () =>
                 {

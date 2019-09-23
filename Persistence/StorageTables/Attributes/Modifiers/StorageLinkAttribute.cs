@@ -39,8 +39,12 @@ namespace EastFive.Persistence.Azure.StorageTables
         }
 
         public IEnumerableAsync<IRefAst> GetKeys(object memberValue,
-                MemberInfo memberInfo, Driver.AzureTableDriverDynamic repository)
+            MemberInfo memberInfo, Driver.AzureTableDriverDynamic repository,
+            KeyValuePair<MemberInfo, object>[] queries)
         {
+            if (!queries.IsDefaultNullOrEmpty())
+                throw new ArgumentException("Exactly one query param is valid for StorageLinkAttribute.");
+
             var tableName = GetLookupTableName(memberInfo);
 
             var rowKey = memberInfo.StorageComputeRowKey(memberValue,

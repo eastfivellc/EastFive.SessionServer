@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,7 +13,8 @@ namespace EastFive.Persistence.Azure.StorageTables
     public interface IProvideFindBy
     {
         IEnumerableAsync<IRefAst> GetKeys(object memberValue,
-                MemberInfo memberInfo, Driver.AzureTableDriverDynamic repository);
+            MemberInfo memberInfo, Driver.AzureTableDriverDynamic repository,
+            KeyValuePair<MemberInfo, object>[] queries);
     }
 
     public interface IProvideFindByAsync

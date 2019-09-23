@@ -26,11 +26,12 @@ using EastFive.Linq;
 using BlackBarLabs.Extensions;
 using EastFive.Collections.Generic;
 using BlackBarLabs.Api;
+using EastFive.Azure.Auth;
 
 namespace EastFive.Api.Azure.Credentials
 {
     [Attributes.IntegrationName(PinterestProvider.IntegrationName)]
-    public class PinterestProvider : IProvideLogin
+    public class PinterestProvider : IProvideLogin, IProvideSession, EastFive.Azure.Auth.IProvideIntegration
     {
         public const string IntegrationName = "Pinterest";
         public string Method => IntegrationName;
@@ -204,6 +205,34 @@ namespace EastFive.Api.Azure.Credentials
         public Uri GetSignupUrl(Guid state, Uri responseControllerLocation, Func<Type, Uri> controllerToLocation)
         {
             return default(Uri);
+        }
+
+        public Task<bool> SupportsSessionAsync(EastFive.Azure.Auth.Session session)
+        {
+            return true.AsTask();
+        }
+
+        public string GetDefaultName(IDictionary<string, string> extraParams)
+        {
+            return Method;
+        }
+
+        public Task<bool> SupportsIntegrationAsync(Guid accountId)
+        {
+            return true.AsTask();
+        }
+
+        [Obsolete]
+        public Task<TResult> UserParametersAsync<TResult>(Guid actorId, 
+            System.Security.Claims.Claim[] claims,
+            IDictionary<string, string> extraParams,
+            Func<
+                IDictionary<string, string>, 
+                IDictionary<string, Type>, 
+                IDictionary<string, string>,
+                TResult> onSuccess)
+        {
+            throw new NotImplementedException();
         }
 
         #endregion

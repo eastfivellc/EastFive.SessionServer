@@ -1,4 +1,20 @@
-﻿using BlackBarLabs.Extensions;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Net;
+using System.Net.Http;
+using System.Reflection;
+using System.Text;
+using System.Threading.Tasks;
+
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.WindowsAzure.Storage.RetryPolicies;
+using Microsoft.WindowsAzure.Storage.Table;
+
+using BlackBarLabs.Extensions;
 using BlackBarLabs.Persistence.Azure;
 using BlackBarLabs.Persistence.Azure.StorageTables;
 using EastFive.Analytics;
@@ -12,20 +28,6 @@ using EastFive.Linq.Async;
 using EastFive.Linq.Expressions;
 using EastFive.Reflection;
 using EastFive.Serialization;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
-using Microsoft.WindowsAzure.Storage.RetryPolicies;
-using Microsoft.WindowsAzure.Storage.Table;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Net;
-using System.Net.Http;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace EastFive.Persistence.Azure.StorageTables.Driver
 {
@@ -252,6 +254,9 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
            CloudTable table = default)
         {
             var tableEntity = GetEntity(entity);
+            if(tableEntity.RowKey.IsNullOrWhiteSpace())
+                throw new ArgumentException("RowKey must have value.");
+
             if(table.IsDefaultOrNull())
                 table = GetTable<TEntity>();
             return await await tableEntity.ExecuteCreateModifiersAsync<Task<TResult>>(this,
@@ -832,6 +837,16 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
         }
 
         public IEnumerableAsync<TEntity> FindBy<TRefEntity, TEntity>(IRef<TRefEntity> entityRef,
+                Expression<Func<TEntity, IRef<TRefEntity>>> by,
+                Expression<Func<TEntity, bool>> query1 = default,
+                Expression<Func<TEntity, bool>> query2 = default)
+            where TEntity : IReferenceable
+            where TRefEntity : IReferenceable
+        {
+            return FindByInternal(entityRef, by, query1, query2);
+        }
+
+        public IEnumerableAsync<TEntity> FindBy<TRefEntity, TEntity>(IRef<TRefEntity> entityRef,
                 Expression<Func<TEntity, IRef<IReferenceable>>> by)
             where TEntity : IReferenceable
             where TRefEntity : IReferenceable
@@ -863,7 +878,8 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
         }
 
         private IEnumerableAsync<TEntity> FindByInternal<TMatch, TEntity>(object findByValue,
-                Expression<Func<TEntity, TMatch>> by)
+                Expression<Func<TEntity, TMatch>> by,
+                params Expression<Func<TEntity, bool>> [] queries)
             where TEntity : IReferenceable
         {
             return by.MemberInfo(
@@ -874,7 +890,16 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                         .First<IProvideFindBy, IEnumerableAsync<TEntity>>(
                             (attr, next) =>
                             {
-                                return attr.GetKeys(findByValue, memberCandidate, this)
+                                var memberAssignments = queries
+                                    .Select(
+                                        query =>
+                                        {
+                                            var memberInfo = (query).MemberComparison(out ExpressionType operand, out object value);
+                                            return memberInfo.PairWithValue(value);
+                                        })
+                                    .ToArray();
+
+                                return attr.GetKeys(findByValue, memberCandidate, this, memberAssignments)
                                     .Select(
                                         rowParitionKeyKvp =>
                                         {

@@ -1,4 +1,5 @@
 ﻿using BlackBarLabs.Persistence.Azure.StorageTables;
+using EastFive.Extensions;
 using EastFive.Linq.Expressions;
 using System;
 using System.Collections.Generic;
@@ -14,7 +15,9 @@ namespace EastFive.Persistence.Azure.StorageTables
     {
         public virtual string ComputeRowKey(object memberValue, MemberInfo memberInfo)
         {
-            var propertyValueType = memberInfo.GetMemberType();
+            if (memberValue.IsDefaultOrNull())
+                return null;
+            var propertyValueType = memberValue.GetType(); // memberInfo.GetMemberType();
             if (typeof(Guid).IsAssignableFrom(propertyValueType))
             {
                 var guidValue = (Guid)memberValue;

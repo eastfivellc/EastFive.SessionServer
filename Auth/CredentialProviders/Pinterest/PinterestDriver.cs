@@ -173,7 +173,7 @@ namespace EastFive.Api.Azure.Credentials
             /// The user’s profile image. The response returns the image’s URL, width and height.
             /// </summary>
             [JsonProperty]
-            public IDictionary<string, Image> image;
+            public IDictionary<string, ImageLink> image;
         }
 
         public Task<TResult> BoardsAsync<TResult>(
@@ -181,7 +181,7 @@ namespace EastFive.Api.Azure.Credentials
             Func<string, TResult> onFailure)
         {
             return GetAsync<Board[], TResult>("me/boards",
-                    default,
+                    "url,creator,created_at,description,counts,image",
                 (boards) => onFound(boards),
                 onFailure);
         }

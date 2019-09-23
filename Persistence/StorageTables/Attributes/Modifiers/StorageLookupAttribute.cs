@@ -34,21 +34,33 @@ namespace EastFive.Persistence.Azure.StorageTables
 
         public interface IScope
         {
-            string GetHashValue(MemberInfo memberInfo);
+            string Scope { get; }
+
+            IRefAst MutateReference(IRefAst lookupKeyCurrent, MemberInfo key, object value);
         }
 
         public class ScopingAttribute : Attribute, IScope
         {
             public string Scope { get; set; }
 
+            public bool Facet { get; set; } = false;
+
             public ScopingAttribute(string scope)
             {
                 this.Scope = scope;
             }
 
-            public string GetHashValue(MemberInfo memberInfo)
+            public IRefAst MutateReference(IRefAst lookupKeyCurrent, MemberInfo key, object value)
             {
-                return this.Scope;
+                var valueStr = GetStringValue(key, value);
+                if (this.Facet)
+                    return lookupKeyCurrent.RowKey.AsAstRef(valueStr);
+                return $"{lookupKeyCurrent.RowKey}{valueStr}".AsAstRef(lookupKeyCurrent.ParitionKey);
+            }
+
+            protected virtual string GetStringValue(MemberInfo key, object value)
+            {
+                return (string)value;
             }
         }
 
@@ -65,19 +77,6 @@ namespace EastFive.Persistence.Azure.StorageTables
 
         public virtual string ComputeLookupPartitionKey(object memberValue, MemberInfo memberInfo, string rowKey)
         {
-            var scopes = memberInfo.DeclaringType
-                .GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                .Where(member => member.ContainsAttributeInterface<IScope>())
-                .Select(
-                    member =>
-                    {
-                        return member.GetAttributesInterface<IScope>().First()
-                            .GetHashValue(member);
-                    })
-                .Join(string.Empty);
-            if (scopes.HasBlackSpace())
-                return scopes;
-
             if (!this.PartitionAttribute.IsDefaultOrNull())
             {
                 var partitionKeyComputer = (IComputeAzureStorageTablePartitionKey)Activator.CreateInstance(RowKeyAttribute);
@@ -88,18 +87,6 @@ namespace EastFive.Persistence.Azure.StorageTables
                 () => new StandardParititionKeyAttribute());
         }
 
-        //public virtual IRefAst< ComputeLookupRef(object memberValue, MemberInfo memberInfo, string rowKey)
-        //{
-        //    // TODO: Check for Scopes
-        //    if (!this.PartitionAttribute.IsDefaultOrNull())
-        //    {
-        //        var partitionKeyComputer = (IComputeAzureStorageTablePartitionKey)Activator.CreateInstance(RowKeyAttribute);
-        //        return partitionKeyComputer.ComputePartitionKey(memberValue, memberInfo, rowKey);
-        //    }
-        //    return memberInfo.StorageComputePartitionKey(memberValue, rowKey,
-        //        () => new StandardParititionKeyAttribute());
-        //}
-
         private string GetLookupTableName(MemberInfo memberInfo)
         {
             if (LookupTableName.HasBlackSpace())
@@ -108,13 +95,33 @@ namespace EastFive.Persistence.Azure.StorageTables
         }
 
         public IEnumerableAsync<IRefAst> GetKeys(object memberValue,
-                MemberInfo memberInfo, Driver.AzureTableDriverDynamic repository)
+            MemberInfo memberInfo, Driver.AzureTableDriverDynamic repository,
+            KeyValuePair<MemberInfo, object>[] queries)
         {
             var tableName = GetLookupTableName(memberInfo);
             var lookupRowKey = ComputeLookupRowKey(memberValue, memberInfo);
             var lookupPartitionKey = ComputeLookupPartitionKey(memberValue, memberInfo, lookupRowKey);
+            var lookupKey = queries
+                .NullToEmpty()
+                .OrderBy(kvp => kvp.Key.Name)
+                .Aggregate(
+                    lookupRowKey.AsAstRef(lookupPartitionKey),
+                    (lookupKeyCurrent, kvp) =>
+                    {
+                        var scopings = kvp.Key
+                            .GetAttributesInterface<IScope>()
+                            .Where(attr => attr.Scope == this.Scope);
+                        if (!scopings.Any())
+                        {
+                            // TODO: Error here?
+                            return lookupKeyCurrent;
+                        }
+                        var scoping = scopings.First();
+                        return scoping.MutateReference(lookupKeyCurrent, kvp.Key, kvp.Value);
+                    });
+
             return repository
-                .FindByIdAsync<StorageLookupTable, IEnumerableAsync<IRefAst>>(lookupRowKey, lookupPartitionKey,
+                .FindByIdAsync<StorageLookupTable, IEnumerableAsync<IRefAst>>(lookupKey.RowKey, lookupKey.ParitionKey,
                     (dictEntity) =>
                     {
                         var rowAndParitionKeys = dictEntity.rowAndPartitionKeys
@@ -197,6 +204,38 @@ namespace EastFive.Persistence.Azure.StorageTables
             return partitionKey;
         }
 
+        private IEnumerable<IRefAst> GetKeys<TEntity>(MemberInfo memberInfo, TEntity value)
+        {
+            var rowKeys = GetRowKeys(memberInfo, value);
+            return rowKeys
+                .Where(rowKey => !rowKey.IsDefaultNullOrEmpty())
+                .Select(
+                    rowKey =>
+                    {
+                        var partitionKey = GetPartitionKey(rowKey, value, memberInfo);
+                        return typeof(TEntity)
+                            .GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                            .Where(mi => mi.GetAttributesInterface<IScope>().Any())
+                            .OrderBy(kvp => kvp.Name)
+                            .Aggregate(
+                                rowKey.AsAstRef(partitionKey),
+                                (lookupKeyCurrent, mi) =>
+                                {
+                                    var scopings = mi
+                                        .GetAttributesInterface<IScope>()
+                                        .Where(attr => attr.Scope == this.Scope);
+                                    if (!scopings.Any())
+                                    {
+                                        // TODO: Error here?
+                                        return lookupKeyCurrent;
+                                    }
+                                    var scoping = scopings.First();
+                                    var memberValue = mi.GetValue(value);
+                                    return scoping.MutateReference(lookupKeyCurrent, mi, memberValue);
+                                });
+                    });
+        }
+
         public virtual async Task<TResult> ExecuteAsync<TEntity, TResult>(MemberInfo memberInfo,
                 string rowKeyRef, string partitionKeyRef,
                 TEntity value, IDictionary<string, EntityProperty> dictionary,
@@ -205,13 +244,11 @@ namespace EastFive.Persistence.Azure.StorageTables
             Func<Func<Task>, TResult> onSuccessWithRollback,
             Func<TResult> onFailure)
         {
-            var rowKeys = GetRowKeys(memberInfo, value);
-            var rollbacks = await rowKeys
+            var rollbacks = await GetKeys(memberInfo, value)
                 .Select(
-                    rowKey =>
+                    lookupKey =>
                     {
-                        var partitionKey = GetPartitionKey(rowKey, value, memberInfo);
-                        return MutateLookupTable(rowKey, partitionKey,
+                        return MutateLookupTable(lookupKey.RowKey, lookupKey.ParitionKey,
                             memberInfo, repository, mutateCollection);
                     })
                 .WhenAllAsync();
@@ -232,8 +269,6 @@ namespace EastFive.Persistence.Azure.StorageTables
             return await repository.UpdateOrCreateAsync<StorageLookupTable, Func<Task>>(rowKey, partitionKey,
                 async (created, lookup, saveAsync) =>
                 {
-                    //lookup.rowKey = rowKey;
-                    //lookup.partitionKey = partitionKey;
                     var rollbackRowAndPartitionKeys = lookup.rowAndPartitionKeys; // store for rollback
                     lookup.rowAndPartitionKeys = mutateCollection(rollbackRowAndPartitionKeys)
                         .Distinct(rpKey => rpKey.Key)
@@ -309,16 +344,15 @@ namespace EastFive.Persistence.Azure.StorageTables
             Func<Func<Task>, TResult> onSuccessWithRollback, 
             Func<TResult> onFailure)
         {
-            var existingRowKeys = GetRowKeys(memberInfo, valueExisting);
-            var updatedRowKeys = GetRowKeys(memberInfo, valueUpdated);
-            var rowKeysDeleted = existingRowKeys.Except(updatedRowKeys);
-            var rowKeysAdded = updatedRowKeys.Except(existingRowKeys);
+            var existingRowKeys = GetKeys(memberInfo, valueExisting);
+            var updatedRowKeys = GetKeys(memberInfo, valueUpdated);
+            var rowKeysDeleted = existingRowKeys.Except(updatedRowKeys, rk => $"{rk.RowKey}|{rk.ParitionKey}");
+            var rowKeysAdded = updatedRowKeys.Except(existingRowKeys, rk => $"{rk.RowKey}|{rk.ParitionKey}");
             var deletionRollbacks = rowKeysDeleted
                 .Select(
                     rowKey =>
                     {
-                        var partitionKey = GetPartitionKey(rowKey, valueExisting, memberInfo);
-                        return MutateLookupTable(rowKey, partitionKey, memberInfo,
+                        return MutateLookupTable(rowKey.RowKey, rowKey.ParitionKey, memberInfo,
                             repository,
                             (rowAndParitionKeys) => rowAndParitionKeys
                                 .NullToEmpty()
@@ -328,8 +362,7 @@ namespace EastFive.Persistence.Azure.StorageTables
                  .Select(
                      rowKey =>
                      {
-                         var partitionKey = GetPartitionKey(rowKey, valueExisting, memberInfo);
-                         return MutateLookupTable(rowKey, partitionKey, memberInfo,
+                         return MutateLookupTable(rowKey.RowKey, rowKey.ParitionKey, memberInfo,
                              repository,
                              (rowAndParitionKeys) => rowAndParitionKeys
                                 .NullToEmpty()
