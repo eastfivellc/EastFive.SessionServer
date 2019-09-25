@@ -35,11 +35,24 @@ namespace EastFive.Azure.Media
                 onNotFound);
         }
 
+        public static Task<TResult> LoadImageAsync<TResult>(this IRef<Content> contentRef,
+            Func<System.Drawing.Image, TResult> onFound,
+            Func<TResult> onNotFound)
+        {
+            return contentRef.id.BlobLoadStreamAsync("content",
+                (imageStream, contentType) =>
+                {
+                    var image = System.Drawing.Image.FromStream(imageStream);
+                    return onFound(image);
+                },
+                onNotFound);
+        }
+
         public static Task<TResult> SaveBytesAsync<TResult>(this IRef<Content> contentRef, 
                 byte[] content,
             Func<TResult> onSuccess,
             Func<TResult> onAlreadyExists = default,
-            Func<StorageTables.Driver.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
+            Func<Persistence.StorageTables.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
             string contentType = default,
             Azure.StorageTables.Driver.AzureStorageDriver.RetryDelegate onTimeout = null)
         {
@@ -55,7 +68,7 @@ namespace EastFive.Azure.Media
                 Stream content,
             Func<TResult> onSuccess,
             Func<TResult> onAlreadyExists = default,
-            Func<StorageTables.Driver.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
+            Func<Persistence.StorageTables.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
             string contentType = default,
             Azure.StorageTables.Driver.AzureStorageDriver.RetryDelegate onTimeout = null)
         {

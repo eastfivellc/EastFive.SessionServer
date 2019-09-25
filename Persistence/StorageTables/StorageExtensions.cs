@@ -537,7 +537,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
 
         public static Task<TResult> StorageReplaceAsync<TEntity, TResult>(this TEntity entity,
             Func<TResult> onSuccess,
-            Func<Azure.StorageTables.Driver.ExtendedErrorInformationCodes, string, TResult> onFailure = null,
+            Func<StorageTables.ExtendedErrorInformationCodes, string, TResult> onFailure = null,
             AzureStorageDriver.RetryDelegate onTimeout = null)
             where TEntity : IReferenceable
         {
@@ -810,7 +810,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
 
         public static Task<TResult> BlobCreateAsync<TResult>(this byte[] content, string containerName,
             Func<Guid, TResult> onSuccess,
-            Func<Azure.StorageTables.Driver.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
+            Func<StorageTables.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
             string contentType = default,
             Azure.StorageTables.Driver.AzureStorageDriver.RetryDelegate onTimeout = null)
         {
@@ -826,7 +826,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
         public static Task<TResult> BlobCreateAsync<TResult>(this byte[] content, Guid blobId, string containerName,
             Func<TResult> onSuccess,
             Func<TResult> onAlreadyExists,
-            Func<Azure.StorageTables.Driver.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
+            Func<StorageTables.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
             string contentType = default,
             Azure.StorageTables.Driver.AzureStorageDriver.RetryDelegate onTimeout = null)
         {
@@ -843,7 +843,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
         public static Task<TResult> BlobCreateAsync<TResult>(this Stream content, Guid blobId, string containerName,
             Func<TResult> onSuccess,
             Func<TResult> onAlreadyExists,
-            Func<Azure.StorageTables.Driver.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
+            Func<StorageTables.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
             string contentType = default,
             Azure.StorageTables.Driver.AzureStorageDriver.RetryDelegate onTimeout = null)
         {
@@ -860,7 +860,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
         public static Task<TResult> BlobLoadBytesAsync<TResult>(this Guid blobId, string containerName,
             Func<byte [], string, TResult> onSuccess,
             Func<TResult> onNotFound = default,
-            Func<Azure.StorageTables.Driver.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
+            Func<StorageTables.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
             Azure.StorageTables.Driver.AzureStorageDriver.RetryDelegate onTimeout = null)
         {
             return AzureTableDriverDynamic
@@ -875,7 +875,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
         public static Task<TResult> BlobLoadStreamAsync<TResult>(this Guid blobId, string containerName,
             Func<System.IO.Stream, string, TResult> onSuccess,
             Func<TResult> onNotFound = default,
-            Func<Azure.StorageTables.Driver.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
+            Func<StorageTables.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
             Azure.StorageTables.Driver.AzureStorageDriver.RetryDelegate onTimeout = null)
         {
             return AzureTableDriverDynamic

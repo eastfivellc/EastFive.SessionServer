@@ -1,10 +1,11 @@
 using System;
 using System.Threading.Tasks;
+
 using Microsoft.WindowsAzure.Storage.Table;
+
 using BlackBarLabs.Extensions;
-using EastFive.Extensions;
-using EastFive.Azure.StorageTables.Driver;
 using EastFive;
+using EastFive.Extensions;
 using EastFive.Linq.Async;
 
 namespace BlackBarLabs.Persistence.Azure.StorageTables
@@ -106,7 +107,7 @@ namespace BlackBarLabs.Persistence.Azure.StorageTables
                     return useResultGlobal ? resultGlobal : resultLocal;
                 },
                 onNotFound,
-                default(Func<ExtendedErrorInformationCodes, string, Task<TResult>>),
+                default,
                 GetRetryDelegate());
         }
     }

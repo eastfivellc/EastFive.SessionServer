@@ -337,6 +337,7 @@
     <Compile Include="Persistence\StorageTables\Attributes\PartitionKey\StandardParititionKeyAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\PartitionKey\Partition16x3Attribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\StorageObjectAttribute.cs" />
+    <Compile Include="Persistence\StorageTables\ExtendedErrorInformationCodes.cs" />
     <Compile Include="Persistence\StorageTables\GenericTableEntity.cs" />
     <Compile Include="Persistence\StorageTables\IRefAst.cs" />
     <Compile Include="Persistence\StorageTables\StorageExtensions.cs" />

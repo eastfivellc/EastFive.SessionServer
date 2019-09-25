@@ -20,6 +20,7 @@ using Microsoft.WindowsAzure.Storage.Blob;
 using System.IO;
 using EastFive.Analytics;
 using BlackBarLabs.Web;
+using EastFive.Azure.Persistence.StorageTables;
 
 namespace BlackBarLabs.Persistence.Azure.StorageTables
 {
@@ -576,7 +577,7 @@ namespace BlackBarLabs.Persistence.Azure.StorageTables
                 {
                     var shouldRetry = await storageException.ResolveCreate(table,
                         () => true,
-                        onTimeout);
+                        onTimeout:onTimeout);
                     if (shouldRetry)
                         continue;
 
