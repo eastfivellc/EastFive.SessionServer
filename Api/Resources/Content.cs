@@ -38,12 +38,9 @@ namespace EastFive.Api.Azure.Resources
         public byte[] Data { get; set; }
 
         public const string XPropertyName = "x";
-        [JsonProperty(PropertyName = XPropertyName)]
-        public int X { get; set; }
-
         public const string YPropertyName = "y";
-        [JsonProperty(PropertyName = YPropertyName)]
-        public int Y { get; set; }
+        public const string WPropertyName = "w";
+        public const string HPropertyName = "h";
 
         public const string WidthPropertyName = "width";
         [JsonProperty(PropertyName = WidthPropertyName)]
@@ -140,6 +137,35 @@ namespace EastFive.Api.Azure.Resources
             return response;
         }
 
+        [HttpGet]
+        public static async Task<HttpResponseMessage> QuerySubImageByContentIdAsync(
+                [QueryParameter(CheckFileName = true, Name = ContentIdPropertyName)]Guid contentId,
+                [QueryParameter(Name = XPropertyName)]int x,
+                [QueryParameter(Name = YPropertyName)]int y,
+                [QueryParameter(Name = WPropertyName)]int w,
+                [QueryParameter(Name = HPropertyName)]int h,
+                [OptionalQueryParameter]int? width,
+                [OptionalQueryParameter]int? height,
+                [OptionalQueryParameter]bool? fill,
+            HttpRequestMessage request,
+            System.Web.Http.Routing.UrlHelper url)
+        {
+            var response = await EastFive.Api.Azure.Content.FindContentByContentIdAsync(contentId,
+                (contentType, imageData) =>
+                {
+                    var image = System.Drawing.Image.FromStream(new MemoryStream(imageData));
+                    var newImage = image
+                        .Crop(x, y, w, h)
+                        .Scale(width, height, fill);
+                    
+                    return request.CreateImageResponse(newImage,
+                        filename: contentId.ToString("N"),
+                        contentType: contentType);
+                },
+                () => request.CreateResponse(HttpStatusCode.NotFound),
+                () => request.CreateResponse(HttpStatusCode.Unauthorized));
+            return response;
+        }
 
         public Task<TResult> LoadStreamAsync<TResult>(
             Func<Stream, string, TResult> onFound,

@@ -1,4 +1,5 @@
-﻿using Microsoft.WindowsAzure.Storage.RetryPolicies;
+﻿using EastFive.Azure.Persistence.StorageTables;
+using Microsoft.WindowsAzure.Storage.RetryPolicies;
 using Microsoft.WindowsAzure.Storage.Table;
 using System;
 using System.Collections.Generic;
@@ -22,8 +23,6 @@ namespace EastFive.Azure.StorageTables.Driver
         public delegate Task<TResult> RetryDelegateAsync<TResult>(
             Func<TResult> retry,
             Func<int, TResult> timeout);
-
-
 
         #region Utility methods
 

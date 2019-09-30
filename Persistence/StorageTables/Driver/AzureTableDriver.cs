@@ -1,4 +1,5 @@
-﻿using EastFive.Azure.StorageTables.Driver;
+﻿using EastFive.Azure.Persistence.StorageTables;
+using EastFive.Azure.StorageTables.Driver;
 using EastFive.Extensions;
 using EastFive.Linq;
 using System;

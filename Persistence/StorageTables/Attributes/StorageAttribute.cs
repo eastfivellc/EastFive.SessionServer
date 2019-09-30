@@ -144,6 +144,15 @@ namespace EastFive.Persistence
             if (storageMembers.Any())
                 return true;
 
+            // Nullable custom type
+            if(type.IsNullable())
+            {
+                var structType = type.GenericTypeArguments.First();
+                var structStorageMembers = structType.GetPersistenceAttributes();
+                if (structStorageMembers.Any())
+                    return true;
+            }
+
             if (type.IsArray)
             {
                 var arrayType = type.GetElementType();
@@ -522,6 +531,22 @@ namespace EastFive.Persistence
                 }
             }
 
+            if (type.IsNullable())
+            {
+                if (!allValues.ContainsKey($"{propertyName}____Value"))
+                    return onBound(type.GetDefault());
+                var hasValue = allValues[$"{propertyName}____Value"];
+                if(!hasValue.BooleanValue.HasValue)
+                    return onBound(type.GetDefault());
+                if (!hasValue.BooleanValue.Value)
+                    return onBound(type.GetDefault());
+
+                var structType = type.GenericTypeArguments.First();
+                return BindEntityProperties(propertyName, structType, allValues,
+                    onBound,
+                    onFailedToBind);
+            }
+
             var storageMembers = type.GetPersistenceAttributes();
             if (storageMembers.Any())
             {
@@ -605,6 +630,22 @@ namespace EastFive.Persistence
                         onValues,
                         onNoCast);
                 }
+            }
+
+            if (valueType.IsNullable())
+            {
+                if (value.IsDefaultOrNull())
+                    return onValues("__Value".PairWithValue(new EntityProperty(false)).AsArray());
+
+                var structType = valueType.GenericTypeArguments.First();
+                var valueValue = value.GetNullableValue();
+                var valueKvp = "__Value".PairWithValue(new EntityProperty(true));
+                return CastEntityProperties(valueValue, structType,
+                    (values) =>
+                    {
+                        return onValues(values.Append(valueKvp).ToArray());
+                    },
+                    () => onValues(valueKvp.AsArray()));
             }
 
             var storageMembers = valueType.GetPersistenceAttributes();

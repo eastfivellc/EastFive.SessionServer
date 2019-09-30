@@ -272,22 +272,40 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                         }
                         catch (StorageException ex)
                         {
-                            if (ex.IsProblemResourceAlreadyExists())
-                            {
-                                await rollback();
-                                if (onAlreadyExists.IsDefaultOrNull())
-                                    throw new Api.ResourceAlreadyExistsException();
-                                return onAlreadyExists();
-                            }
-
-                            var shouldRetry = await ex.ResolveCreate(table,
-                                () => true,
-                                onTimeout);
-                            if (shouldRetry)
-                                continue;
-
-                            await rollback();
-                            throw;
+                            return await await ex.ResolveCreate(table,
+                                async () => await await CreateAsync<TEntity, Task<TResult>>(tableEntity,
+                                    (ite) => onSuccess(tableEntity).AsTask(),
+                                    onAlreadyExists:
+                                        async () =>
+                                        {
+                                            await rollback();
+                                            if (onAlreadyExists.IsDefaultOrNull())
+                                                throw new Api.ResourceAlreadyExistsException();
+                                            return onAlreadyExists();
+                                        },
+                                    onFailure:
+                                        async (code, msg) =>
+                                        {
+                                            await rollback();
+                                            return onFailure(code, msg);
+                                        },
+                                    onTimeout: onTimeout, // TODO: Handle rollback with timeout
+                                    table: table),
+                                onFailure:
+                                    async (code, msg) =>
+                                    {
+                                        await rollback();
+                                        return onFailure(code, msg);
+                                    },
+                                onAlreadyExists:
+                                    async () =>
+                                    {
+                                        await rollback();
+                                        if (onAlreadyExists.IsDefaultOrNull())
+                                            throw new Api.ResourceAlreadyExistsException();
+                                        return onAlreadyExists();
+                                    },
+                                onTimeout:onTimeout);
                         }
                         catch (Exception generalEx)
                         {
@@ -486,21 +504,20 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                 }
                 catch (StorageException ex)
                 {
-                    if (ex.IsProblemResourceAlreadyExists())
-                        return onAlreadyExists();
+                    bool shouldRetry = false; // TODO: This is funky
+                    var r = await ex.ResolveCreate(table,
+                        () =>
+                        {
+                            shouldRetry = true;
+                            return default;
+                        },
+                        onFailure: onFailure,
+                        onAlreadyExists: onAlreadyExists,
+                        onTimeout: onTimeout);
 
-                    var shouldRetry = await ex.ResolveCreate(table,
-                        () => true,
-                        onTimeout);
                     if (shouldRetry)
                         continue;
-
-                    if (!onFailure.IsDefaultOrNull())
-                        return ex.ParseStorageException(
-                            onFailure,
-                            () => throw ex);
-
-                    throw;
+                    return r;
                 }
                 catch (Exception generalEx)
                 {
@@ -625,7 +642,9 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             var delete = TableOperation.Delete(entity);
             try
             {
-                await table.ExecuteAsync(delete);
+                var response = await table.ExecuteAsync(delete);
+                if (response.HttpStatusCode == (int)HttpStatusCode.NotFound)
+                    return onNotFound();
                 return success();
             }
             catch (StorageException se)
@@ -1084,7 +1103,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                 {
                     var shouldRetry = await storageException.ResolveCreate(table,
                         () => true,
-                        onTimeout);
+                        onTimeout: onTimeout);
                     if (shouldRetry)
                         continue;
 
@@ -1822,7 +1841,9 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             var delete = TableOperation.Delete(entity);
             try
             {
-                await table.ExecuteAsync(delete);
+               var response = await table.ExecuteAsync(delete);
+                if (response.HttpStatusCode == (int)HttpStatusCode.NotFound)
+                    return onNotFound();
                 return success();
             }
             catch (StorageException se)
