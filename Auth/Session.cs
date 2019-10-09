@@ -11,6 +11,7 @@ using EastFive.Azure.Persistence.AzureStorageTables;
 using EastFive.Extensions;
 using EastFive.Persistence;
 using EastFive.Persistence.Azure.StorageTables;
+using EastFive.Web.Configuration;
 using Newtonsoft.Json;
 
 namespace EastFive.Azure.Auth
@@ -84,7 +85,6 @@ namespace EastFive.Azure.Auth
         [Storage(Name = RefreshTokenPropertyName)]
         public string refreshToken;
 
-
         private static async Task<TResult> GetClaimsAsync<TResult>(
             Api.Azure.AzureApplication application, IRefOptional<Authorization> authorizationRefMaybe,
             Func<IDictionary<string, string>, Guid?, bool, TResult> onClaims,
@@ -94,8 +94,7 @@ namespace EastFive.Azure.Auth
                 return onClaims(new Dictionary<string, string>(), default(Guid?), false);
             var authorizationRef = authorizationRefMaybe.Ref;
 
-            return await EastFive.Web.Configuration.Settings.GetString(
-                EastFive.Api.AppSettings.ActorIdClaimType,
+            return await Api.AppSettings.ActorIdClaimType.ConfigurationString(
                 (accountIdClaimType) =>
                 {
                     return GetSessionAcountAsync(authorizationRef, application,
@@ -112,7 +111,7 @@ namespace EastFive.Azure.Auth
                 (why) => onClaims(new Dictionary<string, string>(), default(Guid?), false).AsTask());
         }
 
-        [Api.HttpGet] //(MatchAllBodyParameters = false)]
+        [Api.HttpGet]
         public static async Task<HttpResponseMessage> GetAsync(
                 [QueryParameter(Name = SessionIdPropertyName, CheckFileName =true)]IRef<Session> sessionRef,
                 EastFive.Api.Controllers.SessionToken security,
@@ -179,8 +178,6 @@ namespace EastFive.Azure.Auth
                 onFailure);
         }
 
-        
-
         [HttpPost] //(MatchAllBodyParameters = false)]
         public async static Task<HttpResponseMessage> CreateAsync(
                 [Property(Name = SessionIdPropertyName)]IRef<Session> sessionId,
@@ -195,11 +192,10 @@ namespace EastFive.Azure.Auth
         {
             session.refreshToken = Security.SecureGuid.Generate().ToString("N");
 
-            return await Web.Configuration.Settings.GetUri(
-                    EastFive.Security.AppSettings.TokenScope,
+            return await Security.AppSettings.TokenScope.ConfigurationUri(
                 scope =>
                 {
-                    return Web.Configuration.Settings.GetDouble(Security.SessionServer.Configuration.AppSettings.TokenExpirationInMinutes,
+                    return Security.SessionServer.Configuration.AppSettings.TokenExpirationInMinutes.ConfigurationDouble(
                         async (tokenExpirationInMinutes) =>
                         {
                             return await await GetClaimsAsync(application, authorizationRefMaybe,
@@ -244,31 +240,30 @@ namespace EastFive.Azure.Auth
             return sessionRef.StorageUpdateAsync(
                 (sessionStorage, saveSessionAsync) =>
                 {
-                    return Web.Configuration.Settings.GetUri(
-                            EastFive.Security.AppSettings.TokenScope,
-                        (scope) =>
+                    return Security.AppSettings.TokenScope.ConfigurationUri(
+                        scope =>
                         {
-                            return Web.Configuration.Settings.GetDouble(Security.SessionServer.Configuration.AppSettings.TokenExpirationInMinutes,
+                            return Security.SessionServer.Configuration.AppSettings.TokenExpirationInMinutes.ConfigurationDouble(
                                 async (tokenExpirationInMinutes) =>
                                 {
                                     return await await GetClaimsAsync(application, authorizationRefMaybe,
-                                    async (claims, accountIdMaybe, authorized) =>
-                                    {
-                                        sessionStorage.authorization = authorizationRefMaybe;
-                                        sessionStorage.authorized = authorized;
-                                        sessionStorage.account = accountIdMaybe;
-                                        return await BlackBarLabs.Security.Tokens.JwtTools.CreateToken(sessionRef.id,
-                                                scope, TimeSpan.FromMinutes(tokenExpirationInMinutes), claims,
-                                            async (tokenNew) =>
-                                            {
-                                                sessionStorage.token = tokenNew;
-                                                await saveSessionAsync(sessionStorage);
-                                                return onUpdated(sessionStorage);
-                                            },
-                                            (missingConfig) => onConfigurationFailure("Missing", missingConfig).AsTask(),
-                                            (configName, issue) => onConfigurationFailure(configName, issue).AsTask());
-                                    },
-                                    why => onFailure(why).AsTask());
+                                        async (claims, accountIdMaybe, authorized) =>
+                                        {
+                                            sessionStorage.authorization = authorizationRefMaybe;
+                                            sessionStorage.authorized = authorized;
+                                            sessionStorage.account = accountIdMaybe;
+                                            return await BlackBarLabs.Security.Tokens.JwtTools.CreateToken(sessionRef.id,
+                                                    scope, TimeSpan.FromMinutes(tokenExpirationInMinutes), claims,
+                                                async (tokenNew) =>
+                                                {
+                                                    sessionStorage.token = tokenNew;
+                                                    await saveSessionAsync(sessionStorage);
+                                                    return onUpdated(sessionStorage);
+                                                },
+                                                (missingConfig) => onConfigurationFailure("Missing", missingConfig).AsTask(),
+                                                (configName, issue) => onConfigurationFailure(configName, issue).AsTask());
+                                        },
+                                        why => onFailure(why).AsTask());
                                 },
                                 why => onConfigurationFailure("Missing", why).AsTask());
                         },
@@ -335,7 +330,7 @@ namespace EastFive.Azure.Auth
             Func<Guid, bool, TResult> onSuccess,
             Func<string, bool, TResult> onFailure)
         {
-            var isSuperAdminAuth = Web.Configuration.Settings.GetGuid(EastFive.Api.AppSettings.AuthorizationIdSuperAdmin,
+            var isSuperAdminAuth = Api.AppSettings.AuthorizationIdSuperAdmin.ConfigurationGuid(
                 (authorizationIdSuperAdmin) =>
                 {
                     if (authorizationIdSuperAdmin == authorizationRef.id)
@@ -347,7 +342,7 @@ namespace EastFive.Azure.Auth
             if (!isSuperAdminAuth)
                 return onFailure(failureMessage, authorized);
 
-            return Web.Configuration.Settings.GetGuid(EastFive.Api.AppSettings.ActorIdSuperAdmin,
+            return Api.AppSettings.ActorIdSuperAdmin.ConfigurationGuid(
                 (authorizationIdSuperAdmin) => onSuccess(authorizationIdSuperAdmin, authorized),
                 (dontCare) => onFailure(failureMessage, authorized));
         }

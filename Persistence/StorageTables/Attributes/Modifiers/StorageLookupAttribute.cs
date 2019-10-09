@@ -1,5 +1,6 @@
 ﻿using BlackBarLabs;
 using BlackBarLabs.Extensions;
+using BlackBarLabs.Persistence.Azure.Attributes;
 using BlackBarLabs.Persistence.Azure.StorageTables;
 using EastFive.Azure.Persistence.AzureStorageTables;
 using EastFive.Collections.Generic;
@@ -22,7 +23,7 @@ using System.Threading.Tasks;
 namespace EastFive.Persistence.Azure.StorageTables
 {
     public class StorageLookupAttribute : Attribute,
-        IModifyAzureStorageTableSave, IProvideFindBy
+        IModifyAzureStorageTableSave, IProvideFindBy, IBackupStorage
     {
         public string LookupTableName { get; set; }
 
@@ -31,6 +32,18 @@ namespace EastFive.Persistence.Azure.StorageTables
         public Type RowKeyAttribute { get; set; }
 
         public Type PartitionAttribute { get; set; }
+
+        public string GetTableName(object declaringInfo)
+        {
+            if (!typeof(MemberInfo).IsAssignableFrom(declaringInfo.GetType()))
+                throw new ArgumentException("delcaringInfo", $"{typeof(StorageLookupAttribute).FullName} cannot decorate {declaringInfo.GetType().FullName}");
+            return GetLookupTableName(declaringInfo as MemberInfo);
+        }
+
+        public Func<StringKeyGenerator> PartitionKeyGenerator =>
+            () => (StringKeyGenerator)Activator.CreateInstance(PartitionAttribute);
+        public Func<StringKeyGenerator> RowKeyGenerator =>
+            () => (StringKeyGenerator)Activator.CreateInstance(RowKeyAttribute);
 
         public interface IScope
         {
