@@ -1,4 +1,6 @@
-﻿using EastFive.Linq;
+﻿using EastFive;
+using EastFive.Linq;
+using EastFive.Persistence.Azure.StorageTables;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -179,7 +181,7 @@ namespace BlackBarLabs.Persistence.Azure.Attributes
     }
 
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
-    public class StorageResourceAttribute : Attribute
+    public class StorageResourceAttribute : Attribute, IBackupStorage
     {
         public StorageResourceAttribute() : this(typeof(NoKeyGenerator), typeof(NoKeyGenerator)) { }
 
@@ -187,13 +189,34 @@ namespace BlackBarLabs.Persistence.Azure.Attributes
 
         public StorageResourceAttribute(Type partitionKeyGenerator, Type rowKeyGenerator)
         {
-            PartitionKeyGenerator = 
+            PartitionKeyGenerator =
                 () => (StringKeyGenerator)Activator.CreateInstance(partitionKeyGenerator);
-            RowKeyGenerator = 
+            RowKeyGenerator =
                 () => (StringKeyGenerator)Activator.CreateInstance(rowKeyGenerator);
         }
 
         public Func<StringKeyGenerator> PartitionKeyGenerator { get; set; }
         public Func<StringKeyGenerator> RowKeyGenerator { get; set; }
+
+        public string GetTableName(object declaringInfo)
+        {
+            var declaringType = (Type)declaringInfo;
+            return declaringType.GetCustomAttributes<StorageTableAttribute>()
+                .First(
+                    (storageTableAttr, next) =>
+                    {
+                        if (storageTableAttr.TableName.HasBlackSpace())
+                            return storageTableAttr.TableName;
+                        return next();
+                    },
+                    () => declaringType.Name);
+        }
+    }
+
+    public interface IBackupStorage
+    {
+        string GetTableName(object declaringInfo);
+        Func<StringKeyGenerator> PartitionKeyGenerator { get; }
+        Func<StringKeyGenerator> RowKeyGenerator { get; }
     }
 }
