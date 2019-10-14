@@ -606,7 +606,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
         public static Task<TResult> StorageDeleteAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
             Func<TResult> onSuccess,
             Func<TResult> onNotFound = default)
-            where TEntity : struct, IReferenceable
+            where TEntity : IReferenceable
         {
             return AzureTableDriverDynamic
                 .FromSettings()
@@ -649,9 +649,19 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
 
         public static IEnumerableAsync<TResult> StorageDeleteBatch<TEntity, TResult>(this IEnumerableAsync<IRef<TEntity>> entityRefs,
             Func<Microsoft.WindowsAzure.Storage.Table.TableResult, TResult> onSuccess)
-            where TEntity : struct, IReferenceable
+            where TEntity : IReferenceable
         {
             var documentIds = entityRefs.Select(entity => entity.id);
+            return AzureTableDriverDynamic
+                .FromSettings()
+                .DeleteBatch<TEntity, TResult>(documentIds, onSuccess);
+        }
+
+        public static IEnumerableAsync<TResult> StorageDeleteBatch<TEntity, TResult>(this IEnumerableAsync<TEntity> entities,
+            Func<Microsoft.WindowsAzure.Storage.Table.TableResult, TResult> onSuccess)
+            where TEntity : IReferenceable
+        {
+            var documentIds = entities.Select(entity => entity.id);
             return AzureTableDriverDynamic
                 .FromSettings()
                 .DeleteBatch<TEntity, TResult>(documentIds, onSuccess);

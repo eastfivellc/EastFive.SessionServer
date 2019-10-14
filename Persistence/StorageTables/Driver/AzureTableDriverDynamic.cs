@@ -1794,10 +1794,9 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
         public async Task<TResult> DeleteAsync<TEntity, TResult>(string rowKey, string partitionKey,
             Func<TEntity, Func<Task>, Task<TResult>> onFound,
             Func<TResult> onNotFound,
-            Func<ExtendedErrorInformationCodes, string, TResult> onFailure =
-                default(Func<ExtendedErrorInformationCodes, string, TResult>),
-            AzureStorageDriver.RetryDelegate onTimeout = default(AzureStorageDriver.RetryDelegate),
-            string tableName = default(string))
+            Func<ExtendedErrorInformationCodes, string, TResult> onFailure = default,
+            AzureStorageDriver.RetryDelegate onTimeout = default,
+            string tableName = default)
         {
             return await await FindByIdAsync(rowKey, partitionKey,
                 (TEntity entity) =>
@@ -1815,6 +1814,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                         });
                 },
                 onNotFound.AsAsyncFunc(),
+                onFailure: onFailure.AsAsyncFunc(),
                 onTimeout: onTimeout,
                 tableName: tableName);
         }
@@ -1822,10 +1822,9 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
         public async Task<TResult> DeleteAsync<TData, TResult>(IAzureStorageTableEntity<TData> entity,
             Func<TResult> success,
             Func<TResult> onNotFound,
-            Func<ExtendedErrorInformationCodes, string, TResult> onFailure =
-                default(Func<ExtendedErrorInformationCodes, string, TResult>),
-            AzureStorageDriver.RetryDelegate onTimeout = default(AzureStorageDriver.RetryDelegate),
-            string tableName = default(string))
+            Func<ExtendedErrorInformationCodes, string, TResult> onFailure = default,
+            AzureStorageDriver.RetryDelegate onTimeout = default,
+            string tableName = default)
         {
             var table = tableName.HasBlackSpace() ?
                 this.TableClient.GetTableReference(tableName)
@@ -1891,7 +1890,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
 
         public IEnumerableAsync<TResult> DeleteBatch<TData, TResult>(IEnumerableAsync<Guid> documentIds,
             Func<TableResult, TResult> result,
-            AzureStorageDriver.RetryDelegate onTimeout = default(AzureStorageDriver.RetryDelegate))
+            AzureStorageDriver.RetryDelegate onTimeout = default)
             where TData : IReferenceable
         {
             return documentIds

@@ -147,8 +147,7 @@ namespace EastFive.Api.Azure.Resources
                 [OptionalQueryParameter]int? width,
                 [OptionalQueryParameter]int? height,
                 [OptionalQueryParameter]bool? fill,
-            HttpRequestMessage request,
-            System.Web.Http.Routing.UrlHelper url)
+            HttpRequestMessage request)
         {
             var response = await EastFive.Api.Azure.Content.FindContentByContentIdAsync(contentId,
                 (contentType, imageData) =>
@@ -165,6 +164,24 @@ namespace EastFive.Api.Azure.Resources
                 () => request.CreateResponse(HttpStatusCode.NotFound),
                 () => request.CreateResponse(HttpStatusCode.Unauthorized));
             return response;
+        }
+
+        [HttpGet]
+        public static Task<HttpResponseMessage> QuerySubImageByContentIdAsync(
+                [HashedFile(Name = ContentIdPropertyName)]CheckSumRef<Content> contentId,
+                [QueryParameter(Name = XPropertyName)]int x,
+                [QueryParameter(Name = YPropertyName)]int y,
+                [QueryParameter(Name = WPropertyName)]int w,
+                [QueryParameter(Name = HPropertyName)]int h,
+                [OptionalQueryParameter]int? width,
+                [OptionalQueryParameter]int? height,
+                [OptionalQueryParameter]bool? fill,
+            HttpRequestMessage request)
+        {
+            return QuerySubImageByContentIdAsync(contentId.resourceRef.id,
+                x, y, w, h,
+                width, height, fill,
+                request);
         }
 
         public Task<TResult> LoadStreamAsync<TResult>(

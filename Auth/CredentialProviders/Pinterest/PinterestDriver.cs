@@ -274,7 +274,7 @@ namespace EastFive.Api.Azure.Credentials
             Func<string, TResult> onFailure)
         {
             return GetAsync<Pin[], TResult>($"boards/{boardId}/pins",
-                "created_at,link,creator,note,color,counts,media,attribution,image", //,metadata",
+                "created_at,link,creator,note,color,counts,media,attribution,image,metadata",
                 (boards) => onFound(boards),
                 onFailure);
         }
