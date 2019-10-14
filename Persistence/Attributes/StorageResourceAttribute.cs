@@ -200,8 +200,6 @@ namespace BlackBarLabs.Persistence.Azure.Attributes
 
         public string GetTableName(object declaringInfo)
         {
-            if (typeof(Type).IsAssignableFrom(declaringInfo.GetType()))
-                throw new ArgumentException($"Should not have been able to declare StorageResourceAttribute on type {declaringInfo.GetType().FullName}");
             var declaringType = (Type)declaringInfo;
             return declaringType.GetCustomAttributes<StorageTableAttribute>()
                 .First(
