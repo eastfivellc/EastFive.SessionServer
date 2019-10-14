@@ -28,24 +28,6 @@ namespace EastFive.Azure
         public const string CDNApiRoutePrefix = "EastFive.Azure.CDNApiRoutePrefix";
 
         [Config]
-        public static class Pinterest
-        {
-            [ConfigKey("Key used to identify the application to pinterest.",
-                DeploymentOverrides.Suggested,
-                Location = "Pinterest admin portal",
-                DeploymentSecurityConcern = false,
-                PrivateRepositoryOnly =true)]
-            public const string AppKey = "EastFive.Pinterest.AppKey";
-
-            [ConfigKey("Key used to securte the application to pinterest.",
-                DeploymentOverrides.Suggested,
-                Location = "Pinterest admin portal",
-                DeploymentSecurityConcern = false,
-                PrivateRepositoryOnly = true)]
-            public const string AppSecret = "EastFive.Pinterest.AppSecret";
-        }
-
-        [Config]
         public static class CognitiveServices
         {
             [ConfigKey("Endpoint used by computer vision to analyze image Content.",
@@ -81,7 +63,7 @@ namespace EastFive.Azure
 
 namespace EastFive.Security.SessionServer.Configuration
 {
-    [ConfigAttribute]
+    [Config]
     public static class AppSettings
     {
         //public const string Storage = "EastFive.Security.SessionServer.Storage";
@@ -114,32 +96,7 @@ namespace EastFive.Security.SessionServer.Configuration
             Location = "The URL that the webUI is deployed")]
         public const string ServiceBusConnectionString = "EastFive.Api.Workers.ServiceBusConnectionString";
 
-        [ConfigAttribute]
-        public static class OAuth
-        {
-            [ConfigAttribute]
-            public static class Lightspeed
-            {
-                [ConfigKey("1/2 of the authorization process." + 
-                    "This value is used to identify the connecting client or environment.",
-                    DeploymentOverrides.Desireable,
-                    DeploymentSecurityConcern = false,
-                    Location = "This value is first provided at https://cloud.merchantos.com/oauth/register.php but is used to authenticate so cannot be recovered.",
-                    MoreInfo = "Sometimes referred to as the client id by Lightspeed.",
-                    PrivateRepositoryOnly = false)]
-                public const string ClientKey = "OrderOwl.Integrations.Lightspeed.ClientKey";
-
-                [ConfigKey("Other 1/2 of the authorization process." +
-                    "This value is used to authenticate the connecting client or environment.",
-                    DeploymentOverrides.Desireable,
-                    DeploymentSecurityConcern = false,
-                    Location = "This value is first provided at https://cloud.merchantos.com/oauth/register.php but is used to authenticate so cannot be recovered." +
-                        "Value can be updated at: https://cloud.merchantos.com/oauth/update.php",
-                    MoreInfo = "Sometimes referred to as the client id by Lightspeed.",
-                    PrivateRepositoryOnly = true)]
-                public const string ClientSecret = "OrderOwl.Integrations.Lightspeed.ClientSecret";
-            }
-        }
+        
 
         public static class TokenCredential
         {

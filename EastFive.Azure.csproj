@@ -292,8 +292,6 @@
     <Compile Include="Api\Resources\Queries\MonitoringQuery.cs" />
     <Compile Include="Attributes\ASTFVCPropertyAttribute.cs" />
     <Compile Include="Attributes\IntegrationAttribute.cs" />
-    <Compile Include="Auth\CredentialProviders\Pinterest\PinterestDriver.cs" />
-    <Compile Include="Auth\CredentialProviders\Pinterest\PinterestProvider.cs" />
     <Compile Include="Auth\XIntegration.cs" />
     <Compile Include="Auth\Whoami.cs" />
     <Compile Include="Functions\FunctionApplication.cs" />
@@ -420,7 +418,6 @@
     <Compile Include="Api\Controllers\BaseController.cs" />
     <Compile Include="Api\Controllers\ActAsUserController.cs" />
     <Compile Include="Api\Controllers\Credentials\AADB2CResponseController.cs" />
-    <Compile Include="Api\Controllers\Credentials\OAuthResponseLightspeedController.cs" />
     <Compile Include="Api\Controllers\AuthenticationRequestLinkController.cs" />
     <Compile Include="Api\Controllers\CredentialController.cs" />
     <Compile Include="Api\Controllers\Credentials\ResponseController.cs" />
@@ -487,7 +484,6 @@
     <Compile Include="Configuration\AuthorizationParameters.cs" />
     <Compile Include="Configuration\ClaimsDefinitions.cs" />
     <Compile Include="Configuration\EmailTemplateDefinitions.cs" />
-    <Compile Include="Auth\CredentialProviders\LightspeedProvider.cs" />
     <Compile Include="Auth\CredentialProviders\PingProvider.cs" />
     <Compile Include="Auth\CredentialProviders\SAMLProvider.cs" />
     <Compile Include="Auth\CredentialProviders\TokenCredentialProvider.cs" />

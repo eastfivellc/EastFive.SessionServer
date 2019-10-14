@@ -1,5 +1,8 @@
 ﻿using BlackBarLabs.Api;
 using BlackBarLabs.Extensions;
+using EastFive.Api;
+using EastFive.Extensions;
+using EastFive.Web.Configuration;
 using System;
 using System.Net;
 using System.Net.Http;
@@ -12,8 +15,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
     {
         public IHttpActionResult Get()
         {
-            var response = EastFive.Web.Configuration.Settings.GetString(
-                EastFive.Security.SessionServer.Configuration.AppSettings.AppleAppSiteAssociationId,
+            var response = SessionServer.Configuration.AppSettings.AppleAppSiteAssociationId.ConfigurationString(
                 (appId) =>
                 {
                     var content = new
@@ -37,7 +39,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 (why) => this.Request.CreateResponse(HttpStatusCode.NotFound)
                     .AddReason(why));
             
-            return this.ActionResult(() => response.ToTask());
+            return this.ActionResult(() => response.AsTask());
         }
     }
 }

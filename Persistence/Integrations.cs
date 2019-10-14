@@ -22,6 +22,7 @@ using EastFive.Linq;
 using EastFive.Security.SessionServer;
 using EastFive.Extensions;
 using EastFive.Api.Azure.Credentials;
+using EastFive.Linq.Async;
 
 namespace EastFive.Azure.Persistence.Persistence
 {
@@ -164,8 +165,8 @@ namespace EastFive.Azure.Persistence.Persistence
                     async (AccessDocument[] accessDocs) =>
                     {
                         return await accessDocs
-                            .FlatMap(
-                                async (accessDoc, next, skip) =>
+                            .Select(
+                                async (accessDoc) =>
                                 {
                                     var integration = new EastFive.Azure.Integration
                                     {
@@ -173,43 +174,12 @@ namespace EastFive.Azure.Persistence.Persistence
                                         method = accessDoc.Method,
                                         parameters = accessDoc.GetExtraParams(),
                                     };
-                                    return await await this.dataContext.AuthenticationRequests.FindByIdAsync(accessDoc.LookupId,
-                                        (authorization) => next(integration.PairWithValue(authorization.AsOptional())),
-                                        () => next(integration.PairWithValue(default(Security.SessionServer.Persistence.AuthenticationRequest?))));
-                                },
-                                async (IEnumerable<KeyValuePair<EastFive.Azure.Integration, Security.SessionServer.Persistence.AuthenticationRequest?>> integrations) =>
-                                {
-                                    bool[] x = await integrations
-                                        .Select(
-                                            async integration =>
-                                            {
-                                                if (!integration.Value.HasValue)
-                                                    return false;
-                                                var authorizationRequest = integration.Value.Value;
-                                                if (!authorizationRequest.authorizationId.HasValue)
-                                                    return false;
-                                                if (!integration.Key.parameters.ContainsKey(LightspeedProvider.accountIdKey))
-                                                    return false;
-                                                return await this.dataContext.CredentialMappings.CreateCredentialMappingAsync(
-                                                        Guid.NewGuid(), integration.Key.method, 
-                                                        integration.Key.parameters[LightspeedProvider.accountIdKey],
-                                                        authorizationRequest.authorizationId.Value,
-                                                    () =>
-                                                    {
-                                                        return true;
-                                                    },
-                                                    () =>
-                                                    {
-                                                        return false;
-                                                    },
-                                                    () =>
-                                                    {
-                                                        return false;
-                                                    });
-                                            })
-                                        .WhenAllAsync();
-                                    return integrations.ToArray();
-                                });
+                                    return await this.dataContext.AuthenticationRequests.FindByIdAsync(accessDoc.LookupId,
+                                        (authorization) => integration.PairWithValue(authorization.AsOptional()),
+                                        () => integration.PairWithValue(default(Security.SessionServer.Persistence.AuthenticationRequest?)));
+                                })
+                            .AsyncEnumerable()
+                            .ToArrayAsync();
                     });
             }
             catch (Exception ex)

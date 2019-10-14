@@ -38,12 +38,7 @@ namespace EastFive.Api.Azure.Credentials
             Func<InternalProvider, TResult> onLoaded,
             Func<string, TResult> onConfigurationNotAvailable)
         {
-            return Web.Configuration.Settings.GetString(Security.SessionServer.Configuration.AppSettings.OAuth.Lightspeed.ClientKey,
-                (clientKey) =>
-                {
-                    return onLoaded(new InternalProvider());
-                },
-                onConfigurationNotAvailable);
+            return onLoaded(new InternalProvider());
         }
 
         [Attributes.IntegrationName(IntegrationName)]
