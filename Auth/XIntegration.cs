@@ -78,6 +78,26 @@ namespace EastFive.Azure.Auth
             return await onContents(kvps.SelectKeys());
         }
 
+        [Api.HttpGet]
+        public async static Task<HttpResponseMessage> GetByAccountAsync(
+                [QueryParameter(Name = Authorization.MethodPropertyName)]IRef<Method> method,
+                Api.Azure.AzureApplication application, SessionToken security,
+            MultipartResponseAsync<XIntegration> onContents,
+            ReferencedDocumentNotFoundResponse<object> onAccountNotFound,
+            UnauthorizedResponse onUnauthorized)
+        {
+            if (!security.accountIdMaybe.HasValue)
+                return onUnauthorized();
+
+            var accountId = security.accountIdMaybe.Value;
+            if (!await application.CanAdministerCredentialAsync(accountId, security))
+                return onUnauthorized();
+
+            var kvps = GetIntegrationsByAccount(accountId)
+                .Where(integration => integration.Value.Method.id == method.id);
+            return await onContents(kvps.SelectKeys());
+        }
+
         [Api.HttpPost] //(MatchAllBodyParameters = false)]
         public async static Task<HttpResponseMessage> CreateAsync(
                 [Property(Name = AccountPropertyName)]Guid accountId,
