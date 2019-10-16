@@ -23,11 +23,13 @@ using System.Threading.Tasks;
 namespace EastFive.Persistence.Azure.StorageTables
 {
     public class StorageLookupAttribute : Attribute,
-        IModifyAzureStorageTableSave, IProvideFindBy, IBackupStorage
+        IModifyAzureStorageTableSave, IProvideFindBy, IBackupStorage, CascadeDeleteAttribute.IDeleteCascaded
     {
         public string LookupTableName { get; set; }
 
         public string Scope { get; set; }
+
+        public string Cascade { get; set; }
 
         public Type RowKeyAttribute { get; set; }
 
@@ -92,7 +94,7 @@ namespace EastFive.Persistence.Azure.StorageTables
         {
             if (!this.PartitionAttribute.IsDefaultOrNull())
             {
-                var partitionKeyComputer = (IComputeAzureStorageTablePartitionKey)Activator.CreateInstance(RowKeyAttribute);
+                var partitionKeyComputer = (IComputeAzureStorageTablePartitionKey)Activator.CreateInstance(PartitionAttribute);
                 return partitionKeyComputer.ComputePartitionKey(memberValue, memberInfo, rowKey);
             }
 
@@ -126,7 +128,7 @@ namespace EastFive.Persistence.Azure.StorageTables
                             .Where(attr => attr.Scope == this.Scope);
                         if (!scopings.Any())
                         {
-                            // TODO: Error here?
+                            // TODO: Error here if scope is set?
                             return lookupKeyCurrent;
                         }
                         var scoping = scopings.First();
@@ -423,6 +425,41 @@ namespace EastFive.Persistence.Azure.StorageTables
                 member = member,
                 handler = handlerOnFailure,
             };
+        }
+
+        public Task<Func<Task>> CascadeDeleteAsync<TEntity>(MemberInfo memberInfo,
+            string rowKeyRef, string partitionKeyRef,
+            TEntity memberValue, IDictionary<string, EntityProperty> dictionary,
+            AzureTableDriverDynamic repository)
+        {
+            var tableName = GetLookupTableName(memberInfo);
+
+            return repository
+                .DeleteAsync<StorageLookupTable, Func<Task>>(rowKeyRef, partitionKeyRef,
+                    async (lookupTable, deleteAsync) =>
+                    {
+                        var lookupEntity = await deleteAsync();
+                        var rollbacks = await lookupTable
+                            .rowAndPartitionKeys
+                            .NullToEmpty()
+                            .Select(rowParitionKeyKvp =>
+                                repository.DeleteAsync<Func<Task>>(rowParitionKeyKvp.Key, rowParitionKeyKvp.Value, memberInfo.DeclaringType,
+                                    (entity, data) => 
+                                        () => (Task)repository.CreateAsync(entity, memberInfo.DeclaringType,
+                                            (x) => true, () => false),
+                                    () => 
+                                        () => 1.AsTask()))
+                            .AsyncEnumerable()
+                            .Append(
+                                () => repository.CreateAsync(lookupEntity, tableName,
+                                    x => true,
+                                    () => false))
+                            .ToArrayAsync();
+                        Func<Task> rollbacksAll = () => Task.WhenAll(rollbacks.Select(rollback => rollback()));
+                        return rollbacksAll;
+                    },
+                    () => () => 0.AsTask(),
+                    tableName: tableName);
         }
 
         private class FaildModificationHandler<TResult> : IHandleFailedModifications<TResult>

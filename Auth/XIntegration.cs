@@ -53,7 +53,9 @@ namespace EastFive.Azure.Auth
         [ApiProperty(PropertyName = AccountPropertyName)]
         [JsonProperty(PropertyName = AccountPropertyName)]
         [Storage]
-        [StorageLookup(PartitionAttribute = typeof(StandardPartitionKeyGenerator), RowKeyAttribute = typeof(RowKeyPrefixAttribute))]
+        [StorageLookup(
+            RowKeyAttribute = typeof(RowKeyAttribute),
+            PartitionAttribute = typeof(StandardParititionKeyAttribute))]
         public Guid accountId { get; set; }
         
         public const string AuthorizationPropertyName = "authorization";
@@ -75,6 +77,26 @@ namespace EastFive.Azure.Auth
                 return onUnauthorized();
 
             var kvps = GetIntegrationsByAccount(accountId);
+            return await onContents(kvps.SelectKeys());
+        }
+
+        [Api.HttpGet]
+        public async static Task<HttpResponseMessage> GetByAccountAsync(
+                [QueryParameter(Name = Authorization.MethodPropertyName)]IRef<Method> method,
+                Api.Azure.AzureApplication application, SessionToken security,
+            MultipartResponseAsync<XIntegration> onContents,
+            ReferencedDocumentNotFoundResponse<object> onAccountNotFound,
+            UnauthorizedResponse onUnauthorized)
+        {
+            if (!security.accountIdMaybe.HasValue)
+                return onUnauthorized();
+
+            var accountId = security.accountIdMaybe.Value;
+            if (!await application.CanAdministerCredentialAsync(accountId, security))
+                return onUnauthorized();
+
+            var kvps = GetIntegrationsByAccount(accountId)
+                .Where(integration => integration.Value.Method.id == method.id);
             return await onContents(kvps.SelectKeys());
         }
 

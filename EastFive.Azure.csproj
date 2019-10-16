@@ -331,6 +331,7 @@
     <Compile Include="Persistence\StorageTables\Attributes\Modifiers\MigratePartitionAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\Modifiers\StorageConstraintUniqueAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\Modifiers\DateTimeLookupAttribute.cs" />
+    <Compile Include="Persistence\StorageTables\Attributes\Modifiers\CascadeDeleteAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\PartitionKey\RowKeyPrefixAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\PartitionKey\StandardParititionKeyAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\PartitionKey\Partition16x3Attribute.cs" />
