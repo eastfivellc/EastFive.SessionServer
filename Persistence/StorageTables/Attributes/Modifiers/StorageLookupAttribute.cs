@@ -94,7 +94,7 @@ namespace EastFive.Persistence.Azure.StorageTables
         {
             if (!this.PartitionAttribute.IsDefaultOrNull())
             {
-                var partitionKeyComputer = (IComputeAzureStorageTablePartitionKey)Activator.CreateInstance(RowKeyAttribute);
+                var partitionKeyComputer = (IComputeAzureStorageTablePartitionKey)Activator.CreateInstance(PartitionAttribute);
                 return partitionKeyComputer.ComputePartitionKey(memberValue, memberInfo, rowKey);
             }
 
