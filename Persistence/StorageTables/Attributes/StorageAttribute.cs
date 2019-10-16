@@ -921,28 +921,4 @@ namespace EastFive.Persistence
         }
     }
 
-    [Obsolete("Use StorageAttribute, RowKeyAttribute, PartitionKeyAttribute")]
-    public class StoragePropertyAttribute : StorageAttribute,
-        IPersistInAzureStorageTables, IModifyAzureStorageTablePartitionKey
-    {
-        public string GeneratePartitionKey(string rowKey, object value, MemberInfo memberInfo)
-        {
-            return rowKey.GeneratePartitionKey();
-        }
-
-        public IEnumerable<string> GeneratePartitionKeys(Type type, int skip, int top)
-        {
-            return Enumerable
-                .Range(
-                    -1 * (KeyExtensions.PartitionKeyRemainder - 1),
-                    (KeyExtensions.PartitionKeyRemainder * 2) - 1)
-                .Select(index => index.ToString());
-        }
-
-        public EntityType ParsePartitionKey<EntityType>(EntityType entity, string value, MemberInfo memberInfo)
-        {
-            // discard since generated from ID
-            return entity;
-        }
-    }
 }

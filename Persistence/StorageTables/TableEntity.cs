@@ -41,40 +41,15 @@ namespace EastFive.Persistence.Azure.StorageTables
                        .Where(propInfo => propInfo.ContainsAttributeInterface<IModifyAzureStorageTableRowKey>())
                        .Select(propInfo => propInfo.GetAttributesInterface<IModifyAzureStorageTableRowKey>().PairWithKey(propInfo))
                        .Where(propInfoKvp => propInfoKvp.Value.Any());
-                if (rowKeyModificationProperties.Any())
-                {
-                    var rowKeyModificationProperty = rowKeyModificationProperties.First();
-                    var rowKeyProperty = rowKeyModificationProperty.Key;
-                    var rowKeyGenerator = rowKeyModificationProperty.Value.First();
-                    var rowKeyValue = rowKeyGenerator.GenerateRowKey(this.Entity, rowKeyProperty);
-                    return rowKeyValue;
-                }
+                if (!rowKeyModificationProperties.Any())
+                    throw new Exception("Entity does not contain row key attribute");
+                
+                var rowKeyModificationProperty = rowKeyModificationProperties.First();
+                var rowKeyProperty = rowKeyModificationProperty.Key;
+                var rowKeyGenerator = rowKeyModificationProperty.Value.First();
+                var rowKeyValue = rowKeyGenerator.GenerateRowKey(this.Entity, rowKeyProperty);
+                return rowKeyValue;
 
-                {
-                    var attributesKvp = properties
-                        .Where(propInfo => propInfo.ContainsCustomAttribute<StoragePropertyAttribute>())
-                        .Select(propInfo => propInfo.PairWithKey(propInfo.GetCustomAttribute<StoragePropertyAttribute>()))
-                        .ToArray();
-                    var rowKeyProperty = attributesKvp
-                        .First<KeyValuePair<StoragePropertyAttribute, MemberInfo>, MemberInfo>(
-                            (attr, next) =>
-                            {
-                                if (attr.Key.IsRowKey)
-                                    return attr.Value;
-                                return next();
-                            },
-                            () => throw new Exception("Entity does not contain row key attribute"));
-
-                    var rowKeyValue = rowKeyProperty.GetValue(Entity);
-                    if (rowKeyValue.GetType().IsSubClassOfGeneric(typeof(IReferenceable)))
-                    {
-                        var rowKeyRef = rowKeyValue as IReferenceable;
-                        var rowKeyRefString = rowKeyRef.id.AsRowKey();
-                        return rowKeyRefString;
-                    }
-                    var rowKeyString = ((Guid)rowKeyValue).AsRowKey();
-                    return rowKeyString;
-                }
             }
             set
             {

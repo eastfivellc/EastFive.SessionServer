@@ -118,6 +118,7 @@ namespace EastFive.Persistence.Azure.StorageTables
             return await result;
         }
 
+        // Called via reflection
         public virtual Task<TResult> ExecuteTypedAsync<TEntity, TRefEntity, TResult>(IRef<TRefEntity> entityRef,
                 MemberInfo memberInfo,
                 string rowKeyRef, string partitionKeyRef,

@@ -11,15 +11,20 @@ using System.Threading.Tasks;
 namespace EastFive.Persistence.Azure.StorageTables
 {
     public class ParititionKeyAttribute : Attribute,
-        IModifyAzureStorageTablePartitionKey
+        IModifyAzureStorageTablePartitionKey, IComputeAzureStorageTablePartitionKey
     {
+        public string ComputePartitionKey(object memberValue, MemberInfo memberInfo, string rowKey)
+        {
+            throw new NotImplementedException();
+        }
+
         public string GeneratePartitionKey(string rowKey, object value, MemberInfo memberInfo)
         {
             var partitionValue = memberInfo.GetValue(value);
             return (string)partitionValue;
         }
 
-        public IEnumerable<string> GeneratePartitionKeys(Type type, int skip, int top)
+        public virtual IEnumerable<string> GeneratePartitionKeys(Type type, int skip, int top)
         {
             throw new NotImplementedException();
         }

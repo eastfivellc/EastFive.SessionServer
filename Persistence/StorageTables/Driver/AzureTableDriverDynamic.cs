@@ -1300,7 +1300,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
         //}
 
         public IEnumerableAsync<TEntity> FindByIdsAsync<TEntity>(
-                KeyValuePair<string, string>[] rowKeys,
+                IRefAst[] rowKeys,
             CloudTable table = default(CloudTable),
             AzureStorageDriver.RetryDelegate onTimeout =
                 default(AzureStorageDriver.RetryDelegate))
