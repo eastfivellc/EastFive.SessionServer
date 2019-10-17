@@ -21,7 +21,7 @@ namespace EastFive.Persistence.Azure.StorageTables
     {
         Task<TResult> GetKeysAsync<TEntity, TResult>(IRef<TEntity> value,
                 Driver.AzureTableDriverDynamic repository, MemberInfo memberInfo,
-            Func<IEnumerableAsync<KeyValuePair<string, string>>, TResult> onRefFound,
+            Func<IEnumerableAsync<IRefAst>, TResult> onRefFound,
             Func<TResult> onRefNotFound)
             where TEntity : IReferenceable;
     }

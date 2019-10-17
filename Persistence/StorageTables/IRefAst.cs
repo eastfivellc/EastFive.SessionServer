@@ -9,7 +9,7 @@ namespace EastFive.Persistence.Azure.StorageTables
     public interface IRefAst
     {
         string RowKey { get; }
-        string ParitionKey { get; }
+        string PartitionKey { get; }
     }
 
     public interface IRefAst<TEntity> : IRefAst
@@ -20,12 +20,12 @@ namespace EastFive.Persistence.Azure.StorageTables
     {
         public string RowKey { get; private set; }
 
-        public string ParitionKey { get; private set; }
+        public string PartitionKey { get; private set; }
 
         public RefAst(string rowKey, string partitionKey)
         {
             this.RowKey = rowKey;
-            this.ParitionKey = partitionKey;
+            this.PartitionKey = partitionKey;
         }
     }
 

@@ -70,7 +70,7 @@ namespace EastFive.Persistence.Azure.StorageTables
                 var valueStr = GetStringValue(key, value);
                 if (this.Facet)
                     return lookupKeyCurrent.RowKey.AsAstRef(valueStr);
-                return $"{lookupKeyCurrent.RowKey}{valueStr}".AsAstRef(lookupKeyCurrent.ParitionKey);
+                return $"{lookupKeyCurrent.RowKey}{valueStr}".AsAstRef(lookupKeyCurrent.PartitionKey);
             }
 
             protected virtual string GetStringValue(MemberInfo key, object value)
@@ -136,7 +136,7 @@ namespace EastFive.Persistence.Azure.StorageTables
                     });
 
             return repository
-                .FindByIdAsync<StorageLookupTable, IEnumerableAsync<IRefAst>>(lookupKey.RowKey, lookupKey.ParitionKey,
+                .FindByIdAsync<StorageLookupTable, IEnumerableAsync<IRefAst>>(lookupKey.RowKey, lookupKey.PartitionKey,
                     (dictEntity) =>
                     {
                         var rowAndParitionKeys = dictEntity.rowAndPartitionKeys
@@ -263,7 +263,7 @@ namespace EastFive.Persistence.Azure.StorageTables
                 .Select(
                     lookupKey =>
                     {
-                        return MutateLookupTable(lookupKey.RowKey, lookupKey.ParitionKey,
+                        return MutateLookupTable(lookupKey.RowKey, lookupKey.PartitionKey,
                             memberInfo, repository, mutateCollection);
                     })
                 .WhenAllAsync();
@@ -361,13 +361,13 @@ namespace EastFive.Persistence.Azure.StorageTables
         {
             var existingRowKeys = GetKeys(memberInfo, valueExisting);
             var updatedRowKeys = GetKeys(memberInfo, valueUpdated);
-            var rowKeysDeleted = existingRowKeys.Except(updatedRowKeys, rk => $"{rk.RowKey}|{rk.ParitionKey}");
-            var rowKeysAdded = updatedRowKeys.Except(existingRowKeys, rk => $"{rk.RowKey}|{rk.ParitionKey}");
+            var rowKeysDeleted = existingRowKeys.Except(updatedRowKeys, rk => $"{rk.RowKey}|{rk.PartitionKey}");
+            var rowKeysAdded = updatedRowKeys.Except(existingRowKeys, rk => $"{rk.RowKey}|{rk.PartitionKey}");
             var deletionRollbacks = rowKeysDeleted
                 .Select(
                     rowKey =>
                     {
-                        return MutateLookupTable(rowKey.RowKey, rowKey.ParitionKey, memberInfo,
+                        return MutateLookupTable(rowKey.RowKey, rowKey.PartitionKey, memberInfo,
                             repository,
                             (rowAndParitionKeys) => rowAndParitionKeys
                                 .NullToEmpty()
@@ -377,7 +377,7 @@ namespace EastFive.Persistence.Azure.StorageTables
                  .Select(
                      rowKey =>
                      {
-                         return MutateLookupTable(rowKey.RowKey, rowKey.ParitionKey, memberInfo,
+                         return MutateLookupTable(rowKey.RowKey, rowKey.PartitionKey, memberInfo,
                              repository,
                              (rowAndParitionKeys) => rowAndParitionKeys
                                 .NullToEmpty()

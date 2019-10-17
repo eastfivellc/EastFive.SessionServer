@@ -53,13 +53,14 @@ namespace EastFive.Persistence
     {
         string ComputePartitionKey(object memberValue, MemberInfo memberInfo,
             string rowKey);
+
+        IEnumerable<string> GeneratePartitionKeys(Type type, int skip, int top);
     }
 
     public interface IModifyAzureStorageTablePartitionKey
     {
         string GeneratePartitionKey(string rowKey, object value, MemberInfo memberInfo);
         EntityType ParsePartitionKey<EntityType>(EntityType entity, string value, MemberInfo memberInfo);
-        IEnumerable<string> GeneratePartitionKeys(Type type, int skip, int top);
     }
 
     public interface IModifyAzureStorageTableLastModified
@@ -67,6 +68,13 @@ namespace EastFive.Persistence
         DateTimeOffset GenerateLastModified(object value, MemberInfo memberInfo);
 
         EntityType ParseLastModfied<EntityType>(EntityType entity, DateTimeOffset value, MemberInfo memberInfo);
+    }
+
+    public interface IProvideTableQuery
+    {
+        string ProvideTableQuery<TEntity>(MemberInfo memberInfo, 
+            Expression<Func<TEntity, bool>> filter,
+            out Func<TEntity, bool> postFilter);
     }
 
     public class StorageAttribute : Attribute,
