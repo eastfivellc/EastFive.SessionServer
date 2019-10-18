@@ -222,6 +222,30 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
 
         #region QUERY / GET
 
+        public static IEnumerableAsync<object> StorageGetAll(this Type type)
+        {
+            var findAllMethod = typeof(StorageExtensions)
+                .GetMethod("StorageGetAllInternal", BindingFlags.Public | BindingFlags.Static);
+            var findAllCast = findAllMethod.MakeGenericMethod(type.AsArray());
+            return (IEnumerableAsync<object>)findAllCast.Invoke(null, new object[] { });
+        }
+
+        public static IEnumerableAsync<object> StorageGetAllInternal<TEntity>()
+        {
+            var driver = AzureTableDriverDynamic.FromSettings();
+            Expression<Func<TEntity, bool>> expr = e => true;
+            return driver
+                .FindAll(expr)
+                .Select(
+                    doc =>
+                    {
+                        return driver.InsertOrReplaceAsync(doc,
+                            updated => doc.PairWithKey(updated));
+                    })
+                .Await()
+                .Select(doc => (object)doc);
+        }
+
         public static Task<TResult> StorageGetAsync<TEntity, TResult>(this Guid resourceId,
             Func<TEntity, TResult> onFound,
             Func<TResult> onDoesNotExists = default(Func<TResult>),
@@ -290,6 +314,18 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                 .FindBy(entityRef, idProperty, query1, query2);
         }
 
+
+        public static IEnumerableAsync<TEntity> StorageGetBy<TProperty, TEntity>(this TProperty propertyValue,
+                Expression<Func<TEntity, TProperty>> propertyExpr,
+                Expression<Func<TEntity, bool>> query1 = default,
+                Expression<Func<TEntity, bool>> query2 = default)
+            where TEntity : IReferenceable
+        {
+            return AzureTableDriverDynamic
+                .FromSettings()
+                .FindBy(propertyValue, propertyExpr, query1, query2);
+        }
+
         public static IEnumerableAsync<TEntity> StorageGetByIdProperty<TRefEntity, TEntity>(this IRef<TRefEntity> entityRef,
                 Expression<Func<TEntity, IRefOptional<TRefEntity>>> idProperty)
             where TEntity : IReferenceable
@@ -311,12 +347,14 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
         }
 
         public static IEnumerableAsync<TEntity> StorageGetByIdProperty<TEntity>(this Guid entityId,
-                Expression<Func<TEntity, Guid>> idProperty)
+                Expression<Func<TEntity, Guid>> idProperty,
+                Expression<Func<TEntity, bool>> query1 = default,
+                Expression<Func<TEntity, bool>> query2 = default)
             where TEntity : IReferenceable
         {
             return AzureTableDriverDynamic
                 .FromSettings()
-                .FindBy(entityId, idProperty);
+                .FindBy(entityId, idProperty, query1, query2);
         }
 
         public static IEnumerableAsync<TEntity> StorageGetByIdsProperty<TRefEntity, TEntity>(this IRef<TRefEntity> entityRef,

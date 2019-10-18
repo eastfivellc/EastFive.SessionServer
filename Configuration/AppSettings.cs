@@ -11,9 +11,12 @@ namespace EastFive.Azure
            Location = "Azure Portal | Storage | Connection Strings",
            PrivateRepositoryOnly = true)]
         public const string ASTConnectionStringKey = EastFive.Azure.Persistence.AppSettings.Storage; // "EastFive.Azure.StorageTables.ConnectionString";
+        public const string TableInformationToken = "EastFive.Azure.StorageTables.TableInformationToken";
 
         public const string ApplicationInsightsKey = "EastFive.Security.SessionServer.ApplicationInsightsKey";
         public const string ApiSecurityKey = "EastFive.Security.SessionServer.ApiSecurityKey";
+
+        
 
         public const string SpaSiteLocation = "EastFive.Azure.SpaSiteLocation";
 

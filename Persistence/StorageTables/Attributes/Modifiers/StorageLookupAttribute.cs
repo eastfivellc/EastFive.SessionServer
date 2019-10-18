@@ -43,9 +43,18 @@ namespace EastFive.Persistence.Azure.StorageTables
         }
 
         public Func<StringKeyGenerator> PartitionKeyGenerator =>
-            () => (StringKeyGenerator)Activator.CreateInstance(PartitionAttribute);
+            () =>
+            {
+                if(PartitionAttribute.IsDefaultOrNull())
+                    return (StringKeyGenerator)new StandardParititionKeyAttribute();
+                return (StringKeyGenerator)Activator.CreateInstance(PartitionAttribute);
+            };
+
         public Func<StringKeyGenerator> RowKeyGenerator =>
-            () => (StringKeyGenerator)Activator.CreateInstance(RowKeyAttribute);
+            () =>
+            {
+                return (StringKeyGenerator)Activator.CreateInstance(RowKeyAttribute);
+            };
 
         public interface IScope
         {
@@ -75,7 +84,19 @@ namespace EastFive.Persistence.Azure.StorageTables
 
             protected virtual string GetStringValue(MemberInfo key, object value)
             {
+                if(typeof(Guid).IsAssignableFrom(key.GetMemberType()))
+                {
+                    var guidValue = (Guid)value;
+                    return guidValue.ToString("N");
+                }
                 return (string)value;
+            }
+        }
+
+        public class Scoping2Attribute : ScopingAttribute
+        {
+            public Scoping2Attribute(string scope) : base(scope)
+            {
             }
         }
 

@@ -404,14 +404,13 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             return FindByInternal(entityRef, by);
         }
 
-        public IEnumerableAsync<TEntity> FindBy<TRefEntity, TEntity>(IRef<TRefEntity> entityRef,
-                Expression<Func<TEntity, IRef<TRefEntity>>> by,
+        public IEnumerableAsync<TEntity> FindBy<TProperty, TEntity>(TProperty propertyValue,
+                Expression<Func<TEntity, TProperty>> propertyExpr,
                 Expression<Func<TEntity, bool>> query1 = default,
                 Expression<Func<TEntity, bool>> query2 = default)
             where TEntity : IReferenceable
-            where TRefEntity : IReferenceable
         {
-            return FindByInternal(entityRef, by, query1, query2);
+            return FindByInternal(propertyValue, propertyExpr, query1, query2);
         }
 
         public IEnumerableAsync<TEntity> FindBy<TRefEntity, TEntity>(IRef<TRefEntity> entityRef,
@@ -423,10 +422,12 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
         }
 
         public IEnumerableAsync<TEntity> FindBy<TEntity>(Guid entityId,
-                Expression<Func<TEntity, Guid>> by)
+                Expression<Func<TEntity, Guid>> by,
+                Expression<Func<TEntity, bool>> query1 = default,
+                Expression<Func<TEntity, bool>> query2 = default)
             where TEntity : IReferenceable
         {
-            return FindByInternal(entityId.AsRef<IReferenceable>(), by);
+            return FindByInternal(entityId.AsRef<IReferenceable>(), by, query1, query2);
         }
 
         public IEnumerableAsync<TEntity> FindBy<TRefEntity, TEntity>(IRef<TRefEntity> entityRef,
@@ -459,6 +460,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                             (attr, next) =>
                             {
                                 var memberAssignments = queries
+                                    .Where(query => !query.IsDefaultOrNull())
                                     .Select(
                                         query =>
                                         {
@@ -941,7 +943,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
         }
 
         public async Task<TResult> InsertOrReplaceAsync<TData, TResult>(ITableEntity tableEntity,
-            Func<bool, ITableEntity, TResult> success,
+            Func<bool, IAzureStorageTableEntity<TData>, TResult> success,
             Func<ExtendedErrorInformationCodes, string, TResult> onFailure = null,
             AzureStorageDriver.RetryDelegate onTimeout = null)
         {
@@ -951,7 +953,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             {
                 TableResult result = await table.ExecuteAsync(update);
                 var created = result.HttpStatusCode == ((int)HttpStatusCode.Created);
-                var entity = result.Result as ITableEntity;
+                var entity = result.Result as IAzureStorageTableEntity<TData>;
                 return success(created, entity);
             }
             catch (StorageException ex)
@@ -1166,6 +1168,8 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
 
         #region CREATE
 
+        #region No modifiers
+
         /// <summary>
         /// Table is created using <paramref name="tableName"/> and no modifiers are executed.
         /// </summary>
@@ -1243,6 +1247,42 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                 onAlreadyExists: onAlreadyExists,
                 onFailure: onFailure,
                 onTimeout: onTimeout);
+        }
+
+        #endregion
+
+        public async Task<TResult> InsertOrReplaceAsync<TData, TResult>(TData data,
+            Func<bool, TResult> onUpdate,
+            Func<ExtendedErrorInformationCodes, string, TResult> onFailure = default,
+            AzureStorageDriver.RetryDelegateAsync<Task<TResult>> onTimeoutAsync = default,
+            string tableName = default)
+        {
+            var table = default(CloudTable);
+            if (tableName.HasBlackSpace())
+                table = this.TableClient.GetTableReference(tableName);
+            if (table.IsDefaultOrNull())
+                table = tableName.HasBlackSpace() ?
+                    this.TableClient.GetTableReference(tableName)
+                    :
+                    table = GetTable<TData>();
+
+            var entity = GetEntity(data);
+
+            var repo = this;
+            return await await this.InsertOrReplaceAsync<TData, Task<TResult>>(entity,
+                (created, updatedEntity) =>
+                {
+                    if (created)
+                    {
+                        return entity.ExecuteCreateModifiersAsync<TResult>(repo,
+                            (discardRollback) => onUpdate(true),
+                            (errors) => throw new Exception());
+                    }
+                    return entity.ExecuteUpdateModifiersAsync(updatedEntity, repo,
+                        (discardRollback) => onUpdate(false),
+                        (members) => throw new Exception("Modifiers failed to execute."));
+                },
+                onFailure: onFailure.AsAsyncFunc());
         }
 
         public Task<TResult> UpdateOrCreateAsync<TData, TResult>(string rowKey, string partitionKey,
@@ -1332,8 +1372,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                 Guid rowId,
             Func<TEntity, TResult> onSuccess,
             Func<TResult> onNotFound,
-            Func<ExtendedErrorInformationCodes, string, TResult> onFailure =
-                default(Func<ExtendedErrorInformationCodes, string, TResult>),
+            Func<ExtendedErrorInformationCodes, string, TResult> onFailure = default,
             CloudTable table = default(CloudTable),
             AzureStorageDriver.RetryDelegate onTimeout =
                 default(AzureStorageDriver.RetryDelegate))
@@ -1391,7 +1430,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
 
         public IEnumerableAsync<TEntity> FindAll<TEntity>(
             Expression<Func<TEntity, bool>> filter,
-            CloudTable table = default(CloudTable),
+            CloudTable table = default,
             int numberOfTimesToRetry = DefaultNumberOfTimesToRetry)
         {
             Func<TEntity, bool> postFilter = (e) => true;
