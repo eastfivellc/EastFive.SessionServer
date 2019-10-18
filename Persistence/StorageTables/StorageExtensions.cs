@@ -384,12 +384,18 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
         public static IEnumerableAsync<TEntity> StorageGet<TEntity>(this IRefs<TEntity> entityRefs)
             where TEntity : IReferenceable
         {
+            var partitionMember = typeof(TEntity).GetMembers()
+                .Where(member => member.ContainsAttributeInterface<EastFive.Persistence.IComputeAzureStorageTablePartitionKey>())
+                .First();
+            var partitionGenerator = partitionMember
+                .GetAttributeInterface<EastFive.Persistence.IComputeAzureStorageTablePartitionKey>();
             var keys = entityRefs.refs
                 .Select(
                     r =>
                     {
                         var rowKey = r.StorageComputeRowKey();
-                        return rowKey.AsAstRef(rowKey);
+                        var partition = partitionGenerator.ComputePartitionKey(r, partitionMember, rowKey);
+                        return rowKey.AsAstRef(partition);
                     })
                 .ToArray();
             return AzureTableDriverDynamic
