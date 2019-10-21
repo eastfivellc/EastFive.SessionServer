@@ -290,9 +290,15 @@ namespace EastFive.Persistence.Azure.StorageTables
 
             if (typeof(Guid) == type)
             {
-                var guidValue = value.GuidValue;
-                return onBound(guidValue);
+                if (value.PropertyType == EdmType.Guid)
+                {
+                    var guidValue = value.GuidValue;
+                    return onBound(guidValue);
+                }
+                return onBound(default(Guid)); // This seems to be the best move in case of data migration
+                // return onFailedToBind();
             }
+            // TODO: Type check the rest of these like GUID
             if (typeof(long) == type)
             {
                 var longValue = value.Int64Value;
