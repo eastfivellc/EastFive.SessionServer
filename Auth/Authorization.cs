@@ -87,6 +87,7 @@ namespace EastFive.Azure.Auth
         public IDictionary<string, string> parameters;
 
         [Storage]
+        [StorageQuery]
         [JsonIgnore]
         public bool authorized;
 

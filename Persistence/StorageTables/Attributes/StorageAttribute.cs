@@ -77,6 +77,17 @@ namespace EastFive.Persistence
             out Func<TEntity, bool> postFilter);
     }
 
+    public class StorageQueryAttribute : Attribute, IProvideTableQuery
+    {
+        public string ProvideTableQuery<TEntity>(MemberInfo memberInfo,
+            Expression<Func<TEntity, bool>> filter, 
+            out Func<TEntity, bool> postFilter)
+        {
+            var query = filter.ResolveFilter(out postFilter);
+            return query;
+        }
+    }
+
     public class StorageAttribute : Attribute,
         IPersistInAzureStorageTables
     {
