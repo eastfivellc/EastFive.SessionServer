@@ -810,6 +810,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
             Func<Guid, TResult> onSuccess,
             Func<StorageTables.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
             string contentType = default,
+            IDictionary<string, string> metadata = default,
             Azure.StorageTables.Driver.AzureStorageDriver.RetryDelegate onTimeout = null)
         {
             var blobId = Guid.NewGuid();
@@ -818,6 +819,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                 () => throw new Exception("Guid not unique."),
                 onFailure: onFailure,
                 contentType: contentType,
+                metadata: metadata,
                 onTimeout: onTimeout);
         }
 
@@ -826,6 +828,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
             Func<TResult> onAlreadyExists,
             Func<StorageTables.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
             string contentType = default,
+            IDictionary<string, string> metadata = default,
             Azure.StorageTables.Driver.AzureStorageDriver.RetryDelegate onTimeout = null)
         {
             return AzureTableDriverDynamic
@@ -835,6 +838,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                     onAlreadyExists: onAlreadyExists,
                     onFailure: onFailure,
                     contentType: contentType,
+                    metadata: metadata,
                     onTimeout: onTimeout);
         }
 
@@ -843,6 +847,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
             Func<TResult> onAlreadyExists,
             Func<StorageTables.ExtendedErrorInformationCodes, string, TResult> onFailure = default,
             string contentType = default,
+            IDictionary<string, string> metadata = default,
             Azure.StorageTables.Driver.AzureStorageDriver.RetryDelegate onTimeout = null)
         {
             return AzureTableDriverDynamic
@@ -852,6 +857,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                     onAlreadyExists: onAlreadyExists,
                     onFailure: onFailure,
                     contentType: contentType,
+                    metadata: metadata,
                     onTimeout: onTimeout);
         }
 

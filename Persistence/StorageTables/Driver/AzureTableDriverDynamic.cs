@@ -2281,24 +2281,35 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             Func<TResult> onAlreadyExists = default,
             Func<ExtendedErrorInformationCodes, string, TResult> onFailure = default,
             string contentType = default,
+            IDictionary<string, string> metadata = default,
             AzureStorageDriver.RetryDelegate onTimeout = default)
         {
             var container = this.BlobClient.GetContainerReference(containerName);
-            container.CreateIfNotExists();
-            var blockBlob = container.GetBlockBlobReference(blobId.ToString("N"));
             try
             {
+                container.CreateIfNotExists();
+                var blockBlob = container.GetBlockBlobReference(blobId.ToString("N"));
+
                 if (await blockBlob.ExistsAsync())
                 {
                     if (onAlreadyExists.IsDefault())
                         throw new RecordAlreadyExistsException();
                     return onAlreadyExists();
                 }
+
                 if (contentType.HasBlackSpace())
                     blockBlob.Properties.ContentType = contentType;
+                
                 using (var stream = await blockBlob.OpenWriteAsync())
                 {
                     await stream.WriteAsync(content, 0, content.Length);
+                }
+
+                if (!metadata.IsDefaultNullOrEmpty())
+                {
+                    foreach (var kvp in metadata)
+                        blockBlob.Metadata.Add(kvp.Key, kvp.Value);
+                    await blockBlob.SetMetadataAsync();
                 }
                 return onSuccess();
             }
@@ -2318,6 +2329,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             Func<TResult> onAlreadyExists = default,
             Func<ExtendedErrorInformationCodes, string, TResult> onFailure = default,
             string contentType = default,
+            IDictionary<string, string> metadata = default,
             AzureStorageDriver.RetryDelegate onTimeout = default)
         {
             var container = this.BlobClient.GetContainerReference(containerName);
@@ -2333,6 +2345,12 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                 }
                 if (contentType.HasBlackSpace())
                     blockBlob.Properties.ContentType = contentType;
+                if (!metadata.IsDefaultNullOrEmpty())
+                {
+                    foreach (var kvp in metadata)
+                        blockBlob.Metadata.Add(kvp.Key, kvp.Value);
+                    await blockBlob.SetMetadataAsync();
+                }
                 using (var stream = await blockBlob.OpenWriteAsync())
                 {
                     await content.CopyToAsync(stream);
