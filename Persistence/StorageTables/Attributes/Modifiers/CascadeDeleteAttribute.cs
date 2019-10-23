@@ -49,6 +49,16 @@ namespace EastFive.Persistence.Azure.StorageTables
             return onSuccessWithRollback(() => true.AsTask()).AsTask();
         }
 
+        public Task<TResult> ExecuteInsertOrReplaceAsync<TEntity, TResult>(MemberInfo memberInfo,
+                string rowKeyRef, string partitionKeyRef, TEntity value,
+                IDictionary<string, EntityProperty> dictionary, 
+                AzureTableDriverDynamic repository,
+            Func<Func<Task>, TResult> onSuccessWithRollback, 
+            Func<TResult> onFailure)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<TResult> ExecuteUpdateAsync<TEntity, TResult>(MemberInfo memberInfo, 
                 string rowKeyRef, string partitionKeyRef, 
                 TEntity valueExisting, IDictionary<string, EntityProperty> dictionaryExisting,

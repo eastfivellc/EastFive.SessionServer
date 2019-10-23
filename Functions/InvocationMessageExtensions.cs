@@ -16,22 +16,30 @@ namespace EastFive.Azure.Functions
 {
     public static class InvocationMessageExtensions
     {
-        public static async Task<InvocationMessage> InvocationMessageAsync(
-            this HttpRequestMessage requestMessage)
+        public static async Task<InvocationMessage> InvocationMessageAsync(this HttpRequestMessage request)
         {
             var invocationMessageRef = Ref<InvocationMessage>.SecureRef();
             var invocationMessage = new InvocationMessage
             {
                 invocationRef = invocationMessageRef,
-                headers = requestMessage.Headers
+                headers = request.Headers
                     .Select(hdr => hdr.Key.PairWithValue(hdr.Value.First()))
                     .ToDictionary(),
-                requestUri = requestMessage.RequestUri,
-                content = requestMessage.Content.IsDefaultOrNull() ?
+                requestUri = request.RequestUri,
+                content = request.Content.IsDefaultOrNull() ?
                     default(byte[])
                     :
-                    await requestMessage.Content.ReadAsByteArrayAsync(),
+                    await request.Content.ReadAsByteArrayAsync(),
+                method = request.Method.Method,
             };
+            return invocationMessage;
+        }
+
+        public static async Task<InvocationMessage> InvocationMessageCreateAsync(
+            this HttpRequestMessage requestMessage)
+        {
+            var invocationMessageRef = Ref<InvocationMessage>.SecureRef();
+            var invocationMessage = await requestMessage.InvocationMessageAsync();
             return await invocationMessage.StorageCreateAsync(
                 (created) =>
                 {

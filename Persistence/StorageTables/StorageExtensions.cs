@@ -466,7 +466,8 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
         }
 
         public static Task<TResult> StorageCreateOrUpdateAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
-            Func<bool, TEntity, Func<TEntity, Task>, Task<TResult>> onCreated)
+            Func<bool, TEntity, Func<TEntity, Task>, Task<TResult>> onCreated,
+            params IHandleFailedModifications<TResult>[] onModificationFailures)
             where TEntity : struct, IReferenceable
         {
             var rowKey = entityRef.StorageComputeRowKey();
@@ -477,6 +478,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                     onCreated,
                     default);
         }
+
         [Obsolete]
         public static Task<TResult> StorageCreateOrUpdateAsync<TEntity, TResult>(this IRef<TEntity> entityRef,
             string partitionKey,
@@ -488,7 +490,23 @@ namespace EastFive.Azure.Persistence.AzureStorageTables
                 .FromSettings()
                 .UpdateOrCreateAsync<TEntity, TResult>(rowKey, partitionKey,
                     onCreated,
-                    default(AzureStorageDriver.RetryDelegateAsync<Task<TResult>>));
+                    onTimeoutAsync: default(AzureStorageDriver.RetryDelegateAsync<Task<TResult>>));
+        }
+
+        public static Task<TResult> StorageInsertOrReplaceAsync<TEntity, TResult>(this TEntity entity,
+            Func<bool, TResult> onSuccess,
+            IHandleFailedModifications<TResult>[] onModificationFailures = default,
+            Func<StorageTables.ExtendedErrorInformationCodes, string, TResult> onFailure = null,
+            AzureStorageDriver.RetryDelegate onTimeout = null)
+            where TEntity : IReferenceable
+        {
+            return AzureTableDriverDynamic
+                .FromSettings()
+                .InsertOrReplaceAsync(entity,
+                    onSuccess,
+                    onModificationFailures: onModificationFailures,
+                    onFailure: onFailure,
+                    onTimeout: onTimeout);
         }
 
         public static IEnumerableAsync<TResult> StorageCreateOrUpdateBatch<TEntity, TResult>(this IEnumerable<TEntity> entities,

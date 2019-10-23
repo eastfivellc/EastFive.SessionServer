@@ -257,6 +257,40 @@ namespace EastFive.Persistence.Azure.StorageTables
                 onFailure);
         }
 
+        public Task<TResult> ExecuteInsertOrReplaceAsync<TEntity, TResult>(MemberInfo memberInfo,
+                string rowKeyRef, string partitionKeyRef,
+                TEntity value, IDictionary<string, EntityProperty> dictionary,
+                AzureTableDriverDynamic repository,
+            Func<Func<Task>, TResult> onSuccessWithRollback,
+            Func<TResult> onFailure)
+        {
+            var existingRowKey = GetRowKey(memberInfo, value);
+            var existingPartitionKey = GetPartitionKey(memberInfo, value);
+            var tableName = GetLookupTableName(memberInfo);
+
+            return repository.FindByIdAsync<DateTimeLookupTable, TResult>(existingRowKey, existingPartitionKey,
+                (lookup) =>
+                {
+                    var rowAndParitionKeys = lookup.rows
+                        .NullToEmpty()
+                        .Zip(lookup.partitions.NullToEmpty(), (k, v) => k.PairWithValue(v))
+                        .ToArray();
+                    var rowKeyFound = rowAndParitionKeys
+                            .NullToEmpty()
+                            .Where(kvp => kvp.Key == rowKeyRef)
+                            .Any();
+                    var partitionKeyFound = rowAndParitionKeys
+                            .NullToEmpty()
+                            .Where(kvp => kvp.Value == partitionKeyRef)
+                            .Any();
+                    if (rowKeyFound && partitionKeyFound)
+                        return onSuccessWithRollback(() => true.AsTask());
+                    return onFailure();
+                },
+                onNotFound:() => onFailure(),
+                tableName: tableName);
+        }
+
         public async Task<TResult> ExecuteUpdateAsync<TEntity, TResult>(MemberInfo memberInfo, 
                 string rowKeyRef, string partitionKeyRef, 
                 TEntity valueExisting, IDictionary<string, EntityProperty> dictionaryExisting,

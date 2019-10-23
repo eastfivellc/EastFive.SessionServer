@@ -74,6 +74,18 @@ namespace EastFive.Azure.Auth
                     onNotFound);
         }
 
+        [HttpGet]
+        public static Task<HttpResponseMessage> QueryByIdAsync(
+                [QueryId]IRef<Method> methodRef,
+            Api.Azure.AzureApplication application,
+            ContentTypeResponse<Method> onFound,
+            NotFoundResponse onNotFound)
+        {
+            return ById(methodRef, application,
+                method => onFound(method),
+                () => onNotFound());
+        }
+
         [Obsolete]
         [HttpGet]
         public static Task<HttpResponseMessage> QueryAsync(

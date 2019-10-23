@@ -178,6 +178,21 @@ namespace EastFive.Persistence.Azure.StorageTables
                 () => 1.AsTask());
         }
 
+        public async Task<TResult> ExecuteInsertOrReplaceModifiersAsync<TResult>(AzureTableDriverDynamic repository, 
+            Func<Func<Task>, TResult> onSuccessWithRollback,
+            Func<MemberInfo[], TResult> onFailure)
+        {
+            var hasModifiers = typeof(EntityType)
+                .GetPropertyOrFieldMembers()
+                .Where(member => member.ContainsAttributeInterface<IModifyAzureStorageTableSave>())
+                .Any();
+            if (hasModifiers)
+                throw new NotImplementedException("Please use the non-depricated StorageTableAttribute with modifier classes");
+
+            return onSuccessWithRollback(
+                () => 1.AsTask());
+        }
+
         public async Task<TResult> ExecuteUpdateModifiersAsync<TResult>(IAzureStorageTableEntity<EntityType> current, AzureTableDriverDynamic repository,
             Func<Func<Task>, TResult> onSuccessWithRollback, 
             Func<MemberInfo[], TResult> onFailure)

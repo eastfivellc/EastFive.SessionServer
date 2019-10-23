@@ -305,6 +305,56 @@ namespace EastFive.Persistence.Azure.StorageTables
                     () => Task.WhenAll(rollbacks));
             }
 
+            public async Task<TResult> ExecuteInsertOrReplaceModifiersAsync<TResult>(AzureTableDriverDynamic repository, 
+                Func<Func<Task>, TResult> onSuccessWithRollback, 
+                Func<MemberInfo[], TResult> onFailure)
+            {
+                var modifierResults = await typeof(EntityType)
+                    .GetPropertyOrFieldMembers()
+                    .Where(member => member.ContainsAttributeInterface<IModifyAzureStorageTableSave>())
+                    .SelectMany(memberInfo =>
+                        memberInfo
+                            .GetAttributesInterface<IModifyAzureStorageTableSave>()
+                            .Select(
+                               storageModifier =>
+                               {
+                                   return storageModifier.ExecuteInsertOrReplaceAsync(memberInfo,
+                                            this.RowKey, this.PartitionKey,
+                                            this.Entity, this.WriteEntity(null),
+                                            repository,
+                                        rollback =>
+                                            new ExecResult
+                                            {
+                                                success = true,
+                                                rollback = rollback,
+                                                member = memberInfo,
+                                            },
+                                        () =>
+                                        new ExecResult
+                                        {
+                                            success = false,
+                                            member = memberInfo,
+                                        });
+                               }))
+                    .AsyncEnumerable()
+                    .ToArrayAsync();
+                var rollbacks = modifierResults
+                    .Where(result => result.success)
+                    .Select(result => result.rollback());
+                var failures = modifierResults
+                    .Where(result => !result.success)
+                    .Select(result => result.member);
+                var didFail = failures.Any();
+                if (didFail)
+                {
+                    await Task.WhenAll(rollbacks);
+                    return onFailure(failures.ToArray());
+                }
+
+                return onSuccessWithRollback(
+                    () => Task.WhenAll(rollbacks));
+            }
+
             public async Task<TResult> ExecuteUpdateModifiersAsync<TResult>(IAzureStorageTableEntity<EntityType> current,
                     AzureTableDriverDynamic repository,
                 Func<Func<Task>, TResult> onSuccessWithRollback, 

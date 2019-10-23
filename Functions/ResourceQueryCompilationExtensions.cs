@@ -22,19 +22,8 @@ namespace EastFive.Azure.Functions
             AzureApplication application = default)
         {
             var request = urlQuery.Request(httpMethod: httpMethod, applicationInvoker: applicationInvoker);
-            var invocationMessageRef = Ref<InvocationMessage>.SecureRef();
-            var invocationMessage = new InvocationMessage
-            {
-                invocationRef = invocationMessageRef,
-                headers = request.Headers
-                    .Select(hdr => hdr.Key.PairWithValue(hdr.Value.First()))
-                    .ToDictionary(),
-                requestUri = request.RequestUri,
-                content = request.Content.IsDefaultOrNull() ?
-                    default(byte[])
-                    :
-                    await request.Content.ReadAsByteArrayAsync(),
-            };
+            var invocationMessage = await request.InvocationMessageAsync();
+            var invocationMessageRef = invocationMessage.invocationRef;
             return await await invocationMessage.StorageCreateAsync(
                 async (created) =>
                 {

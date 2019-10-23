@@ -26,6 +26,10 @@ namespace EastFive.Persistence.Azure.StorageTables
             Func<Func<Task>, TResult> onSuccessWithRollback,
             Func<MemberInfo[], TResult> onFailure);
 
+        Task<TResult> ExecuteInsertOrReplaceModifiersAsync<TResult>(AzureTableDriverDynamic repository,
+            Func<Func<Task>, TResult> onSuccessWithRollback,
+            Func<MemberInfo[], TResult> onFailure);
+
         Task<TResult> ExecuteUpdateModifiersAsync<TResult>(IAzureStorageTableEntity<TEntity> current, AzureTableDriverDynamic repository,
             Func<Func<Task>, TResult> onSuccessWithRollback,
             Func<MemberInfo[], TResult> onFailure);

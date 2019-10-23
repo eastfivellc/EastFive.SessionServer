@@ -72,6 +72,12 @@ namespace EastFive.Persistence.Azure.StorageTables
 
             [Storage]
             public string [] hashvalues;
+
+            [Storage]
+            public string rowKeyRef;
+
+            [Storage]
+            public string partitionKeyRef;
         }
 
         protected virtual string GetHashKey<TEntity>(MemberInfo memberInfo, TEntity value)
@@ -169,6 +175,58 @@ namespace EastFive.Persistence.Azure.StorageTables
                     if (!created)
                         return onFailure();
 
+                    lookup.rowKeyRef = rowKeyRef;
+                    lookup.partitionKeyRef = partitionKeyRef;
+                    lookup.hashvalues = hashKeys;
+                    await saveAsync(lookup);
+                    Func<Task<bool>> rollback =
+                        async () =>
+                        {
+                            return await repository.DeleteAsync<StorageLookupTable, bool>(hashRowKey, hashPartitionKey,
+                                    () => true,
+                                    () => false,
+                                    tableName: tableName);
+                        };
+                    return onSuccessWithRollback(rollback);
+                },
+                tableName: tableName);
+        }
+
+        public async Task<TResult> ExecuteInsertOrReplaceAsync<TEntity, TResult>(MemberInfo memberInfo,
+                string rowKeyRef, string partitionKeyRef,
+                TEntity value, IDictionary<string, EntityProperty> dictionary,
+                AzureTableDriverDynamic repository,
+            Func<Func<Task>, TResult> onSuccessWithRollback,
+            Func<TResult> onFailure)
+        {
+            if (IsIgnored(memberInfo, value))
+                return onSuccessWithRollback(() => true.AsTask());
+            var hashRowKey = GetHashRowKey(memberInfo, value, out string[] hashKeys);
+            var hashPartitionKey = memberInfo.DeclaringType.Name;
+            var tableName = GetLookupTableName(memberInfo);
+            return await repository.UpdateOrCreateAsync<StorageLookupTable, TResult>(
+                    hashRowKey, hashPartitionKey,
+                async (created, lookup, saveAsync) =>
+                {
+                    bool ClaimedByDifferentResource()
+                    {
+                        if (created)
+                            return false;
+
+                        if (lookup.rowKeyRef != rowKeyRef)
+                            return true;
+
+                        if (lookup.partitionKeyRef != partitionKeyRef)
+                            return true;
+
+                        return false;
+                    }
+
+                    if (ClaimedByDifferentResource())
+                        return onFailure();
+
+                    lookup.rowKeyRef = rowKeyRef;
+                    lookup.partitionKeyRef = partitionKeyRef;
                     lookup.hashvalues = hashKeys;
                     await saveAsync(lookup);
                     Func<Task<bool>> rollback =
@@ -229,7 +287,7 @@ namespace EastFive.Persistence.Azure.StorageTables
                     }
 
                     var rollbackMaybeTask = RollbackMaybeAsync();
-                    lookup.hashvalues = hashKeys;
+                    lookup.hashvalues = hashKeys; // TODO: Why is this necessary?
                     await saveAsync(lookup);
                     var rollbackMaybe = await rollbackMaybeTask;
 

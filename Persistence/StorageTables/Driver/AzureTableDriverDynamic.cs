@@ -331,6 +331,75 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             
         }
 
+        public async Task<TResult> InsertOrReplaceAsync<TData, TResult>(TData tableData,
+            Func<bool, TResult> success,
+            IHandleFailedModifications<TResult>[] onModificationFailures = default,
+            Func<ExtendedErrorInformationCodes, string, TResult> onFailure = null,
+            AzureStorageDriver.RetryDelegate onTimeout = null)
+        {
+            var entity = GetEntity(tableData);
+            var table = GetTable<TData>();
+            var update = TableOperation.InsertOrReplace(entity);
+            return await await entity.ExecuteInsertOrReplaceModifiersAsync(this,
+                async rollback =>
+                {
+                    try
+                    {
+                        var result = await table.ExecuteAsync(update);
+                        var created = result.HttpStatusCode == ((int)HttpStatusCode.Created);
+                        return success(created);
+                    }
+                    catch (StorageException ex)
+                    {
+                        await rollback();
+                        return await ex.ParseStorageException(
+                            async (errorCode, errorMessage) =>
+                            {
+                                switch (errorCode)
+                                {
+                                    case ExtendedErrorInformationCodes.Timeout:
+                                        {
+                                            var timeoutResult = default(TResult);
+                                            if (default(AzureStorageDriver.RetryDelegate) == onTimeout)
+                                                onTimeout = AzureStorageDriver.GetRetryDelegate();
+                                            await onTimeout(ex.RequestInformation.HttpStatusCode, ex,
+                                                async () =>
+                                                {
+                                                    timeoutResult = await InsertOrReplaceAsync(tableData,
+                                                        success, onModificationFailures, onFailure, onTimeout);
+                                                });
+                                            return timeoutResult;
+                                        }
+                                    default:
+                                        {
+                                            if (onFailure.IsDefaultOrNull())
+                                                throw ex;
+                                            return onFailure(errorCode, errorMessage);
+                                        }
+                                }
+                            },
+                            () =>
+                            {
+                                throw ex;
+                            });
+                    }
+                },
+                (membersWithFailures) =>
+                {
+                    return onModificationFailures
+                        .NullToEmpty()
+                        .Where(
+                            onModificationFailure =>
+                            {
+                                return onModificationFailure.DoesMatchMember(membersWithFailures);
+                            })
+                        .First<IHandleFailedModifications<TResult>, TResult>(
+                            (onModificationFailure, next) => onModificationFailure.ModificationFailure(membersWithFailures),
+                            () => throw new Exception("Modifiers failed to execute."))
+                        .AsTask();
+                });
+        }
+
         private async Task<TResult> UpdateIfNotModifiedAsync<TData, TResult>(TData data,
                 IAzureStorageTableEntity<TData> currentDocument,
             Func<TResult> success,
@@ -1290,6 +1359,8 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
 
         public Task<TResult> UpdateOrCreateAsync<TData, TResult>(string rowKey, string partitionKey,
             Func<bool, TData, Func<TData, Task>, Task<TResult>> onUpdate,
+            IHandleFailedModifications<TResult>[] onModificationFailures = default,
+            Func<ExtendedErrorInformationCodes, string, TResult> onFailure = default,
             AzureStorageDriver.RetryDelegateAsync<Task<TResult>> onTimeoutAsync = default,
             string tableName = default(string)) 
         {
@@ -1305,26 +1376,44 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                         .StorageParseRowKey(rowKey)
                         .StorageParsePartitionKey(partitionKey);
                     var global = default(TResult);
-                    bool useGlobal = false;
+                    var useGlobal = false;
                     var result = await onUpdate(true, doc,
                         async (docUpdated) =>
                         {
-                            if (await this.CreateAsync(docUpdated,
-                                discard => true,
-                                () => false,
-                                table: table))
-                                return;
-                            global = await this.UpdateOrCreateAsync<TData, TResult>(
-                                    rowKey, partitionKey,
-                                onUpdate,
-                                onTimeoutAsync: onTimeoutAsync,
-                                tableName: tableName);
-                            useGlobal = true;
+                            useGlobal = await await this.CreateAsync<TData, Task<bool>>(docUpdated,
+                                onSuccess: discard => false.AsTask(),
+                                onAlreadyExists:
+                                    async () =>
+                                    {
+                                        global = await this.UpdateOrCreateAsync<TData, TResult>(
+                                                rowKey, partitionKey,
+                                            onUpdate,
+                                            onTimeoutAsync: onTimeoutAsync,
+                                            tableName: tableName);
+                                        return true;
+                                    },
+                                onFailure:
+                                    (code, why) =>
+                                    {
+                                        global = onFailure(code, why);
+                                        return true.AsTask();
+                                    },
+                                // TODO:
+                                //onModificationFailures:
+                                //    () =>
+                                //    {
+                                //        // global = onModificationFailures();
+                                //        throw new NotImplementedException();
+                                //        return true.AsTask();
+                                //    },
+                                table: table);
+                            
                         });
                     if (useGlobal)
                         return global;
                     return result;
                 },
+                onModificationFailures:onModificationFailures,
                 table: table);
         }
 

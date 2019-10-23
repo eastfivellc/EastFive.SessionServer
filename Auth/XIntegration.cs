@@ -35,6 +35,8 @@ namespace EastFive.Azure.Auth
     [StorageTable]
     public struct XIntegration : IReferenceable
     {
+        #region Properties
+
         [JsonIgnore]
         public Guid id => integrationRef.id;
 
@@ -48,6 +50,11 @@ namespace EastFive.Azure.Auth
         [JsonIgnore]
         [Storage]
         public IRef<Method> Method { get; set; }
+
+        public const string MethodNamePropertyName = "method_name";
+        [ApiProperty(PropertyName = MethodNamePropertyName)]
+        [JsonProperty(PropertyName = MethodNamePropertyName)]
+        public string methodName { get; set; }
 
         public const string AccountPropertyName = "account";
         [ApiProperty(PropertyName = AccountPropertyName)]
@@ -64,6 +71,37 @@ namespace EastFive.Azure.Auth
         [Storage(Name = AuthorizationPropertyName)]
         [StorageConstraintUnique]
         public IRefOptional<Authorization> authorization { get; set; }
+        
+        #endregion
+
+        #region Http Methods
+
+        [Api.HttpGet]
+        public async static Task<HttpResponseMessage> GetByIdAsync(
+                [QueryParameter(Name = IntegrationIdPropertyName)]IRef<XIntegration> integrationRef,
+                Api.Azure.AzureApplication application, SessionToken security,
+            ContentTypeResponse<XIntegration> onFound,
+            NotFoundResponse onNotFound,
+            UnauthorizedResponse onUnauthorized)
+        {
+            if (!security.accountIdMaybe.HasValue)
+                return onUnauthorized();
+            var accountId = security.accountIdMaybe.Value;
+
+            return await await integrationRef.StorageGetAsync(
+                integration =>
+                {
+                    return Auth.Method.ById(integration.Method,
+                                application,
+                            method =>
+                            {
+                                integration.methodName = method.name;
+                                return onFound(integration);
+                            },
+                            () => onNotFound());
+                },
+                () => onNotFound().AsTask());
+        }
 
         [Api.HttpGet]
         public async static Task<HttpResponseMessage> GetByAccountAsync(
@@ -76,31 +114,58 @@ namespace EastFive.Azure.Auth
             if (!await application.CanAdministerCredentialAsync(accountId, security))
                 return onUnauthorized();
 
-            var kvps = GetIntegrationsByAccount(accountId);
-            return await onContents(kvps.SelectKeys());
+            var integrations = GetIntegrationsByAccount(accountId)
+                .Select(
+                    kvp =>
+                    {
+                        var integration = kvp.Key;
+                        return Auth.Method.ById(kvp.Value.Method,
+                                application,
+                            method =>
+                            {
+                                integration.methodName = method.name;
+                                return integration;
+                            },
+                            () => default(XIntegration?));
+                    })
+                .Await()
+                .SelectWhereHasValue();
+
+            return await onContents(integrations);
         }
 
         [Api.HttpGet]
-        public async static Task<HttpResponseMessage> GetByAccountAsync(
-                [QueryParameter(Name = Authorization.MethodPropertyName)]IRef<Method> method,
+        public async static Task<HttpResponseMessage> GetByMethodAsync(
+                [QueryParameter(Name = Authorization.MethodPropertyName)]IRef<Method> methodRef,
                 Api.Azure.AzureApplication application, SessionToken security,
             MultipartResponseAsync<XIntegration> onContents,
-            ReferencedDocumentNotFoundResponse<object> onAccountNotFound,
             UnauthorizedResponse onUnauthorized)
         {
             if (!security.accountIdMaybe.HasValue)
                 return onUnauthorized();
-
             var accountId = security.accountIdMaybe.Value;
-            if (!await application.CanAdministerCredentialAsync(accountId, security))
-                return onUnauthorized();
 
-            var kvps = GetIntegrationsByAccount(accountId)
-                .Where(integration => integration.Value.Method.id == method.id);
-            return await onContents(kvps.SelectKeys());
+            var integrations = GetIntegrationsByAccount(accountId)
+                .Where(integration => integration.Value.Method.id == methodRef.id)
+                .Select(
+                    kvp =>
+                    {
+                        var integration = kvp.Key;
+                        return Auth.Method.ById(kvp.Value.Method,
+                                application,
+                            method =>
+                            {
+                                integration.methodName = method.name;
+                                return integration;
+                            },
+                            () => default(XIntegration?));
+                    })
+                .Await()
+                .SelectWhereHasValue();
+            return await onContents(integrations);
         }
 
-        [Api.HttpPost] //(MatchAllBodyParameters = false)]
+        [Api.HttpPost]
         public async static Task<HttpResponseMessage> CreateAsync(
                 [Property(Name = AccountPropertyName)]Guid accountId,
                 [PropertyOptional(Name = AuthorizationPropertyName)]IRefOptional<Authorization> authorizationRefMaybe,
@@ -181,6 +246,11 @@ namespace EastFive.Azure.Auth
 
                             integration.Method = authorization.Method; // method is used in the .mappingId
                             integration.authorization = authorizationRef.Optional();
+                            integration.methodName = await Auth.Method.ById(authorization.Method,
+                                    application,
+                                method => method.name,
+                                () => string.Empty);
+
                             await saveAsync(integration);
                             return onUpdated(integration);
                         },
@@ -197,6 +267,10 @@ namespace EastFive.Azure.Auth
                         }).AsArray());
 
         }
+        
+        #endregion
+
+        #region Utility Methods
 
         public static Task<TResult> DeleteInternalAsync<TResult>(
                 IRef<XIntegration> integrationRef, Api.Azure.AzureApplication application, 
@@ -345,5 +419,7 @@ namespace EastFive.Azure.Auth
                 .Await()
                 .SelectWhereHasValue();
         }
+
+        #endregion
     }
 }

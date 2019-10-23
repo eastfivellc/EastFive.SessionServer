@@ -20,6 +20,8 @@ using EastFive.Collections.Generic;
 using Microsoft.WindowsAzure.Storage.Queue;
 using EastFive.Linq.Async;
 using EastFive.Linq;
+using EastFive.Analytics;
+using System.Linq.Expressions;
 
 namespace EastFive.Azure.Functions
 {
@@ -48,7 +50,6 @@ namespace EastFive.Azure.Functions
         [DateTimeLookup(Partition = 3600.0, Row = 60.0)]
         public DateTimeOffset lastModified;
 
-
         [JsonProperty]
         [Storage]
         public Uri requestUri;
@@ -70,10 +71,25 @@ namespace EastFive.Azure.Functions
         [ApiProperty(PropertyName = LastExecutedPropertyName)]
         [Storage]
         public DateTime? lastExecuted;
-        
+
         #endregion
 
         #region Http Methods
+
+        [Api.HttpGet]
+        public static Task<HttpResponseMessage> ListAsync(
+            [QueryParameter(Name = "last_modified")]DateTime day,
+            [HeaderLog]EastFive.Analytics.ILogger analyticsLog,
+            InvokeApplicationDirect invokeApplication,
+            MultipartResponseAsync<InvocationMessage> onRun)
+        {
+            Expression<Func<InvocationMessage, bool>> expr = (im) => true;
+
+            var messages = expr
+                .StorageQuery()
+                .Where(msg => DateTime.UtcNow - msg.lastModified < TimeSpan.FromDays(3.0));
+            return onRun(messages);
+        }
 
         [HttpAction("Invoke")]
         public static async Task<HttpResponseMessage> RunAsync(
@@ -83,7 +99,7 @@ namespace EastFive.Azure.Functions
                 MultipartResponseAsync onRun)
         {
             var messages = await invocationMessageRefs.refs
-                .Select(invocationMessageRef => InvokeAsync(invocationMessageRef, invokeApplication))
+                .Select(invocationMessageRef => InvokeAsync(invocationMessageRef, invokeApplication, logging: analyticsLog))
                 .AsyncEnumerable()
                 .ToArrayAsync();
             return await onRun(messages);
@@ -94,7 +110,8 @@ namespace EastFive.Azure.Functions
         public static IEnumerableAsync<HttpResponseMessage> InvokeAsync(
                 byte [] invocationMessageIdsBytes,
             IApplication application,
-            IInvokeApplication invokeApplication)
+            IInvokeApplication invokeApplication,
+            EastFive.Analytics.ILogger analyticsLog = default)
         {
             return invocationMessageIdsBytes
                 .Split(index => 16)
@@ -104,7 +121,7 @@ namespace EastFive.Azure.Functions
                         var idBytes = invocationMessageIdBytes.ToArray();
                         var invocationMessageId = new Guid(idBytes);
                         var invocationMessageRef = invocationMessageId.AsRef<InvocationMessage>();
-                        return InvokeAsync(invocationMessageRef, invokeApplication);
+                        return InvokeAsync(invocationMessageRef, invokeApplication, analyticsLog);
                     })
                 .Parallel();
         }
@@ -112,20 +129,7 @@ namespace EastFive.Azure.Functions
         internal static async Task<HttpResponseMessage> CreateAsync(
             HttpRequestMessage httpRequest)
         {
-            var invocationMessageRef = Ref<InvocationMessage>.SecureRef();
-            var invocationMessage = new InvocationMessage
-            {
-                invocationRef = invocationMessageRef,
-                headers = httpRequest.Headers
-                    .Select(hdr => hdr.Key.PairWithValue(hdr.Value.First()))
-                    .ToDictionary(),
-                requestUri = httpRequest.RequestUri,
-                content = httpRequest.Content.IsDefaultOrNull() ?
-                    default(byte[])
-                    :
-                    await httpRequest.Content.ReadAsByteArrayAsync(),
-                method = httpRequest.Method.Method,
-            };
+            var invocationMessage = await httpRequest.InvocationMessageAsync();
             return await invocationMessage.StorageCreateAsync(
                 (created) =>
                 {
@@ -178,8 +182,10 @@ namespace EastFive.Azure.Functions
         }
 
         public static Task<HttpResponseMessage> InvokeAsync(IRef<InvocationMessage> invocationMessageRef,
-            IInvokeApplication invokeApplication)
+            IInvokeApplication invokeApplication,
+            ILogger logging = default)
         {
+            logging.Trace($"Processing message [{invocationMessageRef.id}].");
             return invocationMessageRef.StorageUpdateAsync(
                 async (invocationMessage, saveAsync) =>
                 {

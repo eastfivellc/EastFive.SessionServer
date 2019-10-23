@@ -351,6 +351,46 @@ namespace EastFive.Persistence.Azure.StorageTables
                 onFailure);
         }
 
+        public async Task<TResult> ExecuteInsertOrReplaceAsync<TEntity, TResult>(MemberInfo memberInfo,
+                string rowKeyRef, string partitionKeyRef,
+                TEntity value, IDictionary<string, EntityProperty> dictionary,
+                AzureTableDriverDynamic repository,
+            Func<Func<Task>, TResult> onSuccessWithRollback,
+            Func<TResult> onFailure)
+        {
+            var existingRowKeys = GetKeys(memberInfo, value);
+            var tableName = GetLookupTableName(memberInfo);
+            var missingRows = existingRowKeys
+                .Select(
+                    async astKey =>
+                    {
+                        var isGood = await repository.FindByIdAsync<StorageLookupTable, bool>(astKey.RowKey, astKey.ParitionKey,
+                            (lookup) =>
+                            {
+                                var rowAndParitionKeys = lookup.rowAndPartitionKeys;
+                                var rowKeyFound = rowAndParitionKeys
+                                    .NullToEmpty()
+                                    .Where(kvp => kvp.Key == rowKeyRef)
+                                    .Any();
+                                var partitionKeyFound = rowAndParitionKeys
+                                    .NullToEmpty()
+                                    .Where(kvp => kvp.Value == partitionKeyRef)
+                                    .Any();
+                                if (rowKeyFound && partitionKeyFound)
+                                    return true;
+                                return false;
+                            },
+                            onNotFound: () => false,
+                            tableName: tableName);
+                        return isGood;
+                    })
+                .AsyncEnumerable()
+                .Where(item => !item);
+            if (await missingRows.AnyAsync())
+                return onFailure();
+            return onSuccessWithRollback(() => 1.AsTask());
+        }
+
         public async Task<TResult> ExecuteUpdateAsync<TEntity, TResult>(MemberInfo memberInfo, 
                 string rowKeyRef, string partitionKeyRef, 
                 TEntity valueExisting, IDictionary<string, EntityProperty> dictionaryExisting,
