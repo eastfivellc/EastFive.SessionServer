@@ -323,6 +323,7 @@
     <Compile Include="Login\CredentialProvider.cs" />
     <Compile Include="Login\Redirection.cs" />
     <Compile Include="Media\ContentExtensions.cs" />
+    <Compile Include="Persistence\StorageTables\TableInformationAttribute.cs" />
     <Compile Include="Monitoring\Monitoring.cs" />
     <Compile Include="IProvideIntegration.cs" />
     <Compile Include="Persistence\AppSettings.cs" />

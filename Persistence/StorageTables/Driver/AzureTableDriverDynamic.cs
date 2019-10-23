@@ -144,7 +144,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                 var entityRef = rowKey.AsRef<EntityType>();
                 var deletableEntity = new DeletableEntity<EntityType>();
                 deletableEntity.rowKeyValue = entityRef.StorageComputeRowKey();
-                deletableEntity.partitionKeyValue = entityRef.StorageComputePartitionKey();
+                deletableEntity.partitionKeyValue = entityRef.StorageComputePartitionKey(deletableEntity.rowKeyValue);
                 return deletableEntity;
             }
         }
@@ -243,6 +243,447 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
 
         #region Core
 
+        #region Find
+
+        public async Task<TResult> FindByIdAsync<TEntity, TResult>(
+                string rowKey, string partitionKey,
+            Func<TEntity, TResult> onSuccess,
+            Func<TResult> onNotFound,
+            Func<ExtendedErrorInformationCodes, string, TResult> onFailure =
+                default(Func<ExtendedErrorInformationCodes, string, TResult>),
+            CloudTable table = default(CloudTable),
+            string tableName = default(string),
+            AzureStorageDriver.RetryDelegate onTimeout =
+                default(AzureStorageDriver.RetryDelegate))
+        {
+            var operation = TableOperation.Retrieve(partitionKey, rowKey,
+                (string partitionKeyEntity, string rowKeyEntity, DateTimeOffset timestamp, IDictionary<string, EntityProperty> properties, string etag) =>
+                {
+                    return typeof(TEntity)
+                        .GetAttributesInterface<IProvideEntity>()
+                        .First(
+                            (entityProvider, next) =>
+                            {
+                                var entityPopulated = entityProvider.CreateEntityInstance<TEntity>(
+                                    rowKeyEntity, partitionKeyEntity, properties, etag, timestamp);
+                                return entityPopulated;
+                            },
+                            () =>
+                            {
+                                var entityPopulated = TableEntity<TEntity>.CreateEntityInstance(properties);
+                                return entityPopulated;
+                            });
+                });
+            if (table.IsDefaultOrNull())
+                table = tableName.HasBlackSpace() ?
+                    this.TableClient.GetTableReference(tableName)
+                    :
+                    table = GetTable<TEntity>();
+            try
+            {
+                var result = await table.ExecuteAsync(operation);
+                if (404 == result.HttpStatusCode)
+                    return onNotFound();
+                return onSuccess((TEntity)result.Result);
+            }
+            catch (StorageException se)
+            {
+                if (se.IsProblemTableDoesNotExist())
+                    return onNotFound();
+                if (se.IsProblemTimeout())
+                {
+                    TResult result = default(TResult);
+                    if (default(AzureStorageDriver.RetryDelegate) == onTimeout)
+                        onTimeout = AzureStorageDriver.GetRetryDelegate();
+                    await onTimeout(se.RequestInformation.HttpStatusCode, se,
+                        async () =>
+                        {
+                            result = await FindByIdAsync(rowKey, partitionKey,
+                                onSuccess, onNotFound, onFailure,
+                                    table: table, onTimeout: onTimeout);
+                        });
+                    return result;
+                }
+                throw se;
+            }
+            catch (Exception ex)
+            {
+                ex.GetType();
+                throw ex;
+            }
+
+        }
+
+        public async Task<TResult> InsertOrReplaceAsync<TData, TResult>(TData tableData,
+            Func<bool, TResult> success,
+            IHandleFailedModifications<TResult>[] onModificationFailures = default,
+            Func<ExtendedErrorInformationCodes, string, TResult> onFailure = null,
+            AzureStorageDriver.RetryDelegate onTimeout = null)
+        {
+            var entity = GetEntity(tableData);
+            var table = GetTable<TData>();
+            var update = TableOperation.InsertOrReplace(entity);
+            return await await entity.ExecuteInsertOrReplaceModifiersAsync(this,
+                async rollback =>
+                {
+                    try
+                    {
+                        var result = await table.ExecuteAsync(update);
+                        var created = result.HttpStatusCode == ((int)HttpStatusCode.Created);
+                        return success(created);
+                    }
+                    catch (StorageException ex)
+                    {
+                        await rollback();
+                        return await ex.ParseStorageException(
+                            async (errorCode, errorMessage) =>
+                            {
+                                switch (errorCode)
+                                {
+                                    case ExtendedErrorInformationCodes.Timeout:
+                                        {
+                                            var timeoutResult = default(TResult);
+                                            if (default(AzureStorageDriver.RetryDelegate) == onTimeout)
+                                                onTimeout = AzureStorageDriver.GetRetryDelegate();
+                                            await onTimeout(ex.RequestInformation.HttpStatusCode, ex,
+                                                async () =>
+                                                {
+                                                    timeoutResult = await InsertOrReplaceAsync(tableData,
+                                                        success, onModificationFailures, onFailure, onTimeout);
+                                                });
+                                            return timeoutResult;
+                                        }
+                                    default:
+                                        {
+                                            if (onFailure.IsDefaultOrNull())
+                                                throw ex;
+                                            return onFailure(errorCode, errorMessage);
+                                        }
+                                }
+                            },
+                            () =>
+                            {
+                                throw ex;
+                            });
+                    }
+                },
+                (membersWithFailures) =>
+                {
+                    return onModificationFailures
+                        .NullToEmpty()
+                        .Where(
+                            onModificationFailure =>
+                            {
+                                return onModificationFailure.DoesMatchMember(membersWithFailures);
+                            })
+                        .First<IHandleFailedModifications<TResult>, TResult>(
+                            (onModificationFailure, next) => onModificationFailure.ModificationFailure(membersWithFailures),
+                            () => throw new Exception("Modifiers failed to execute."))
+                        .AsTask();
+                });
+        }
+
+        public async Task<TResult> FindByIdAsync<TResult>(
+                string rowKey, string partitionKey,
+                Type typeData,
+            Func<object, TResult> onSuccess,
+            Func<TResult> onNotFound,
+            Func<ExtendedErrorInformationCodes, string, TResult> onFailure = default,
+            CloudTable table = default,
+            string tableName = default,
+            AzureStorageDriver.RetryDelegate onTimeout = default)
+        {
+            var operation = TableOperation.Retrieve(partitionKey, rowKey,
+                (string partitionKeyEntity, string rowKeyEntity,
+                 DateTimeOffset timestamp, IDictionary<string, EntityProperty> properties, string etag) =>
+                {
+                    return typeData
+                        .GetAttributesInterface<IProvideEntity>()
+                        .First<IProvideEntity, object>(
+                            (entityProvider, next) =>
+                            {
+                                // READ AS:
+                                //var entityPopulated = entityProvider.CreateEntityInstance<TEntity>(
+                                //    rowKeyEntity, partitionKeyEntity, properties, etag, timestamp);
+
+                                var entityPopulated = entityProvider.GetType()
+                                    .GetMethod("CreateEntityInstance", BindingFlags.Instance | BindingFlags.Public)
+                                    .MakeGenericMethod(typeData.AsArray())
+                                    .Invoke(entityProvider,
+                                        new object[] { rowKeyEntity, partitionKeyEntity, properties, etag, timestamp });
+
+                                return entityPopulated;
+                            },
+                            () =>
+                            {
+                                throw new Exception($"No attributes of type IProvideEntity on {typeData.FullName}.");
+                            });
+                });
+            table = GetTable();
+            CloudTable GetTable()
+            {
+                if (!table.IsDefaultOrNull())
+                    return table;
+
+                if (tableName.HasBlackSpace())
+                    return this.TableClient.GetTableReference(tableName);
+
+                return TableFromEntity(typeData, this.TableClient);
+            }
+            try
+            {
+                var result = await table.ExecuteAsync(operation);
+                if (404 == result.HttpStatusCode)
+                    return onNotFound();
+                return onSuccess(result.Result);
+            }
+            catch (StorageException se)
+            {
+                if (se.IsProblemTableDoesNotExist())
+                    return onNotFound();
+                if (se.IsProblemTimeout())
+                {
+                    TResult result = default(TResult);
+                    if (default(AzureStorageDriver.RetryDelegate) == onTimeout)
+                        onTimeout = AzureStorageDriver.GetRetryDelegate();
+                    await onTimeout(se.RequestInformation.HttpStatusCode, se,
+                        async () =>
+                        {
+                            result = await FindByIdAsync(rowKey, partitionKey, typeData,
+                                onSuccess, onNotFound, onFailure,
+                                    table: table, onTimeout: onTimeout);
+                        });
+                    return result;
+                }
+                throw se;
+            }
+            catch (Exception ex)
+            {
+                ex.GetType();
+                throw ex;
+            }
+
+        }
+
+        public IEnumerableAsync<TEntity> FindBy<TRefEntity, TEntity>(IRef<TRefEntity> entityRef,
+                Expression<Func<TEntity, IRef<TRefEntity>>> by)
+            where TEntity : IReferenceable
+            where TRefEntity : IReferenceable
+        {
+            return FindByInternal(entityRef, by);
+        }
+
+        public IEnumerableAsync<TEntity> FindBy<TProperty, TEntity>(TProperty propertyValue,
+                Expression<Func<TEntity, TProperty>> propertyExpr,
+                Expression<Func<TEntity, bool>> query1 = default,
+                Expression<Func<TEntity, bool>> query2 = default)
+            where TEntity : IReferenceable
+        {
+            return FindByInternal(propertyValue, propertyExpr, query1, query2);
+        }
+
+        public IEnumerableAsync<TEntity> FindBy<TRefEntity, TEntity>(IRef<TRefEntity> entityRef,
+                Expression<Func<TEntity, IRef<IReferenceable>>> by)
+            where TEntity : IReferenceable
+            where TRefEntity : IReferenceable
+        {
+            return FindByInternal(entityRef, by);
+        }
+
+        public IEnumerableAsync<TEntity> FindBy<TEntity>(Guid entityId,
+                Expression<Func<TEntity, Guid>> by,
+                Expression<Func<TEntity, bool>> query1 = default,
+                Expression<Func<TEntity, bool>> query2 = default)
+            where TEntity : IReferenceable
+        {
+            return FindByInternal(entityId.AsRef<IReferenceable>(), by, query1, query2);
+        }
+
+        public IEnumerableAsync<TEntity> FindBy<TRefEntity, TEntity>(IRef<TRefEntity> entityRef,
+                Expression<Func<TEntity, IRefOptional<TRefEntity>>> by)
+            where TEntity : IReferenceable
+            where TRefEntity : IReferenceable
+        {
+            return FindByInternal(entityRef.Optional(), by);
+        }
+
+        public IEnumerableAsync<TEntity> FindBy<TRefEntity, TEntity>(IRef<TRefEntity> entityRef,
+                Expression<Func<TEntity, IRefs<TRefEntity>>> by)
+            where TEntity : IReferenceable
+            where TRefEntity : IReferenceable
+        {
+            return FindByInternal(entityRef, by);
+        }
+
+        private IEnumerableAsync<TEntity> FindByInternal<TMatch, TEntity>(object findByValue,
+                Expression<Func<TEntity, TMatch>> by,
+                params Expression<Func<TEntity, bool>>[] queries)
+            where TEntity : IReferenceable
+        {
+            return by.MemberInfo(
+                (memberCandidate, expr) =>
+                {
+                    return memberCandidate
+                        .GetAttributesInterface<IProvideFindBy>()
+                        .First<IProvideFindBy, IEnumerableAsync<TEntity>>(
+                            (attr, next) =>
+                            {
+                                var memberAssignments = queries
+                                    .Where(query => !query.IsDefaultOrNull())
+                                    .Select(
+                                        query =>
+                                        {
+                                            var memberInfo = (query).MemberComparison(out ExpressionType operand, out object value);
+                                            return memberInfo.PairWithValue(value);
+                                        })
+                                    .ToArray();
+
+                                return attr.GetKeys(findByValue, memberCandidate, this, memberAssignments)
+                                    .Select(
+                                        rowParitionKeyKvp =>
+                                        {
+                                            var rowKey = rowParitionKeyKvp.RowKey;
+                                            var partitionKey = rowParitionKeyKvp.PartitionKey;
+                                            return this.FindByIdAsync(rowKey, partitionKey,
+                                                    (TEntity entity) => entity.PairWithKey(true),
+                                                    () => default(TEntity).PairWithKey(false),
+                                                    onFailure: (code, msg) => default(TEntity).PairWithKey(false));
+                                        })
+                                    .Await()
+                                    .Where(kvp => kvp.Key)
+                                    .SelectValues();
+                            },
+                            () =>
+                            {
+                                throw new ArgumentException("TEntity does not contain an attribute of type IProvideFindBy.");
+                            });
+                },
+                () => throw new Exception());
+        }
+
+        private Task<TResult> FindByInternalAsync<TRefEntity, TMatch, TEntity, TResult>(IRef<TRefEntity> entityRef,
+                Expression<Func<TEntity, TMatch>> by,
+            Func<IEnumerableAsync<TEntity>, Func<KeyValuePair<ExtendedErrorInformationCodes, string>[]>, TResult> onFound,
+            Func<TResult> onRefNotFound = default)
+            where TEntity : struct, IReferenceable
+            where TRefEntity : IReferenceable
+        {
+            return by.MemberInfo(
+                (memberInfo, expr) =>
+                {
+                    return MemberExpr(memberInfo);
+                    Task<TResult> MemberExpr(MemberInfo memberCandidate)
+                    {
+                        return memberCandidate
+                            .GetAttributesInterface<IProvideFindByAsync>()
+                            .First<IProvideFindByAsync, Task<TResult>>(
+                                (attr, next) =>
+                                {
+                                    return attr.GetKeysAsync(entityRef, this, memberCandidate,
+                                        (keys) =>
+                                        {
+                                            var failures = new KeyValuePair<ExtendedErrorInformationCodes, string>[] { };
+                                            var results = keys
+                                                .Select(
+                                                    rowParitionKeyKvp =>
+                                                    {
+                                                        var rowKey = rowParitionKeyKvp.RowKey;
+                                                        var partitionKey = rowParitionKeyKvp.PartitionKey;
+                                                        return this.FindByIdAsync(rowKey, partitionKey,
+                                                            (TEntity entity) => entity,
+                                                            () => default(TEntity?),
+                                                            onFailure:
+                                                                (code, msg) =>
+                                                                {
+                                                                    failures = failures
+                                                                        .Append(code.PairWithValue(msg))
+                                                                        .ToArray();
+                                                                    return default(TEntity?);
+                                                                });
+                                                    })
+                                                .Await()
+                                                .SelectWhereHasValue();
+                                            return onFound(results,
+                                                () => failures);
+                                        },
+                                        () =>
+                                        {
+                                            if (!onRefNotFound.IsDefaultOrNull())
+                                                return onRefNotFound();
+                                            var emptyResults = EnumerableAsync.Empty<TEntity>();
+                                            return onFound(emptyResults,
+                                                () => new KeyValuePair<ExtendedErrorInformationCodes, string>[] { });
+                                        });
+                                },
+                                () =>
+                                {
+                                    if (expr is MemberExpression)
+                                    {
+                                        var exprFunc = expr as MemberExpression;
+                                        return MemberExpr(exprFunc.Member);
+                                    }
+                                    throw new Exception();
+                                });
+                    }
+                },
+                () => throw new Exception());
+        }
+
+        public static IEnumerableAsync<TEntity> FindAllInternal<TEntity>(
+            TableQuery<TEntity> query,
+            CloudTable table,
+            int numberOfTimesToRetry = DefaultNumberOfTimesToRetry)
+            where TEntity : ITableEntity, new()
+        {
+            var token = default(TableContinuationToken);
+            var segmentFecthing = table.ExecuteQuerySegmentedAsync(query, token);
+            return EnumerableAsync.YieldBatch<TEntity>(
+                async (yieldReturn, yieldBreak) =>
+                {
+                    if (segmentFecthing.IsDefaultOrNull())
+                        return yieldBreak;
+                    try
+                    {
+                        var segment = await segmentFecthing;
+                        if (segment.IsDefaultOrNull())
+                            return yieldBreak;
+
+                        token = segment.ContinuationToken;
+                        segmentFecthing = token.IsDefaultOrNull() ?
+                            default(Task<TableQuerySegment<TEntity>>)
+                            :
+                            table.ExecuteQuerySegmentedAsync(query, token);
+                        var results = segment.Results.ToArray();
+                        return yieldReturn(results);
+                    }
+                    catch (AggregateException)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        if (!table.Exists())
+                            return yieldBreak;
+                        if (ex is StorageException except && except.IsProblemTimeout())
+                        {
+                            if (--numberOfTimesToRetry > 0)
+                            {
+                                await Task.Delay(DefaultBackoffForRetry);
+                                segmentFecthing = token.IsDefaultOrNull() ?
+                                    default(Task<TableQuerySegment<TEntity>>)
+                                    :
+                                    table.ExecuteQuerySegmentedAsync(query, token);
+                                return yieldReturn(new TEntity[] { });
+                            }
+                        }
+                        throw;
+                    }
+                });
+        }
+
+        #endregion
+
+
         #region With modifiers
 
         public async Task<TResult> CreateAsync<TEntity, TResult>(TEntity entity,
@@ -329,75 +770,6 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                         .AsTask();
                 });
             
-        }
-
-        public async Task<TResult> InsertOrReplaceAsync<TData, TResult>(TData tableData,
-            Func<bool, TResult> success,
-            IHandleFailedModifications<TResult>[] onModificationFailures = default,
-            Func<ExtendedErrorInformationCodes, string, TResult> onFailure = null,
-            AzureStorageDriver.RetryDelegate onTimeout = null)
-        {
-            var entity = GetEntity(tableData);
-            var table = GetTable<TData>();
-            var update = TableOperation.InsertOrReplace(entity);
-            return await await entity.ExecuteInsertOrReplaceModifiersAsync(this,
-                async rollback =>
-                {
-                    try
-                    {
-                        var result = await table.ExecuteAsync(update);
-                        var created = result.HttpStatusCode == ((int)HttpStatusCode.Created);
-                        return success(created);
-                    }
-                    catch (StorageException ex)
-                    {
-                        await rollback();
-                        return await ex.ParseStorageException(
-                            async (errorCode, errorMessage) =>
-                            {
-                                switch (errorCode)
-                                {
-                                    case ExtendedErrorInformationCodes.Timeout:
-                                        {
-                                            var timeoutResult = default(TResult);
-                                            if (default(AzureStorageDriver.RetryDelegate) == onTimeout)
-                                                onTimeout = AzureStorageDriver.GetRetryDelegate();
-                                            await onTimeout(ex.RequestInformation.HttpStatusCode, ex,
-                                                async () =>
-                                                {
-                                                    timeoutResult = await InsertOrReplaceAsync(tableData,
-                                                        success, onModificationFailures, onFailure, onTimeout);
-                                                });
-                                            return timeoutResult;
-                                        }
-                                    default:
-                                        {
-                                            if (onFailure.IsDefaultOrNull())
-                                                throw ex;
-                                            return onFailure(errorCode, errorMessage);
-                                        }
-                                }
-                            },
-                            () =>
-                            {
-                                throw ex;
-                            });
-                    }
-                },
-                (membersWithFailures) =>
-                {
-                    return onModificationFailures
-                        .NullToEmpty()
-                        .Where(
-                            onModificationFailure =>
-                            {
-                                return onModificationFailure.DoesMatchMember(membersWithFailures);
-                            })
-                        .First<IHandleFailedModifications<TResult>, TResult>(
-                            (onModificationFailure, next) => onModificationFailure.ModificationFailure(membersWithFailures),
-                            () => throw new Exception("Modifiers failed to execute."))
-                        .AsTask();
-                });
         }
 
         private async Task<TResult> UpdateIfNotModifiedAsync<TData, TResult>(TData data,
@@ -546,7 +918,6 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             }
         }
 
-
         #endregion
 
         #region Without Modifiers
@@ -641,7 +1012,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
         }
 
         public async Task<TResult> InsertOrReplaceAsync<TData, TResult>(ITableEntity tableEntity,
-            Func<bool, ITableEntity, TResult> success,
+            Func<bool, IAzureStorageTableEntity<TData>, TResult> success,
             Func<ExtendedErrorInformationCodes, string, TResult> onFailure = null,
             AzureStorageDriver.RetryDelegate onTimeout = null)
         {
@@ -651,7 +1022,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             {
                 TableResult result = await table.ExecuteAsync(update);
                 var created = result.HttpStatusCode == ((int)HttpStatusCode.Created);
-                var entity = result.Result as ITableEntity;
+                var entity = result.Result as IAzureStorageTableEntity<TData>;
                 return success(created, entity);
             }
             catch (StorageException ex)
@@ -743,379 +1114,6 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                         throw se;
                     });
             }
-        }
-
-        #endregion
-
-        #region Find
-
-        public async Task<TResult> FindByIdAsync<TEntity, TResult>(
-                string rowKey, string partitionKey,
-            Func<TEntity, TResult> onSuccess,
-            Func<TResult> onNotFound,
-            Func<ExtendedErrorInformationCodes, string, TResult> onFailure =
-                default(Func<ExtendedErrorInformationCodes, string, TResult>),
-            CloudTable table = default(CloudTable),
-            string tableName = default(string),
-            AzureStorageDriver.RetryDelegate onTimeout =
-                default(AzureStorageDriver.RetryDelegate))
-        {
-            var operation = TableOperation.Retrieve(partitionKey, rowKey,
-                (string partitionKeyEntity, string rowKeyEntity, DateTimeOffset timestamp, IDictionary<string, EntityProperty> properties, string etag) =>
-                {
-                    return typeof(TEntity)
-                        .GetAttributesInterface<IProvideEntity>()
-                        .First(
-                            (entityProvider, next) =>
-                            {
-                                var entityPopulated = entityProvider.CreateEntityInstance<TEntity>(
-                                    rowKeyEntity, partitionKeyEntity, properties, etag, timestamp);
-                                return entityPopulated;
-                            },
-                            () =>
-                            {
-                                var entityPopulated = TableEntity<TEntity>.CreateEntityInstance(properties);
-                                return entityPopulated;
-                            });
-                });
-            if (table.IsDefaultOrNull())
-                table = tableName.HasBlackSpace()?
-                    this.TableClient.GetTableReference(tableName)
-                    :
-                    table = GetTable<TEntity>();
-            try
-            {
-                var result = await table.ExecuteAsync(operation);
-                if (404 == result.HttpStatusCode)
-                    return onNotFound();
-                return onSuccess((TEntity)result.Result);
-            }
-            catch (StorageException se)
-            {
-                if (se.IsProblemTableDoesNotExist())
-                    return onNotFound();
-                if (se.IsProblemTimeout())
-                {
-                    TResult result = default(TResult);
-                    if (default(AzureStorageDriver.RetryDelegate) == onTimeout)
-                        onTimeout = AzureStorageDriver.GetRetryDelegate();
-                    await onTimeout(se.RequestInformation.HttpStatusCode, se,
-                        async () =>
-                        {
-                            result = await FindByIdAsync(rowKey, partitionKey,
-                                onSuccess, onNotFound, onFailure,
-                                    table:table, onTimeout:onTimeout);
-                        });
-                    return result;
-                }
-                throw se;
-            }
-            catch(Exception ex)
-            {
-                ex.GetType();
-                throw ex;
-            }
-
-        }
-
-        public async Task<TResult> FindByIdAsync<TResult>(
-                string rowKey, string partitionKey,
-                Type typeData,
-            Func<object, TResult> onSuccess,
-            Func<TResult> onNotFound,
-            Func<ExtendedErrorInformationCodes, string, TResult> onFailure = default,
-            CloudTable table = default,
-            string tableName = default,
-            AzureStorageDriver.RetryDelegate onTimeout = default)
-        {
-            var operation = TableOperation.Retrieve(partitionKey, rowKey,
-                (string partitionKeyEntity, string rowKeyEntity,
-                 DateTimeOffset timestamp, IDictionary<string, EntityProperty> properties, string etag) =>
-                {
-                    return typeData
-                        .GetAttributesInterface<IProvideEntity>()
-                        .First<IProvideEntity, object>(
-                            (entityProvider, next) =>
-                            {
-                                // READ AS:
-                                //var entityPopulated = entityProvider.CreateEntityInstance<TEntity>(
-                                //    rowKeyEntity, partitionKeyEntity, properties, etag, timestamp);
-
-                                var entityPopulated = entityProvider.GetType()
-                                    .GetMethod("CreateEntityInstance", BindingFlags.Instance | BindingFlags.Public)
-                                    .MakeGenericMethod(typeData.AsArray())
-                                    .Invoke(entityProvider,
-                                        new object[] { rowKeyEntity, partitionKeyEntity, properties, etag, timestamp });
-                                    
-                                return entityPopulated;
-                            },
-                            () =>
-                            {
-                                throw new Exception($"No attributes of type IProvideEntity on {typeData.FullName}.");
-                            });
-                });
-            table = GetTable();
-            CloudTable GetTable()
-            {
-                if (!table.IsDefaultOrNull())
-                    return table;
-
-                if (tableName.HasBlackSpace())
-                    return this.TableClient.GetTableReference(tableName);
-
-                //READ AS: return GetTable<TEntity>();
-                return (CloudTable) typeof(AzureTableDriverDynamic)
-                    .GetMethod("GetTable", BindingFlags.NonPublic | BindingFlags.Instance)
-                    .MakeGenericMethod(typeData.AsArray())
-                    .Invoke(this, new object[] { });
-            }
-            try
-            {
-                var result = await table.ExecuteAsync(operation);
-                if (404 == result.HttpStatusCode)
-                    return onNotFound();
-                return onSuccess(result.Result);
-            }
-            catch (StorageException se)
-            {
-                if (se.IsProblemTableDoesNotExist())
-                    return onNotFound();
-                if (se.IsProblemTimeout())
-                {
-                    TResult result = default(TResult);
-                    if (default(AzureStorageDriver.RetryDelegate) == onTimeout)
-                        onTimeout = AzureStorageDriver.GetRetryDelegate();
-                    await onTimeout(se.RequestInformation.HttpStatusCode, se,
-                        async () =>
-                        {
-                            result = await FindByIdAsync(rowKey, partitionKey, typeData,
-                                onSuccess, onNotFound, onFailure,
-                                    table: table, onTimeout: onTimeout);
-                        });
-                    return result;
-                }
-                throw se;
-            }
-            catch (Exception ex)
-            {
-                ex.GetType();
-                throw ex;
-            }
-
-        }
-
-        public IEnumerableAsync<TEntity> FindBy<TRefEntity, TEntity>(IRef<TRefEntity> entityRef,
-                Expression<Func<TEntity, IRef<TRefEntity>>> by)
-            where TEntity : IReferenceable
-            where TRefEntity : IReferenceable
-        {
-            return FindByInternal(entityRef, by);
-        }
-
-        public IEnumerableAsync<TEntity> FindBy<TRefEntity, TEntity>(IRef<TRefEntity> entityRef,
-                Expression<Func<TEntity, IRef<TRefEntity>>> by,
-                Expression<Func<TEntity, bool>> query1 = default,
-                Expression<Func<TEntity, bool>> query2 = default)
-            where TEntity : IReferenceable
-            where TRefEntity : IReferenceable
-        {
-            return FindByInternal(entityRef, by, query1, query2);
-        }
-
-        public IEnumerableAsync<TEntity> FindBy<TRefEntity, TEntity>(IRef<TRefEntity> entityRef,
-                Expression<Func<TEntity, IRef<IReferenceable>>> by)
-            where TEntity : IReferenceable
-            where TRefEntity : IReferenceable
-        {
-            return FindByInternal(entityRef, by);
-        }
-
-        public IEnumerableAsync<TEntity> FindBy<TEntity>(Guid entityId,
-                Expression<Func<TEntity, Guid>> by)
-            where TEntity : IReferenceable
-        {
-            return FindByInternal(entityId.AsRef<IReferenceable>(), by);
-        }
-
-        public IEnumerableAsync<TEntity> FindBy<TRefEntity, TEntity>(IRef<TRefEntity> entityRef,
-                Expression<Func<TEntity, IRefOptional<TRefEntity>>> by)
-            where TEntity : IReferenceable
-            where TRefEntity : IReferenceable
-        {
-            return FindByInternal(entityRef.Optional(), by);
-        }
-
-        public IEnumerableAsync<TEntity> FindBy<TRefEntity, TEntity>(IRef<TRefEntity> entityRef,
-                Expression<Func<TEntity, IRefs<TRefEntity>>> by)
-            where TEntity : IReferenceable
-            where TRefEntity : IReferenceable
-        {
-            return FindByInternal(entityRef, by);
-        }
-
-        private IEnumerableAsync<TEntity> FindByInternal<TMatch, TEntity>(object findByValue,
-                Expression<Func<TEntity, TMatch>> by,
-                params Expression<Func<TEntity, bool>> [] queries)
-            where TEntity : IReferenceable
-        {
-            return by.MemberInfo(
-                (memberCandidate, expr) =>
-                {
-                    return memberCandidate
-                        .GetAttributesInterface<IProvideFindBy>()
-                        .First<IProvideFindBy, IEnumerableAsync<TEntity>>(
-                            (attr, next) =>
-                            {
-                                var memberAssignments = queries
-                                    .Select(
-                                        query =>
-                                        {
-                                            var memberInfo = (query).MemberComparison(out ExpressionType operand, out object value);
-                                            return memberInfo.PairWithValue(value);
-                                        })
-                                    .ToArray();
-
-                                return attr.GetKeys(findByValue, memberCandidate, this, memberAssignments)
-                                    .Select(
-                                        rowParitionKeyKvp =>
-                                        {
-                                            var rowKey = rowParitionKeyKvp.RowKey;
-                                            var partitionKey = rowParitionKeyKvp.ParitionKey;
-                                            return this.FindByIdAsync(rowKey, partitionKey,
-                                                    (TEntity entity) => entity.PairWithKey(true),
-                                                    () => default(TEntity).PairWithKey(false),
-                                                    onFailure: (code, msg) => default(TEntity).PairWithKey(false));
-                                        })
-                                    .Await()
-                                    .Where(kvp => kvp.Key)
-                                    .SelectValues();
-                            },
-                            () =>
-                            {
-                                throw new ArgumentException("TEntity does not contain an attribute of type IProvideFindBy.");
-                            });
-                },
-                () => throw new Exception());
-        }
-
-        private Task<TResult> FindByInternalAsync<TRefEntity, TMatch, TEntity, TResult>(IRef<TRefEntity> entityRef,
-                Expression<Func<TEntity, TMatch>> by,
-            Func<IEnumerableAsync<TEntity>, Func<KeyValuePair<ExtendedErrorInformationCodes, string>[]>, TResult> onFound,
-            Func<TResult> onRefNotFound = default)
-            where TEntity : struct, IReferenceable
-            where TRefEntity : IReferenceable
-        {
-            return by.MemberInfo(
-                (memberInfo, expr) =>
-                {
-                    return MemberExpr(memberInfo);
-                    Task<TResult> MemberExpr(MemberInfo memberCandidate)
-                    {
-                        return memberCandidate
-                            .GetAttributesInterface<IProvideFindByAsync>()
-                            .First<IProvideFindByAsync, Task<TResult>>(
-                                (attr, next) =>
-                                {
-                                    return attr.GetKeysAsync(entityRef, this, memberCandidate,
-                                        (keys) =>
-                                        {
-                                            var failures = new KeyValuePair<ExtendedErrorInformationCodes, string>[] { };
-                                            var results = keys
-                                                .Select(
-                                                    rowParitionKeyKvp =>
-                                                    {
-                                                        var rowKey = rowParitionKeyKvp.Key;
-                                                        var partitionKey = rowParitionKeyKvp.Value;
-                                                        return this.FindByIdAsync(rowKey, partitionKey,
-                                                            (TEntity entity) => entity,
-                                                            () => default(TEntity?),
-                                                            onFailure:
-                                                                (code, msg) =>
-                                                                {
-                                                                    failures = failures
-                                                                        .Append(code.PairWithValue(msg))
-                                                                        .ToArray();
-                                                                    return default(TEntity?);
-                                                                });
-                                                    })
-                                                .Await()
-                                                .SelectWhereHasValue();
-                                            return onFound(results,
-                                                () => failures);
-                                        },
-                                        () =>
-                                        {
-                                            if (!onRefNotFound.IsDefaultOrNull())
-                                                return onRefNotFound();
-                                            var emptyResults = EnumerableAsync.Empty<TEntity>();
-                                            return onFound(emptyResults,
-                                                () => new KeyValuePair<ExtendedErrorInformationCodes, string>[] { });
-                                        });
-                                },
-                                () =>
-                                {
-                                    if (expr is MemberExpression)
-                                    {
-                                        var exprFunc = expr as MemberExpression;
-                                        return MemberExpr(exprFunc.Member);
-                                    }
-                                    throw new Exception();
-                                });
-                    }
-                },
-                () => throw new Exception());
-        }
-
-        public static IEnumerableAsync<TEntity> FindAllInternal<TEntity>(
-            TableQuery<TEntity> query,
-            CloudTable table,
-            int numberOfTimesToRetry = DefaultNumberOfTimesToRetry)
-            where TEntity : ITableEntity, new()
-        {
-            var token = default(TableContinuationToken);
-            var segmentFecthing = table.ExecuteQuerySegmentedAsync(query, token);
-            return EnumerableAsync.YieldBatch<TEntity>(
-                async (yieldReturn, yieldBreak) =>
-                {
-                    if (segmentFecthing.IsDefaultOrNull())
-                        return yieldBreak;
-                    try
-                    {
-                        var segment = await segmentFecthing;
-                        if (segment.IsDefaultOrNull())
-                            return yieldBreak;
-
-                        token = segment.ContinuationToken;
-                        segmentFecthing = token.IsDefaultOrNull()?
-                            default(Task<TableQuerySegment<TEntity>>)
-                            :
-                            table.ExecuteQuerySegmentedAsync(query, token);
-                        var results = segment.Results.ToArray();
-                        return yieldReturn(results);
-                    }
-                    catch (AggregateException)
-                    {
-                        throw;
-                    }
-                    catch (Exception ex)
-                    {
-                        if (!table.Exists())
-                            return yieldBreak;
-                        if (ex is StorageException except && except.IsProblemTimeout())
-                        {
-                            if (--numberOfTimesToRetry > 0)
-                            {
-                                await Task.Delay(DefaultBackoffForRetry);
-                                segmentFecthing = token.IsDefaultOrNull() ?
-                                    default(Task<TableQuerySegment<TEntity>>)
-                                    :
-                                    table.ExecuteQuerySegmentedAsync(query, token);
-                                return yieldReturn(new TEntity[] { });
-                            }
-                        }
-                        throw;
-                    }
-                });
         }
 
         #endregion
@@ -1239,6 +1237,8 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
 
         #region CREATE
 
+        #region No modifiers
+
         /// <summary>
         /// Table is created using <paramref name="tableName"/> and no modifiers are executed.
         /// </summary>
@@ -1316,6 +1316,42 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                 onAlreadyExists: onAlreadyExists,
                 onFailure: onFailure,
                 onTimeout: onTimeout);
+        }
+
+        #endregion
+
+        public async Task<TResult> InsertOrReplaceAsync<TData, TResult>(TData data,
+            Func<bool, TResult> onUpdate,
+            Func<ExtendedErrorInformationCodes, string, TResult> onFailure = default,
+            AzureStorageDriver.RetryDelegateAsync<Task<TResult>> onTimeoutAsync = default,
+            string tableName = default)
+        {
+            var table = default(CloudTable);
+            if (tableName.HasBlackSpace())
+                table = this.TableClient.GetTableReference(tableName);
+            if (table.IsDefaultOrNull())
+                table = tableName.HasBlackSpace() ?
+                    this.TableClient.GetTableReference(tableName)
+                    :
+                    table = GetTable<TData>();
+
+            var entity = GetEntity(data);
+
+            var repo = this;
+            return await await this.InsertOrReplaceAsync<TData, Task<TResult>>(entity,
+                (created, updatedEntity) =>
+                {
+                    if (created)
+                    {
+                        return entity.ExecuteCreateModifiersAsync<TResult>(repo,
+                            (discardRollback) => onUpdate(true),
+                            (errors) => throw new Exception());
+                    }
+                    return entity.ExecuteUpdateModifiersAsync(updatedEntity, repo,
+                        (discardRollback) => onUpdate(false),
+                        (members) => throw new Exception("Modifiers failed to execute."));
+                },
+                onFailure: onFailure.AsAsyncFunc());
         }
 
         public Task<TResult> UpdateOrCreateAsync<TData, TResult>(string rowKey, string partitionKey,
@@ -1425,8 +1461,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                 Guid rowId,
             Func<TEntity, TResult> onSuccess,
             Func<TResult> onNotFound,
-            Func<ExtendedErrorInformationCodes, string, TResult> onFailure =
-                default(Func<ExtendedErrorInformationCodes, string, TResult>),
+            Func<ExtendedErrorInformationCodes, string, TResult> onFailure = default,
             CloudTable table = default(CloudTable),
             AzureStorageDriver.RetryDelegate onTimeout =
                 default(AzureStorageDriver.RetryDelegate))
@@ -1434,29 +1469,15 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
         {
             var entityRef = rowId.AsRef<TEntity>();
             var rowKey = entityRef.StorageComputeRowKey();
-            var partitionKey = entityRef.StorageComputePartitionKey();
+            var partitionKey = entityRef.StorageComputePartitionKey(rowKey);
             return FindByIdAsync(rowKey, partitionKey,
                 onSuccess: onSuccess, onNotFound: onNotFound, onFailure:onFailure,
                 table:table,
                 onTimeout:onTimeout);
         }
 
-        //public Task<TResult> FindByIdAsync<TEntity, TResult>(
-        //        string rowKey,
-        //    Func<TEntity, TResult> onSuccess,
-        //    Func<TResult> onNotFound,
-        //    Func<ExtendedErrorInformationCodes, string, TResult> onFailure =
-        //        default(Func<ExtendedErrorInformationCodes, string, TResult>),
-        //    CloudTable table = default(CloudTable),
-        //    AzureStorageDriver.RetryDelegate onTimeout =
-        //        default(AzureStorageDriver.RetryDelegate))
-        //{
-        //    return FindByIdAsync(rowKey, rowKey.GeneratePartitionKey(),
-        //        onSuccess, onNotFound, onFailure, table:table, onTimeout:onTimeout);
-        //}
-
         public IEnumerableAsync<TEntity> FindByIdsAsync<TEntity>(
-                KeyValuePair<string, string>[] rowKeys,
+                IRefAst[] rowKeys,
             CloudTable table = default(CloudTable),
             AzureStorageDriver.RetryDelegate onTimeout =
                 default(AzureStorageDriver.RetryDelegate))
@@ -1468,9 +1489,9 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                 .Select(
                     rowKey =>
                     {
-                        return FindByIdAsync<TEntity, KeyValuePair<bool, TEntity>?>(rowKey.Key, rowKey.Value,
+                        return FindByIdAsync<TEntity, KeyValuePair<bool, TEntity>?>(rowKey.RowKey, rowKey.PartitionKey,
                             (entity) => entity.PairWithKey(true),
-                            () => default(KeyValuePair<bool, TEntity>?),
+                            () => default,
                             table: table,
                             onTimeout: onTimeout);
                     })
@@ -1498,10 +1519,33 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
 
         public IEnumerableAsync<TEntity> FindAll<TEntity>(
             Expression<Func<TEntity, bool>> filter,
-            CloudTable table = default(CloudTable),
+            CloudTable table = default,
             int numberOfTimesToRetry = DefaultNumberOfTimesToRetry)
         {
-            var query = filter.ResolveExpression(out Func<TEntity, bool> postFilter);
+            Func<TEntity, bool> postFilter = (e) => true;
+            var query = typeof(TEntity)
+                .GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                .Where(member => member.ContainsAttributeInterface<IProvideTableQuery>())
+                .Aggregate(string.Empty,
+                    (currentQuery, member) =>
+                    {
+                        var queryModifier = member.GetAttributeInterface<IProvideTableQuery>();
+                        var nextPartOfQuery = queryModifier.ProvideTableQuery(member, filter, 
+                            out Func<TEntity, bool> postFilterForMember);
+                        if (currentQuery.IsNullOrWhiteSpace())
+                        {
+                            postFilter = postFilterForMember;
+                            return nextPartOfQuery;
+                        }
+                        var lastPostFilter = postFilter;
+                        postFilter = (e) => lastPostFilter(e) && postFilterForMember(e);
+                        return TableQuery.CombineFilters(
+                            currentQuery,
+                            TableOperators.And,
+                            nextPartOfQuery);
+                    },
+                    whereFilter => whereFilter.AsTableQuery<TEntity>()); 
+            //var query = filter.ResolveExpression(out Func<TEntity, bool> postFilter);
             var tableEntityTypes = query.GetType().GetGenericArguments();
             if (table.IsDefaultOrNull())
             {
@@ -1524,7 +1568,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
         }
 
         public IEnumerableAsync<TData> FindByPartition<TData>(string partitionKeyValue,
-            string tableName = default(string))
+            string tableName = default)
             where TData  : ITableEntity, new()
         {
             var table = tableName.HasBlackSpace() ?
@@ -1537,7 +1581,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
         }
 
         public IEnumerableAsync<TEntity> FindEntityBypartition<TEntity>(string partitionKeyValue,
-            string tableName = default(string),
+            string tableName = default,
             int numberOfTimesToRetry = DefaultNumberOfTimesToRetry)
         {
             var table = tableName.HasBlackSpace() ?
@@ -1559,33 +1603,6 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
         #endregion
 
         #region Update
-
-        [Obsolete("Use string based row/partition access")]
-        public async Task<TResult> UpdateAsync<TData, TResult>(Guid documentId,
-            Func<TData, Func<TData, Task>, Task<TResult>> onUpdate,
-            Func<TResult> onNotFound = default(Func<TResult>),
-            AzureStorageDriver.RetryDelegateAsync<Task<TResult>> onTimeoutAsync =
-                default(AzureStorageDriver.RetryDelegateAsync<Task<TResult>>),
-                Func<string> getPartitionKey = default(Func<string>))
-        {
-            if (default(Func<string>) == getPartitionKey)
-                getPartitionKey = () => documentId.AsRowKey().GeneratePartitionKey();
-
-            var rowKey = documentId.AsRowKey();
-            var partitionKey = getPartitionKey();
-            return await UpdateAsync(rowKey, partitionKey, onUpdate, onNotFound);
-        }
-
-        [Obsolete("Use string based row/partition access")]
-        public async Task<TResult> UpdateAsync<TData, TResult>(Guid documentId, string partitionKey,
-            Func<TData, Func<TData, Task>, Task<TResult>> onUpdate,
-            Func<TResult> onNotFound = default(Func<TResult>),
-            AzureStorageDriver.RetryDelegateAsync<Task<TResult>> onTimeoutAsync =
-                default(AzureStorageDriver.RetryDelegateAsync<Task<TResult>>))
-        {
-            var rowKey = documentId.AsRowKey();
-            return await UpdateAsync(rowKey, partitionKey, onUpdate, onNotFound);
-        }
 
         public Task<TResult> UpdateAsync<TData, TResult>(string rowKey, string partitionKey,
             Func<TData, Func<TData, Task>, Task<TResult>> onUpdate,
@@ -1629,7 +1646,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
         {
             var entityRef = documentId.AsRef<TData>();
             var rowKey = entityRef.StorageComputeRowKey();
-            var partitionKey = entityRef.StorageComputePartitionKey();
+            var partitionKey = entityRef.StorageComputePartitionKey(rowKey);
             return await UpdateAsyncAsync(rowKey, partitionKey, onUpdate, onNotFound);
         }
 
@@ -1915,7 +1932,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
         {
             var entityRef = documentId.AsRef<TData>();
             var rowKey = entityRef.StorageComputeRowKey();
-            var partitionKey = entityRef.StorageComputePartitionKey();
+            var partitionKey = entityRef.StorageComputePartitionKey(rowKey);
             return DeleteAsync<TData, TResult>(rowKey, partitionKey,
                 success,
                 onNotFound,
@@ -2353,24 +2370,35 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             Func<TResult> onAlreadyExists = default,
             Func<ExtendedErrorInformationCodes, string, TResult> onFailure = default,
             string contentType = default,
+            IDictionary<string, string> metadata = default,
             AzureStorageDriver.RetryDelegate onTimeout = default)
         {
             var container = this.BlobClient.GetContainerReference(containerName);
-            container.CreateIfNotExists();
-            var blockBlob = container.GetBlockBlobReference(blobId.ToString("N"));
             try
             {
+                container.CreateIfNotExists();
+                var blockBlob = container.GetBlockBlobReference(blobId.ToString("N"));
+
                 if (await blockBlob.ExistsAsync())
                 {
                     if (onAlreadyExists.IsDefault())
                         throw new RecordAlreadyExistsException();
                     return onAlreadyExists();
                 }
+
                 if (contentType.HasBlackSpace())
                     blockBlob.Properties.ContentType = contentType;
+                
                 using (var stream = await blockBlob.OpenWriteAsync())
                 {
                     await stream.WriteAsync(content, 0, content.Length);
+                }
+
+                if (!metadata.IsDefaultNullOrEmpty())
+                {
+                    foreach (var kvp in metadata)
+                        blockBlob.Metadata.Add(kvp.Key, kvp.Value);
+                    await blockBlob.SetMetadataAsync();
                 }
                 return onSuccess();
             }
@@ -2390,6 +2418,7 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
             Func<TResult> onAlreadyExists = default,
             Func<ExtendedErrorInformationCodes, string, TResult> onFailure = default,
             string contentType = default,
+            IDictionary<string, string> metadata = default,
             AzureStorageDriver.RetryDelegate onTimeout = default)
         {
             var container = this.BlobClient.GetContainerReference(containerName);
@@ -2405,6 +2434,12 @@ namespace EastFive.Persistence.Azure.StorageTables.Driver
                 }
                 if (contentType.HasBlackSpace())
                     blockBlob.Properties.ContentType = contentType;
+                if (!metadata.IsDefaultNullOrEmpty())
+                {
+                    foreach (var kvp in metadata)
+                        blockBlob.Metadata.Add(kvp.Key, kvp.Value);
+                    await blockBlob.SetMetadataAsync();
+                }
                 using (var stream = await blockBlob.OpenWriteAsync())
                 {
                     await content.CopyToAsync(stream);

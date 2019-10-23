@@ -43,6 +43,12 @@ namespace EastFive.Persistence.Azure.StorageTables
                     });
         }
 
+        public static object AsTableQuery<TEntity>(this string whereExpression,
+            IList<string> selectColumns = default)
+        {
+            return GetTableQuery<TEntity>(whereExpression, selectColumns);
+        }
+
         public static object GetTableQuery<TEntity>(string whereExpression = null,
             IList<string> selectColumns = default)
         {
@@ -103,7 +109,7 @@ namespace EastFive.Persistence.Azure.StorageTables
             throw new ArgumentException($"{member.DeclaringType.FullName}..{member.Name} is not a property/field of {entityType.FullName}.");
         }
 
-        private static string ExpressionTypeToQueryComparison(ExpressionType comparision)
+        public static string ExpressionTypeToQueryComparison(this ExpressionType comparision)
         {
             if (ExpressionType.Equal == comparision)
                 return QueryComparisons.Equal;
@@ -121,9 +127,9 @@ namespace EastFive.Persistence.Azure.StorageTables
             throw new ArgumentException($"{comparision} is not a supported query comparison.");
         }
 
-        private static string WhereExpression(ExpressionType comparision, string assignmentName, object assignmentValue)
+        public static string WhereExpression(this ExpressionType comparision, string assignmentName, object assignmentValue)
         {
-            var queryComparison = ExpressionTypeToQueryComparison(comparision);
+            var queryComparison = comparision.ExpressionTypeToQueryComparison();
 
             if (typeof(Guid?).IsInstanceOfType(assignmentValue))
                 TableQuery.GenerateFilterConditionForGuid(assignmentName, queryComparison, (assignmentValue as Guid?).Value);
@@ -148,7 +154,7 @@ namespace EastFive.Persistence.Azure.StorageTables
 
         private static object ResolveUnaryExpression<TEntity>(UnaryExpression expression, out Func<TEntity, bool> postFilter)
         {
-            postFilter = (entity) => true;
+            // TODO: var expressionModifier = expression.NodeType == ExpressionType.NotEqual;
             var operand = expression.Operand;
             if (!(operand is MemberExpression))
                 throw new NotImplementedException($"Unary expression of type {operand.GetType().FullName} is not supported.");
@@ -157,6 +163,7 @@ namespace EastFive.Persistence.Azure.StorageTables
             var assignmentMember = ResolveMemberInType(typeof(TEntity), memberOperand, out Func<object,object> getValue);
             var assignmentName = assignmentMember.GetTablePropertyName();
 
+            postFilter = (entity) => true;
             var query = GetTableQuery<TEntity>();
             var nullableHasValueProperty = typeof(Nullable<>).GetProperty("HasValue");
             if (memberOperand.Member == nullableHasValueProperty)
@@ -226,22 +233,71 @@ namespace EastFive.Persistence.Azure.StorageTables
             return query;
         }
 
-        private static object ResolveMemberExpression<TEntity>(MemberExpression expression)
+        private static string ResolveMemberExpressionFilter<TEntity>(MemberExpression expression)
         {
-            var assignmentMember = ResolveMemberInType(typeof(TEntity), expression, out Func<object,object> getValue);
+            var assignmentMember = ResolveMemberInType(typeof(TEntity), expression, out Func<object, object> getValue);
             if (!typeof(bool).IsAssignableFrom(expression.Type))
                 throw new NotImplementedException($"Member expression of type {expression.Type.FullName} is not supported.");
 
             var assignmentName = assignmentMember.GetTablePropertyName();
             var filter = TableQuery.GenerateFilterConditionForBool(assignmentName, QueryComparisons.Equal, true);
+            return filter;
+        }
+
+        private static object ResolveMemberExpression<TEntity>(MemberExpression expression)
+        {
+            var filter = ResolveMemberExpressionFilter<TEntity>(expression);
             var whereQuery = GetTableQuery<TEntity>(filter);
             return whereQuery;
         }
 
-        public static object ResolveExpression<TEntity>(this Expression<Func<TEntity, bool>> filter, out Func<TEntity, bool> postFilter)
+        private static string ResolveBinaryExpressionFilter<TEntity>(BinaryExpression binaryExpression, out Func<TEntity, bool> postFilter)
+        {
+            if(binaryExpression.NodeType == ExpressionType.AndAlso)
+            {
+                if (!(binaryExpression.Left is Expression<Func<TEntity, bool>>))
+                    throw new Exception();
+                var leftExpr = binaryExpression.Left as Expression<Func<TEntity, bool>>;
+                var leftFilter = ResolveFilter<TEntity>(leftExpr, out Func<TEntity, bool> postFilterLeft);
+
+                if (!(binaryExpression.Right is Expression<Func<TEntity, bool>>))
+                    throw new Exception();
+                var rightExpr = binaryExpression.Right as Expression<Func<TEntity, bool>>;
+                var rightFilter = ResolveFilter<TEntity>(rightExpr, out Func<TEntity, bool> postFilterRight);
+
+                var queryComparison = binaryExpression.NodeType.ExpressionTypeToQueryComparison();
+
+                postFilter = (e) => postFilterLeft(e) && postFilterRight(e);
+                var filterAnd = $"{leftFilter} {queryComparison} {rightFilter}";
+            }
+
+            if (!(binaryExpression.Left is MemberExpression))
+                throw new ArgumentException("TableQuery expression left side must be an MemberExpression");
+
+            var memberBeingAssigned = binaryExpression.Left as MemberExpression;
+            var assignmentMember = ResolveMemberInType(typeof(TEntity), memberBeingAssigned, out Func<object, object> getValue);
+            var assignmentValue = binaryExpression.Right.ResolveExpression();
+            var assignmentName = assignmentMember.GetTablePropertyName();
+
+            var whereFilter = binaryExpression.NodeType.WhereExpression(assignmentName, assignmentValue);
+            postFilter = (e) => true;
+            return whereFilter;
+        }
+
+        private static object ResolveBinaryExpression<TEntity>(BinaryExpression binaryExpression, out Func<TEntity, bool> postFilter)
+        {
+            var whereFilter = ResolveBinaryExpressionFilter<TEntity>(binaryExpression, out postFilter);
+            var whereQuery = GetTableQuery<TEntity>(whereFilter);
+            return whereQuery;
+        }
+
+        public static object ResolveQuery<TEntity>(this Expression<Func<TEntity, bool>> filter, out Func<TEntity, bool> postFilter)
         {
             if (filter.Body is UnaryExpression)
-                return ResolveUnaryExpression<TEntity>(filter.Body as UnaryExpression, out postFilter);
+                return ResolveUnaryExpression(filter.Body as UnaryExpression, out postFilter);
+
+            if (filter.Body is BinaryExpression)
+                return ResolveBinaryExpression(filter.Body as BinaryExpression, out postFilter);
 
             postFilter = (entity) => true;
             if (filter.Body is ConstantExpression)
@@ -250,20 +306,29 @@ namespace EastFive.Persistence.Azure.StorageTables
             if (filter.Body is MemberExpression)
                 return ResolveMemberExpression<TEntity>(filter.Body as MemberExpression);
 
-            if (!(filter.Body is BinaryExpression))
-                throw new ArgumentException("TableQuery expression is not a binary expression");
+            throw new ArgumentException($"{filter.Body.GetType().FullName} is not a supported TableQuery expression type.");
+        }
 
-            var binaryExpression = filter.Body as BinaryExpression;
-            if (!(binaryExpression.Left is MemberExpression))
-                throw new ArgumentException("TableQuery expression left side must be an MemberExpression");
+        public static string ResolveFilter<TEntity>(this Expression<Func<TEntity, bool>> filter, out Func<TEntity, bool> postFilter)
+        {
+            if (filter.Body is UnaryExpression)
+            {
+                var discard = ResolveUnaryExpression<TEntity>(filter.Body as UnaryExpression, out postFilter);
+                return null;
+            }
 
-            var assignmentMember = ResolveMemberInType(typeof(TEntity), binaryExpression.Left as MemberExpression, out Func<object,object> getValue);
-            var assignmentValue = binaryExpression.Right.ResolveExpression();
-            var assignmentName = assignmentMember.GetTablePropertyName();
+            if (filter.Body is BinaryExpression)
+                return ResolveBinaryExpressionFilter<TEntity>(filter.Body as BinaryExpression, out postFilter);
 
-            var whereExpr = WhereExpression(binaryExpression.NodeType, assignmentName, assignmentValue);
-            var whereQuery = GetTableQuery<TEntity>(whereExpr);
-            return whereQuery;
+            postFilter = (entity) => true;
+            if (filter.Body is ConstantExpression)
+                return default;
+
+            if (filter.Body is MemberExpression)
+                return ResolveMemberExpressionFilter<TEntity>(filter.Body as MemberExpression);
+
+
+            throw new ArgumentException($"{filter.Body.GetType().FullName} is not a supported TableQuery expression type.");
         }
 
     }

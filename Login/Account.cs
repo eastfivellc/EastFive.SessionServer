@@ -68,11 +68,6 @@ namespace EastFive.Azure.Login
                 .AsRef<Account>();
             return await accountRef
                 .StorageCreateOrUpdateAsync(
-                    account =>
-                    {
-                        account.accountRef = accountRef;
-                        return account;
-                    },
                     async (created, account, saveAsync) =>
                     {
                         if (!created)

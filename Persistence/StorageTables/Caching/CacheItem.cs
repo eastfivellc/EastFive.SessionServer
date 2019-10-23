@@ -132,11 +132,6 @@ namespace EastFive.Persistence.Azure.StorageTables.Caching
 
             var cacheRef = cacheId.AsRef<CacheItem>();
             return cacheRef.StorageCreateOrUpdateAsync<CacheItem, TResult>(
-                (ci) =>
-                {
-                    ci.cacheItemRef = cacheRef;
-                    return ci;
-                },
                 async (created, item, saveAsync) =>
                 {
                     if (item.whenLookup.IsDefaultOrNull())

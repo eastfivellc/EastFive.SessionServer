@@ -118,6 +118,7 @@ namespace EastFive.Persistence.Azure.StorageTables
             return await result;
         }
 
+        // Called via reflection
         public virtual Task<TResult> ExecuteTypedAsync<TEntity, TRefEntity, TResult>(IRef<TRefEntity> entityRef,
                 MemberInfo memberInfo,
                 string rowKeyRef, string partitionKeyRef,
@@ -128,7 +129,7 @@ namespace EastFive.Persistence.Azure.StorageTables
             where TRefEntity : IReferenceable
         {
             var rowKey = entityRef.StorageComputeRowKey();
-            var partitionKey = entityRef.StorageComputePartitionKey();
+            var partitionKey = entityRef.StorageComputePartitionKey(rowKey);
             return repository.UpdateAsync<TRefEntity, TResult>(rowKey, partitionKey,
                 async (entity, saveAsync) =>
                 {
