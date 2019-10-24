@@ -252,26 +252,42 @@ namespace EastFive.Persistence.Azure.StorageTables
 
             #endregion
 
-            if (typeof(object) == valueType)
-            {
-                if (null == value)
+            return valueType.IsNullable(
+                nullableType =>
                 {
-                    var nullGuidKey = new Guid(EDMExtensions.NullGuidKey);
-                    var ep = new EntityProperty(nullGuidKey);
-                    return onValue(ep);
-                }
-                var valueTypeOfInstance = value.GetType();
-                if (typeof(object) == valueTypeOfInstance) // Prevent stack overflow recursion
+                    if (!value.NullableHasValue())
+                        return onValue(new EntityProperty(default(int?))); // best way to rep null
+
+                    var valueFromNullable = value.GetNullableValue();
+                    return CastEntityProperty(valueFromNullable, nullableType,
+                        onValue,
+                        onNoCast);
+                },
+                () =>
                 {
-                    var ep = new EntityProperty(new byte[] { });
-                    return onValue(ep);
-                }
-                return CastEntityProperty(value, valueTypeOfInstance, onValue, onNoCast);
-            }
+                    if (typeof(object) == valueType)
+                    {
+                        if (null == value)
+                        {
+                            var nullGuidKey = new Guid(EDMExtensions.NullGuidKey);
+                            var ep = new EntityProperty(nullGuidKey);
+                            return onValue(ep);
+                        }
+                        var valueTypeOfInstance = value.GetType();
+                        if (typeof(object) == valueTypeOfInstance) // Prevent stack overflow recursion
+                        {
+                            var ep = new EntityProperty(new byte[] { });
+                            return onValue(ep);
+                        }
+                        return CastEntityProperty(value, valueTypeOfInstance, onValue, onNoCast);
+                    }
+
+
+                    return onNoCast();
+                });
 
             #endregion
 
-            return onNoCast();
         }
 
         public static TResult Bind<TResult>(this EntityProperty value, Type type, 
@@ -531,8 +547,8 @@ namespace EastFive.Persistence.Azure.StorageTables
                     }
                     if (typeof(DateTime) == nullableType)
                     {
-                        var dtValue = value.DateTime;
-                        return onBound(dtValue);
+                        var dateTimeValueMaybe = value.DateTime;
+                        return onBound(dateTimeValueMaybe);
                     }
                     return onFailedToBind();
                 },
