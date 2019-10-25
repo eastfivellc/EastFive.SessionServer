@@ -50,8 +50,9 @@ namespace EastFive.Api.Azure.Modules
             ZipArchive zipArchive = null;
             try
             {
-                var blobClient = EastFive.Azure.Persistence.AppSettings.Storage.ConfigurationString(connectionString => AzureTableDriverDynamic.FromStorageString(connectionString).BlobClient);
-                var container = blobClient.GetContainerReference("spa");
+                var blobClient = EastFive.Azure.Persistence.AppSettings.SpaStorage.ConfigurationString(connectionString => AzureTableDriverDynamic.FromStorageString(connectionString).BlobClient);
+                var containerName = EastFive.Azure.Persistence.AppSettings.SpaContainer.ConfigurationString(name => name);
+                var container = blobClient.GetContainerReference(containerName);
                 var blobRef = container.GetBlockBlobReference("spa.zip");
                 var blobStream = blobRef.OpenRead();
 
