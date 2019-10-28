@@ -22,7 +22,10 @@ using BlackBarLabs.Persistence.Azure.Attributes;
 
 namespace EastFive.Azure.Synchronization.Persistence
 {
-    [StorageResource(typeof(StandardPartitionKeyGenerator), typeof(ThreePlaceHexadecimalKeyGenerator))]
+    [StorageResource(
+        typeof(StandardPartitionKeyGenerator), 
+        typeof(ThreePlaceHexadecimalKeyGenerator),
+        SortKey = "2")]
     public class AdapterDocument : TableEntity
     {
         [IgnoreDataMember]

@@ -323,6 +323,10 @@
     <Compile Include="Login\CredentialProvider.cs" />
     <Compile Include="Login\Redirection.cs" />
     <Compile Include="Media\ContentExtensions.cs" />
+    <Compile Include="Persistence\StorageTables\Backups\BackupFunction.cs" />
+    <Compile Include="Persistence\StorageTables\Backups\BlobBackup.cs" />
+    <Compile Include="Persistence\StorageTables\Backups\Containers.cs" />
+    <Compile Include="Persistence\StorageTables\Backups\WhereInformation.cs" />
     <Compile Include="Persistence\StorageTables\TableInformationAttribute.cs" />
     <Compile Include="Monitoring\Monitoring.cs" />
     <Compile Include="IProvideIntegration.cs" />
