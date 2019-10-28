@@ -3,6 +3,7 @@ using BlackBarLabs.Extensions;
 using BlackBarLabs.Persistence.Azure.Attributes;
 using BlackBarLabs.Persistence.Azure.StorageTables;
 using EastFive.Azure.Persistence.AzureStorageTables;
+using EastFive.Azure.Persistence.StorageTables.Backups;
 using EastFive.Collections.Generic;
 using EastFive.Extensions;
 using EastFive.Linq;
@@ -55,6 +56,8 @@ namespace EastFive.Persistence.Azure.StorageTables
             {
                 return (StringKeyGenerator)Activator.CreateInstance(RowKeyAttribute);
             };
+
+        public string SortKey => default;
 
         public interface IScope
         {
@@ -521,6 +524,12 @@ namespace EastFive.Persistence.Azure.StorageTables
                     },
                     () => () => 0.AsTask(),
                     tableName: tableName);
+        }
+
+        public IEnumerable<StorageResourceInfo> GetStorageResourceInfos(Type t)
+        {
+            // TODO: THis!!
+            yield break;
         }
 
         private class FaildModificationHandler<TResult> : IHandleFailedModifications<TResult>

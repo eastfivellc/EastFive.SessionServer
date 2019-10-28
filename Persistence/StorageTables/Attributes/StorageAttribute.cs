@@ -15,7 +15,6 @@ using System.Threading.Tasks;
 using BlackBarLabs.Extensions;
 using EastFive.Linq.Expressions;
 using EastFive.Persistence.Azure.StorageTables;
-using BlackBarLabs.Persistence.Azure.StorageTables;
 using EastFive.Linq;
 
 namespace EastFive.Persistence

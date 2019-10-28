@@ -19,6 +19,7 @@ namespace EastFive.Api.Azure.Credentials
 {
     [Serializable]
     [DataContract]
+    [StorageResourceNoOp]
     public class CredentialProcessDocument : TableEntity
     {
         public CredentialProcessDocument()

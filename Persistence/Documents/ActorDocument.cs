@@ -16,6 +16,7 @@ using BlackBarLabs.Persistence.Azure.Attributes;
 
 namespace EastFive.Security.SessionServer.Persistence.Documents
 {
+    [StorageResourceNoOp]
     public class ActorMappingsDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
     {
         #region Constructors

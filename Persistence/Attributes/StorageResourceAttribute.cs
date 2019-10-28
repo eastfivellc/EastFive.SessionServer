@@ -1,6 +1,8 @@
 ﻿using EastFive;
+using EastFive.Azure.Persistence.StorageTables.Backups;
 using EastFive.Linq;
 using EastFive.Persistence.Azure.StorageTables;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -197,6 +199,51 @@ namespace BlackBarLabs.Persistence.Azure.Attributes
 
         public Func<StringKeyGenerator> PartitionKeyGenerator { get; set; }
         public Func<StringKeyGenerator> RowKeyGenerator { get; set; }
+        public string SortKey { get; set; }
+
+        public virtual IEnumerable<StorageResourceInfo> GetStorageResourceInfos(Type t)
+        {
+            string GetSortKey(string tableName)
+            {
+                if (this.SortKey.HasBlackSpace())
+                    return this.SortKey;
+                return tableName;
+            }
+
+            var attr = this;
+            var baseResWhereInfo = WhereInformation
+                .GenerateWhereInformation(
+                    this.PartitionKeyGenerator.Invoke(),
+                    this.RowKeyGenerator.Invoke())
+                .ToArray();
+            var baseResInfo = new StorageResourceInfo
+            {
+                tableName = this.GetTableName(t),
+                sortKey = GetSortKey(attr.GetTableName(t)),
+                message = baseResWhereInfo,
+            };
+            return t
+                .GetMembers(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+                .Where(member => member.ContainsAttributeInterface<IBackupStorage>())
+                .Select(
+                    member =>
+                    {
+                        var attrMember = member.GetAttributesInterface<IBackupStorage>().First();
+                        var partitionKeyGenerator = attrMember.PartitionKeyGenerator.Invoke();
+                        var rowKeyGenerator = attrMember.RowKeyGenerator.Invoke();
+                        var sortKey = GetSortKey(attrMember.GetTableName(member));
+                        var where = WhereInformation
+                            .GenerateWhereInformation(partitionKeyGenerator, rowKeyGenerator)
+                            .ToArray();
+                        return new StorageResourceInfo
+                        {
+                            tableName = this.GetTableName(t),
+                            sortKey = GetSortKey(attr.GetTableName(t)),
+                            message = where,
+                        };
+                    })
+                .Append(baseResInfo);
+        }
 
         public string GetTableName(object declaringInfo)
         {
@@ -213,10 +260,27 @@ namespace BlackBarLabs.Persistence.Azure.Attributes
         }
     }
 
+
+    public class StorageResourceNoOpAttribute : StorageResourceAttribute, IBackupStorage
+    {
+        public override IEnumerable<StorageResourceInfo> GetStorageResourceInfos(Type t)
+        {
+            yield return new StorageResourceInfo
+            {
+                tableName = GetTableName(t),
+                message = new WhereInformation[] { },
+                sortKey = default,
+            };
+        }
+    }
+
     public interface IBackupStorage
     {
         string GetTableName(object declaringInfo);
         Func<StringKeyGenerator> PartitionKeyGenerator { get; }
         Func<StringKeyGenerator> RowKeyGenerator { get; }
+        string SortKey { get; }
+
+        IEnumerable<StorageResourceInfo> GetStorageResourceInfos(Type t);
     }
 }

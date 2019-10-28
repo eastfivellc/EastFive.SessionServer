@@ -5,6 +5,7 @@ using System.Runtime.Serialization;
 
 namespace EastFive.Security.SessionServer.Persistence.Azure.Documents
 {
+    [StorageResourceNoOp]
     public class CredentialMappingLookupDocument : Microsoft.WindowsAzure.Storage.Table.TableEntity
     {
         #region Properties
