@@ -19,6 +19,7 @@ using System.Linq.Expressions;
 using BlackBarLabs.Api.Resources;
 using EastFive.Api.Azure.Credentials.Attributes;
 using EastFive.Api.Azure.Credentials.Controllers;
+using EastFive.Extensions;
 
 namespace EastFive.Security.SessionServer
 {

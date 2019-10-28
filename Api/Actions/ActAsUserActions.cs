@@ -10,7 +10,6 @@ using System.IO;
 using System.Linq;
 using System.Web.Http.Results;
 using BlackBarLabs;
-using BlackBarLabs.Extensions;
 using EastFive.Collections.Generic;
 using Microsoft.ApplicationInsights;
 using EastFive.Linq.Async;
@@ -19,6 +18,7 @@ using EastFive.Linq;
 using BlackBarLabs.Linq;
 using EastFive.Security.SessionServer;
 using BlackBarLabs.Api;
+using EastFive.Extensions;
 
 namespace EastFive.Api.Azure.Credentials
 {
@@ -150,7 +150,7 @@ namespace EastFive.Api.Azure.Credentials
                     return redirectResponse;
                 },
                 "Guid not unique for creation of authentication request id".AsFunctionException<Task<HttpResponseMessage>>(),
-                (why) => request.CreateResponseConfiguration("", why).ToTask());
+                (why) => request.CreateResponseConfiguration("", why).AsTask());
         }
     }
 }

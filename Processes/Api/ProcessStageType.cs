@@ -12,6 +12,7 @@ using BlackBarLabs.Extensions;
 using System.Linq;
 using EastFive.Collections.Generic;
 using EastFive.Linq;
+using EastFive.Extensions;
 
 namespace EastFive.Api.Azure.Resources
 {

@@ -12,6 +12,7 @@ using EastFive.Collections.Generic;
 using Microsoft.ApplicationInsights;
 using EastFive.Linq;
 using EastFive.Api.Azure;
+using EastFive.Extensions;
 
 namespace EastFive.Security.SessionServer
 {

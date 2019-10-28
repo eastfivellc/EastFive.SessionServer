@@ -73,7 +73,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 ApiSecurity apiSecurity,
             EastFive.Api.Azure.AzureApplication application, HttpRequestMessage request,
             EastFive.Api.Controllers.RedirectResponse redirectResponse,
-            EastFive.Api.Controllers.ViewStringResponse viewResponse)
+            ViewStringResponse viewResponse)
         {
             return await await CredentialProcessDocument.FindByIdAsync(credentialProcessId,
                 (document) =>
@@ -94,7 +94,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 ApiSecurity apiSecurity,
             EastFive.Api.Azure.AzureApplication application, HttpRequestMessage request,
             EastFive.Api.Controllers.RedirectResponse redirectResponse,
-            EastFive.Api.Controllers.ViewStringResponse viewResponse)
+            ViewStringResponse viewResponse)
         {
             return await await CredentialProcessDocument.FindByIdAsync(credentialProcessId,
                 (document) =>
@@ -117,7 +117,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 ApiSecurity apiSecurity,
             EastFive.Api.Azure.AzureApplication application, HttpRequestMessage request,
             EastFive.Api.Controllers.RedirectResponse redirectResponse,
-            EastFive.Api.Controllers.ViewStringResponse viewResponse)
+            ViewStringResponse viewResponse)
         {
             return await await CredentialProcessDocument.FindByIdAsync(credentialProcessId,
                 async (document) =>
@@ -178,7 +178,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 ApiSecurity apiSecurity,
             EastFive.Api.Azure.AzureApplication application, HttpRequestMessage request,
             EastFive.Api.Controllers.RedirectResponse redirectResponse,
-            EastFive.Api.Controllers.ViewStringResponse viewResponse)
+            ViewStringResponse viewResponse)
         {
             return await await CredentialProcessDocument.FindByIdAsync(credentialProcessId,
                 async (document) =>

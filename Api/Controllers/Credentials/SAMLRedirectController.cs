@@ -11,7 +11,6 @@ using BlackBarLabs;
 using BlackBarLabs.Api;
 using EastFive.Api.Services;
 using System.Xml;
-using BlackBarLabs.Extensions;
 using System.Xml.Linq;
 using Newtonsoft.Json;
 using System.Dynamic;
@@ -19,6 +18,7 @@ using EastFive.Collections.Generic;
 using EastFive.Linq;
 using EastFive.Api.Azure.Controllers;
 using EastFive.Security.SessionServer;
+using EastFive.Extensions;
 
 namespace EastFive.Api.Azure.Credentials.Controllers
 {
@@ -34,7 +34,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                     .CreateResponse(HttpStatusCode.BadRequest)
                     .AddReason("Content was not multipart")
                     .ToActionResult()
-                    .ToTask());
+                    .AsTask());
         }
 
         private TResult ParseToDictionary<TResult>(string samlResponse,
@@ -92,32 +92,32 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                         (location, why, paramsExtra) => Request.CreateRedirectResponse(location)
                                     .AddReason(why)
                                     .ToActionResult()
-                                    .ToTask(),
+                                    .AsTask(),
                         (why) => this.Request.CreateResponse(HttpStatusCode.BadRequest)
                                     .AddReason($"Invalid token:{why}")
                                     .ToActionResult()
-                                    .ToTask(),
+                                    .AsTask(),
                         () => this.Request.CreateResponse(HttpStatusCode.Conflict)
                                     .AddReason($"Token is not connected to a user in this system")
                                     .ToActionResult()
-                                    .ToTask(),
+                                    .AsTask(),
                         (why) => this.Request.CreateResponse(HttpStatusCode.ServiceUnavailable)
                                     .AddReason(why)
                                     .ToActionResult()
-                                    .ToTask(),
+                                    .AsTask(),
                         (why) => this.Request.CreateResponse(HttpStatusCode.InternalServerError)
                                     .AddReason(why)
                                     .ToActionResult()
-                                    .ToTask(),
+                                    .AsTask(),
                         (why) => this.Request.CreateResponse(HttpStatusCode.Conflict)
                                     .AddReason(why)
                                     .ToActionResult()
-                                    .ToTask());
+                                    .AsTask());
                         },
                         (why) => Request.CreateResponse(HttpStatusCode.BadRequest)
                             .AddReason(why)
                             .ToActionResult()
-                            .ToTask());
+                            .AsTask());
             
         }
     }

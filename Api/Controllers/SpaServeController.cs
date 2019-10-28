@@ -11,6 +11,7 @@ using System.IO;
 using System.Collections.Generic;
 using EastFive.Security.SessionServer.Exceptions;
 using System.Linq;
+using EastFive.Extensions;
 
 namespace EastFive.Api.Azure.Controllers
 {

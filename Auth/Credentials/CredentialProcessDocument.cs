@@ -13,6 +13,7 @@ using BlackBarLabs.Extensions;
 using EastFive.Collections.Generic;
 using EastFive.Linq;
 using BlackBarLabs.Persistence.Azure.Attributes;
+using EastFive.Extensions;
 
 namespace EastFive.Api.Azure.Credentials
 {
