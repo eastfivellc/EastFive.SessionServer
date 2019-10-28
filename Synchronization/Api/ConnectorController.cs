@@ -23,7 +23,7 @@ using EastFive.Security.SessionServer;
 
 namespace EastFive.Api.Controllers
 {
-    [FunctionViewController(Route = "Connector")]
+    //[FunctionViewController(Route = "Connector")]
     public class ConnectorController
     {
 

@@ -47,59 +47,66 @@ namespace EastFive.Api.Azure.Modules
         
         private void ExtractSpaFiles(AzureApplication application)
         {
-            ZipArchive zipArchive = null;
-            try
-            {
-                var blobClient = EastFive.Azure.Persistence.AppSettings.Storage.ConfigurationString(connectionString => AzureTableDriverDynamic.FromStorageString(connectionString).BlobClient);
-                var container = blobClient.GetContainerReference("spa");
-                var blobRef = container.GetBlockBlobReference("spa.zip");
-                var blobStream = blobRef.OpenRead();
-
-                zipArchive = new ZipArchive(blobStream);
-            }
-            catch
-            {
-                indexHTML = System.Text.Encoding.UTF8.GetBytes("SPA Not Installed");
-                return;
-            }
-
-            using (zipArchive)
-            {
-
-                indexHTML = zipArchive.Entries
-                    .First(item => string.Compare(item.FullName, IndexHTMLFileName, true) == 0)
-                    .Open()
-                    .ToBytes();
-
-                lookupSpaFile = ConfigurationContext.Instance.GetSettingValue(EastFive.Azure.AppSettings.SpaSiteLocation,
-                    (siteLocation) =>
+            bool setup = EastFive.Azure.Persistence.AppSettings.SpaStorage.ConfigurationString(
+                connectionString =>
+                {
+                    ZipArchive zipArchive = null;
+                    try
                     {
-                        application.Telemetry.TrackEvent($"SpaHandlerModule - ExtractSpaFiles   siteLocation: {siteLocation}");
-                        return zipArchive.Entries
-                            .Where(item => string.Compare(item.FullName, IndexHTMLFileName, true) != 0)
-                            .Select(
-                                entity =>
-                                {
-                                    if (!entity.FullName.EndsWith(".js"))
-                                        return entity.FullName.PairWithValue(entity.Open().ToBytes());
+                        var blobClient = AzureTableDriverDynamic.FromStorageString(connectionString).BlobClient;
+                        var containerName = EastFive.Azure.Persistence.AppSettings.SpaContainer.ConfigurationString(name => name);
+                        var container = blobClient.GetContainerReference(containerName);
+                        var blobRef = container.GetBlockBlobReference("spa.zip");
+                        var blobStream = blobRef.OpenRead();
 
-                                    var fileBytes = entity.Open()
-                                        .ToBytes()
-                                        .GetString()
-                                        .Replace("8FCC3D6A-9C25-4802-8837-16C51BE9FDBE.example.com", siteLocation)
-                                        .GetBytes();
-
-                                    return entity.FullName.PairWithValue(fileBytes);
-
-                                })
-                            .ToDictionary();
-                    },
-                    () =>
+                        zipArchive = new ZipArchive(blobStream);
+                    }
+                    catch
                     {
-                        application.Telemetry.TrackException(new ArgumentNullException("Could not find SpaSiteLocation - is this key set in app settings?"));
-                        return new Dictionary<string, byte[]>();
-                    });
-            }
+                        indexHTML = System.Text.Encoding.UTF8.GetBytes("SPA Not Installed");
+                        return false;
+                    }
+                    
+                    using (zipArchive)
+                    {
+                        
+                        indexHTML = zipArchive.Entries
+                            .First(item => string.Compare(item.FullName, IndexHTMLFileName, true) == 0)
+                            .Open()
+                            .ToBytes();
+                        
+                        lookupSpaFile = ConfigurationContext.Instance.GetSettingValue(EastFive.Azure.AppSettings.SpaSiteLocation,
+                            (siteLocation) =>
+                            {
+                                application.Telemetry.TrackEvent($"SpaHandlerModule - ExtractSpaFiles   siteLocation: {siteLocation}");
+                                return zipArchive.Entries
+                                    .Where(item => string.Compare(item.FullName, IndexHTMLFileName, true) != 0)
+                                    .Select(
+                                        entity =>
+                                        {
+                                            if (!entity.FullName.EndsWith(".js"))
+                                                return entity.FullName.PairWithValue(entity.Open().ToBytes());
+                                            
+                                            var fileBytes = entity.Open()
+                                                .ToBytes()
+                                                .GetString()
+                                                .Replace("8FCC3D6A-9C25-4802-8837-16C51BE9FDBE.example.com", siteLocation)
+                                                .GetBytes();
+                                            
+                                            return entity.FullName.PairWithValue(fileBytes);
+                                        })
+                                    .ToDictionary();
+                            },
+                            () =>
+                            {
+                                application.Telemetry.TrackException(new ArgumentNullException("Could not find SpaSiteLocation - is this key set in app settings?"));
+                                return new Dictionary<string, byte[]>();
+                            });
+                    }
+                    return true;
+
+                },
+                why => false);
         }
         
         protected override async Task<HttpResponseMessage> SendAsync(EastFive.Api.HttpApplication httpApp, HttpRequestMessage request, CancellationToken cancellationToken, Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> continuation)
