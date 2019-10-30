@@ -72,7 +72,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 [OptionalQueryParameter(Name = "ApiKeySecurity")]string apiSecurityKey,
                 ApiSecurity apiSecurity,
             EastFive.Api.Azure.AzureApplication application, HttpRequestMessage request,
-            EastFive.Api.Controllers.RedirectResponse redirectResponse,
+            RedirectResponse redirectResponse,
             ViewStringResponse viewResponse)
         {
             return await await CredentialProcessDocument.FindByIdAsync(credentialProcessId,
@@ -93,7 +93,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 [OptionalQueryParameter(Name = "ApiKeySecurity")]string apiSecurityKey,
                 ApiSecurity apiSecurity,
             EastFive.Api.Azure.AzureApplication application, HttpRequestMessage request,
-            EastFive.Api.Controllers.RedirectResponse redirectResponse,
+            RedirectResponse redirectResponse,
             ViewStringResponse viewResponse)
         {
             return await await CredentialProcessDocument.FindByIdAsync(credentialProcessId,
@@ -116,7 +116,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 [OptionalQueryParameter(Name = "ApiKeySecurity")]string apiSecurityKey,
                 ApiSecurity apiSecurity,
             EastFive.Api.Azure.AzureApplication application, HttpRequestMessage request,
-            EastFive.Api.Controllers.RedirectResponse redirectResponse,
+            RedirectResponse redirectResponse,
             ViewStringResponse viewResponse)
         {
             return await await CredentialProcessDocument.FindByIdAsync(credentialProcessId,
@@ -177,7 +177,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
                 [OptionalQueryParameter(Name = "ApiKeySecurity")]string apiSecurityKey,
                 ApiSecurity apiSecurity,
             EastFive.Api.Azure.AzureApplication application, HttpRequestMessage request,
-            EastFive.Api.Controllers.RedirectResponse redirectResponse,
+            RedirectResponse redirectResponse,
             ViewStringResponse viewResponse)
         {
             return await await CredentialProcessDocument.FindByIdAsync(credentialProcessId,

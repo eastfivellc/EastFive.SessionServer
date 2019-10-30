@@ -13,7 +13,8 @@ namespace EastFive.Azure
         public const string ASTConnectionStringKey = EastFive.Azure.Persistence.AppSettings.Storage; // "EastFive.Azure.StorageTables.ConnectionString";
         public const string TableInformationToken = "EastFive.Azure.StorageTables.TableInformationToken";
 
-        public const string ApplicationInsightsKey = "EastFive.Security.SessionServer.ApplicationInsightsKey";
+        public const string ApplicationInsightsKey = EastFive.Api.AppSettings.ApplicationInsightsKey;
+
         public const string ApiSecurityKey = "EastFive.Security.SessionServer.ApiSecurityKey";
 
         
