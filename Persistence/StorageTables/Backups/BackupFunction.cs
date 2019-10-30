@@ -19,6 +19,7 @@ using EastFive.Persistence.Azure.StorageTables;
 using EastFive.Persistence.Azure.StorageTables.Driver;
 using EastFive.Serialization;
 using EastFive.Web.Configuration;
+using EastFive.Extensions;
 
 namespace EastFive.Azure.Persistence.StorageTables.Backups
 {
@@ -233,13 +234,35 @@ namespace EastFive.Azure.Persistence.StorageTables.Backups
                     var infos = AppDomain.CurrentDomain.GetAssemblies()
                         .Where(a => assemblyNames.Contains(a.ManifestModule.Name))
                         .SelectMany(a => a.GetTypes())
-                        .Where(t => t.ContainsAttributeInterface<IBackupStorage>())
                         .SelectMany(
                             (t) =>
                             {
-                                var attr = t.GetAttributesInterface<IBackupStorage>().First();
-                                return attr.GetStorageResourceInfos(t);
-                                
+                                return Yield();
+                                IEnumerable<StorageResourceInfo> Yield()
+                                {
+                                    var backupStorageTypeAttrs = t.GetAttributesInterface<IBackupStorageType>();
+                                    if (backupStorageTypeAttrs.Any())
+                                    {
+                                        var backupStorageTypeAttr = backupStorageTypeAttrs.First();
+                                        foreach (var storageResourceInfo in backupStorageTypeAttr.GetStorageResourceInfos(t))
+                                            yield return storageResourceInfo;
+                                    }
+                                    var memberResults = t
+                                        .GetMembers(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+                                        .SelectMany(
+                                            memberInfo =>
+                                            {
+                                                return memberInfo
+                                                    .GetAttributesInterface<IBackupStorageMember>(inherit: true, multiple: true)
+                                                    .SelectMany(
+                                                        backupStorageMemberAttr =>
+                                                        {
+                                                            return backupStorageMemberAttr.GetStorageResourceInfos(memberInfo);
+                                                        });
+                                            });
+                                    foreach (var memberResult in memberResults)
+                                        yield return memberResult;
+                                }
                             })
                         .OrderBy(x => x.sortKey);
 

@@ -24,7 +24,7 @@ using System.Threading.Tasks;
 namespace EastFive.Persistence.Azure.StorageTables
 {
     public class StorageLookupAttribute : Attribute,
-        IModifyAzureStorageTableSave, IProvideFindBy, IBackupStorage, CascadeDeleteAttribute.IDeleteCascaded
+        IModifyAzureStorageTableSave, IProvideFindBy, IBackupStorageMember, CascadeDeleteAttribute.IDeleteCascaded
     {
         public string LookupTableName { get; set; }
 
@@ -42,20 +42,6 @@ namespace EastFive.Persistence.Azure.StorageTables
                 throw new ArgumentException("delcaringInfo", $"{typeof(StorageLookupAttribute).FullName} cannot decorate {declaringInfo.GetType().FullName}");
             return GetLookupTableName(declaringInfo as MemberInfo);
         }
-
-        public Func<StringKeyGenerator> PartitionKeyGenerator =>
-            () =>
-            {
-                if(PartitionAttribute.IsDefaultOrNull())
-                    return (StringKeyGenerator)new StandardParititionKeyAttribute();
-                return (StringKeyGenerator)Activator.CreateInstance(PartitionAttribute);
-            };
-
-        public Func<StringKeyGenerator> RowKeyGenerator =>
-            () =>
-            {
-                return (StringKeyGenerator)Activator.CreateInstance(RowKeyAttribute);
-            };
 
         public string SortKey => default;
 
@@ -526,7 +512,7 @@ namespace EastFive.Persistence.Azure.StorageTables
                     tableName: tableName);
         }
 
-        public IEnumerable<StorageResourceInfo> GetStorageResourceInfos(Type t)
+        public IEnumerable<StorageResourceInfo> GetStorageResourceInfos(MemberInfo t)
         {
             // TODO: THis!!
             yield break;

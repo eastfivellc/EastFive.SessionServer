@@ -335,6 +335,7 @@
     <Compile Include="Login\CredentialProvider.cs" />
     <Compile Include="Login\Redirection.cs" />
     <Compile Include="Media\ContentExtensions.cs" />
+    <Compile Include="Persistence\StorageTables\Backups\Attributes\IBackupStorage.cs" />
     <Compile Include="Persistence\StorageTables\Backups\BackupFunction.cs" />
     <Compile Include="Persistence\StorageTables\Backups\BlobBackup.cs" />
     <Compile Include="Persistence\StorageTables\Backups\Containers.cs" />
@@ -343,8 +344,8 @@
     <Compile Include="Monitoring\Monitoring.cs" />
     <Compile Include="IProvideIntegration.cs" />
     <Compile Include="Persistence\AppSettings.cs" />
-    <Compile Include="Persistence\Attributes\ContainerResourceAttribute.cs" />
-    <Compile Include="Persistence\Attributes\StorageResourceAttribute.cs" />
+    <Compile Include="Persistence\StorageTables\Backups\Attributes\ContainerResourceAttribute.cs" />
+    <Compile Include="Persistence\StorageTables\Backups\Attributes\StorageResourceAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\Modifiers\MigratePartitionAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\Modifiers\StorageConstraintUniqueAttribute.cs" />
     <Compile Include="Persistence\StorageTables\Attributes\Modifiers\DateTimeLookupAttribute.cs" />
@@ -617,6 +618,7 @@
   <ItemGroup>
     <Content Include="Api\Controllers\IndexPage.html" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\Microsoft.Azure.Services.AppAuthentication.1.0.3\build\Microsoft.Azure.Services.AppAuthentication.targets" Condition="Exists('..\packages\Microsoft.Azure.Services.AppAuthentication.1.0.3\build\Microsoft.Azure.Services.AppAuthentication.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
