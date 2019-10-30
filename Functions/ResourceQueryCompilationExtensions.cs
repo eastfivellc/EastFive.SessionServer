@@ -16,12 +16,16 @@ namespace EastFive.Azure.Functions
 {
     public static class ResourceQueryCompilationExtensions
     {
-        public static async Task<InvocationMessage> FunctionAsync<TResource>(this IQueryable<TResource> urlQuery,
-            HttpMethod httpMethod = default,
-            IInvokeApplication applicationInvoker = default,
+        public static Task<InvocationMessage> FunctionAsync<TResource>(this IQueryable<TResource> urlQuery,
             AzureApplication application = default)
         {
-            var request = urlQuery.Request(httpMethod: httpMethod, applicationInvoker: applicationInvoker);
+            var request = urlQuery.CompileRequest();
+            return request.FunctionAsync(application);
+        }
+
+        public static async Task<InvocationMessage> FunctionAsync(this HttpRequestMessage request,
+            AzureApplication application = default)
+        {
             var invocationMessage = await request.InvocationMessageAsync();
             var invocationMessageRef = invocationMessage.invocationRef;
             return await await invocationMessage.StorageCreateAsync(
