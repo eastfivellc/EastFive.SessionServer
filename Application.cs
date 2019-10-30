@@ -182,8 +182,9 @@ namespace EastFive.Api.Azure
 
         public virtual async Task SendServiceBusMessageAsync(string queueName, IEnumerable<string> contents)
         {
-            const int payloadSize = 262_144;
-            const int perMessageContainerSize = 70;
+            const int maxPayloadSize = 262_144;
+            const int perMessageHeaderSize = 58;
+            const int perMessageListSize = 8;
 
             if (!contents.Any())
                 return;
@@ -195,6 +196,14 @@ namespace EastFive.Api.Azure
                 },
                 (why) => throw new Exception(why));
 
+            // The padding was confirmed by this:
+            //var bodyLen = 131_006;  // (131_006 + 58 + 8) * 2 messages = 262_144
+            //var body = Enumerable.Range(0, bodyLen).Select(x => (byte)5).ToArray();
+            //var msg1 = new Microsoft.Azure.ServiceBus.Message(body);
+            //var msg2 = new Microsoft.Azure.ServiceBus.Message(body);
+            //await client.SendAsync(new List<Microsoft.Azure.ServiceBus.Message> { msg1, msg2 });
+            // If the send is successful, we haven't exceeded the max payload
+
             try
             {
                 var messages = contents
@@ -205,17 +214,9 @@ namespace EastFive.Api.Azure
                             return new Microsoft.Azure.ServiceBus.Message(bytes);
                         })
                     .ToArray();
-
-                var first = messages[0];
-                var remaining = messages.Skip(1).ToArray();
-                await client.SendAsync(first);
-
-                if (remaining.Length == 0)
-                    return;
-
-                var sizeFirst = first.Size;
-                var numberInBatch = payloadSize / ((sizeFirst * 2) + perMessageContainerSize); // fuzzy attempt to batch send as many as possible
-                var batches = await remaining
+                var maxMessageSize = messages.Select(x => x.Body.Length + perMessageHeaderSize + perMessageListSize).Max();
+                int numberInBatch = maxPayloadSize / maxMessageSize; 
+                var batches = await messages
                     .Select((x, index) => new { x, index }) 
                     .GroupBy(x => x.index / numberInBatch, y => y.x)
                     .Select(
@@ -227,7 +228,7 @@ namespace EastFive.Api.Azure
                         })
                     .WhenAllAsync(5);
 
-                var sent = 1 + batches.Sum();
+                var sent = batches.Sum();
             }
             finally
             {
