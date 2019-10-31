@@ -138,7 +138,12 @@ namespace EastFive.Azure.Persistence.StorageTables.Backups
             return EastFive.Web.Configuration.Settings.GetString(
                     $"AffirmHealth.Backup.{GetDestinationKey()}.ConnectionString",
                 (connString) => onSuccess(connString),
-                (why) => onFailure(why));
+                (why) =>
+                {
+                    return "AffirmHealth.Backup.Default.ConnectionString".ConfigurationString(
+                        (connString) => onSuccess(connString),
+                        onFailure);
+                });
         }
 
         public static async Task ProcessBackupPartitionsAsync(TableMessage message, EastFive.Analytics.ILogger logger)
