@@ -35,8 +35,7 @@ namespace EastFive.Azure.Functions
             this.azureApplication = GetApplication();
         }
 
-        public override Task<HttpResponseMessage> SendAsync<TResource>(RequestMessage<TResource> requestMessage, 
-            HttpRequestMessage httpRequest)
+        public override Task<HttpResponseMessage> SendAsync(HttpRequestMessage httpRequest)
         {
             return InvocationMessage.CreateAsync(httpRequest);
         }
