@@ -23,7 +23,7 @@ using EastFive.Api.Azure.Credentials.Attributes;
 using EastFive.Security.SessionServer.Persistence.Documents;
 using EastFive.Api.Azure.Monitoring;
 
-namespace EastFive.Azure
+namespace EastFive.Azure.Monitoring
 {
     public struct MonitoringInfo
     {

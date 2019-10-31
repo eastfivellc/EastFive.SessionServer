@@ -442,19 +442,6 @@ namespace EastFive.Persistence.Azure.StorageTables
                 return onBound(instance);
             }
 
-            object IRefObjInstance(Guid guidValue)
-            {
-                var resourceType = type.GenericTypeArguments.First();
-                return EntityPropertyExtensions.IRefObjInstance(guidValue, resourceType);
-            }
-
-            if (type.IsSubClassOfGeneric(typeof(IRefObj<>)))
-            {
-                var guidValue = value.GuidValue.Value;
-                var instance = IRefObjInstance(guidValue);
-                return onBound(instance);
-            }
-
             #endregion
 
             if (typeof(object) == type)
@@ -790,14 +777,6 @@ namespace EastFive.Persistence.Azure.StorageTables
                 return onBound(values);
             }
 
-            if (arrayType.IsSubClassOfGeneric(typeof(IRefObj<>)))
-            {
-                var values = ComposeFromBase<Guid>(typeof(IRefObj<>), typeof(EastFive.RefObj<>),
-                    (instantiatableType, guidValue) => Activator.CreateInstance(instantiatableType, new object[] { guidValue }));
-                return onBound(values);
-            }
-
-
             object ComposeOptionalFromBase<TBase>(Type composedType, Type genericCompositionType, Type optionalBaseType)
             {
                 var values = ComposeFromBase<Guid?>(composedType, genericCompositionType,
@@ -972,13 +951,6 @@ namespace EastFive.Persistence.Azure.StorageTables
         private static object IRefInstance(Guid guidValue, Type type)
         {
             var instantiatableType = typeof(EastFive.Ref<>).MakeGenericType(type);
-            var instance = Activator.CreateInstance(instantiatableType, new object[] { guidValue });
-            return instance;
-        }
-
-        private static object IRefObjInstance(Guid guidValue, Type type)
-        {
-            var instantiatableType = typeof(EastFive.RefObj<>).MakeGenericType(type);
             var instance = Activator.CreateInstance(instantiatableType, new object[] { guidValue });
             return instance;
         }

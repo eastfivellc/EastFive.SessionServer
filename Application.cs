@@ -27,11 +27,12 @@ using System.Linq.Expressions;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage;
 using EastFive.Azure.Auth;
+using EastFive.Azure.Monitoring;
 
 namespace EastFive.Api.Azure
 {
 
-    [ApiResourcesAttribute(NameSpacePrefixes = "EastFive.Azure,EastFive.Search")]
+    [ApiResources(NameSpacePrefixes = "EastFive.Azure,EastFive.Search")]
     public class AzureApplication : EastFive.Api.HttpApplication
     {
         public const string QueryRequestIdentfier = "request_id";
@@ -41,11 +42,9 @@ namespace EastFive.Api.Azure
         public AzureApplication()
             : base()
         {
-            Telemetry = EastFive.Web.Configuration.Settings.GetString(EastFive.Azure.AppSettings.ApplicationInsightsKey,
-                (applicationInsightsKey) => new TelemetryClient { InstrumentationKey = applicationInsightsKey },
-                (why) => new TelemetryClient());
+            Telemetry = EastFive.Azure.AppSettings.ApplicationInsights.InstrumentationKey.LoadTelemetryClient();
 
-            this.AddInstigator(typeof(Security.SessionServer.Context),
+            this.AddInstigator(typeof(EastFive.Security.SessionServer.Context),
                 (httpApp, request, parameterInfo, onCreatedSessionContext) => onCreatedSessionContext(this.AzureContext));
             this.AddInstigator(typeof(EastFive.Azure.Functions.InvokeFunction),
                 (httpApp, request, parameterInfo, onCreated) =>
@@ -70,7 +69,7 @@ namespace EastFive.Api.Azure
             
         }
 
-        public virtual async Task<bool> CanAdministerCredentialAsync(Guid actorInQuestion, Api.Controllers.SessionToken security)
+        public virtual async Task<bool> CanAdministerCredentialAsync(Guid actorInQuestion, Api.SessionToken security)
         {
             if (security.accountIdMaybe.HasValue)
             {
@@ -346,14 +345,14 @@ namespace EastFive.Api.Azure
         
         internal virtual WebId GetActorLink(Guid actorId, UrlHelper url)
         {
-            return Security.SessionServer.Library.configurationManager.GetActorLink(actorId, url);
+            return EastFive.Security.SessionServer.Library.configurationManager.GetActorLink(actorId, url);
         }
 
         public virtual Task<TResult> GetActorNameDetailsAsync<TResult>(Guid actorId,
             Func<string, string, string, TResult> onActorFound,
             Func<TResult> onActorNotFound)
         {
-            return Security.SessionServer.Library.configurationManager.GetActorNameDetailsAsync(actorId, onActorFound, onActorNotFound);
+            return EastFive.Security.SessionServer.Library.configurationManager.GetActorNameDetailsAsync(actorId, onActorFound, onActorNotFound);
         }
 
         public virtual async Task<TResult> GetRedirectUriAsync<TResult>(Guid requestId,
@@ -418,10 +417,10 @@ namespace EastFive.Api.Azure
                 }
             }
 
-            if (null != authParams && authParams.ContainsKey(Security.SessionServer.Configuration.AuthorizationParameters.RedirectUri))
+            if (null != authParams && authParams.ContainsKey(EastFive.Security.SessionServer.Configuration.AuthorizationParameters.RedirectUri))
             {
                 Uri redirectUri;
-                var redirectUriString = authParams[Security.SessionServer.Configuration.AuthorizationParameters.RedirectUri];
+                var redirectUriString = authParams[EastFive.Security.SessionServer.Configuration.AuthorizationParameters.RedirectUri];
                 if (!Uri.TryCreate(redirectUriString, UriKind.Absolute, out redirectUri))
                     return onInvalidParameter("REDIRECT", $"BAD URL in redirect call:{redirectUriString}");
                 var redirectUrl = SetRedirectParameters(requestId, authorization, redirectUri);
@@ -448,7 +447,7 @@ namespace EastFive.Api.Azure
             return redirectUrl;
         }
 
-        public Security.SessionServer.Context AzureContext
+        public EastFive.Security.SessionServer.Context AzureContext
         {
             get
             {

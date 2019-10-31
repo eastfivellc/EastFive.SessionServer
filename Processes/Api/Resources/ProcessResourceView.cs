@@ -99,7 +99,7 @@ namespace EastFive.Api.Azure.Resources
         public static async Task<HttpResponseMessage> FindByResourceTypeAsync(
                 [EastFive.Api.QueryParameter(Name = ActorPropertyName)]Guid actorId,
                 [EastFive.Api.QueryParameter(Name = Resources.ProcessStageType.ResourceTypePropertyName)]Type resourceType,
-                EastFive.Api.Controllers.Security security, AzureApplication application, UrlHelper url,
+                EastFive.Api.Security security, AzureApplication application, UrlHelper url,
             [Display(Name = "Found")]MultipartAcceptArrayResponseAsync onMultipart,
             ReferencedDocumentNotFoundResponse onResourceNotFound,
             UnauthorizedResponse onUnauthorized)

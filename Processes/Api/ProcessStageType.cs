@@ -50,7 +50,7 @@ namespace EastFive.Api.Azure.Resources
         [EastFive.Api.HttpGet]
         public static async Task<HttpResponseMessage> FindByIdAsync(
                 [QueryParameter(CheckFileName = true)]Guid processStageTypeId,
-                EastFive.Api.Controllers.Security security, HttpRequestMessage request, UrlHelper url,
+                EastFive.Api.Security security, HttpRequestMessage request, UrlHelper url,
             ContentResponse onFound,
             NotFoundResponse onNotFound,
             UnauthorizedResponse onUnauthorized)
@@ -76,7 +76,7 @@ namespace EastFive.Api.Azure.Resources
 
         [EastFive.Api.HttpGet]
         public static async Task<HttpResponseMessage> FindAllAsync(
-                EastFive.Api.Controllers.Security security, HttpRequestMessage request, UrlHelper url,
+                EastFive.Api.Security security, HttpRequestMessage request, UrlHelper url,
             MultipartAcceptArrayResponseAsync onMultipart,
             UnauthorizedResponse onUnauthorized)
         {
@@ -121,7 +121,7 @@ namespace EastFive.Api.Azure.Resources
                 [Property(Name = Resources.ProcessStageType.ResourceTypePropertyName)]Type resourceType,
                 [Property(Name = Resources.ProcessStageType.ResourceKeysPropertyName)]string[] resourceKeys,
                 [Property(Name = Resources.ProcessStageType.ResourceTypesPropertyName)]Type[] resourceTypes,
-                EastFive.Api.Controllers.Security security, HttpRequestMessage request, UrlHelper url,
+                EastFive.Api.Security security, HttpRequestMessage request, UrlHelper url,
             CreatedResponse onCreated,
             CreatedBodyResponse<ProcessStageType> onCreatedAndModified,
             AlreadyExistsResponse onAlreadyExists,

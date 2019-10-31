@@ -26,7 +26,7 @@ namespace EastFive.Azure
     {
         public static Task<TResult> CreateAsync<TResult>(Guid processStageTypeId, Guid actorId,
                 Guid processStageGroupId, string title, Type resourceType, KeyValuePair<string, Type>[] resourceKeys,
-                EastFive.Api.Controllers.Security security,
+                EastFive.Api.Security security,
             Func<TResult> onCreated,
             Func<TResult> onAlreadyExists,
             Func<TResult> onTypeDoesNotExist,
@@ -48,7 +48,7 @@ namespace EastFive.Azure
                 () => onTypeDoesNotExist().ToTask());
         }
         
-        public static Task<TResult> FindAllAsync<TResult>(EastFive.Api.Controllers.Security security,
+        public static Task<TResult> FindAllAsync<TResult>(EastFive.Api.Security security,
             Func<ProcessStageType[], TResult> onFound,
             Func<TResult> onUnauthorized)
         {

@@ -31,10 +31,10 @@ namespace EastFive.Api.Azure.Credentials
     public class PasswordCredentials
     {
         private Context context;
-        private Security.SessionServer.Persistence.DataContext dataContext;
+        private EastFive.Security.SessionServer.Persistence.DataContext dataContext;
         private IProvideLoginManagement managmentProvider;
 
-        internal PasswordCredentials(Context context, Security.SessionServer.Persistence.DataContext dataContext)
+        internal PasswordCredentials(Context context, EastFive.Security.SessionServer.Persistence.DataContext dataContext)
         {
             this.dataContext = dataContext;
             this.context = context;
@@ -54,7 +54,7 @@ namespace EastFive.Api.Azure.Credentials
         public async Task<TResult> CreatePasswordCredentialsAsync<TResult>(Guid passwordCredentialId, Guid actorId,
                 string displayName, string username, bool isEmail, string token, bool forceChange,
                 DateTime? emailLastSent, Uri callbackUrl,
-                EastFive.Api.Controllers.SessionToken security, AzureApplication application,
+                EastFive.Api.SessionToken security, AzureApplication application,
             Func<TResult> onSuccess,
             Func<TResult> credentialAlreadyExists,
             Func<Guid, TResult> onUsernameAlreadyInUse,
@@ -192,7 +192,7 @@ namespace EastFive.Api.Azure.Credentials
         }
 
         internal async Task<TResult> GetPasswordCredentialAsync<TResult>(Guid passwordCredentialId,
-                EastFive.Api.Controllers.SessionToken security, AzureApplication application,
+                EastFive.Api.SessionToken security, AzureApplication application,
             Func<PasswordCredential, TResult> success,
             Func<TResult> notFound,
             Func<TResult> onUnauthorized,
@@ -227,7 +227,7 @@ namespace EastFive.Api.Azure.Credentials
         }
 
         internal async Task<TResult> GetPasswordCredentialByActorAsync<TResult>(Guid actorId,
-                EastFive.Api.Controllers.SessionToken security, AzureApplication application,
+                EastFive.Api.SessionToken security, AzureApplication application,
             Func<PasswordCredential[], TResult> success,
             Func<TResult> notFound,
             Func<TResult> onUnauthorized,
@@ -313,15 +313,15 @@ namespace EastFive.Api.Azure.Credentials
                         .Select(async m =>
                         {
                             if (!ServiceConfiguration.managementProviders.ContainsKey(m))
-                                return m.PairWithValue(new Security.SessionServer.LoginInfo[] { });
+                                return m.PairWithValue(new EastFive.Security.SessionServer.LoginInfo[] { });
 
                             // AADB2C fails when it is called too often so now make one call to get it all
                             var provider = ServiceConfiguration.managementProviders[m];
                             return m.PairWithValue(await provider.GetAllAuthorizationsAsync(
                                 infos => infos,
-                                (why) => new Security.SessionServer.LoginInfo[] { },
-                                () => new Security.SessionServer.LoginInfo[] { },
-                                (why) => new Security.SessionServer.LoginInfo[] { }));
+                                (why) => new EastFive.Security.SessionServer.LoginInfo[] { },
+                                () => new EastFive.Security.SessionServer.LoginInfo[] { },
+                                (why) => new EastFive.Security.SessionServer.LoginInfo[] { }));
                         })
                         .WhenAllAsync();
                     var lookups = mappings
@@ -350,7 +350,7 @@ namespace EastFive.Api.Azure.Credentials
 
         internal async Task<TResult> UpdatePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
                 string password, bool forceChange, DateTime? emailLastSent,
-                EastFive.Api.Controllers.SessionToken security, AzureApplication application,
+                EastFive.Api.SessionToken security, AzureApplication application,
             Func<TResult> onSuccess,
             Func<TResult> onNotFound,
             Func<TResult> onUnathorized,
@@ -399,7 +399,7 @@ namespace EastFive.Api.Azure.Credentials
                                     return resultFailure;
                                 }
 
-                                return await Web.Configuration.Settings.GetUri(Security.SessionServer.Configuration.AppSettings.LandingPage,
+                                return await Web.Configuration.Settings.GetUri(EastFive.Security.SessionServer.Configuration.AppSettings.LandingPage,
                                     async (landingPage) =>
                                     {
                                         if (string.IsNullOrWhiteSpace(password))
@@ -497,10 +497,10 @@ namespace EastFive.Api.Azure.Credentials
             Func<TResult> onServiceNotAvailable,
             Func<string, TResult> onFailure)
         {
-            return EastFive.Web.Configuration.Settings.GetString(Security.SessionServer.Configuration.EmailTemplateDefinitions.InvitePassword,
-                templateName => EastFive.Web.Configuration.Settings.GetString(Security.SessionServer.Configuration.EmailTemplateDefinitions.InviteFromAddress,
-                    fromAddress => EastFive.Web.Configuration.Settings.GetString(Security.SessionServer.Configuration.EmailTemplateDefinitions.InviteFromName,
-                        fromName => EastFive.Web.Configuration.Settings.GetString(Security.SessionServer.Configuration.EmailTemplateDefinitions.InviteSubject,
+            return EastFive.Web.Configuration.Settings.GetString(EastFive.Security.SessionServer.Configuration.EmailTemplateDefinitions.InvitePassword,
+                templateName => EastFive.Web.Configuration.Settings.GetString(EastFive.Security.SessionServer.Configuration.EmailTemplateDefinitions.InviteFromAddress,
+                    fromAddress => EastFive.Web.Configuration.Settings.GetString(EastFive.Security.SessionServer.Configuration.EmailTemplateDefinitions.InviteFromName,
+                        fromName => EastFive.Web.Configuration.Settings.GetString(EastFive.Security.SessionServer.Configuration.EmailTemplateDefinitions.InviteSubject,
                             subject => Web.Services.ServiceConfiguration.SendMessageService()
                                 .SendEmailMessageAsync(templateName,
                                     emailAddress, string.Empty,
@@ -523,7 +523,7 @@ namespace EastFive.Api.Azure.Credentials
         }
         
         internal async Task<TResult> DeletePasswordCredentialAsync<TResult>(Guid passwordCredentialId,
-                EastFive.Api.Controllers.SessionToken security, AzureApplication application,
+                EastFive.Api.SessionToken security, AzureApplication application,
             Func<TResult> success,
             Func<TResult> onUnauthorized,
             Func<TResult> notFound,

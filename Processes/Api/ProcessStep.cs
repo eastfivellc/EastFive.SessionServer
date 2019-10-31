@@ -56,7 +56,7 @@ namespace EastFive.Api.Azure.Resources
         [EastFive.Api.HttpGet]
         public static Task<HttpResponseMessage> FindByIdAsync(
                 [QueryParameter(CheckFileName = true, Name = ProcessStep.IdPropertyName)]Guid id,
-                AzureApplication httpApplication, EastFive.Api.Controllers.Security security, UrlHelper url,
+                AzureApplication httpApplication, EastFive.Api.Security security, UrlHelper url,
             ContentResponse onFound,
             NotFoundResponse onNotFound,
             UnauthorizedResponse onUnauthorized)
@@ -78,7 +78,7 @@ namespace EastFive.Api.Azure.Resources
                 CreatedOn = process.createdOn,
 
                 ConfirmedBy = process.confirmedBy.HasValue ?
-                    Security.SessionServer.Library.configurationManager.GetActorLink(process.confirmedBy.Value, urlHelper)
+                    EastFive.Security.SessionServer.Library.configurationManager.GetActorLink(process.confirmedBy.Value, urlHelper)
                     :
                     default(WebId),
                 ConfirmedWhen = process.confirmedWhen,
@@ -105,7 +105,7 @@ namespace EastFive.Api.Azure.Resources
                 [PropertyOptional(Name = ProcessStep.ConfirmedWhenPropertyName)]DateTime? confirmedWhen,
                 [PropertyOptional(Name = ProcessStep.ResourceKeysPropertyName)]string[] resourceKeys,
                 [PropertyOptional(Name = ProcessStep.ResourcesPropertyName)]Guid[] resources,
-                EastFive.Api.Controllers.Security security, UrlHelper url,
+                EastFive.Api.Security security, UrlHelper url,
             CreatedResponse onCreated,
             AlreadyExistsResponse onAlreadyExists,
             ReferencedDocumentDoesNotExistsResponse<Resources.ProcessStage> onStageNotFound,
@@ -129,7 +129,7 @@ namespace EastFive.Api.Azure.Resources
                 [PropertyOptional(Name = ProcessStep.ConfirmedWhenPropertyName)]DateTime? confirmedWhen,
                 [PropertyOptional(Name = ProcessStep.ResourceKeysPropertyName)]string[] resourceKeys,
                 [PropertyOptional(Name = ProcessStep.ResourcesPropertyName)]Guid[] resources,
-                EastFive.Api.Controllers.Security security, UrlHelper url,
+                EastFive.Api.Security security, UrlHelper url,
             NoContentResponse onUpdated,
             NotFoundResponse onNotFound,
             UnauthorizedResponse onUnauthorized,
@@ -154,7 +154,7 @@ namespace EastFive.Api.Azure.Resources
         [EastFive.Api.HttpDelete]
         public static Task<HttpResponseMessage> DeleteByIdAsync(
                 [QueryParameter(CheckFileName = true, Name = ProcessStep.IdPropertyName)]Guid processStepId,
-                EastFive.Api.Controllers.Security security,
+                EastFive.Api.Security security,
             NoContentResponse onDeleted,
             NotFoundResponse onNotFound,
             UnauthorizedResponse onUnauthorized)

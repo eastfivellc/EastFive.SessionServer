@@ -281,14 +281,6 @@ namespace EastFive.Persistence
                 return onBound(values);
             }
 
-            if (arrayType.IsSubClassOfGeneric(typeof(IRefObj<>)))
-            {
-                var values = ComposeFromBase<Guid>(typeof(IRefObj<>), typeof(EastFive.RefObj<>),
-                    (instantiatableType, guidValue) => Activator.CreateInstance(instantiatableType, new object[] { guidValue }));
-                return onBound(values);
-            }
-
-
             object ComposeOptionalFromBase<TBase>(Type composedType, Type genericCompositionType, Type optionalBaseType)
             {
                 var values = ComposeFromBase<Guid?>(composedType, genericCompositionType,
@@ -853,13 +845,6 @@ namespace EastFive.Persistence
                 return onBound(new Guid[] { });
 
             if (type.IsSubClassOfGeneric(typeof(IRef<>)))
-            {
-                //var resourceType = type.GenericTypeArguments.First();
-                var instance = type.GetDefault();
-                return onBound(instance);
-            }
-
-            if (type.IsSubClassOfGeneric(typeof(IRefObj<>)))
             {
                 //var resourceType = type.GenericTypeArguments.First();
                 var instance = type.GetDefault();

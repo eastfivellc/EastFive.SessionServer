@@ -29,7 +29,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                         responseAllowed.Content = new StringContent(String.Empty);
                         responseAllowed.Content.Headers.Add("Access-Control-Expose-Headers", "Allow");
 
-                        return Security.SessionServer.Library.configurationManager.CanActAsUsersAsync(actorId, claims,
+                        return EastFive.Security.SessionServer.Library.configurationManager.CanActAsUsersAsync(actorId, claims,
                             () =>
                             {
                                 responseAllowed.Content.Headers.Allow.Add(HttpMethod.Get.Method);

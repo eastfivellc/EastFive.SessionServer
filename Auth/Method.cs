@@ -108,7 +108,7 @@ namespace EastFive.Azure.Auth
         [HttpGet]
         public static async Task<HttpResponseMessage> QueryByIntegrationAsync(
             [QueryParameter(Name = "integration")]IRef<Integration> integrationRef,
-            Api.Azure.AzureApplication application, EastFive.Api.Controllers.SessionToken security,
+            Api.Azure.AzureApplication application, EastFive.Api.SessionToken security,
             MultipartResponseAsync<Method> onContent,
             UnauthorizedResponse onUnauthorized,
             ReferencedDocumentNotFoundResponse<Integration> onIntegrationNotFound)
@@ -151,7 +151,7 @@ namespace EastFive.Azure.Auth
         [HttpGet]
         public static async Task<HttpResponseMessage> QueryByIntegrationAsync(
             [QueryParameter(Name = "integration_account")]Guid accountId,
-            Api.Azure.AzureApplication application, EastFive.Api.Controllers.SessionToken security,
+            Api.Azure.AzureApplication application, EastFive.Api.SessionToken security,
             MultipartResponseAsync<Method> onContent,
             UnauthorizedResponse onUnauthorized)
         {

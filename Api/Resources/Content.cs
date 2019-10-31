@@ -215,7 +215,7 @@ namespace EastFive.Api.Azure.Resources
                 [QueryParameter(CheckFileName = true, Name = ContentIdPropertyName)]Guid contentId,
                 [QueryParameter(Name = StreamingPropertyName)]bool streaming,
                 HttpRequestMessage request,
-                EastFive.Api.Controllers.Security security,
+                EastFive.Api.Security security,
                 System.Web.Http.Routing.UrlHelper url)
         {
             var response = await EastFive.Api.Azure.Content.FindContentByContentIdAsync(contentId,

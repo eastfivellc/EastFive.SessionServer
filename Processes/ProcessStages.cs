@@ -32,7 +32,7 @@ namespace EastFive.Azure
                 Guid processStageTypeId, string title,
                 Guid[] viewableActorIds, Guid[] editableActorIds, Guid [] completableActorIds,
                 KeyValuePair<Guid[], Guid>[] confirmableActorIdsNexts,
-                EastFive.Api.Controllers.Security security,
+                EastFive.Api.Security security,
             Func<TResult> onCreated,
             Func<TResult> onAlreadyExists,
             Func<TResult> onTypeDoesNotExist,
@@ -92,7 +92,7 @@ namespace EastFive.Azure
                 () => onTypeDoesNotExist().ToTask());
         }
 
-        public static Task<TResult> FindByIdAsync<TResult>(Guid processStageId, EastFive.Api.Controllers.Security security,
+        public static Task<TResult> FindByIdAsync<TResult>(Guid processStageId, EastFive.Api.Security security,
             Func<ProcessStage, TResult> onFound,
             Func<TResult> onNotFound,
             Func<TResult> onUnauthorized)
@@ -105,7 +105,7 @@ namespace EastFive.Azure
                 onNotFound);
         }
 
-        public static Task<TResult> FindByResourceAsync<TResult>(Guid resourceId, EastFive.Api.Controllers.Security security,
+        public static Task<TResult> FindByResourceAsync<TResult>(Guid resourceId, EastFive.Api.Security security,
             Func<ProcessStage[], TResult> onFound,
             Func<TResult> onResourceNotFound,
             Func<TResult> onUnauthorized)
@@ -118,7 +118,7 @@ namespace EastFive.Azure
                 onResourceNotFound);
         }
 
-        public static async Task<TResult> FindStartByActorAndResourceTypeAsync<TResult>(Guid ownerId, Type resourceType, EastFive.Api.Controllers.Security security,
+        public static async Task<TResult> FindStartByActorAndResourceTypeAsync<TResult>(Guid ownerId, Type resourceType, EastFive.Api.Security security,
             Func<ProcessStage[], TResult> onFound,
             Func<TResult> onResourceNotFound,
             Func<TResult> onUnauthorized)
@@ -151,7 +151,7 @@ namespace EastFive.Azure
                 Guid? processStageTypeId, string title,
                 Guid[] viewableIds, Guid[] completableIds, Guid[] editableIds,
                 KeyValuePair<Guid[], Guid>[] confirmables,
-                EastFive.Api.Controllers.Security security,
+                EastFive.Api.Security security,
             Func<TResult> onUpdated,
             Func<TResult> onNotFound,
             Func<TResult> onUnauthorized,
@@ -179,7 +179,7 @@ namespace EastFive.Azure
                 onNotFound);
         }
 
-        public static Task<TResult> DeleteByIdAsync<TResult>(Guid processStageId, EastFive.Api.Controllers.Security security,
+        public static Task<TResult> DeleteByIdAsync<TResult>(Guid processStageId, EastFive.Api.Security security,
             Func<TResult> onDeleted,
             Func<TResult> onNotFound)
         {

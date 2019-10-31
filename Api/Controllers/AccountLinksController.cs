@@ -66,7 +66,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                         (authRequest) =>
                         {
                             return this.Request.CreateResponse(System.Net.HttpStatusCode.OK,
-                                new Security.SessionServer.Api.Resources.AccountLink
+                                new EastFive.Security.SessionServer.Api.Resources.AccountLink
                                 {
                                     Login = authRequest.loginUrl,
                                     Signup = loginProvider.GetSignupUrl(authReqId, callbackUrl, type => this.Url.GetLocation(type)),

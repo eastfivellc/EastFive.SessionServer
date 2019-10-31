@@ -125,7 +125,7 @@ namespace EastFive.Api.Azure.Credentials.Controllers
                             async () =>
                             {
                                 if (redirectUrl.IsDefaultOrNull())
-                                    return Web.Configuration.Settings.GetUri(Security.SessionServer.Configuration.AppSettings.LandingPage,
+                                    return Web.Configuration.Settings.GetUri(EastFive.Security.SessionServer.Configuration.AppSettings.LandingPage,
                                             (redirect) => onRedirect(redirectUrl, reason),
                                             (why) => onResponse(HttpStatusCode.BadRequest, why, $"Location was null"));
                                 if (redirectUrl.Query.IsNullOrWhiteSpace())

@@ -37,7 +37,7 @@ namespace EastFive.Api.Azure.Credentials
         {
             //02/15/2019, KDH - Exit early without returning data for now.  Doing this because this code was
             //required as a part of our sprint.  However, unless someone asks for this data, leaving this 
-            //without function as it unnecessarily potentially exposes some security info.
+            //without functionality as it unnecessarily potentially exposes some security info.
             return request.CreateResponse(HttpStatusCode.OK);
 
             return await EastFive.Web.Configuration.Settings.GetString(EastFive.Azure.AppSettings.ApiSecurityKey,

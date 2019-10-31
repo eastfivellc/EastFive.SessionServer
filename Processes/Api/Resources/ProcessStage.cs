@@ -70,7 +70,7 @@ namespace EastFive.Api.Azure.Resources
         [EastFive.Api.HttpGet]
         public static Task<HttpResponseMessage> FindByIdAsync(
                 [QueryParameter(CheckFileName = true)]Guid id,
-                EastFive.Api.Controllers.Security security, UrlHelper url,
+                EastFive.Api.Security security, UrlHelper url,
             ContentResponse onFound,
             NotFoundResponse onNotFound,
             UnauthorizedResponse onUnauthorized)
@@ -85,7 +85,7 @@ namespace EastFive.Api.Azure.Resources
         [EastFive.Api.HttpGet]
         public static async Task<HttpResponseMessage> FindByResourceAsync(
                 [QueryParameter]Guid resourceId,
-                EastFive.Api.Controllers.Security security, UrlHelper url,
+                EastFive.Api.Security security, UrlHelper url,
             MultipartAcceptArrayResponseAsync onMultipart,
             ReferencedDocumentNotFoundResponse onResourceNotFound,
             UnauthorizedResponse onUnauthorized)
@@ -102,7 +102,7 @@ namespace EastFive.Api.Azure.Resources
                 [QueryParameter(Name = Resources.ProcessStage.TypePropertyName)]Type resourceType,
                 [QueryParameter(Name = "processstage." + Resources.ProcessStage.ConfirmablePropertyName + "." + Resources.ProcessStage.ConfirmableResource.ProcessStageNextPropertyName)]
                     EastFive.Api.Controllers.WebIdNone nextStage,
-                AzureApplication application, EastFive.Api.Controllers.Security security, UrlHelper url,
+                AzureApplication application, EastFive.Api.Security security, UrlHelper url,
             MultipartAcceptArrayResponseAsync onMultipart,
             ReferencedDocumentNotFoundResponse onResourceNotFound,
             UnauthorizedResponse onUnauthorized)
@@ -164,7 +164,7 @@ namespace EastFive.Api.Azure.Resources
                     Guid [] editableIds,
                 [PropertyOptional(Name = Resources.ProcessStage.ConfirmablePropertyName)]
                     Resources.ProcessStage.ConfirmableResource [] confirmables,
-                EastFive.Api.Controllers.Security security, EastFive.Api.Azure.AzureApplication application,
+                EastFive.Api.Security security, EastFive.Api.Azure.AzureApplication application,
             CreatedResponse onCreated,
             AlreadyExistsResponse onAlreadyExists,
             ReferencedDocumentDoesNotExistsResponse<Resources.ProcessStageType> onTypeDoesNotExist,
@@ -209,7 +209,7 @@ namespace EastFive.Api.Azure.Resources
                     Guid [] editableIds,
                 [PropertyOptional(Name = Resources.ProcessStage.ConfirmablePropertyName)]
                     Resources.ProcessStage.ConfirmableResource [] confirmables,
-                EastFive.Api.Controllers.Security security, Context context, HttpRequestMessage request, UrlHelper url,
+                EastFive.Api.Security security, Context context, HttpRequestMessage request, UrlHelper url,
             NoContentResponse onUpdated,
             NotFoundResponse onNotFound,
             UnauthorizedResponse onUnauthorized,

@@ -170,7 +170,7 @@ namespace EastFive.Azure.Auth
                 [Property(Name = AccountPropertyName)]Guid accountId,
                 [PropertyOptional(Name = AuthorizationPropertyName)]IRefOptional<Authorization> authorizationRefMaybe,
                 [Resource]XIntegration integration,
-                Api.Azure.AzureApplication application, EastFive.Api.Controllers.SessionToken security,
+                Api.Azure.AzureApplication application, EastFive.Api.SessionToken security,
             CreatedResponse onCreated,
             AlreadyExistsResponse onAlreadyExists,
             ForbiddenResponse onForbidden,
@@ -204,7 +204,7 @@ namespace EastFive.Azure.Auth
         [HttpDelete]
         public static async Task<HttpResponseMessage> DeleteAsync(
         [UpdateId(Name = IntegrationIdPropertyName)]IRef<XIntegration> integrationRef,
-                Api.Azure.AzureApplication application, EastFive.Api.Controllers.SessionToken security,
+                Api.Azure.AzureApplication application, EastFive.Api.SessionToken security,
             NoContentResponse onDeleted,
             NotFoundResponse onNotFound,
             ForbiddenResponse onForbidden)
@@ -224,7 +224,7 @@ namespace EastFive.Azure.Auth
         public async static Task<HttpResponseMessage> UpdateAsync(
                 [Property(Name = IntegrationIdPropertyName)]IRef<XIntegration> integrationRef,
                 [Property(Name = AuthorizationPropertyName)]IRef<Authorization> authorizationRef,
-                Api.Azure.AzureApplication application, EastFive.Api.Controllers.SessionToken security,
+                Api.Azure.AzureApplication application, EastFive.Api.SessionToken security,
             ContentTypeResponse<XIntegration> onUpdated,
             NotFoundResponse onNotFound,
             ForbiddenResponse onForbidden,

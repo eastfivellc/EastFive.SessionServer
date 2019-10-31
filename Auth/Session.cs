@@ -114,7 +114,7 @@ namespace EastFive.Azure.Auth
         [Api.HttpGet]
         public static async Task<HttpResponseMessage> GetAsync(
                 [QueryParameter(Name = SessionIdPropertyName, CheckFileName =true)]IRef<Session> sessionRef,
-                EastFive.Api.Controllers.SessionToken security,
+                EastFive.Api.SessionToken security,
                 Api.Azure.AzureApplication application, UrlHelper urlHelper,
             ContentTypeResponse<Session> onFound,
             NotFoundResponse onNotFound,
@@ -161,7 +161,7 @@ namespace EastFive.Azure.Auth
         public static Task<HttpResponseMessage> GetByRequestIdAsync(
                 [QueryParameter(Name = SessionIdPropertyName, CheckFileName = true)]IRef<Session> sessionRef,
                 [QueryParameter(Name = "request_id")]IRef<Authorization> authorization,
-                EastFive.Api.Controllers.SessionToken security,
+                EastFive.Api.SessionToken security,
                 Api.Azure.AzureApplication application, UrlHelper urlHelper,
             ContentTypeResponse<Session> onUpdated,
             NotFoundResponse onNotFound,

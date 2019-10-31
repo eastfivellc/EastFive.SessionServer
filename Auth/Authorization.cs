@@ -111,7 +111,7 @@ namespace EastFive.Azure.Auth
         public static Task<HttpResponseMessage> GetAsync(
                 [QueryParameter(CheckFileName = true, Name = AuthorizationIdPropertyName)]IRef<Authorization> authorizationRef,
                 Api.Azure.AzureApplication application, UrlHelper urlHelper,
-                EastFive.Api.Controllers.SessionToken? securityMaybe,
+                EastFive.Api.SessionToken? securityMaybe,
             ContentTypeResponse<Authorization> onFound,
             NotFoundResponse onNotFound,
             UnauthorizedResponse onUnauthorized,
@@ -171,7 +171,7 @@ namespace EastFive.Azure.Auth
         public async static Task<HttpResponseMessage> UpdateAsync(
                 [UpdateId(Name = AuthorizationIdPropertyName)]IRef<Authorization> authorizationRef,
                 [Property(Name = LocationLogoutReturnPropertyName)]Uri locationLogoutReturn,
-                EastFive.Api.Controllers.SessionToken? securityMaybe,
+                EastFive.Api.SessionToken? securityMaybe,
             NoContentResponse onUpdated,
             AlreadyExistsResponse onNotFound,
             UnauthorizedResponse onUnauthorized)

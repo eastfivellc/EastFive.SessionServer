@@ -73,13 +73,13 @@ namespace EastFive.Api.Azure.Credentials
             Func<AzureADB2CProvider, TResult> onLoaded,
             Func<string, TResult> onConfigurationNotAvailable)
         {
-            return Web.Configuration.Settings.GetString(Security.SessionServer.Configuration.AppSettings.AADB2CAudience,
+            return Web.Configuration.Settings.GetString(EastFive.Security.SessionServer.Configuration.AppSettings.AADB2CAudience,
                 (audience) =>
                 {
-                    return Web.Configuration.Settings.GetUri(Security.SessionServer.Configuration.AppSettings.AADB2CSigninConfiguration,
+                    return Web.Configuration.Settings.GetUri(EastFive.Security.SessionServer.Configuration.AppSettings.AADB2CSigninConfiguration,
                         (signinConfiguration) =>
                         {
-                            return Web.Configuration.Settings.GetUri(Security.SessionServer.Configuration.AppSettings.AADB2CSignupConfiguration,
+                            return Web.Configuration.Settings.GetUri(EastFive.Security.SessionServer.Configuration.AppSettings.AADB2CSignupConfiguration,
                                 (signupConfiguration) =>
                                 {
                                     return EastFive.AzureADB2C.B2CGraphClient.LoadFromConfig(

@@ -42,7 +42,7 @@ namespace EastFive.Azure
                 Guid processStageId, Guid resourceId, DateTime createdOn,
                 KeyValuePair<string, Guid>[] resourceIds,
                 Guid? previousStepId, DateTime? confirmedWhen, Guid? confirmedBy,
-                EastFive.Api.Controllers.Security security,
+                EastFive.Api.Security security,
             Func<TResult> onCreated,
             Func<TResult> onAlreadyExists,
             Func<TResult> onStageDoesNotExist,
@@ -124,7 +124,7 @@ namespace EastFive.Azure
                 onStageDoesNotExist.AsAsyncFunc());
         }
 
-        public static Task<TResult> FindByIdAsync<TResult>(Guid processStageId, EastFive.Api.Controllers.Security security,
+        public static Task<TResult> FindByIdAsync<TResult>(Guid processStageId, EastFive.Api.Security security,
             Func<Process, TResult> onFound,
             Func<TResult> onNotFound,
             Func<TResult> onUnauthorized)
@@ -138,7 +138,7 @@ namespace EastFive.Azure
         }
 
         public static Task<TResult> FindByResourceAsync<TResult>(Guid resourceId, Type resourceType,
-                EastFive.Api.Controllers.Security security,
+                EastFive.Api.Security security,
             Func<Process[], TResult> onFound,
             Func<TResult> onResourceNotFound,
             Func<TResult> onUnauthorized)
@@ -153,7 +153,7 @@ namespace EastFive.Azure
 
         internal static Task<TResult> UpdateAsync<TResult>(Guid processId,
             Guid? confirmedById, DateTime? confirmedWhen, 
-            KeyValuePair<string, Guid>[] resources, EastFive.Api.Controllers.Security security,
+            KeyValuePair<string, Guid>[] resources, EastFive.Api.Security security,
             Func<TResult> onUpdated, 
             Func<TResult> onNotFound,
             Func<TResult> onUnauthorized,
@@ -201,7 +201,7 @@ namespace EastFive.Azure
             
         }
 
-        public static Task<TResult> DeleteByIdAsync<TResult>(Guid processStageId, EastFive.Api.Controllers.Security security,
+        public static Task<TResult> DeleteByIdAsync<TResult>(Guid processStageId, EastFive.Api.Security security,
             Func<TResult> onDeleted,
             Func<TResult> onNotFound,
             Func<TResult> onUnauthorized)

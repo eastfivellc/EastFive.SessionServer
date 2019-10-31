@@ -232,14 +232,14 @@ namespace EastFive.Security.SessionServer
             }
         }
 
-        private Azure.Monitoring monitoring;
-        public Azure.Monitoring Monitoring
+        private Azure.Monitoring.Monitoring monitoring;
+        public Azure.Monitoring.Monitoring Monitoring
         {
 
             get
             {
-                if (default(Azure.Monitoring) == monitoring)
-                    monitoring = new Azure.Monitoring(this, DataContext);
+                if (default(Azure.Monitoring.Monitoring) == monitoring)
+                    monitoring = new Azure.Monitoring.Monitoring(this, DataContext);
                 return monitoring;
             }
         }

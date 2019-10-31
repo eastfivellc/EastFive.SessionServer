@@ -19,7 +19,7 @@ namespace EastFive.Api.Azure.Credentials
 
         private const string subjectIdKey = "loginId";
 
-        private Security.SessionServer.Persistence.DataContext dataContext;
+        private EastFive.Security.SessionServer.Persistence.DataContext dataContext;
 
         public TokenCredentialProvider()
         {

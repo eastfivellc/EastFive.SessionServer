@@ -13,6 +13,7 @@ using Microsoft.ApplicationInsights;
 using EastFive.Linq;
 using EastFive.Api.Azure;
 using EastFive.Extensions;
+using EastFive.Azure.Monitoring;
 
 namespace EastFive.Security.SessionServer
 {
@@ -53,15 +54,7 @@ namespace EastFive.Security.SessionServer
             this.dataContext = dataContext;
             this.context = context;
 
-            telemetry = Web.Configuration.Settings.GetString(EastFive.Azure.AppSettings.ApplicationInsightsKey,
-                (applicationInsightsKey) =>
-                {
-                    return new TelemetryClient { InstrumentationKey = applicationInsightsKey };
-                },
-                (why) =>
-                {
-                    return new TelemetryClient();
-                });
+            telemetry = EastFive.Azure.AppSettings.ApplicationInsights.InstrumentationKey.LoadTelemetryClient();
         }
         
         public async Task<TResult> CreateLoginAsync<TResult>(Guid authenticationRequestId,

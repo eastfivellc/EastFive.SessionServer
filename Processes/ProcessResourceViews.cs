@@ -36,7 +36,7 @@ namespace EastFive.Azure
     public static class ProcessResourceViews
     {
         public async static Task<TResult> FindByResourceAsync<TResult>(Guid actorId, Type resourceType,
-                EastFive.Api.Controllers.Security security,
+                EastFive.Api.Security security,
             Func<ProcessResourceView[], TResult> onFound,
             Func<TResult> onResourceNotFound,
             Func<TResult> onUnauthorized)
@@ -177,7 +177,7 @@ namespace EastFive.Azure
                 () => onFound(new ProcessResourceView[] { }).ToTask());
         }
 
-        public static Task<TResult> DeleteByIdAsync<TResult>(Guid processStageId, EastFive.Api.Controllers.Security security,
+        public static Task<TResult> DeleteByIdAsync<TResult>(Guid processStageId, EastFive.Api.Security security,
             Func<TResult> onDeleted,
             Func<TResult> onNotFound)
         {

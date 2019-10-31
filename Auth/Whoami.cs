@@ -45,7 +45,7 @@ namespace EastFive.Azure.Auth
 
         [Api.HttpGet] //(MatchAllBodyParameters = false)]
         public static async Task<HttpResponseMessage> GetAsync(
-                EastFive.Api.Controllers.SessionToken security,
+                EastFive.Api.SessionToken security,
                 Api.Azure.AzureApplication application, UrlHelper urlHelper,
             ContentTypeResponse<Whoami> onFound)
         {

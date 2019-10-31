@@ -2,7 +2,7 @@
 
 namespace EastFive.Azure
 {
-    [ConfigAttribute]
+    [Config]
     public static class AppSettings
     {
         [ConfigKey("Identifies this application to an AADB2C application",
@@ -13,15 +13,20 @@ namespace EastFive.Azure
         public const string ASTConnectionStringKey = EastFive.Azure.Persistence.AppSettings.Storage; // "EastFive.Azure.StorageTables.ConnectionString";
         public const string TableInformationToken = "EastFive.Azure.StorageTables.TableInformationToken";
 
-        public const string ApplicationInsightsKey = EastFive.Api.AppSettings.ApplicationInsightsKey;
+        public static class ApplicationInsights
+        {
+            [ConfigKey("Application Insights Key.",
+                DeploymentOverrides.Suggested,
+                DeploymentSecurityConcern = false,
+                Location = "Home > Application Insights > {Resource Name} > Dashboard / Instrumentation Key")]
+            public const string InstrumentationKey = EastFive.Api.AppSettings.ApplicationInsights.InstrumentationKey;
+        }
 
         public const string ApiSecurityKey = "EastFive.Security.SessionServer.ApiSecurityKey";
 
         
 
         public const string SpaSiteLocation = "EastFive.Azure.SpaSiteLocation";
-
-        public const string TelemetryKey = "Telemetry.Key";
 
         public const string AdminLoginRsaKey = "EastFive.Azure.Auth.AdminLoginRsaKey";
 

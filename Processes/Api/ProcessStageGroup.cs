@@ -53,7 +53,7 @@ namespace EastFive.Api.Azure.Resources
         [EastFive.Api.HttpGet]
         public static Task<HttpResponseMessage> FindByIdAsync(
                 [QueryParameter(CheckFileName = true)]Guid id,
-                EastFive.Api.Controllers.Security security, HttpRequestMessage request, UrlHelper url,
+                EastFive.Api.Security security, HttpRequestMessage request, UrlHelper url,
             ContentResponse onFound,
             NotFoundResponse onNotFound,
             UnauthorizedResponse onUnauthorized)
@@ -76,7 +76,7 @@ namespace EastFive.Api.Azure.Resources
 
         [EastFive.Api.HttpGet]
         public static Task<HttpResponseMessage> FindAllAsync(
-                EastFive.Api.Controllers.Security security, HttpRequestMessage request, UrlHelper url,
+                EastFive.Api.Security security, HttpRequestMessage request, UrlHelper url,
             MultipartAcceptArrayResponseAsync onMultipart)
         {
             return onMultipart(stages);
@@ -92,7 +92,7 @@ namespace EastFive.Api.Azure.Resources
                 [Property(Name = EastFive.Api.Resources.Connector.SourcePropertyName)]Guid source,
                 [PropertyOptional(Name = EastFive.Api.Resources.Connector.DestinationPropertyName)]Guid? destination,
                 [PropertyOptional(Name = EastFive.Api.Resources.Connector.DestinationIntegrationPropertyName)]Guid? destinationIntegration,
-                EastFive.Api.Controllers.Security security, HttpRequestMessage request, UrlHelper url,
+                EastFive.Api.Security security, HttpRequestMessage request, UrlHelper url,
             NoContentResponse onUpdated,
             NotFoundResponse onNotFound,
             UnauthorizedResponse onUnauthorized,

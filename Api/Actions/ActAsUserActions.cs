@@ -125,7 +125,7 @@ namespace EastFive.Api.Azure.Credentials
             var context = request.GetSessionServerContext();
             var authenticationRequestId = Guid.NewGuid();
             var redirectUrl = new Uri(redirectString);
-            var method = Security.SessionServer.ServiceConfiguration.credentialProviders.First().Value.GetType().GetCustomAttribute<Attributes.IntegrationNameAttribute>().Name;
+            var method = EastFive.Security.SessionServer.ServiceConfiguration.credentialProviders.First().Value.GetType().GetCustomAttribute<Attributes.IntegrationNameAttribute>().Name;
             return await await context.Sessions.CreateLoginAsync(authenticationRequestId, actorId,
                     method, redirectUrl, new Dictionary<string, string>(),
                 async (session) =>

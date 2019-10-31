@@ -25,7 +25,7 @@ namespace EastFive.Api.Azure.Credentials
     public static class Sheets
     {
         internal static Task<TResult> SaveAsync<TResult>(Guid sheetId, string contentType, byte [] sheet, Guid integrationId,
-                Security.SessionServer.Persistence.DataContext dataContext,
+                EastFive.Security.SessionServer.Persistence.DataContext dataContext,
             Func<TResult> onSaved,
             Func<TResult> onAlreadyExists)
         {

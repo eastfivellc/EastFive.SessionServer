@@ -26,7 +26,7 @@ namespace EastFive.Security.SessionServer.Api.Controllers
     public class DiagnosticsController : BaseController
     {
         [EastFive.Api.HttpGet]
-        public static Task<HttpResponseMessage> Get(EastFive.Api.Controllers.Security security, HttpRequestMessage request)
+        public static Task<HttpResponseMessage> Get(EastFive.Api.Security security, HttpRequestMessage request)
         {
             return EastFive.Web.Configuration.Settings.GetGuid(
                 EastFive.Api.AppSettings.ActorIdSuperAdmin,

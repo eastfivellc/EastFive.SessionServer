@@ -28,14 +28,15 @@ namespace EastFive.Api.Azure.Modules
     {
         public const string HeaderKey = "StorageTableInformation";
 
-        public Task<HttpResponseMessage> RouteHandlersAsync(Type controllerType, IApplication httpApp, HttpRequestMessage request, string routeName,
-            Func<Task<HttpResponseMessage>> continueExecution)
+        public Task<HttpResponseMessage> RouteHandlersAsync(Type controllerType, 
+            IApplication httpApp, HttpRequestMessage request, string routeName,
+            RouteHandlingDelegate continueExecution)
         {
             return EastFive.Azure.AppSettings.TableInformationToken.ConfigurationString(
                 async headerToken =>
                 {
                     if (!request.Headers.Contains(HeaderKey))
-                        return await continueExecution();
+                        return await continueExecution(controllerType, httpApp, request, routeName);
 
                     if (request.Headers.GetValues(HeaderKey).First() != headerToken)
                         return request.CreateResponse(System.Net.HttpStatusCode.Unauthorized);
@@ -49,7 +50,7 @@ namespace EastFive.Api.Azure.Modules
                     var tableInformation = await controllerType.StorageTableInformationAsync();
                     return request.CreateResponse(System.Net.HttpStatusCode.OK, tableInformation);
                 },
-                why => continueExecution());
+                why => continueExecution(controllerType, httpApp, request, routeName));
         }
 
     }
