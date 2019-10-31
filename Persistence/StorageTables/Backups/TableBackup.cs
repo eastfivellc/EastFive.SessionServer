@@ -20,13 +20,15 @@ using EastFive.Api;
 using EastFive.Persistence.Azure.StorageTables;
 using System.Net.Http;
 using EastFive.Azure.Functions;
+using EastFive.Api.Azure;
+using EastFive.Analytics;
 
 namespace EastFive.Azure.Persistence.AzureStorageTables.Backups
 {
     [FunctionViewController6(
         Route = "TableBackup",
         Resource = typeof(TableBackup),
-        ContentType = "x-application/document-signing-flow",
+        ContentType = "x-application/table-backup",
         ContentTypeVersion = "0.1")]
     [StorageTable]
     public struct TableBackup : IReferenceable
@@ -59,17 +61,11 @@ namespace EastFive.Azure.Persistence.AzureStorageTables.Backups
         [Storage]
         public string tableName;
 
-        public const string StorageSettingCopyFromPropertyName = "storage_setting_copy_from";
-        [ApiProperty(PropertyName = StorageSettingCopyFromPropertyName)]
-        [JsonProperty(PropertyName = StorageSettingCopyFromPropertyName)]
+        public const string BackupPropertyName = "backup";
+        [ApiProperty(PropertyName = BackupPropertyName)]
+        [JsonProperty(PropertyName = BackupPropertyName)]
         [Storage]
-        public string storageSettingCopyFrom;
-
-        public const string StorageSettingCopyToPropertyName = "storage_setting_copy_to";
-        [ApiProperty(PropertyName = StorageSettingCopyToPropertyName)]
-        [JsonProperty(PropertyName = StorageSettingCopyToPropertyName)]
-        [Storage]
-        public string storageSettingCopyTo;
+        public IRef<RepositoryBackup> backup;
 
         #endregion
 
@@ -77,13 +73,14 @@ namespace EastFive.Azure.Persistence.AzureStorageTables.Backups
 
         [HttpPost]
         public static async Task<HttpResponseMessage> CreateAsync(
-                [Property(Name = IdPropertyName)]IRef<TableBackup> documentSourceRef,
+                [Property(Name = IdPropertyName)]IRef<TableBackup> tableBackupRef,
                 [Property(Name = WhenPropertyName)]DateTime when,
                 [Property(Name = TableNamePropertyName)]string tableName,
-                [Property(Name = StorageSettingCopyFromPropertyName)]string storageSettingCopyFrom,
-                [Property(Name = StorageSettingCopyToPropertyName)]string storageSettingCopyTo,
+                [Property(Name = IdPropertyName)]IRef<RepositoryBackup> repositoryBackupRef,
                 [Resource]TableBackup tableBackup,
                 RequestMessage<TableBackup> requestQuery,
+                HttpRequestMessage request,
+                EastFive.Analytics.ILogger logger,
             CreatedBodyResponse<InvocationMessage> onCreated,
             AlreadyExistsResponse onAlreadyExists)
         {
@@ -91,11 +88,12 @@ namespace EastFive.Azure.Persistence.AzureStorageTables.Backups
                 async (entity) =>
                 {
                     var invocationMessage = await requestQuery
-                        .ById(documentSourceRef)
+                        .ById(tableBackupRef)
                         .HttpPatch(default)
-                        .CompileRequest()
+                        .CompileRequest(request)
                         .FunctionAsync();
 
+                    logger.Trace($"Invocation[{invocationMessage.id}] will next backup table `{tableBackup.tableName}`.");
                     return onCreated(invocationMessage);
                 },
                 () => onAlreadyExists().AsTask());
@@ -105,6 +103,8 @@ namespace EastFive.Azure.Persistence.AzureStorageTables.Backups
         public static async Task<HttpResponseMessage> UpdateAsync(
                 [UpdateId(Name = IdPropertyName)]IRef<TableBackup> documentSourceRef,
                 RequestMessage<TableBackup> requestQuery,
+                HttpRequestMessage request,
+                EastFive.Analytics.ILogger logger,
             CreatedBodyResponse<InvocationMessage> onContinued,
             NoContentResponse onComplete,
             NotFoundResponse onNotFound)
@@ -112,17 +112,25 @@ namespace EastFive.Azure.Persistence.AzureStorageTables.Backups
             return await await documentSourceRef.StorageGetAsync(
                 async entity =>
                 {
-                    var complete = await entity.Copy(TimeSpan.FromSeconds(40));
-                    if (complete)
-                        return onComplete();
+                    return await await entity.backup.StorageGetAsync(
+                        async repoBackup =>
+                        {
+                            var complete = await entity.Copy(
+                                repoBackup.storageSettingCopyFrom,
+                                repoBackup.storageSettingCopyTo,
+                                TimeSpan.FromSeconds(40),
+                                logger);
+                            if (complete)
+                                return onComplete();
 
-                    var invocationMessage = await requestQuery
-                        .ById(documentSourceRef)
-                        .HttpPatch(default)
-                        .CompileRequest()
-                        .FunctionAsync();
+                            var invocationMessage = await requestQuery
+                                .ById(documentSourceRef)
+                                .HttpPatch(default)
+                                .CompileRequest(request)
+                                .FunctionAsync();
 
-                    return onContinued(invocationMessage);
+                            return onContinued(invocationMessage);
+                        });
                 },
                 () => onNotFound().AsTask());
         }
@@ -132,7 +140,10 @@ namespace EastFive.Azure.Persistence.AzureStorageTables.Backups
         #region Copy Functions
 
         public async Task<bool> Copy(
-            TimeSpan limit)
+            string storageSettingCopyFrom,
+            string storageSettingCopyTo,
+            TimeSpan limit,
+            EastFive.Analytics.ILogger logger)
         {
             var cloudStorageFromAccount = CloudStorageAccount.Parse(storageSettingCopyFrom);
             var cloudStorageToAccount = CloudStorageAccount.Parse(storageSettingCopyTo);

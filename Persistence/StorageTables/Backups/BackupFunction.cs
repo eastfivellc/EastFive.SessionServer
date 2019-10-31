@@ -111,11 +111,7 @@ namespace EastFive.Azure.Persistence.StorageTables.Backups
                     });
             }
 
-            public static Task DeleteAllAsync(AzureTableDriverDynamic destRepo)
-            {
-                var cloudTable = destRepo.TableClient.GetTableReference(typeof(Backup).Name);
-                return cloudTable.DeleteIfExistsAsync();
-            }
+            
         }
 
         public static TResult GetBackupDestConnectionString<TResult>(
@@ -166,48 +162,48 @@ namespace EastFive.Azure.Persistence.StorageTables.Backups
             logger.Trace($"copied {completedRows.Length} rows in {sw.Elapsed.TotalSeconds} seconds for {filter}");
         }
 
-        public static async Task QueueUpBackupPartitions(string serviceBusQueueName, string sourceConnectionString, string destConnectionString,
-            AzureApplication application, EastFive.Analytics.ILogger logger)
-        {
-            logger.Trace($"Cleaning backup results");
-            var repo = AzureTableDriverDynamic.FromStorageString(destConnectionString);
-            await Backup.DeleteAllAsync(GetRepository(destConnectionString));
+        //public static async Task QueueUpBackupPartitions(string serviceBusQueueName, string sourceConnectionString, string destConnectionString,
+        //    AzureApplication application, EastFive.Analytics.ILogger logger)
+        //{
+        //    logger.Trace($"Cleaning backup results");
+        //    var repo = AzureTableDriverDynamic.FromStorageString(destConnectionString);
+        //    await Backup.DeleteAllAsync(GetRepository(destConnectionString));
 
-            var resourceInfoToProcess = DiscoverAllStorageResources()
-                .Distinct(info => info.tableName);
+        //    var resourceInfoToProcess = DiscoverAllStorageResources()
+        //        .Distinct(info => info.tableName);
 
-            var backupMessages = resourceInfoToProcess
-                .SelectMany(
-                    resourceInfo =>
-                    {
-                        logger.Trace($"Queuing backup messages for table {resourceInfo.tableName}");
-                        return resourceInfo.message.Select(
-                            whereInfo =>
-                            {
-                                var message = new TableMessage
-                                {
-                                    destConnectionString = destConnectionString,
-                                    sourceConnectionString = sourceConnectionString,
-                                    tableName = resourceInfo.tableName,
-                                    where = whereInfo,
-                                };
-                                var backupMessage = JsonConvert.SerializeObject(message);
-                                return backupMessage;
-                            });
+        //    var backupMessages = resourceInfoToProcess
+        //        .SelectMany(
+        //            resourceInfo =>
+        //            {
+        //                logger.Trace($"Queuing backup messages for table {resourceInfo.tableName}");
+        //                return resourceInfo.message.Select(
+        //                    whereInfo =>
+        //                    {
+        //                        var message = new TableMessage
+        //                        {
+        //                            destConnectionString = destConnectionString,
+        //                            sourceConnectionString = sourceConnectionString,
+        //                            tableName = resourceInfo.tableName,
+        //                            where = whereInfo,
+        //                        };
+        //                        var backupMessage = JsonConvert.SerializeObject(message);
+        //                        return backupMessage;
+        //                    });
                         
-                    });
+        //            });
 
-            await application.SendServiceBusMessageAsync(serviceBusQueueName, backupMessages);
+        //    await application.SendServiceBusMessageAsync(serviceBusQueueName, backupMessages);
             
-            var totalMessages = backupMessages.Count();
-            logger.Trace($"Total of {totalMessages} messages queued for all tables");
+        //    var totalMessages = backupMessages.Count();
+        //    logger.Trace($"Total of {totalMessages} messages queued for all tables");
 
-            var storageResources = resourceInfoToProcess
-                .Select(sri => sri.tableName)
-                .ToArray();
+        //    var storageResources = resourceInfoToProcess
+        //        .Select(sri => sri.tableName)
+        //        .ToArray();
 
-            await ThrowIfTableIsMissingStorageResourceAttribute(sourceConnectionString, storageResources);
-        }
+        //    await ThrowIfTableIsMissingStorageResourceAttribute(sourceConnectionString, storageResources);
+        //}
 
         private static async Task ThrowIfTableIsMissingStorageResourceAttribute(string sourceConnectionString, string[] configuredTables)
         {

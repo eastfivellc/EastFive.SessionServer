@@ -349,6 +349,7 @@
     <Compile Include="Persistence\StorageTables\Backups\BackupFunction.cs" />
     <Compile Include="Persistence\StorageTables\Backups\BlobBackup.cs" />
     <Compile Include="Persistence\StorageTables\Backups\Containers.cs" />
+    <Compile Include="Persistence\StorageTables\Backups\RepositoryBackup.cs" />
     <Compile Include="Persistence\StorageTables\Backups\TableBackup.cs" />
     <Compile Include="Persistence\StorageTables\Backups\WhereInformation.cs" />
     <Compile Include="Persistence\StorageTables\TableInformationAttribute.cs" />
