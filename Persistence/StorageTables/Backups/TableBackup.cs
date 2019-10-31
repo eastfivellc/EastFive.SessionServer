@@ -40,12 +40,13 @@ namespace EastFive.Azure.Persistence.AzureStorageTables.Backups
         [ApiProperty(PropertyName = IdPropertyName)]
         [JsonProperty(PropertyName = IdPropertyName)]
         [RowKey]
+        [RowKeyPrefix(Characters = 3)]
         public IRef<TableBackup> tableBackupRef;
 
         public const string WhenPropertyName = "when";
         [ApiProperty(PropertyName = WhenPropertyName)]
         [JsonProperty(PropertyName = WhenPropertyName)]
-        [PartitionByDay()]
+        [Storage]
         public DateTime when;
 
         [Storage]
@@ -111,7 +112,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables.Backups
             return await await documentSourceRef.StorageGetAsync(
                 async entity =>
                 {
-                    var complete = await entity.Copy(TimeSpan.FromMinutes(8));
+                    var complete = await entity.Copy(TimeSpan.FromSeconds(40));
                     if (complete)
                         return onComplete();
 
@@ -159,19 +160,32 @@ namespace EastFive.Azure.Persistence.AzureStorageTables.Backups
             {
                 try
                 {
-                    var segment = await segmentFecthing;
-                    if (segment.IsDefaultOrNull())
+                    if (segmentFecthing.IsDefaultOrNull())
                     {
                         await resultsProcessing;
                         return true;
                     }
+                    var segment = await segmentFecthing;
+                    var priorResults = segment.Results.ToArray();
+                    var resultsProcessingNext = CreateOrReplaceBatch(priorResults, tableTo);
 
                     token = segment.ContinuationToken;
                     if (timer.Elapsed > limit)
                     {
-                        var tokenTextBuilder = new StringBuilder();
-                        token.WriteXml(XmlWriter.Create(tokenTextBuilder, new XmlWriterSettings()));
-                        var tokenToSave = tokenTextBuilder.ToString();
+                        await resultsProcessing;
+                        await resultsProcessingNext;
+                        var tokenToSave = string.Empty;
+                        if (!token.IsDefaultOrNull())
+                        {
+                            using (var writer = new StringWriter())
+                            {
+                                using (var xmlWriter = XmlWriter.Create(writer))
+                                {
+                                    token.WriteXml(xmlWriter);
+                                }
+                                tokenToSave = writer.ToString();
+                            }
+                        }
                         bool saved = await this.tableBackupRef.StorageUpdateAsync(
                             async (backup, saveAsync) =>
                             {
@@ -180,17 +194,14 @@ namespace EastFive.Azure.Persistence.AzureStorageTables.Backups
                                 return true;
                             },
                             () => false);
-                        await resultsProcessing;
                         return false;
                     }
 
-                    var priorResults = segment.Results.ToArray();
                     segmentFecthing = token.IsDefaultOrNull() ?
                         default
                         :
                         tableFrom.ExecuteQuerySegmentedAsync(query, token);
                     
-                    var resultsProcessingNext = CreateOrReplaceBatch(priorResults, tableTo);
                     await resultsProcessing;
                     resultsProcessing = resultsProcessingNext;
                     backoff = TimeSpan.FromSeconds(1.0);

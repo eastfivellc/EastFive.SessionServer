@@ -247,6 +247,8 @@ namespace EastFive.Azure.StorageTables.Driver
 
                     Exception ExHandleMsg(string handle, object type)
                     {
+                        if(type.IsNull())
+                            return new Exception($"{typeof(ResponseHandlingExtensions).FullName}.ParseStorageException `{handle}` -- Null Type");
                         if (type.GetType().IsEnum)
                             return ExMsg($"to handle {handle} of type {type}");
                         if (type.GetType() == typeof(string))

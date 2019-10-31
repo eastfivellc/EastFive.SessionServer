@@ -204,9 +204,10 @@ namespace EastFive.Azure.Functions
                         httpRequest.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
                     }
 
-                    var requestMessage = new RequestMessage<object>(invokeApplication, httpRequest);
                     invocationMessage.lastExecuted = DateTime.UtcNow;
-                    return await invokeApplication.SendAsync(requestMessage, httpRequest);
+                    var result = await invokeApplication.SendAsync(httpRequest);
+                    await saveAsync(invocationMessage);
+                    return result;
                 },
                 ResourceNotFoundException.StorageGetAsync<HttpResponseMessage>);
         }
