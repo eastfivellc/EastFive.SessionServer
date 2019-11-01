@@ -29,7 +29,7 @@ using EastFive.Linq;
 namespace EastFive.Api.Azure.Credentials.Controllers
 {
     [RoutePrefix("aadb2c")]
-    [FunctionViewController4(
+    [FunctionViewController6(
         Route="PingResponse",
         Resource = typeof(PingResponse),
         ContentType = "x-application/ping-response",

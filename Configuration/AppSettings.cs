@@ -15,11 +15,23 @@ namespace EastFive.Azure
 
         public static class ApplicationInsights
         {
-            [ConfigKey("Application Insights Key.",
+            [ConfigKey("Identifies the application insights endpoint to which data is posted.",
                 DeploymentOverrides.Suggested,
                 DeploymentSecurityConcern = false,
                 Location = "Home > Application Insights > {Resource Name} > Dashboard / Instrumentation Key")]
             public const string InstrumentationKey = EastFive.Api.AppSettings.ApplicationInsights.InstrumentationKey;
+
+            [ConfigKey("Username for API access to Application Insights.",
+                DeploymentOverrides.Suggested,
+                DeploymentSecurityConcern = true,
+                Location = "Home > Application Insights > {Resource Name} > API Access / Application ID")]
+            public const string ApplicationId = "EastFive.Azure.ApplicationInsights.ApplicationId";
+
+            [ConfigKey("Password for API access to Application Insights.",
+                DeploymentOverrides.Suggested,
+                DeploymentSecurityConcern = true,
+                Location = "Home > Application Insights > {Resource Name} > API Access / + Create API Key")]
+            public const string ClientSecret = "EastFive.Azure.ApplicationInsights.ClientSecret";
         }
 
         public const string ApiSecurityKey = "EastFive.Security.SessionServer.ApiSecurityKey";

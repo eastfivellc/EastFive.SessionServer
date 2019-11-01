@@ -26,7 +26,7 @@ using EastFive.Api.Azure;
 
 namespace EastFive.Azure
 {
-    [FunctionViewController4(
+    [FunctionViewController6(
          ContentType = "application/x-redirect",
          Resource = typeof(Redirect),
          Route = "redirect")]

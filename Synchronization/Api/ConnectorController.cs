@@ -88,6 +88,7 @@ namespace EastFive.Api.Controllers
                 [Property(Name = EastFive.Api.Resources.Connector.FlowPropertyName)]Connector.SynchronizationMethod Flow,
                 Security security, Context context, HttpRequestMessage request, UrlHelper url,
             CreatedResponse onCreated,
+            CreatedBodyResponse<Resources.Connection> onCreatedAndModifiedConnection,
             CreatedBodyResponse<Resources.Connector> onCreatedAndModified,
             AlreadyExistsResponse onAlreadyExists,
             AlreadyExistsReferencedResponse onRelationshipAlreadyExists,
@@ -108,7 +109,7 @@ namespace EastFive.Api.Controllers
                                 if(
                                     accept.MediaType.ToLower() == "x-ordering/connection" || 
                                     accept.MediaType.ToLower() == "x-ordering/connection+json")
-                                    return onCreatedAndModified(
+                                    return onCreatedAndModifiedConnection(
                                         ConnectionController.GetResource(connection, url),
                                         "x-ordering/connection+json");
 

@@ -17,7 +17,7 @@ using Newtonsoft.Json;
 namespace EastFive.Azure.Auth
 {
     [DataContract]
-    [FunctionViewController4(
+    [FunctionViewController6(
         Route = "XSession",
         Resource = typeof(Session),
         ContentType = "x-application/auth-session",

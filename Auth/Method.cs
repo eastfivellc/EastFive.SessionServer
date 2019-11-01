@@ -22,7 +22,7 @@ using EastFive.Security.SessionServer;
 namespace EastFive.Azure.Auth
 {
     [DataContract]
-    [FunctionViewController4(
+    [FunctionViewController6(
         Route = "AuthenticationMethod",
         Resource = typeof(Method),
         ContentType = "x-application/auth-authentication-method",

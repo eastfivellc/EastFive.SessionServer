@@ -13,7 +13,7 @@ using System.Web.Http.Routing;
 
 namespace EastFive.Azure.Login
 {
-    [FunctionViewController4(
+    [FunctionViewController6(
         Route = "LoginRedirection",
         Resource = typeof(Redirection),
         ContentType = "x-application/login-redirection",

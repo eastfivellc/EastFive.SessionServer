@@ -14,7 +14,7 @@ using System.Web.Http.Routing;
 
 namespace EastFive.Azure.Auth.CredentialProviders.AzureADB2C
 {
-    [FunctionViewController4(
+    [FunctionViewController6(
         Route = "OpenIdRedirection",
         Resource = typeof(Redirection),
         ContentType = "x-application/auth-redirection.aadb2c",

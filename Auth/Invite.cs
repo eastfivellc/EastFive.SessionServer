@@ -26,7 +26,7 @@ using Newtonsoft.Json;
 namespace EastFive.Azure.Auth
 {
     [DataContract]
-    [FunctionViewController4(
+    [FunctionViewController6(
         Route = "Invite",
         Resource = typeof(Invite),
         ContentType = "x-application/auth-invite",

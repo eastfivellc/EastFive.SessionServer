@@ -4,39 +4,46 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using EastFive.Api;
 using EastFive.Extensions;
+using EastFive.Web.Configuration;
 using Microsoft.Azure.ApplicationInsights;
 using Microsoft.Rest.Azure.Authentication;
 
 namespace EastFive.Azure.Monitoring
 {
+    [FunctionViewController6(
+        Route = "ApplicationInsights",
+        Resource = typeof(ApplicationInsights),
+        ContentType = "x-application/application-sights-results",
+        ContentTypeVersion = "0.1")]
     public class ApplicationInsights
     {
-        public static async Task<HttpResponseMessage> GetAsync()
+        [HttpGet]
+        public static Task<HttpResponseMessage> GetAsync(
+                [QueryParameter]string eventId)
         {
-            var appId = "{appId}";
-            var clientId = "{aadClientAppId}";
-            var clientSecret = "{aadAppkey}";
+            return AppSettings.ApplicationInsights.ApplicationId.ConfigurationString(
+                applicationId =>
+                {
+                    return AppSettings.ApplicationInsights.ClientSecret.ConfigurationString(
+                        async token =>
+                        {
+                            // Authenticate with client secret (app key)
+                            var clientCred = new ApiKeyClientCredentials(token);
 
-            var domain = "microsoft.onmicrosoft.com";
-            var authEndpoint = "https://login.microsoftonline.com";
-            var tokenAudience = "https://api.applicationinsights.io/";
+                            // New up a client with credentials and AI application Id
+                            var client = new ApplicationInsightsDataClient(clientCred);
+                            client.AppId = applicationId;
+                            
+                            var asdf = await client.GetRequestEventAsync(eventId);
+                                //timespan: TimeSpan.FromMinutes(30.0),);
+                            // asdf.Body.Value[0].Request.
 
-            var adSettings = new ActiveDirectoryServiceSettings
-            {
-                AuthenticationEndpoint = new Uri(authEndpoint),
-                TokenAudience = new Uri(tokenAudience),
-                ValidateAuthority = true
-            };
-
-            // Authenticate with client secret (app key)
-            var creds = await ApplicationTokenProvider.LoginSilentAsync(domain, clientId, clientSecret, adSettings);
-
-            // New up a client with credentials and AI application Id
-            var client = new ApplicationInsightsDataClient(creds);
-            client.AppId = appId;
-
-            return new HttpResponseMessage();
+                            return new HttpResponseMessage();
+                        });
+                });
+            
         }
     }
 }

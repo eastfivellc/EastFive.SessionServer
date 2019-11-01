@@ -21,7 +21,7 @@ using Newtonsoft.Json;
 
 namespace EastFive.Azure.Auth
 {
-    [FunctionViewController4(
+    [FunctionViewController6(
         Route = "RedirectionManager",
         Resource = typeof(RedirectionManager),
         ContentType = "x-application/auth-redirection-manager",

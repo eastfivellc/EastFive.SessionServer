@@ -17,7 +17,7 @@ using System.Net.Http;
 
 namespace EastFive.Azure.Login
 {
-    [FunctionViewController4(
+    [FunctionViewController6(
         Route = "XAccount",
         Resource = typeof(Account),
         ContentType = "x-application/login-account",

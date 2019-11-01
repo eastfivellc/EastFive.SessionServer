@@ -28,7 +28,7 @@ using Newtonsoft.Json;
 namespace EastFive.Azure.Auth
 {
     [DataContract]
-    [FunctionViewController4(
+    [FunctionViewController6(
         Route = "XAuthorization",
         Resource = typeof(Authorization),
         ContentType = "x-application/auth-authorization",
@@ -160,6 +160,7 @@ namespace EastFive.Azure.Auth
                     authorization.LocationAuthentication = await authentication.GetLoginUrlAsync(
                         application, urlHelper, authorizationId);
 
+                    throw new NotImplementedException();
                     return await authorization.StorageCreateAsync(
                         createdId => onCreated(authorization),
                         () => onAlreadyExists());

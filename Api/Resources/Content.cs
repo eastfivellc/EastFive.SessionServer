@@ -19,7 +19,7 @@ using EastFive.Linq;
 
 namespace EastFive.Api.Azure.Resources
 {
-    [FunctionViewController4(
+    [FunctionViewController6(
         Route = "Content",
         Resource = typeof(Content),
         ContentType = "x-application/content",

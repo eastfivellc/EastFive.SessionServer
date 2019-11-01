@@ -28,7 +28,7 @@ namespace EastFive.Api.Azure.Modules
     {
         public const string HeaderKey = "StorageTableInformation";
 
-        public Task<HttpResponseMessage> RouteHandlersAsync(Type controllerType, 
+        public Task<HttpResponseMessage> HandleRouteAsync(Type controllerType, 
             IApplication httpApp, HttpRequestMessage request, string routeName,
             RouteHandlingDelegate continueExecution)
         {
