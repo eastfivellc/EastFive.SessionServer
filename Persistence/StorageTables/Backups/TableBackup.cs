@@ -173,18 +173,24 @@ namespace EastFive.Azure.Persistence.AzureStorageTables.Backups
                 {
                     if (segmentFecthing.IsDefaultOrNull())
                     {
-                        await resultsProcessing;
+                        var savedResultsFinal = await resultsProcessing;
+                        logger.Trace($"Wrote {savedResultsFinal.Length} records");
                         return true;
                     }
                     var segment = await segmentFecthing;
                     var priorResults = segment.Results.ToArray();
+                    logger.Trace($"Read {priorResults.Length} records.");
+
                     var resultsProcessingNext = CreateOrReplaceBatch(priorResults, tableTo);
 
                     token = segment.ContinuationToken;
                     if (timer.Elapsed > limit)
                     {
-                        await resultsProcessing;
-                        await resultsProcessingNext;
+                        var secondToLast = await resultsProcessing;
+                        logger.Trace($"Wrote {secondToLast.Length} records");
+                        var lastWrite = await resultsProcessingNext;
+                        logger.Trace($"Wrote {lastWrite.Length} records");
+
                         var tokenToSave = string.Empty;
                         if (!token.IsDefaultOrNull())
                         {
@@ -205,6 +211,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables.Backups
                                 return true;
                             },
                             () => false);
+                        logger.Trace($"Token Saved = {saved}, token = `{tokenToSave}`");
                         return false;
                     }
 
@@ -213,9 +220,12 @@ namespace EastFive.Azure.Persistence.AzureStorageTables.Backups
                         :
                         tableFrom.ExecuteQuerySegmentedAsync(query, token);
                     
-                    await resultsProcessing;
+                    var saveResults = await resultsProcessing;
+                    logger.Trace($"Wrote {saveResults.Length} records");
+
                     resultsProcessing = resultsProcessingNext;
                     backoff = TimeSpan.FromSeconds(1.0);
+                    logger.Trace($"Adjusted backoff to {backoff.TotalSeconds} seconds");
                     continue;
                 }
                 catch (StorageException storageEx)
@@ -223,6 +233,7 @@ namespace EastFive.Azure.Persistence.AzureStorageTables.Backups
                     if (storageEx.IsProblemTimeout())
                     {
                         backoff = backoff + TimeSpan.FromSeconds(1.0);
+                        logger.Trace($"Adjusted backoff to {backoff.TotalSeconds} seconds and pausing");
                         await Task.Delay(backoff);
                         segmentFecthing = token.IsDefaultOrNull() ?
                             default
